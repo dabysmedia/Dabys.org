@@ -213,6 +213,19 @@ export default function HomePage() {
   const voteTally: Record<string, number> = {};
   votes.forEach((v) => { voteTally[v.submissionId] = (voteTally[v.submissionId] || 0) + 1; });
 
+  // Top 3 submissions for the current week (by votes, then createdAt)
+  const topThreeSubmissions =
+    submissions.length > 0
+      ? [...submissions]
+          .sort((a, b) => {
+            const aVotes = voteTally[a.id] || 0;
+            const bVotes = voteTally[b.id] || 0;
+            if (bVotes !== aVotes) return bVotes - aVotes;
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          })
+          .slice(0, 3)
+      : [];
+
   if (checking || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -266,16 +279,123 @@ export default function HomePage() {
             <p className="mt-3 text-white/40 text-sm">The admin will set the weekly theme and open submissions.</p>
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center mb-8">
-            <p className="text-white/30 text-xs uppercase tracking-widest mb-2">This Week&apos;s Theme</p>
-            <h2 className="text-3xl font-bold text-white/90 mb-3">{week.theme}</h2>
-            {phaseMeta && (
-              <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium border ${phaseMeta.color}`}>
-                {phaseMeta.label}
-              </span>
+          <>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center mb-6">
+              <p className="text-white/30 text-xs uppercase tracking-widest mb-2">This Week&apos;s Theme</p>
+              <h2 className="text-3xl font-bold text-white/90 mb-3">{week.theme}</h2>
+              {phaseMeta && (
+                <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium border ${phaseMeta.color}`}>
+                  {phaseMeta.label}
+                </span>
+              )}
+              {phaseMeta && <p className="mt-3 text-white/40 text-sm">{phaseMeta.desc}</p>}
+            </div>
+
+            {/* Winner hero — make it a big deal */}
+            {phase === "winner_published" && thisWeekWinner && (
+              <Link
+                href={`/winners/${thisWeekWinner.id}`}
+                className="relative block mb-10 rounded-3xl overflow-hidden border border-white/[0.16] bg-black/40 backdrop-blur-2xl shadow-[0_40px_120px_rgba(0,0,0,0.9)] group hover:border-[#F0F4F8]/80 hover:shadow-[0_0_40px_rgba(240,244,248,0.55)] transition-all duration-300"
+              >
+                {/* Backdrop art */}
+                <div className="absolute inset-0">
+                  {(thisWeekWinner.backdropUrl || thisWeekWinner.posterUrl) ? (
+                    <img
+                      src={thisWeekWinner.backdropUrl || thisWeekWinner.posterUrl!}
+                      alt={thisWeekWinner.movieTitle}
+                      className="w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-amber-700/40 via-purple-800/40 to-indigo-900/40" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
+
+                <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col md:flex-row items-center gap-8">
+                  {/* Trophy + copy on small screens */}
+                  <div className="md:hidden w-full flex items-center justify-between mb-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/25">
+                      <svg className="w-4 h-4 text-[#F0F4F8]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
+                      </svg>
+                      <span className="text-[11px] font-semibold tracking-widest text-[#F0F4F8] uppercase">
+                        This Week&apos;s Winner
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-white/40">
+                      {new Date(thisWeekWinner.publishedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {/* Poster */}
+                  {thisWeekWinner.posterUrl && (
+                    <div className="relative w-32 sm:w-40 md:w-52 shrink-0">
+                      <div className="absolute -inset-2 rounded-2xl bg-gradient-to-br from-[#B8B8C0]/30 via-[#F0F4F8]/25 to-[#9098A0]/30 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <img
+                        src={thisWeekWinner.posterUrl}
+                        alt={thisWeekWinner.movieTitle}
+                        className="relative w-full rounded-2xl object-cover border border-white/15 shadow-2xl shadow-black/70"
+                      />
+                    </div>
+                  )}
+
+                  {/* Copy */}
+                  <div className="flex-1 min-w-0">
+                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/25 mb-3">
+                      <svg className="w-4 h-4 text-[#F0F4F8]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
+                      </svg>
+                      <span className="text-[11px] font-semibold tracking-widest text-[#F0F4F8] uppercase">
+                        This Week&apos;s Winner
+                      </span>
+                    </div>
+
+                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white/95 mb-2 sm:mb-3 leading-tight line-clamp-2">
+                      {thisWeekWinner.movieTitle}
+                      {thisWeekWinner.year && (
+                        <span className="text-white/60 text-lg sm:text-2xl ml-2">({thisWeekWinner.year})</span>
+                      )}
+                    </h3>
+
+                    {thisWeekWinner.submittedBy && (
+                      <p className="text-sm sm:text-base text-white/70 mb-3">
+                        Picked by{" "}
+                        {thisWeekWinner.submittedByUserId ? (
+                          <span className="text-white font-semibold">
+                            {thisWeekWinner.submittedBy}
+                          </span>
+                        ) : (
+                          <span className="text-white/90 font-semibold">
+                            {thisWeekWinner.submittedBy}
+                          </span>
+                        )}
+                      </p>
+                    )}
+
+                    <p className="hidden sm:block text-sm text-white/70 max-w-xl mb-4 line-clamp-3">
+                      Rate it, drop a comment, and share how it played with the crowd.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#B8B8C0] via-[#F0F4F8] to-[#9098A0] text-black text-sm font-semibold shadow-lg shadow-[rgba(240,244,248,0.6)] group-hover:shadow-[0_0_32px_rgba(240,244,248,0.8)] transition-shadow">
+                        Rate &amp; discuss
+                        <span aria-hidden="true">↗</span>
+                      </span>
+                      <span className="text-xs sm:text-[11px] text-white/60">
+                        Published{" "}
+                        {new Date(thisWeekWinner.publishedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             )}
-            {phaseMeta && <p className="mt-3 text-white/40 text-sm">{phaseMeta.desc}</p>}
-          </div>
+          </>
         )}
 
         {/* ═══ PHASE-SPECIFIC CONTENT ═══ */}
@@ -596,40 +716,99 @@ export default function HomePage() {
               </>
             )}
 
-            {/* ── WINNER_PUBLISHED: this week's winner banner ── */}
-            {phase === "winner_published" && thisWeekWinner && (
-              <Link href={`/winners/${thisWeekWinner.id}`} className="block rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/5 to-purple-500/5 backdrop-blur-xl p-6 mb-6 group hover:border-amber-500/40 transition-all">
-                <div className="flex items-center gap-6">
-                  {thisWeekWinner.posterUrl && (
-                    <img src={thisWeekWinner.posterUrl} alt={thisWeekWinner.movieTitle} className="w-20 h-28 rounded-xl object-cover border border-white/[0.08] shadow-lg" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.003 6.003 0 01-5.54 0" />
-                      </svg>
-                      <span className="text-xs uppercase tracking-widest text-amber-400/70 font-medium">This Week&apos;s Winner</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-white/90 group-hover:text-amber-200 transition-colors truncate">{thisWeekWinner.movieTitle}</h3>
-                    {thisWeekWinner.submittedBy && (
-                      <p className="text-sm text-white/40 mt-1">Picked by <span className="text-white/60">{thisWeekWinner.submittedBy}</span></p>
-                    )}
-                    <p className="text-xs text-purple-400/60 mt-2 group-hover:text-purple-400 transition-colors">Rate and discuss &rarr;</p>
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* If winner published, also show submissions with final tally */}
+            {/* If winner published, show top 3 pedestal instead of raw submissions grid */}
             {phase === "winner_published" && submissions.length > 0 && (
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
-                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">This Week&apos;s Submissions</h3>
-                <SubmissionsGrid
-                  submissions={submissions}
-                  voteTally={voteTally}
-                  highlightTitle={thisWeekWinner?.movieTitle}
-                  sorted
-                />
+                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">
+                  Runners-up this Week
+                </h3>
+                <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5 items-end">
+                  {topThreeSubmissions.slice(1).map((sub, idx) => {
+                    const place = idx + 2; // 2nd and 3rd place only
+                    const votes = voteTally[sub.id] || 0;
+                    const sizeClass =
+                      place === 1
+                        ? "sm:translate-y-0"
+                        : "sm:translate-y-3";
+                    const borderClass =
+                      place === 1
+                        ? "border-amber-500/40 shadow-lg shadow-amber-500/30"
+                        : "border-white/[0.06]";
+
+                    const ribbonLabel =
+                      place === 1 ? "1st" : place === 2 ? "2nd" : "3rd";
+                    const ribbonColor =
+                      place === 1
+                        ? "bg-amber-500 text-black"
+                        : place === 2
+                          ? "bg-slate-400 text-black"
+                          : "bg-amber-700/80 text-amber-100";
+
+                    return (
+                      <div
+                        key={sub.id}
+                        className={`relative rounded-2xl border bg-white/[0.02] px-3 pt-4 pb-4 flex flex-col items-center ${borderClass} ${sizeClass}`}
+                      >
+                        {/* Ribbon */}
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                          <div className={`px-3 py-1 rounded-full text-xs font-semibold shadow-md ${ribbonColor}`}>
+                            {ribbonLabel} place
+                          </div>
+                        </div>
+
+                        {/* Poster */}
+                        <div className="mt-3 w-28 sm:w-28 md:w-32 rounded-xl overflow-hidden border border-white/10 shadow-lg shadow-black/40">
+                          {sub.posterUrl ? (
+                            <img
+                              src={sub.posterUrl}
+                              alt={sub.movieTitle}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-40 flex items-center justify-center text-white/10 text-3xl font-bold">
+                              {sub.movieTitle.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="mt-3 text-center px-1">
+                          <p className="text-sm font-semibold text-white/90 truncate max-w-[10rem]">
+                            {sub.movieTitle}
+                          </p>
+                          <p className="text-[11px] text-white/40 mb-1">
+                            {sub.year && <span className="text-white/50">{sub.year} &middot; </span>}
+                            by{" "}
+                            <Link
+                              href={`/profile/${sub.userId}`}
+                              className="text-white/60 hover:text-purple-300 transition-colors"
+                            >
+                              {sub.userName}
+                            </Link>
+                          </p>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/70">
+                            <svg
+                              className="w-3.5 h-3.5 text-amber-300"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.959a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.449a1 1 0 00-.364 1.118l1.287 3.96c.3.92-.755 1.688-1.54 1.118l-3.371-2.449a1 1 0 00-1.175 0l-3.37 2.45c-.785.569-1.84-.198-1.54-1.119l1.287-3.959a1 1 0 00-.364-1.118L2.075 9.386c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.274-3.96z"
+                              />
+                            </svg>
+                            <span className="font-semibold tabular-nums">
+                              {votes} vote{votes !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

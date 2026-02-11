@@ -30,3 +30,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+src/data/weeks.json
+src/data/winners.json
+src/data/weeks.json
+src/data/winners.json
