@@ -1,0 +1,36 @@
+[
+  {
+    "id": "1",
+    "theme": "2000's",
+    "phase": "vote_open",
+    "startedAt": "2026-02-11T00:44:43.818Z"
+  },
+  {
+    "id": "0",
+    "theme": "Crime",
+    "phase": "winner_published",
+    "startedAt": "2026-02-03T00:00:00.000Z",
+    "endedAt": "2026-02-09T23:59:59.000Z"
+  },
+  {
+    "id": "2",
+    "theme": "Fantasy",
+    "phase": "winner_published",
+    "startedAt": "2026-01-25T00:00:00.000Z",
+    "endedAt": "2026-01-31T00:00:00.000Z"
+  },
+  {
+    "id": "3",
+    "theme": "International",
+    "phase": "winner_published",
+    "startedAt": "2026-02-22T00:00:00.000Z",
+    "endedAt": "2026-02-11T03:52:26.364Z"
+  },
+  {
+    "id": "4",
+    "theme": "Spielberg",
+    "phase": "winner_published",
+    "startedAt": "2026-01-19T00:00:00.000Z",
+    "endedAt": "2026-01-20T00:00:00.000Z"
+  }
+]

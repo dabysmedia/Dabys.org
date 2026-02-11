@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1",
+    "winnerId": "1",
+    "userId": "2",
+    "userName": "Carlos",
+    "text": "Tio maxing",
+    "mediaUrl": "https://giphy.com/embed/0VP7QeejEFQoD1AwoW",
+    "mediaType": "gif",
+    "createdAt": "2026-02-11T01:52:32.446Z"
+  },
+  {
+    "id": "2",
+    "winnerId": "2",
+    "userId": "2",
+    "userName": "Carlos",
+    "text": "",
+    "mediaUrl": "https://giphy.com/embed/PXJY5Z531Sd5NCKrEd",
+    "mediaType": "gif",
+    "createdAt": "2026-02-11T03:31:17.833Z"
+  }
+]

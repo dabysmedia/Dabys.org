@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0f;
+  --foreground: #e5e5e5;
+  --accent: #8b5cf6;
+  --accent-glow: #a78bfa;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+/* Styled scrollbar for autocomplete dropdowns */
+.scrollbar-autocomplete {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.5) rgba(255, 255, 255, 0.06);
+}
+.scrollbar-autocomplete::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-autocomplete::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+}
+.scrollbar-autocomplete::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 4px;
+}
+.scrollbar-autocomplete::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
+
+/* Chrome silver glow animation for Winners Circle — slow, subtle, lava-lamp feel */
+@keyframes winners-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 14px rgba(240, 244, 255, 0.18)) drop-shadow(0 0 28px rgba(200, 210, 230, 0.08));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(240, 244, 255, 0.26)) drop-shadow(0 0 32px rgba(200, 210, 230, 0.12));
+  }
+}
+.winners-circle-glow {
+  animation: winners-glow 8s ease-in-out infinite;
+}
+
+/* Netflix-style scrolling background — duration set inline so speed is constant for any image count */
+@keyframes winners-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.winners-scroll-track {
+  animation: winners-scroll var(--scroll-duration, 120s) linear infinite;
+}

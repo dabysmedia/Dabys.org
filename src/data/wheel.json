@@ -1,0 +1,20 @@
+{
+  "entries": [
+    "Horror",
+    "Comedy",
+    "Action",
+    "Sci-Fi",
+    "Drama",
+    "Thriller",
+    "Romance",
+    "Animation",
+    "2000's"
+  ],
+  "lastResult": "2000's",
+  "lastSpunAt": "2026-02-11T03:29:13.929Z",
+  "spinning": false,
+  "spinStartedAt": "2026-02-11T03:16:23.971Z",
+  "winnerIndex": 8,
+  "fullSpins": 6,
+  "duration": 6000
+}

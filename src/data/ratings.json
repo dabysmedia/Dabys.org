@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "winnerId": "1",
+    "userId": "1",
+    "userName": "Jerry",
+    "thumbsUp": true,
+    "stars": 4,
+    "createdAt": "2026-02-11T00:52:46.821Z"
+  },
+  {
+    "id": "2",
+    "winnerId": "1",
+    "userId": "2",
+    "userName": "Carlos",
+    "thumbsUp": true,
+    "stars": 4,
+    "createdAt": "2026-02-11T01:50:02.177Z"
+  },
+  {
+    "id": "3",
+    "winnerId": "2",
+    "userId": "2",
+    "userName": "Carlos",
+    "thumbsUp": true,
+    "stars": 3.5,
+    "createdAt": "2026-02-11T02:46:11.612Z"
+  },
+  {
+    "id": "4",
+    "winnerId": "3",
+    "userId": "2",
+    "userName": "Carlos",
+    "thumbsUp": true,
+    "stars": 3,
+    "createdAt": "2026-02-11T03:58:46.100Z"
+  }
+]

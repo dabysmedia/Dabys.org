@@ -1,0 +1,737 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import ImageCropModal from "@/components/ImageCropModal";
+
+interface LocalUser {
+  id: string;
+  name: string;
+}
+
+interface ProfileData {
+  avatarUrl: string;
+  bannerUrl: string;
+  bio: string;
+}
+
+interface FavoriteMovie {
+  title: string;
+  posterUrl: string;
+  backdropUrl: string;
+  year: string;
+  winnerId: string;
+  stars: number;
+  thumbsUp: boolean;
+}
+
+interface Stats {
+  totalSubmissions: number;
+  totalWins: number;
+  totalRatings: number;
+  totalComments: number;
+  avgStars: number;
+  thumbsUpCount: number;
+  thumbsDownCount: number;
+  favoriteMovie: FavoriteMovie | null;
+  skipsEarned: number;
+  skipsUsed: number;
+  skipsAvailable: number;
+}
+
+interface SubEntry {
+  id: string;
+  movieTitle: string;
+  posterUrl: string;
+  letterboxdUrl: string;
+  year?: string;
+  weekTheme: string;
+  weekId: string;
+  createdAt: string;
+  submissionCount?: number;
+}
+
+interface WinEntry {
+  winnerId: string;
+  movieTitle: string;
+  posterUrl: string;
+  weekTheme: string;
+  publishedAt: string;
+}
+
+interface CommentEntry {
+  id: string;
+  winnerId: string;
+  movieTitle: string;
+  moviePosterUrl: string;
+  text: string;
+  mediaUrl: string;
+  mediaType: string;
+  createdAt: string;
+}
+
+interface FullProfile {
+  user: { id: string; name: string };
+  profile: ProfileData;
+  stats: Stats;
+  submissions: SubEntry[];
+  weeksWon: WinEntry[];
+  comments: CommentEntry[];
+}
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const params = useParams();
+  const profileId = params.id as string;
+
+  const [currentUser, setCurrentUser] = useState<LocalUser | null>(null);
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string>("");
+  const [data, setData] = useState<FullProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"submissions" | "wins" | "comments">("submissions");
+
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [editBio, setEditBio] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
+  const [editBannerUrl, setEditBannerUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Crop modals
+  const [cropTarget, setCropTarget] = useState<"avatar" | "banner" | null>(null);
+
+  const isOwnProfile = currentUser?.id === profileId;
+
+  useEffect(() => {
+    const cached = localStorage.getItem("dabys_user");
+    if (cached) {
+      try {
+        setCurrentUser(JSON.parse(cached));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  // Fetch current user's avatar for header (so it shows on every profile, not only own)
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setCurrentUserAvatarUrl("");
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/users/${currentUser.id}/profile`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!cancelled && json?.profile?.avatarUrl) setCurrentUserAvatarUrl(json.profile.avatarUrl);
+        else if (!cancelled) setCurrentUserAvatarUrl("");
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentUserAvatarUrl("");
+      });
+    return () => { cancelled = true; };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/users/${profileId}/profile`);
+        if (!res.ok) {
+          router.replace("/");
+          return;
+        }
+        const json: FullProfile = await res.json();
+        setData(json);
+        setEditBio(json.profile.bio);
+        setEditAvatarUrl(json.profile.avatarUrl);
+        setEditBannerUrl(json.profile.bannerUrl);
+      } catch {
+        router.replace("/");
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (profileId) load();
+  }, [profileId, router]);
+
+  function handleCropComplete(url: string) {
+    if (cropTarget === "avatar") setEditAvatarUrl(url);
+    else if (cropTarget === "banner") setEditBannerUrl(url);
+    setCropTarget(null);
+  }
+
+  async function saveProfile() {
+    setSaving(true);
+    try {
+      await fetch(`/api/users/${profileId}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bio: editBio,
+          avatarUrl: editAvatarUrl,
+          bannerUrl: editBannerUrl,
+        }),
+      });
+      // Reload profile
+      const res = await fetch(`/api/users/${profileId}/profile`);
+      if (res.ok) setData(await res.json());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  if (loading || !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const { user, profile, stats, submissions, weeksWon, comments } = data;
+
+  return (
+    <div className="min-h-screen">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
+              Dabys.org
+            </Link>
+
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/wheel" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Theme Wheel</Link>
+            <Link href="/stats" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Stats</Link>
+            {currentUser && (
+              <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                {currentUserAvatarUrl ? (
+                  <img src={currentUserAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
+                    {currentUser.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-white/70 text-sm font-medium">{currentUser.name}</span>
+              </Link>
+            )}
+            <button onClick={() => { localStorage.removeItem("dabys_user"); router.replace("/login"); }} className="text-white/20 hover:text-white/50 transition-colors cursor-pointer" title="Log out"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></button>
+          </div>
+        </div>
+      </header>
+
+      {/* Banner */}
+      <div className="relative z-10 h-48 sm:h-64 overflow-hidden bg-gradient-to-br from-purple-900/60 via-indigo-900/60 to-violet-900/60 group/banner">
+        {(editing ? editBannerUrl : profile.bannerUrl) ? (
+          <img
+            src={editing ? editBannerUrl : profile.bannerUrl}
+            alt="Banner"
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-purple-900/80 via-indigo-900/60 to-violet-900/80" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent" />
+        {isOwnProfile && editing && (
+          <button
+            onClick={() => setCropTarget("banner")}
+            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/banner:opacity-100 transition-opacity cursor-pointer"
+          >
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black/50 border border-white/10 text-white/70 text-sm backdrop-blur-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Change Banner
+            </div>
+          </button>
+        )}
+      </div>
+
+      {/* Profile content */}
+      <main className="relative z-10 max-w-4xl mx-auto px-6 -mt-16">
+
+        {/* Avatar + Name + Bio */}
+        <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-end mb-8">
+          <div className="relative group shrink-0">
+            {(editing ? editAvatarUrl : profile.avatarUrl) ? (
+              <img
+                src={editing ? editAvatarUrl : profile.avatarUrl}
+                alt={user.name}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-[#0a0a0f] shadow-xl shadow-purple-500/10"
+              />
+            ) : (
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-4xl font-bold border-4 border-[#0a0a0f] shadow-xl shadow-purple-500/10">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            {isOwnProfile && editing && (
+              <button
+                onClick={() => setCropTarget("avatar")}
+                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0 pb-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white/95">{user.name}</h1>
+            {!editing ? (
+              <p className="text-white/40 text-sm mt-1 max-w-md">
+                {profile.bio || (isOwnProfile ? "No bio yet. Click edit to add one." : "No bio yet.")}
+              </p>
+            ) : (
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={300}
+                rows={2}
+                placeholder="Write something about yourself..."
+                className="mt-2 w-full max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-purple-500/40 resize-none"
+              />
+            )}
+          </div>
+
+          {isOwnProfile && (
+            <div className="shrink-0">
+              {!editing ? (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="px-4 py-2 text-xs font-medium text-white/60 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/80 transition-all cursor-pointer"
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setEditing(false); setEditBio(profile.bio); setEditAvatarUrl(profile.avatarUrl); setEditBannerUrl(profile.bannerUrl); }}
+                    className="px-3 py-2 text-xs font-medium text-white/40 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/60 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveProfile}
+                    disabled={saving}
+                    className="px-4 py-2 text-xs font-medium bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Favorite Movie hero */}
+        {stats.favoriteMovie && (
+          <Link
+            href={`/winners/${stats.favoriteMovie.winnerId}`}
+            className="group block relative rounded-2xl overflow-hidden border border-white/[0.08] mb-6 hover:border-pink-500/20 transition-all"
+          >
+            {/* Backdrop */}
+            <div className="absolute inset-0">
+              {stats.favoriteMovie.backdropUrl ? (
+                <img src={stats.favoriteMovie.backdropUrl} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              ) : stats.favoriteMovie.posterUrl ? (
+                <img src={stats.favoriteMovie.posterUrl} alt="" className="w-full h-full object-cover blur-sm scale-110" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-pink-900/40 to-purple-900/40" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/50" />
+            </div>
+
+            <div className="relative flex items-center gap-5 p-5 sm:p-6">
+              {/* Poster */}
+              <div className="shrink-0 w-20 sm:w-24 aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-xl shadow-pink-500/10">
+                {stats.favoriteMovie.posterUrl ? (
+                  <img src={stats.favoriteMovie.posterUrl} alt={stats.favoriteMovie.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-pink-900/30 to-purple-900/30 flex items-center justify-center text-white/10 text-2xl font-bold">
+                    {stats.favoriteMovie.title.charAt(0)}
+                  </div>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <svg className="w-4 h-4 text-pink-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+                  <span className="text-[11px] uppercase tracking-widest text-pink-400/60 font-medium">Favorite Movie</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white/95 truncate group-hover:text-pink-200 transition-colors">
+                  {stats.favoriteMovie.title}
+                </h3>
+                {stats.favoriteMovie.year && (
+                  <p className="text-sm text-white/30 mt-0.5">{stats.favoriteMovie.year}</p>
+                )}
+                <div className="flex items-center gap-3 mt-2.5">
+                  {/* Stars */}
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const starVal = stats.favoriteMovie!.stars;
+                      const filled = starVal >= s;
+                      const half = !filled && starVal >= s - 0.5;
+                      return (
+                        <div key={s} className="relative w-4 h-4">
+                          <svg className="w-4 h-4 text-white/10" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                          {filled && (
+                            <svg className="absolute inset-0 w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          )}
+                          {half && (
+                            <svg className="absolute inset-0 w-4 h-4 text-yellow-400" viewBox="0 0 24 24">
+                              <defs><clipPath id={`fav-half-${s}`}><rect x="0" y="0" width="12" height="24" /></clipPath></defs>
+                              <path clipPath={`url(#fav-half-${s})`} fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <span className="text-xs text-yellow-400/50 ml-1 font-medium">{stats.favoriteMovie!.stars}</span>
+                  </div>
+                  {/* Thumb */}
+                  {stats.favoriteMovie.thumbsUp ? (
+                    <span className="flex items-center gap-1 text-green-400/60 text-xs">
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-red-400/60 text-xs">
+                      <svg className="w-3.5 h-3.5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <StatCard label="Submissions" value={stats.totalSubmissions} />
+          <StatCard label="Weeks Won" value={stats.totalWins} icon="trophy" />
+          <StatCard label="Avg Rating" value={stats.avgStars ? `${stats.avgStars} / 5` : "—"} icon="star" />
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <svg className="w-4 h-4 text-cyan-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              </svg>
+              <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Skips</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold text-cyan-400">{stats.skipsAvailable}</span>
+              {stats.skipsUsed > 0 && (
+                <span className="text-[11px] text-white/20">({stats.skipsUsed} used)</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Thumbs summary */}
+        {stats.totalRatings > 0 && (
+          <div className="flex items-center gap-4 mb-8 text-sm">
+            <span className="flex items-center gap-1.5 text-green-400/70">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
+              {stats.thumbsUpCount}
+            </span>
+            <span className="flex items-center gap-1.5 text-red-400/70">
+              <svg className="w-4 h-4 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
+              {stats.thumbsDownCount}
+            </span>
+            <span className="text-white/20">|</span>
+            <span className="text-white/40">{stats.totalRatings} movies rated</span>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-white/[0.06]">
+          {([
+            { key: "submissions" as const, label: "Submissions", count: submissions.length },
+            { key: "wins" as const, label: "Wins", count: weeksWon.length },
+            { key: "comments" as const, label: "Comments", count: comments.length },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-5 py-3 text-sm font-medium transition-all cursor-pointer relative ${
+                activeTab === tab.key
+                  ? "text-white/90"
+                  : "text-white/30 hover:text-white/60"
+              }`}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.key
+                    ? "bg-purple-500/20 text-purple-300"
+                    : "bg-white/[0.04] text-white/25"
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+              {activeTab === tab.key && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="mb-20">
+          {/* Submissions library */}
+          {activeTab === "submissions" && (
+            submissions.length === 0 ? (
+              <EmptyState icon="film" text="No submissions yet" />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {submissions.map((s) => (
+                  <div key={s.id} className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] hover:border-white/10 transition-all">
+                    <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+                      {s.posterUrl ? (
+                        <img src={s.posterUrl} alt={s.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/10 text-3xl font-bold">{s.movieTitle.charAt(0)}</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                      <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+                        {s.weekTheme && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 border border-purple-500/25 text-purple-300 backdrop-blur-sm">
+                            {s.weekTheme}
+                          </span>
+                        )}
+                        {s.submissionCount != null && s.submissionCount > 1 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm border bg-white/15 border-white/25 text-white/90" title="Submitted this movie multiple times">
+                            {s.submissionCount}×
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {s.letterboxdUrl && (
+                      <a href={s.letterboxdUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-20 cursor-pointer" aria-label={`View ${s.movieTitle} on Letterboxd`} onClick={(e) => { e.preventDefault(); window.open(s.letterboxdUrl, "_blank", "noopener,noreferrer"); }} />
+                    )}
+                    <div className="p-3">
+                      <h4 className="text-sm font-semibold text-white/90 truncate">{s.movieTitle}</h4>
+                      <p className="text-[11px] text-white/30 mt-0.5">{s.year || ""}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Wins */}
+          {activeTab === "wins" && (
+            weeksWon.length === 0 ? (
+              <EmptyState icon="trophy" text="No wins yet" />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {weeksWon.map((w) => (
+                  <Link href={`/winners/${w.winnerId}`} key={w.winnerId} className="group relative rounded-xl overflow-hidden border border-amber-500/10 bg-white/[0.02] hover:border-amber-500/25 transition-all">
+                    <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-amber-900/30 to-orange-900/30">
+                      {w.posterUrl ? (
+                        <img src={w.posterUrl} alt={w.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-amber-400/10 text-3xl font-bold">{w.movieTitle.charAt(0)}</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                      <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/20 border border-amber-500/25 text-amber-300 backdrop-blur-sm">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172" /></svg>
+                        Winner
+                      </div>
+                      {w.weekTheme && (
+                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 border border-purple-500/25 text-purple-300 backdrop-blur-sm">
+                          {w.weekTheme}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h4 className="text-sm font-semibold text-white/90 truncate">{w.movieTitle}</h4>
+                      <p className="text-[11px] text-white/30 mt-0.5">
+                        {new Date(w.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Comments timeline */}
+          {activeTab === "comments" && (
+            comments.length === 0 ? (
+              <EmptyState icon="chat" text="No comments yet" />
+            ) : (
+              <div className="space-y-4">
+                {comments.map((c) => (
+                  <Link
+                    href={`/winners/${c.winnerId}`}
+                    key={c.id}
+                    className="block rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/10 hover:bg-white/[0.03] transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Tiny movie poster */}
+                      <div className="w-10 h-14 rounded-md overflow-hidden shrink-0 bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+                        {c.moviePosterUrl ? (
+                          <img src={c.moviePosterUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold text-white/70">{user.name}</span>
+                          <span className="text-[11px] text-white/20">&middot;</span>
+                          <span className="text-[11px] text-white/25">{timeAgo(c.createdAt)}</span>
+                        </div>
+                        <p className="text-[11px] text-purple-400/60 mb-1.5">
+                          on <span className="text-purple-400/80 font-medium">{c.movieTitle}</span>
+                        </p>
+                        <p className="text-sm text-white/70 leading-relaxed">{c.text}</p>
+                        {c.mediaUrl && c.mediaType === "gif" && (
+                          <div className="mt-2 rounded-lg overflow-hidden max-w-xs">
+                            <iframe src={c.mediaUrl} className="w-full h-40" frameBorder="0" allowFullScreen />
+                          </div>
+                        )}
+                        {c.mediaUrl && c.mediaType === "image" && (
+                          <div className="mt-2 rounded-lg overflow-hidden max-w-xs">
+                            <img src={c.mediaUrl} alt="" className="w-full object-cover rounded-lg" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </main>
+
+      {/* Crop modals */}
+      <ImageCropModal
+        open={cropTarget === "avatar"}
+        onClose={() => setCropTarget(null)}
+        onComplete={handleCropComplete}
+        aspect={1}
+        title="Edit Profile Picture"
+        cropShape="round"
+      />
+      <ImageCropModal
+        open={cropTarget === "banner"}
+        onClose={() => setCropTarget(null)}
+        onComplete={handleCropComplete}
+        aspect={3}
+        title="Edit Banner"
+      />
+
+      {/* Footer */}
+      <ProfileFooter />
+    </div>
+  );
+}
+
+function ProfileFooter() {
+  const router = useRouter();
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      if (res.ok) { router.push("/admin"); }
+      else { setAdminError("Wrong password"); setAdminPassword(""); }
+    } catch { setAdminError("Something went wrong"); }
+    finally { setAdminLoading(false); }
+  }
+
+  return (
+    <footer className="relative z-10 border-t border-white/[0.04] mt-16">
+      <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col items-center gap-4">
+        <button onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }} className="text-white/10 text-[11px] hover:text-white/30 transition-colors cursor-pointer">Admin Panel</button>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out w-full max-w-xs ${adminOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
+          <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-3">
+            <div className="flex gap-2">
+              <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors" />
+              <button type="submit" disabled={adminLoading || !adminPassword} className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+                {adminLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Go"}
+              </button>
+            </div>
+            {adminError && <p className="text-red-400/80 text-xs mt-2">{adminError}</p>}
+          </form>
+        </div>
+        <p className="text-white/8 text-[10px] tracking-widest uppercase">Dabys Media Group</p>
+      </div>
+    </footer>
+  );
+}
+
+// ─── Helper components ───────────────────────────────────
+
+function StatCard({ label, value, icon, small }: { label: string; value: string | number; icon?: string; small?: boolean }) {
+  const iconEl =
+    icon === "trophy" ? (
+      <svg className="w-4 h-4 text-amber-400/60" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172" /></svg>
+    ) : icon === "star" ? (
+      <svg className="w-4 h-4 text-yellow-400/60" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+    ) : icon === "heart" ? (
+      <svg className="w-4 h-4 text-pink-400/60" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
+    ) : null;
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        {iconEl}
+        <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">{label}</span>
+      </div>
+      <p className={`font-bold text-white/80 ${small ? "text-sm truncate" : "text-xl"}`}>{value}</p>
+    </div>
+  );
+}
+
+function EmptyState({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-white/15">
+      {icon === "film" && (
+        <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+      )}
+      {icon === "trophy" && (
+        <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497" /></svg>
+      )}
+      {icon === "chat" && (
+        <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+      )}
+      <p className="text-sm">{text}</p>
+    </div>
+  );
+}

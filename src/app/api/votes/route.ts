@@ -1,0 +1,78 @@
+import { NextResponse } from "next/server";
+import { getVotes, saveVotes, getCurrentWeek } from "@/lib/data";
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const weekId = searchParams.get("weekId");
+
+  let votes = getVotes();
+  if (weekId) {
+    votes = votes.filter((v) => v.weekId === weekId);
+  }
+
+  return NextResponse.json(votes);
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const currentWeek = getCurrentWeek();
+
+  if (!currentWeek || currentWeek.phase !== "vote_open") {
+    return NextResponse.json(
+      { error: "Voting is not open" },
+      { status: 400 }
+    );
+  }
+
+  if (!body.userId || !body.submissionId) {
+    return NextResponse.json(
+      { error: "userId and submissionId required" },
+      { status: 400 }
+    );
+  }
+
+  const votes = getVotes();
+
+  // One vote per user per week
+  const existing = votes.findIndex(
+    (v) => v.weekId === currentWeek.id && v.userId === body.userId
+  );
+
+  const vote = {
+    id:
+      existing >= 0
+        ? votes[existing].id
+        : String(Math.max(0, ...votes.map((v) => parseInt(v.id, 10))) + 1),
+    weekId: currentWeek.id,
+    userId: body.userId,
+    userName: body.userName || "",
+    submissionId: body.submissionId,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (existing >= 0) {
+    votes[existing] = vote;
+  } else {
+    votes.push(vote);
+  }
+
+  saveVotes(votes);
+  return NextResponse.json(vote, { status: existing >= 0 ? 200 : 201 });
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
+  const weekId = searchParams.get("weekId");
+
+  if (!userId || !weekId) {
+    return NextResponse.json({ error: "userId and weekId required" }, { status: 400 });
+  }
+
+  const votes = getVotes();
+  const filtered = votes.filter(
+    (v) => !(v.weekId === weekId && v.userId === userId)
+  );
+  saveVotes(filtered);
+  return NextResponse.json({ success: true });
+}

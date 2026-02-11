@@ -1,0 +1,1041 @@
+"use client";
+
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import ImageCropModal from "@/components/ImageCropModal";
+
+interface User {
+  id: string;
+  name: string;
+}
+
+interface Rating {
+  id: string;
+  winnerId: string;
+  userId: string;
+  userName: string;
+  thumbsUp: boolean;
+  stars: number;
+  createdAt: string;
+}
+
+interface Comment {
+  id: string;
+  winnerId: string;
+  userId: string;
+  userName: string;
+  text: string;
+  mediaUrl: string;
+  mediaType: string;
+  createdAt: string;
+  avatarUrl?: string;
+}
+
+interface RunnerUp {
+  movieTitle: string;
+  posterUrl: string;
+  letterboxdUrl: string;
+  year?: string;
+  userName: string;
+  userId: string;
+}
+
+interface WinnerDetail {
+  id: string;
+  movieTitle: string;
+  posterUrl: string;
+  letterboxdUrl: string;
+  submittedBy: string;
+  publishedAt: string;
+  year?: string;
+  overview?: string;
+  trailerUrl?: string;
+  backdropUrl?: string;
+  submittedByUserId?: string;
+  weekTheme?: string;
+  runnerUps?: RunnerUp[];
+  ratings: Rating[];
+  comments: Comment[];
+  stats: {
+    thumbsUp: number;
+    thumbsDown: number;
+    avgStars: number;
+    totalRatings: number;
+    totalComments: number;
+  };
+}
+
+/** Parse GIPHY ID from giphy.com share/embed URLs (https://giphy.com) */
+function getGiphyEmbedUrl(pasted: string): string | null {
+  const u = pasted.trim();
+  if (!u.includes("giphy.com")) return null;
+  let id: string | null = null;
+  const embedMatch = u.match(/giphy\.com\/embed\/([a-zA-Z0-9]+)/);
+  if (embedMatch) id = embedMatch[1];
+  else {
+    const gifsMatch = u.match(/giphy\.com\/gifs\/[^/]+\/([a-zA-Z0-9]+)/);
+    if (gifsMatch) id = gifsMatch[1];
+    else {
+      const mediaMatch = u.match(/media\.giphy\.com\/media\/([a-zA-Z0-9]+)/);
+      if (mediaMatch) id = mediaMatch[1];
+      else {
+        const pathMatch = u.match(/giphy\.com\/[^/]+\/([a-zA-Z0-9]{6,})/);
+        if (pathMatch) id = pathMatch[1];
+      }
+    }
+  }
+  return id ? `https://giphy.com/embed/${id}` : null;
+}
+
+export default function WinnerDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const winnerId = params.id as string;
+
+  const [user, setUser] = useState<User | null>(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState("");
+  const [winner, setWinner] = useState<WinnerDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Rating state
+  const [myThumb, setMyThumb] = useState<boolean | null>(null);
+  const [myStars, setMyStars] = useState(0);
+  const [hoverStars, setHoverStars] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
+  // Comment state
+  const [commentText, setCommentText] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState("");
+  const [mediaIsGiphy, setMediaIsGiphy] = useState(false);
+  const [showGiphyBrowser, setShowGiphyBrowser] = useState(false);
+  const [giphySearchQuery, setGiphySearchQuery] = useState("");
+  const [giphyResults, setGiphyResults] = useState<{ id: string; embedUrl: string; thumbnail: string; title: string }[]>([]);
+  const [giphyLoading, setGiphyLoading] = useState(false);
+  const [noGiphyKey, setNoGiphyKey] = useState(false);
+  const [giphyPasteUrl, setGiphyPasteUrl] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const giphySearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadWinner = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/winners/${winnerId}`);
+      if (!res.ok) {
+        router.replace("/");
+        return;
+      }
+      const data: WinnerDetail = await res.json();
+      setWinner(data);
+
+      // Check if user already rated
+      const cached = localStorage.getItem("dabys_user");
+      if (cached) {
+        const u = JSON.parse(cached) as User;
+        const existingRating = data.ratings.find((r) => r.userId === u.id);
+        if (existingRating) {
+          setMyThumb(existingRating.thumbsUp);
+          setMyStars(existingRating.stars);
+          setRatingSubmitted(true);
+        }
+      }
+    } catch {
+      router.replace("/");
+    } finally {
+      setLoading(false);
+    }
+  }, [winnerId, router]);
+
+  useEffect(() => {
+    const cached = localStorage.getItem("dabys_user");
+    if (!cached) {
+      router.replace("/login");
+      return;
+    }
+    let u: User;
+    try {
+      u = JSON.parse(cached);
+      setUser(u);
+    } catch {
+      router.replace("/login");
+      return;
+    }
+    loadWinner();
+    // Fetch avatar
+    fetch(`/api/users/${u.id}/profile`).then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d?.profile?.avatarUrl) setUserAvatarUrl(d.profile.avatarUrl);
+    }).catch(() => {});
+  }, [router, loadWinner]);
+
+  // GIPHY browser: load trending when opened, debounced search
+  useEffect(() => {
+    if (!showGiphyBrowser) return;
+
+    if (!giphySearchQuery.trim()) {
+      setGiphyLoading(true);
+      fetch("/api/giphy/trending")
+        .then((r) => r.json())
+        .then((body) => {
+          setGiphyResults(body.data || []);
+          setNoGiphyKey(!!body.noKey);
+        })
+        .catch(() => setGiphyResults([]))
+        .finally(() => setGiphyLoading(false));
+      return;
+    }
+
+    if (giphySearchTimeoutRef.current) clearTimeout(giphySearchTimeoutRef.current);
+    giphySearchTimeoutRef.current = setTimeout(() => {
+      setGiphyLoading(true);
+      fetch(`/api/giphy/search?q=${encodeURIComponent(giphySearchQuery)}`)
+        .then((r) => r.json())
+        .then((body) => {
+          setGiphyResults(body.data || []);
+          setNoGiphyKey(!!body.noKey);
+        })
+        .catch(() => setGiphyResults([]))
+        .finally(() => setGiphyLoading(false));
+    }, 300);
+
+    return () => {
+      if (giphySearchTimeoutRef.current) clearTimeout(giphySearchTimeoutRef.current);
+    };
+  }, [showGiphyBrowser, giphySearchQuery]);
+
+  async function submitRating() {
+    if (!user || myThumb === null || myStars === 0) return;
+
+    try {
+      await fetch(`/api/winners/${winnerId}/ratings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          userName: user.name,
+          thumbsUp: myThumb,
+          stars: myStars,
+        }),
+      });
+      setRatingSubmitted(true);
+      loadWinner();
+    } catch {
+      console.error("Failed to submit rating");
+    }
+  }
+
+  async function postComment() {
+    const hasMedia = mediaFile || mediaPreview;
+    if (!user || (!commentText.trim() && !hasMedia)) return;
+    setPosting(true);
+
+    try {
+      let mediaUrl = "";
+      let mediaType = "";
+
+      if (mediaIsGiphy && mediaPreview) {
+        mediaUrl = mediaPreview;
+        mediaType = "gif";
+      } else if (mediaFile) {
+        const formData = new FormData();
+        formData.append("file", mediaFile);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          mediaUrl = uploadData.url;
+          mediaType = uploadData.mediaType;
+        }
+      } else if (mediaPreview) {
+        // Already-uploaded image URL (from image picker modal)
+        mediaUrl = mediaPreview;
+        mediaType = "image";
+      }
+
+      await fetch(`/api/winners/${winnerId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          userName: user.name,
+          text: commentText.trim(),
+          mediaUrl,
+          mediaType,
+        }),
+      });
+
+      setCommentText("");
+      setMediaFile(null);
+      setMediaPreview("");
+      setMediaIsGiphy(false);
+      setShowGiphyBrowser(false);
+      setGiphyPasteUrl("");
+      loadWinner();
+    } catch {
+      console.error("Failed to post comment");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    if (!user) return;
+    try {
+      await fetch(
+        `/api/winners/${winnerId}/comments?commentId=${commentId}&userId=${user.id}`,
+        { method: "DELETE" }
+      );
+      loadWinner();
+    } catch {
+      console.error("Failed to delete comment");
+    }
+  }
+
+  function insertGiphyFromPaste() {
+    const embedUrl = getGiphyEmbedUrl(giphyPasteUrl);
+    if (embedUrl) {
+      setMediaPreview(embedUrl);
+      setMediaIsGiphy(true);
+      setMediaFile(null);
+      setShowGiphyBrowser(false);
+      setGiphyPasteUrl("");
+    }
+  }
+
+  function selectGiphy(embedUrl: string) {
+    setMediaPreview(embedUrl);
+    setMediaIsGiphy(true);
+    setMediaFile(null);
+    setShowGiphyBrowser(false);
+    setGiphySearchQuery("");
+  }
+
+  function removeMedia() {
+    setMediaFile(null);
+    setMediaPreview("");
+    setMediaIsGiphy(false);
+    setShowGiphyBrowser(false);
+    setGiphyPasteUrl("");
+    setGiphySearchQuery("");
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return `${days}d`;
+    return new Date(dateStr).toLocaleDateString();
+  }
+
+  if (loading || !winner || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const displayStars = hoverStars || myStars;
+
+  return (
+    <div className="min-h-screen">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+      </div>
+
+      {/* Hero backdrop (backdrop art bleed, fallback to poster) */}
+      {(winner.backdropUrl || winner.posterUrl) && (
+        <div className="fixed inset-0 pointer-events-none">
+          <img
+            src={winner.backdropUrl || winner.posterUrl}
+            alt=""
+            className="w-full h-[60vh] object-cover opacity-[0.07]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/80 to-[var(--background)]" />
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
+              Dabys.org
+            </Link>
+
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/wheel" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Theme Wheel</Link>
+            <Link href="/stats" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Stats</Link>
+            {user ? (
+              <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                {userAvatarUrl ? (
+                  <img src={userAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="text-white/70 text-sm font-medium">{user.name}</span>
+              </Link>
+            ) : (
+              <div className="w-16" />
+            )}
+            <button onClick={() => { localStorage.removeItem("dabys_user"); router.replace("/login"); }} className="text-white/20 hover:text-white/50 transition-colors cursor-pointer" title="Log out"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></button>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 max-w-4xl mx-auto px-6 py-10">
+        {/* ─── Movie Hero ─── */}
+        <div className="flex flex-col sm:flex-row gap-8 mb-10">
+          {/* Poster */}
+          <div className="flex-shrink-0 w-48 sm:w-56 mx-auto sm:mx-0">
+            <div className="aspect-[2/3] rounded-2xl overflow-hidden border border-white/[0.08] shadow-2xl shadow-purple-500/10 bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+              {winner.posterUrl ? (
+                <img
+                  src={winner.posterUrl}
+                  alt={winner.movieTitle}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <svg className="w-16 h-16 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="inline-flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.003 6.003 0 01-5.54 0" />
+                </svg>
+                <span className="text-xs uppercase tracking-widest text-amber-400/70 font-medium">
+                  Weekly Winner
+                </span>
+              </div>
+              {winner.weekTheme && (
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/15 border border-purple-500/25 text-purple-300">
+                  {winner.weekTheme}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-bold text-white/95 mb-1">
+              {winner.movieTitle}
+            </h1>
+
+            {winner.year && (
+              <p className="text-white/40 text-sm mb-3">{winner.year}</p>
+            )}
+
+            {winner.submittedBy && (
+              <p className="text-white/40 text-sm mb-4">
+                Picked by{" "}
+                {winner.submittedByUserId ? (
+                  <Link href={`/profile/${winner.submittedByUserId}`} className="text-white/60 hover:text-purple-400 transition-colors">
+                    {winner.submittedBy}
+                  </Link>
+                ) : (
+                  <span className="text-white/60">{winner.submittedBy}</span>
+                )}
+              </p>
+            )}
+
+            {winner.overview && (
+              <p className="text-white/50 text-sm leading-relaxed mb-4 max-w-lg">
+                {winner.overview}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3">
+              {winner.letterboxdUrl && (
+                <a
+                  href={winner.letterboxdUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm hover:bg-green-500/20 transition-colors cursor-pointer"
+                  onClick={(e) => { e.preventDefault(); window.open(winner.letterboxdUrl!, "_blank", "noopener,noreferrer"); }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                  </svg>
+                  View on Letterboxd
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Trailer Embed ─── */}
+        {winner.trailerUrl && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest">Trailer</h3>
+            </div>
+            <div className="aspect-video">
+              <iframe
+                src={winner.trailerUrl}
+                title={`${winner.movieTitle} Trailer`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── Runner-Ups ─── */}
+        {winner.runnerUps && winner.runnerUps.length > 0 && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
+              Also in the Running
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {winner.runnerUps.map((ru, i) => (
+                <div key={i} className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+                  <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+                    {ru.posterUrl ? (
+                      <img src={ru.posterUrl} alt={ru.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl font-bold">{ru.movieTitle.charAt(0)}</div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  </div>
+                  <div className="p-3 relative z-0">
+                    <h4 className="text-sm font-semibold text-white/90 truncate">{ru.movieTitle}</h4>
+                    <p className="text-[11px] text-white/30 mt-0.5 truncate">
+                      {ru.year && <span className="text-white/40">{ru.year} &middot; </span>}
+                      by{" "}
+                      <Link href={`/profile/${ru.userId}`} className="text-white/40 hover:text-purple-400 transition-colors relative z-20">
+                        {ru.userName}
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Rate This Movie ─── */}
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+          <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-5">
+            {ratingSubmitted ? "Your Rating" : "Rate This Movie"}
+          </h3>
+
+          <div className="flex flex-col sm:flex-row items-center gap-8">
+            {/* Thumbs */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => { setMyThumb(true); setRatingSubmitted(false); }}
+                className={`w-14 h-14 rounded-full border-2 flex items-center justify-center text-2xl transition-all cursor-pointer ${
+                  myThumb === true
+                    ? "border-green-400 bg-green-500/15 shadow-lg shadow-green-500/20 scale-110"
+                    : "border-white/10 bg-white/[0.02] hover:border-green-400/40 hover:bg-green-500/5"
+                }`}
+              >
+                👍
+              </button>
+              <button
+                onClick={() => { setMyThumb(false); setRatingSubmitted(false); }}
+                className={`w-14 h-14 rounded-full border-2 flex items-center justify-center text-2xl transition-all cursor-pointer ${
+                  myThumb === false
+                    ? "border-red-400 bg-red-500/15 shadow-lg shadow-red-500/20 scale-110"
+                    : "border-white/10 bg-white/[0.02] hover:border-red-400/40 hover:bg-red-500/5"
+                }`}
+              >
+                👎
+              </button>
+            </div>
+
+            {/* Stars (half-star support) */}
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((s) => {
+                const filled = displayStars >= s;
+                const halfFilled = !filled && displayStars >= s - 0.5;
+                return (
+                  <div key={s} className="relative w-8 h-8 cursor-pointer transition-transform hover:scale-110" onMouseLeave={() => setHoverStars(0)}>
+                    {/* Left half — sets half star */}
+                    <div
+                      className="absolute inset-0 w-1/2 z-10"
+                      onMouseEnter={() => setHoverStars(s - 0.5)}
+                      onClick={() => { setMyStars(s - 0.5); setRatingSubmitted(false); }}
+                    />
+                    {/* Right half — sets full star */}
+                    <div
+                      className="absolute inset-0 left-1/2 w-1/2 z-10"
+                      onMouseEnter={() => setHoverStars(s)}
+                      onClick={() => { setMyStars(s); setRatingSubmitted(false); }}
+                    />
+                    {/* Full star (background) */}
+                    <svg className="absolute inset-0 w-8 h-8 text-white/10" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" />
+                    </svg>
+                    {/* Filled star */}
+                    {filled && (
+                      <svg className="absolute inset-0 w-8 h-8 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" />
+                      </svg>
+                    )}
+                    {/* Half-filled star */}
+                    {halfFilled && (
+                      <svg className="absolute inset-0 w-8 h-8 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]" viewBox="0 0 24 24">
+                        <defs><clipPath id={`half-${s}`}><rect x="0" y="0" width="12" height="24" /></clipPath></defs>
+                        <path clipPath={`url(#half-${s})`} fill="currentColor" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" />
+                      </svg>
+                    )}
+                  </div>
+                );
+              })}
+              {displayStars > 0 && (
+                <span className="text-xs text-amber-400/60 ml-2 font-medium tabular-nums">{displayStars}/5</span>
+              )}
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={submitRating}
+              disabled={myThumb === null || myStars === 0 || ratingSubmitted}
+              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer disabled:cursor-not-allowed ${
+                ratingSubmitted
+                  ? "bg-green-500/15 border border-green-500/30 text-green-400"
+                  : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 disabled:opacity-30"
+              }`}
+            >
+              {ratingSubmitted ? "Saved!" : "Submit Rating"}
+            </button>
+          </div>
+
+          {/* Dabys Score — thumbs + stars combined (0–100), Fresh/Rotten */}
+          <div className="mt-8 pt-6 border-t border-white/[0.06]">
+            <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">
+              Dabys Score
+            </h4>
+            {winner.ratings.length === 0 ? (
+              <p className="text-white/25 text-sm">
+                No score yet — be the first to rate!
+              </p>
+            ) : (
+              (() => {
+                // Each rating: thumb 0 or 100, stars 0.5–5 → 0–100. Combined = average of the two.
+                const scores = winner.ratings.map((r) => {
+                  const thumbScore = r.thumbsUp ? 100 : 0;
+                  const starScore = ((r.stars - 0.5) / 4.5) * 100;
+                  return (thumbScore + starScore) / 2;
+                });
+                const pct = Math.round(
+                  scores.reduce((a, b) => a + b, 0) / scores.length
+                );
+                const isFresh = pct >= 60;
+                return (
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex items-baseline gap-2">
+                      <span
+                        className={`text-4xl font-bold tabular-nums ${
+                          isFresh ? "text-green-400" : "text-red-400"
+                        }`}
+                      >
+                        {pct}%
+                      </span>
+                      <span
+                        className={`text-sm font-semibold uppercase tracking-wide ${
+                          isFresh ? "text-green-400/80" : "text-red-400/80"
+                        }`}
+                      >
+                        {isFresh ? "Fresh" : "Rotten"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-[140px] max-w-xs">
+                      <div className="h-2 rounded-full bg-white/10 overflow-hidden flex">
+                        <div
+                          className="h-full bg-green-500 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                        <div
+                          className="h-full bg-red-500 transition-all duration-500"
+                          style={{ width: `${100 - pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-white/25 mt-1.5">
+                        Thumbs + stars · Based on {winner.ratings.length} rating
+                        {winner.ratings.length !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        </div>
+
+        {/* ─── Comments Section (tweet-style) ─── */}
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/[0.06]">
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+              Discussion ({winner.stats.totalComments})
+            </h3>
+          </div>
+
+          {/* Compose */}
+          <div className="px-6 py-5 border-b border-white/[0.06]">
+            <div className="flex gap-3">
+              {/* User avatar */}
+              {userAvatarUrl ? (
+                <img src={userAvatarUrl} alt={user.name} className="flex-shrink-0 w-10 h-10 rounded-full object-cover border border-white/10" />
+              ) : (
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="What did you think?"
+                  rows={2}
+                  className="w-full bg-transparent border-none outline-none text-white/80 text-sm placeholder-white/20 resize-none"
+                />
+
+                {/* Media preview — uploaded image or GIPHY embed */}
+                {mediaPreview && (
+                  <div className="relative mt-2 inline-block">
+                    {mediaIsGiphy ? (
+                      <div className="relative rounded-xl overflow-hidden border border-white/[0.08] max-w-[280px]">
+                        <iframe
+                          src={mediaPreview}
+                          title="GIPHY embed"
+                          className="w-full h-[200px] pointer-events-none"
+                        />
+                        <button
+                          onClick={removeMedia}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <img
+                          src={mediaPreview}
+                          alt="Upload preview"
+                          className="max-h-48 rounded-xl border border-white/[0.08]"
+                        />
+                        <button
+                          onClick={removeMedia}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions bar */}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
+                  <div className="flex items-center gap-2">
+                    {/* Image — opens picker modal (upload, URL, paste) */}
+                    <button
+                      onClick={() => setShowImagePicker(true)}
+                      className="p-2 rounded-lg text-white/30 hover:text-purple-400 hover:bg-purple-500/10 transition-all cursor-pointer"
+                      title="Add image"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a2.25 2.25 0 002.25-2.25V5.25a2.25 2.25 0 00-2.25-2.25H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                      </svg>
+                    </button>
+                    {/* GIPHY browser */}
+                    <button
+                      onClick={() => setShowGiphyBrowser(true)}
+                      className="px-2.5 py-1.5 rounded-lg border border-white/10 text-white/30 hover:text-purple-400 hover:border-purple-500/30 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      GIF
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={postComment}
+                    disabled={posting || (!commentText.trim() && !mediaFile && !mediaPreview)}
+                    className="px-5 py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {posting ? "Posting..." : "Post"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Comment feed */}
+          {winner.comments.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <p className="text-white/25 text-sm">
+                No comments yet. Be the first to share your thoughts!
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {winner.comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="px-6 py-5 hover:bg-white/[0.01] transition-colors"
+                >
+                  <div className="flex gap-3">
+                    {/* Commenter avatar */}
+                    <Link href={`/profile/${comment.userId}`} className="flex-shrink-0 hover:opacity-80 transition-opacity">
+                      {comment.avatarUrl ? (
+                        <img src={comment.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                          {comment.userName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </Link>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Name + time */}
+                      <div className="flex items-center gap-2">
+                        <Link href={`/profile/${comment.userId}`} className="text-sm font-semibold text-white/80 hover:text-purple-400 transition-colors">
+                          {comment.userName}
+                        </Link>
+                        <span className="text-xs text-white/20">
+                          {timeAgo(comment.createdAt)}
+                        </span>
+                        {/* Delete own comment */}
+                        {comment.userId === user.id && (
+                          <button
+                            onClick={() => deleteComment(comment.id)}
+                            className="ml-auto text-white/15 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Comment text */}
+                      {comment.text && (
+                        <p className="text-sm text-white/70 mt-1 whitespace-pre-wrap break-words">
+                          {comment.text}
+                        </p>
+                      )}
+
+                      {/* Comment media — GIPHY embed or image */}
+                      {comment.mediaUrl && (
+                        <div className="mt-3">
+                          {comment.mediaUrl.includes("giphy.com/embed") ? (
+                            <div className="rounded-xl overflow-hidden border border-white/[0.06] max-w-[280px]">
+                              <iframe
+                                src={comment.mediaUrl}
+                                title="GIPHY"
+                                className="w-full h-[200px]"
+                              />
+                            </div>
+                          ) : (
+                            <img
+                              src={comment.mediaUrl}
+                              alt="Attached media"
+                              className="max-w-full max-h-80 rounded-xl border border-white/[0.06]"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── Expandable GIPHY browser modal (centered overlay) ─── */}
+        {showGiphyBrowser && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              aria-hidden
+              onClick={() => { setShowGiphyBrowser(false); setGiphySearchQuery(""); setGiphyPasteUrl(""); }}
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-label="Choose a GIF"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+                <button
+                  onClick={() => { setShowGiphyBrowser(false); setGiphySearchQuery(""); setGiphyPasteUrl(""); }}
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <span className="text-sm font-semibold text-white/80">GIPHY</span>
+                <input
+                  type="search"
+                  value={giphySearchQuery}
+                  onChange={(e) => setGiphySearchQuery(e.target.value)}
+                  placeholder="Search GIFs..."
+                  className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder-white/30 outline-none focus:border-purple-500/40"
+                  autoFocus
+                />
+              </div>
+
+              {/* Content: paste fallback when no API key */}
+              {noGiphyKey && (
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                    <p className="text-white/50 text-sm mb-3">
+                      Add <code className="text-purple-400/80">GIPHY_API_KEY</code> to your environment to browse GIFs. Or paste a link:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={giphyPasteUrl}
+                        onChange={(e) => setGiphyPasteUrl(e.target.value)}
+                        placeholder="https://giphy.com/gifs/..."
+                        className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/30 outline-none focus:border-purple-500/40"
+                      />
+                      <button
+                        onClick={insertGiphyFromPaste}
+                        disabled={!getGiphyEmbedUrl(giphyPasteUrl)}
+                        className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-30 cursor-pointer shrink-0"
+                      >
+                        Insert
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Content: grid when we have API */}
+              {!noGiphyKey && (
+                <div className="flex-1 overflow-auto p-4 min-h-0">
+                  {giphyLoading ? (
+                    <div className="flex justify-center py-12">
+                      <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                    </div>
+                  ) : giphyResults.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-white/40 text-sm">
+                        {giphySearchQuery.trim() ? "No GIFs found. Try another search." : "Loading..."}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-white/30 mb-2">
+                        {giphySearchQuery.trim() ? "Search results" : "Trending"}
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                        {giphyResults.map((gif) => (
+                          <button
+                            key={gif.id}
+                            type="button"
+                            onClick={() => selectGiphy(gif.embedUrl)}
+                            className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-purple-500/50 focus:border-purple-500/50 focus:outline-none bg-white/[0.04] transition-all cursor-pointer group"
+                          >
+                            <img
+                              src={gif.thumbnail}
+                              alt={gif.title || "GIF"}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* Image picker modal */}
+      <ImageCropModal
+        open={showImagePicker}
+        onClose={() => setShowImagePicker(false)}
+        onComplete={(url) => {
+          setMediaPreview(url);
+          setMediaFile(null);
+          setMediaIsGiphy(false);
+          setShowGiphyBrowser(false);
+          setShowImagePicker(false);
+        }}
+        aspect={16 / 9}
+        title="Add Image"
+        skipCrop
+      />
+
+      {/* Footer */}
+      <WinnerFooter />
+    </div>
+  );
+}
+
+function WinnerFooter() {
+  const router = useRouter();
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      if (res.ok) { router.push("/admin"); }
+      else { setAdminError("Wrong password"); setAdminPassword(""); }
+    } catch { setAdminError("Something went wrong"); }
+    finally { setAdminLoading(false); }
+  }
+
+  return (
+    <footer className="relative z-10 border-t border-white/[0.04] mt-16">
+      <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col items-center gap-4">
+        <button onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }} className="text-white/10 text-[11px] hover:text-white/30 transition-colors cursor-pointer">Admin Panel</button>
+        <div className={`overflow-hidden transition-all duration-300 ease-in-out w-full max-w-xs ${adminOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
+          <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-3">
+            <div className="flex gap-2">
+              <input type="password" placeholder="Password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors" />
+              <button type="submit" disabled={adminLoading || !adminPassword} className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+                {adminLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Go"}
+              </button>
+            </div>
+            {adminError && <p className="text-red-400/80 text-xs mt-2">{adminError}</p>}
+          </form>
+        </div>
+        <p className="text-white/8 text-[10px] tracking-widest uppercase">Dabys Media Group</p>
+      </div>
+    </footer>
+  );
+}
