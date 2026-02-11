@@ -88,3 +88,26 @@ export async function POST(request: Request) {
 
   return NextResponse.json(newWinner, { status: 201 });
 }
+
+export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const orderedIds = body.order;
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return NextResponse.json({ error: "order must be a non-empty array of winner ids" }, { status: 400 });
+  }
+
+  const winners = getWinners();
+  const idSet = new Set(orderedIds);
+  const byId = new Map(winners.map((w) => [w.id, w]));
+
+  if (orderedIds.some((id) => typeof id !== "string" || !byId.has(id))) {
+    return NextResponse.json({ error: "order contains invalid or missing winner ids" }, { status: 400 });
+  }
+  if (byId.size !== orderedIds.length) {
+    return NextResponse.json({ error: "order must contain each winner exactly once" }, { status: 400 });
+  }
+
+  const reordered = orderedIds.map((id) => byId.get(id)!);
+  saveWinners(reordered);
+  return NextResponse.json(reordered);
+}

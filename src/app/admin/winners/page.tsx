@@ -89,6 +89,8 @@ export default function AdminWinnersPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [reordering, setReordering] = useState(false);
   const editDropdownRef = useRef<HTMLDivElement>(null);
   const editSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -337,6 +339,55 @@ export default function AdminWinnersPage() {
       console.error("Failed to delete winner");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function handleDragStart(e: React.DragEvent, winner: Winner) {
+    setDraggingId(winner.id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", winner.id);
+    e.dataTransfer.setData("application/json", JSON.stringify({ winnerId: winner.id }));
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  async function handleDrop(e: React.DragEvent, targetWinner: Winner) {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/plain");
+    if (!draggedId || draggedId === targetWinner.id) {
+      setDraggingId(null);
+      return;
+    }
+    const fromIndex = winners.findIndex((w) => w.id === draggedId);
+    const toIndex = winners.findIndex((w) => w.id === targetWinner.id);
+    if (fromIndex === -1 || toIndex === -1) {
+      setDraggingId(null);
+      return;
+    }
+    const next = [...winners];
+    const [removed] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, removed);
+    setWinners(next);
+    setDraggingId(null);
+    setReordering(true);
+    try {
+      const res = await fetch("/api/winners", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: next.map((w) => w.id) }),
+      });
+      if (!res.ok) await loadWinners();
+    } catch {
+      await loadWinners();
+    } finally {
+      setReordering(false);
     }
   }
 
@@ -803,19 +854,35 @@ export default function AdminWinnersPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06]">
+          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
               All Winners ({winners.length})
             </h2>
+            {reordering && <span className="text-xs text-white/40">Saving order...</span>}
+            <p className="text-[11px] text-white/30 shrink-0">Drag to reorder</p>
           </div>
           <div className="divide-y divide-white/[0.04]">
             {winners.map((winner) => {
               const week = winner.weekId ? weekMap[winner.weekId] : null;
+              const isDragging = draggingId === winner.id;
               return (
                 <div
                   key={winner.id}
-                  className="px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors"
+                  className={`px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors ${isDragging ? "opacity-50" : ""}`}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, winner)}
                 >
+                  <div
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, winner)}
+                    onDragEnd={handleDragEnd}
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded text-white/30 hover:text-white/50 hover:bg-white/[0.04]"
+                    title="Drag to reorder"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path d="M8 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm6-12a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0zm0 6a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
                   {winner.posterUrl ? (
                     <img
                       src={winner.posterUrl}
