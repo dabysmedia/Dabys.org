@@ -18,7 +18,7 @@ export function ScrollingWinnersBg() {
     fetch("/api/winners")
       .then((r) => (r.ok ? r.json() : []))
       .then((winners: { backdropUrl?: string; posterUrl?: string }[]) => {
-        setWinnerArt(winners.map((w) => w.backdropUrl || w.posterUrl).filter(Boolean));
+        setWinnerArt(winners.map((w) => w.backdropUrl || w.posterUrl).filter((src): src is string => Boolean(src)));
       })
       .catch(() => setWinnerArt([]));
   }, []);
