@@ -30,6 +30,10 @@ interface Comment {
   mediaType: string;
   createdAt: string;
   avatarUrl?: string;
+  parentId?: string;
+  parentUserName?: string;
+  likeCount?: number;
+  likedByMe?: boolean;
 }
 
 interface RunnerUp {
@@ -117,11 +121,16 @@ export default function WinnerDetailPage() {
   const [giphyPasteUrl, setGiphyPasteUrl] = useState("");
   const [posting, setPosting] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
   const giphySearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadWinner = useCallback(async () => {
     try {
-      const res = await fetch(`/api/winners/${winnerId}`);
+      const cached = localStorage.getItem("dabys_user");
+      const u = cached ? JSON.parse(cached) as User : null;
+      const url = u?.id ? `/api/winners/${winnerId}?userId=${encodeURIComponent(u.id)}` : `/api/winners/${winnerId}`;
+      const res = await fetch(url);
       if (!res.ok) {
         router.replace("/");
         return;
@@ -130,9 +139,7 @@ export default function WinnerDetailPage() {
       setWinner(data);
 
       // Check if user already rated
-      const cached = localStorage.getItem("dabys_user");
-      if (cached) {
-        const u = JSON.parse(cached) as User;
+      if (u) {
         const existingRating = data.ratings.find((r) => r.userId === u.id);
         if (existingRating) {
           setMyThumb(existingRating.thumbsUp);
@@ -263,6 +270,7 @@ export default function WinnerDetailPage() {
           text: commentText.trim(),
           mediaUrl,
           mediaType,
+          ...(replyingTo && { parentId: replyingTo.commentId }),
         }),
       });
 
@@ -272,6 +280,7 @@ export default function WinnerDetailPage() {
       setMediaIsGiphy(false);
       setShowGiphyBrowser(false);
       setGiphyPasteUrl("");
+      setReplyingTo(null);
       loadWinner();
     } catch {
       console.error("Failed to post comment");
@@ -290,6 +299,23 @@ export default function WinnerDetailPage() {
       loadWinner();
     } catch {
       console.error("Failed to delete comment");
+    }
+  }
+
+  async function toggleLike(commentId: string) {
+    if (!user) return;
+    setLikingId(commentId);
+    try {
+      await fetch(`/api/winners/${winnerId}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      loadWinner();
+    } catch {
+      console.error("Failed to toggle like");
+    } finally {
+      setLikingId(null);
     }
   }
 
@@ -692,6 +718,14 @@ export default function WinnerDetailPage() {
 
           {/* Compose */}
           <div className="px-6 py-5 border-b border-white/[0.06]">
+            {replyingTo && (
+              <div className="flex items-center gap-2 mb-3 text-sm text-white/50">
+                <span>Replying to <span className="text-purple-400/80">{replyingTo.userName}</span></span>
+                <button type="button" onClick={() => setReplyingTo(null)} className="text-white/30 hover:text-white/60 cursor-pointer" aria-label="Cancel reply">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
             <div className="flex gap-3">
               {/* User avatar */}
               {userAvatarUrl ? (
@@ -796,7 +830,7 @@ export default function WinnerDetailPage() {
               {winner.comments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="px-6 py-5 hover:bg-white/[0.01] transition-colors"
+                  className={`px-6 py-5 hover:bg-white/[0.01] transition-colors ${comment.parentId ? "pl-14 border-l-2 border-white/[0.06] ml-4" : ""}`}
                 >
                   <div className="flex gap-3">
                     {/* Commenter avatar */}
@@ -811,8 +845,11 @@ export default function WinnerDetailPage() {
                     </Link>
 
                     <div className="flex-1 min-w-0">
-                      {/* Name + time */}
-                      <div className="flex items-center gap-2">
+                      {/* Name + time + reply context */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {comment.parentUserName && (
+                          <span className="text-xs text-white/30">Replying to <span className="text-purple-400/70">{comment.parentUserName}</span></span>
+                        )}
                         <Link href={`/profile/${comment.userId}`} className="text-sm font-semibold text-white/80 hover:text-purple-400 transition-colors">
                           {comment.userName}
                         </Link>
@@ -860,6 +897,29 @@ export default function WinnerDetailPage() {
                           )}
                         </div>
                       )}
+
+                      {/* Like + Reply actions */}
+                      <div className="flex items-center gap-4 mt-2">
+                        <button
+                          onClick={() => toggleLike(comment.id)}
+                          disabled={likingId === comment.id}
+                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${comment.likedByMe ? "text-red-400" : "text-white/40 hover:text-red-400/80"}`}
+                          title={comment.likedByMe ? "Unlike" : "Like"}
+                        >
+                          {comment.likedByMe ? (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
+                          )}
+                          <span>{comment.likeCount ?? 0}</span>
+                        </button>
+                        <button
+                          onClick={() => setReplyingTo({ commentId: comment.id, userName: comment.userName })}
+                          className="text-xs font-medium text-white/40 hover:text-purple-400 transition-colors cursor-pointer"
+                        >
+                          Reply
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

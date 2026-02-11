@@ -88,6 +88,7 @@ export default function AdminWinnersPage() {
   const [editCreatingWeek, setEditCreatingWeek] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const editDropdownRef = useRef<HTMLDivElement>(null);
   const editSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -323,6 +324,19 @@ export default function AdminWinnersPage() {
       console.error("Failed to fetch movie details");
     } finally {
       setEditSelectingMovie(false);
+    }
+  }
+
+  async function handleDeleteWinner(winner: Winner) {
+    if (!confirm(`Delete winner "${winner.movieTitle}" (${winner.year || ""})? This will also remove all ratings and comments for this winner.`)) return;
+    setDeletingId(winner.id);
+    try {
+      const res = await fetch(`/api/winners/${winner.id}`, { method: "DELETE" });
+      if (res.ok) await loadWinners();
+    } catch {
+      console.error("Failed to delete winner");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -837,9 +851,18 @@ export default function AdminWinnersPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => openEdit(winner)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 transition-colors cursor-pointer"
+                      disabled={!!deletingId}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/50 hover:text-white/80 hover:border-white/20 transition-colors cursor-pointer disabled:opacity-50"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteWinner(winner)}
+                      disabled={deletingId === winner.id}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400/70 hover:text-red-400 hover:border-red-500/50 transition-colors cursor-pointer disabled:opacity-50"
+                      title="Delete this winner"
+                    >
+                      {deletingId === winner.id ? "Deleting..." : "Delete"}
                     </button>
                     {winner.letterboxdUrl && (
                       <a

@@ -206,6 +206,7 @@ export interface Comment {
   mediaUrl: string; // image or gif URL
   mediaType: string; // "image" | "gif" | ""
   createdAt: string;
+  parentId?: string; // set for replies
 }
 
 export function getComments(): Comment[] {
@@ -214,6 +215,24 @@ export function getComments(): Comment[] {
 
 export function saveComments(comments: Comment[]) {
   writeJson("comments.json", comments);
+}
+
+// ──── Comment likes (userId likes commentId) ─────────────
+export interface CommentLike {
+  commentId: string;
+  userId: string;
+}
+
+export function getCommentLikes(): CommentLike[] {
+  try {
+    return readJson<CommentLike[]>("commentLikes.json");
+  } catch {
+    return [];
+  }
+}
+
+export function saveCommentLikes(likes: CommentLike[]) {
+  writeJson("commentLikes.json", likes);
 }
 
 // ──── Theme Wheel ───────────────────────────────────────

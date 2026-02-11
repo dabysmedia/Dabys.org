@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -24,6 +24,8 @@ export async function POST(
     Math.max(0, ...comments.map((c) => parseInt(c.id, 10))) + 1
   );
 
+  const parentId = typeof body.parentId === "string" && body.parentId.trim() ? body.parentId.trim() : undefined;
+
   const newComment = {
     id: newId,
     winnerId,
@@ -33,6 +35,7 @@ export async function POST(
     mediaUrl: body.mediaUrl || "",
     mediaType: body.mediaType || "",
     createdAt: new Date().toISOString(),
+    ...(parentId && { parentId }),
   };
 
   comments.push(newComment);
@@ -63,8 +66,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Comment not found" }, { status: 404 });
   }
 
-  comments.splice(idx, 1);
-  saveComments(comments);
+  const replyIds = comments.filter((c) => c.parentId === commentId).map((c) => c.id);
+  const idsToRemove = new Set([commentId, ...replyIds]);
+
+  const nextComments = comments.filter((c) => c.id !== commentId && c.parentId !== commentId);
+  saveComments(nextComments);
+
+  const likes = getCommentLikes().filter((l) => !idsToRemove.has(l.commentId));
+  saveCommentLikes(likes);
 
   return NextResponse.json({ success: true });
 }
