@@ -58,7 +58,7 @@ export function ScrollingWinnersBg() {
               <img
                 src={src}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-[0.1]"
+                className="absolute inset-0 w-full h-full object-cover opacity-[0.2]"
               />
             </div>
           ))}
@@ -69,3 +69,4 @@ export function ScrollingWinnersBg() {
     </div>
   );
 }
+
