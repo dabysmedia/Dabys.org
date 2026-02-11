@@ -1,18 +1,41 @@
 import fs from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "src", "data");
+// Default data directory baked into the image
+const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
+// Allow overriding via env (e.g. Railway volume mounted at /data)
+const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
+
+function ensureDataFile(filename: string) {
+  const targetPath = path.join(DATA_DIR, filename);
+
+  // Always ensure the directory exists before any read/write
+  const dir = path.dirname(targetPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  // If using a custom DATA_DIR and the file doesn't exist there yet,
+  // seed it from the baked-in src/data copy (if present).
+  if (!fs.existsSync(targetPath) && DATA_DIR !== DEFAULT_DATA_DIR) {
+    const defaultPath = path.join(DEFAULT_DATA_DIR, filename);
+    if (fs.existsSync(defaultPath)) {
+      fs.copyFileSync(defaultPath, targetPath);
+    }
+  }
+
+  return targetPath;
+}
 
 function readJson<T>(filename: string): T {
-  const raw = fs.readFileSync(path.join(DATA_DIR, filename), "utf-8");
+  const filePath = ensureDataFile(filename);
+  const raw = fs.readFileSync(filePath, "utf-8");
   return JSON.parse(raw);
 }
 
 function writeJson<T>(filename: string, data: T) {
-  fs.writeFileSync(
-    path.join(DATA_DIR, filename),
-    JSON.stringify(data, null, 2)
-  );
+  const filePath = ensureDataFile(filename);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
 // ──── Users ─────────────────────────────────────────────
