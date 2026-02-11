@@ -67,6 +67,7 @@ interface WinnerDetail {
     avgStars: number;
     totalRatings: number;
     totalComments: number;
+    dabysScorePct?: number;
   };
 }
 
