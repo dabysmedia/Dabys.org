@@ -547,7 +547,13 @@ export default function HomePage() {
                                 <h3 className="text-sm font-semibold text-white/90 truncate">{sub.movieTitle}</h3>
                                 <p className="text-[11px] text-white/30 mt-0.5 truncate">
                                   {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
-                                  by {sub.userName}
+                                  by{" "}
+                                  <Link
+                                    href={`/profile/${sub.userId}`}
+                                    className="text-white/40 hover:text-purple-400 transition-colors"
+                                  >
+                                    {sub.userName}
+                                  </Link>
                                 </p>
                               </div>
                             </>
