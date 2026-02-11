@@ -434,19 +434,22 @@ export default function HomePage() {
                       const showTrailer = voteTrailerId === sub.id;
                       const hasTrailer = !!sub.trailerUrl;
                       const hasLetterboxd = !!sub.letterboxdUrl;
+                      const isOwn = sub.userId === user.id;
 
                       const voteCardBorderClass = showTrailer
                         ? "col-span-2 sm:col-span-2 md:col-span-3 lg:col-span-3 border-purple-500/30 shadow-lg shadow-purple-500/10"
-                        : isMyVote
-                          ? "border-blue-500/40 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/30"
-                          : myVote
-                            ? "border-white/[0.06] opacity-50"
-                            : "border-white/[0.06] hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10";
+                        : isOwn
+                          ? "border-white/[0.06] opacity-40"
+                          : isMyVote
+                            ? "border-blue-500/40 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/30"
+                            : myVote
+                              ? "border-white/[0.06] opacity-50"
+                              : "border-white/[0.06] hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10";
 
                       return (
                         <div
                           key={sub.id}
-                          className={`group relative rounded-xl overflow-hidden border bg-white/[0.02] transition-all duration-300 ${voteCardBorderClass} ${!myVote ? "cursor-pointer" : ""}`}
+                          className={`group relative rounded-xl overflow-hidden border bg-white/[0.02] transition-all duration-300 ${voteCardBorderClass} ${!myVote && !isOwn ? "cursor-pointer" : ""}`}
                         >
                           {showTrailer && sub.trailerUrl ? (
                             <>
@@ -480,7 +483,7 @@ export default function HomePage() {
                               <div
                                 className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30"
                                 onClick={() => {
-                                  if (myVote) return;
+                                  if (myVote || isOwn) return;
                                   setVoteActiveId(isActive ? null : sub.id);
                                   setVoteTrailerId(null);
                                 }}
@@ -501,7 +504,17 @@ export default function HomePage() {
                                     {sub.submissionCount}×
                                   </div>
                                 )}
-                                {isActive && (
+                                {isOwn && (
+                                  <div className="absolute inset-0 z-10 bg-black/65 backdrop-blur-sm flex flex-col items-center justify-center gap-1 px-4 text-center">
+                                    <span className="text-base text-white/80 font-semibold">
+                                      ⛓️ nice try
+                                    </span>
+                                    <span className="text-[11px] text-white/40">
+                                      You can&apos;t vote for your own movie.
+                                    </span>
+                                  </div>
+                                )}
+                                {isActive && !isOwn && (
                                   <div className="absolute inset-0 z-10 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4">
                                     {hasLetterboxd && sub.letterboxdUrl && (
                                       <a

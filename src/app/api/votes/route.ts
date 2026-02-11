@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getVotes, saveVotes, getCurrentWeek } from "@/lib/data";
+import { getVotes, saveVotes, getCurrentWeek, getSubmissions } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,6 +27,21 @@ export async function POST(request: Request) {
   if (!body.userId || !body.submissionId) {
     return NextResponse.json(
       { error: "userId and submissionId required" },
+      { status: 400 }
+    );
+  }
+
+  const submissions = getSubmissions();
+  const submission = submissions.find((s) => s.id === body.submissionId);
+  if (!submission) {
+    return NextResponse.json(
+      { error: "Unknown submission" },
+      { status: 400 }
+    );
+  }
+  if (submission.userId === body.userId) {
+    return NextResponse.json(
+      { error: "You can't vote for your own submission" },
       { status: 400 }
     );
   }
