@@ -27,6 +27,7 @@ interface StatsData {
 interface FavoriteSlice {
   name: string;
   count: number;
+  profileUrl?: string;
 }
 
 interface FavoritesData {
@@ -57,7 +58,11 @@ function FavoriteBarList({ data, accent = "purple" }: { data: FavoriteSlice[]; a
       <div className={`rounded-xl border ${borderAccent} p-4 shrink-0`}>
         <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-2">Winner</p>
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white/90">1</span>
+          {winner.profileUrl ? (
+            <img src={winner.profileUrl} alt="" className="h-8 w-8 shrink-0 rounded-lg object-cover bg-white/10" />
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white/90">1</span>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white/90 truncate">{winner.name}</p>
             <p className="text-xs text-white/50 mt-0.5">{winner.count} appearance{winner.count !== 1 ? "s" : ""} in winning films</p>
