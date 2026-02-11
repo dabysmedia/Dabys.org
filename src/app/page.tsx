@@ -6,7 +6,7 @@ import Link from "next/link";
 
 interface User { id: string; name: string; }
 interface Week { id: string; theme: string; phase: string; startedAt: string; }
-interface Submission { id: string; weekId: string; userId: string; userName: string; movieTitle: string; posterUrl: string; letterboxdUrl: string; tmdbId?: number; year?: string; overview?: string; trailerUrl?: string; backdropUrl?: string; createdAt: string; submissionCount?: number; }
+interface Submission { id: string; weekId: string; userId: string; userName: string; movieTitle: string; posterUrl: string; letterboxdUrl: string; tmdbId?: number; year?: string; overview?: string; trailerUrl?: string; backdropUrl?: string; createdAt: string; submissionCount?: number; pitch?: string; avatarUrl?: string; }
 interface Vote { id: string; weekId: string; userId: string; userName: string; submissionId: string; }
 interface Winner { id: string; weekId: string; movieTitle: string; posterUrl: string; letterboxdUrl: string; submittedBy: string; publishedAt: string; year?: string; weekTheme?: string; submittedByUserId?: string; backdropUrl?: string; }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
@@ -519,14 +519,26 @@ export default function HomePage() {
                 )}
 
                 {/* Submissions grid */}
-                {submissions.length > 0 && <SubmissionsGrid submissions={submissions} />}
+                {submissions.length > 0 && (
+                  <SubmissionsGrid
+                    submissions={submissions}
+                    currentUserId={user?.id}
+                    onPitchSaved={loadData}
+                  />
+                )}
               </>
             )}
 
             {/* ── SUBS_CLOSED: read-only submissions ── */}
             {phase === "subs_closed" && (
               <>
-                {submissions.length > 0 ? <SubmissionsGrid submissions={submissions} /> : (
+                {submissions.length > 0 ? (
+                  <SubmissionsGrid
+                    submissions={submissions}
+                    currentUserId={user?.id}
+                    onPitchSaved={loadData}
+                  />
+                ) : (
                   <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center">
                     <p className="text-white/30 text-sm">No submissions this week.</p>
                   </div>
@@ -707,7 +719,13 @@ export default function HomePage() {
             {phase === "vote_closed" && (
               <>
                 {submissions.length > 0 ? (
-                  <SubmissionsGrid submissions={submissions} voteTally={voteTally} sorted />
+                  <SubmissionsGrid
+                  submissions={submissions}
+                  voteTally={voteTally}
+                  sorted
+                  currentUserId={user?.id}
+                  onPitchSaved={loadData}
+                />
                 ) : (
                   <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center">
                     <p className="text-white/30 text-sm">No submissions this week.</p>
@@ -962,20 +980,46 @@ function SubmissionsGrid({
   voteTally,
   highlightTitle,
   sorted,
+  currentUserId,
+  onPitchSaved,
 }: {
   submissions: Submission[];
   voteTally?: Record<string, number>;
   highlightTitle?: string;
   sorted?: boolean;
+  currentUserId?: string;
+  onPitchSaved?: () => void | Promise<void>;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [trailerId, setTrailerId] = useState<string | null>(null);
+  const [pitchModalSub, setPitchModalSub] = useState<Submission | null>(null);
+  const [draftPitch, setDraftPitch] = useState("");
+  const [pitchSaving, setPitchSaving] = useState(false);
 
   const items = sorted && voteTally
     ? [...submissions].sort((a, b) => (voteTally[b.id] || 0) - (voteTally[a.id] || 0))
     : submissions;
 
+  async function savePitch() {
+    if (!pitchModalSub || !currentUserId) return;
+    setPitchSaving(true);
+    try {
+      const res = await fetch(`/api/submissions/${pitchModalSub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, pitch: draftPitch.trim().slice(0, 100) }),
+      });
+      if (res.ok) {
+        setPitchModalSub(null);
+        await onPitchSaved?.();
+      }
+    } finally {
+      setPitchSaving(false);
+    }
+  }
+
   return (
+    <>
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       {items.map((sub, i) => {
         const isActive = activeId === sub.id;
@@ -992,11 +1036,14 @@ function SubmissionsGrid({
             ? "border-amber-500/30 shadow-lg shadow-amber-500/10"
             : "border-white/[0.06]";
 
+        const isMine = currentUserId && sub.userId === currentUserId;
+
         return (
           <div
             key={sub.id}
-            className={`group relative rounded-xl overflow-hidden border bg-white/[0.02] transition-all duration-300 ${borderClass}`}
+            className={`group relative rounded-xl border bg-white/[0.02] transition-all duration-300 ${borderClass}`}
           >
+            <div className="rounded-xl overflow-hidden">
             {/* ── Trailer expanded view ── */}
             {showTrailer && sub.trailerUrl ? (
               <div>
@@ -1043,6 +1090,24 @@ function SubmissionsGrid({
                     <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl font-bold">{sub.movieTitle.charAt(0)}</div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                  {/* Pitch — Instagram reel style: pfp + bubble at bottom, hover only */}
+                  {sub.pitch && (
+                    <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end gap-2 p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none">
+                      <div className="shrink-0 w-8 h-8 rounded-full border-2 border-white/40 overflow-hidden bg-white/10 ring-2 ring-black/20">
+                        {sub.avatarUrl ? (
+                          <img src={sub.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/80 text-xs font-semibold">
+                            {(sub.userName || "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-white/90 backdrop-blur-sm border border-white/30 px-3 py-2 shadow-lg">
+                        <p className="text-[13px] text-neutral-800 leading-snug line-clamp-2 break-words">{sub.pitch}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Repeat submission badge */}
                   {sub.submissionCount != null && sub.submissionCount > 1 && (
@@ -1098,16 +1163,57 @@ function SubmissionsGrid({
                 </div>
                 <div className="p-3 relative z-0">
                   <h3 className="text-sm font-semibold text-white/90 truncate">{sub.movieTitle}</h3>
-                  <p className="text-[11px] text-white/30 mt-0.5 truncate">
+                  <p className="text-[11px] text-white/30 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
                     {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
-                    by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors relative z-20">{sub.userName}</Link>
+                    <span>by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors relative z-20">{sub.userName}</Link></span>
+                    {isMine && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPitchModalSub(sub);
+                          setDraftPitch(sub.pitch ?? "");
+                        }}
+                        className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors cursor-pointer shrink-0"
+                      >
+                        {sub.pitch ? "Edit pitch" : "Add pitch"}
+                      </button>
+                    )}
                   </p>
                 </div>
               </>
             )}
+            </div>
           </div>
         );
       })}
     </div>
+
+    {/* Pitch editor modal */}
+    {pitchModalSub && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setPitchModalSub(null)}>
+        <div className="rounded-2xl border border-white/[0.12] bg-[#0f0f14] p-5 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-sm font-semibold text-white/80 mb-1">Pitch for {pitchModalSub.movieTitle}</h3>
+          <p className="text-[11px] text-white/40 mb-3">Short elevator pitch (max 100 characters), shown on hover.</p>
+          <textarea
+            value={draftPitch}
+            onChange={(e) => setDraftPitch(e.target.value.slice(0, 100))}
+            maxLength={100}
+            placeholder="Why should we watch this?"
+            className="w-full h-24 rounded-xl bg-white/[0.06] border border-white/[0.08] px-3 py-2 text-sm text-white/90 placeholder-white/30 resize-none focus:outline-none focus:border-purple-500/40"
+          />
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-[11px] text-white/30">{draftPitch.length}/100</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setPitchModalSub(null)} className="px-3 py-1.5 rounded-lg text-xs text-white/50 hover:text-white/80 border border-white/[0.08] cursor-pointer">Cancel</button>
+              <button type="button" onClick={savePitch} disabled={pitchSaving} className="px-3 py-1.5 rounded-lg text-xs bg-purple-500/80 text-white hover:bg-purple-500 disabled:opacity-50 cursor-pointer">
+                {pitchSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -27,6 +27,11 @@ export async function PATCH(
   if (typeof body.backdropUrl === "string") s.backdropUrl = body.backdropUrl || undefined;
   if (typeof body.tmdbId === "number") s.tmdbId = body.tmdbId;
   if (typeof body.createdAt === "string") s.createdAt = body.createdAt;
+  // Pitch: only allow if requester is the submitter (body.userId must match)
+  if (typeof body.pitch === "string" && typeof body.userId === "string" && body.userId === s.userId) {
+    const trimmed = body.pitch.trim().slice(0, 100);
+    s.pitch = trimmed || undefined;
+  }
 
   subs[idx] = s;
   saveSubmissions(subs);

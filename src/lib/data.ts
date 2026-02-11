@@ -125,6 +125,8 @@ export interface Submission {
   trailerUrl?: string;
   backdropUrl?: string;
   createdAt: string;
+  /** Elevator pitch (max 100 chars), only settable by submitter */
+  pitch?: string;
 }
 
 export function getSubmissions(): Submission[] {

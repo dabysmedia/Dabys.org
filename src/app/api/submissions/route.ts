@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSubmissions, saveSubmissions, getCurrentWeek } from "@/lib/data";
+import { getSubmissions, saveSubmissions, getCurrentWeek, getProfiles } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const weekId = searchParams.get("weekId");
 
   const allSubs = getSubmissions();
+  const profiles = getProfiles();
 
   // Count how many times each movie has been submitted (all time), keyed by tmdbId or movieTitle
   const countByMovie = new Map<string, number>();
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
   const enriched = subs.map((s) => {
     const key = s.tmdbId != null ? `tmdb:${s.tmdbId}` : `title:${s.movieTitle.trim().toLowerCase()}`;
     const submissionCount = countByMovie.get(key) ?? 1;
-    return { ...s, submissionCount };
+    const profile = profiles.find((p) => p.userId === s.userId);
+    return { ...s, submissionCount, avatarUrl: profile?.avatarUrl || "" };
   });
 
   return NextResponse.json(enriched);
