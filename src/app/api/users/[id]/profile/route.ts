@@ -87,8 +87,28 @@ export async function GET(
     };
   });
 
-  // User's ratings — compute favourite movie from highest-starred
+  // User's ratings — list + compute favourite movie from highest-starred
   const userRatings = allRatings.filter((r) => r.userId === id);
+  const userRatingEntries = userRatings
+    .map((r) => {
+      const winner = allWinners.find((w) => w.id === r.winnerId);
+      return {
+        id: r.id,
+        winnerId: r.winnerId,
+        title: winner?.movieTitle || "Unknown",
+        posterUrl: winner?.posterUrl || "",
+        year: winner?.year || "",
+        stars: r.stars,
+        thumbsUp: r.thumbsUp,
+        createdAt: r.createdAt,
+      };
+    })
+    // Sort greatest to least by stars (then newest first for ties)
+    .sort((a, b) => {
+      if (b.stars !== a.stars) return b.stars - a.stars;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
   let favoriteMovie: {
     title: string;
     posterUrl: string;
@@ -169,6 +189,7 @@ export async function GET(
       skipsUsed,
       skipsAvailable,
     },
+    ratings: userRatingEntries,
     submissions: userSubs,
     weeksWon,
     comments: userComments,

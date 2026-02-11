@@ -40,6 +40,17 @@ interface Stats {
   skipsAvailable: number;
 }
 
+interface RatingEntry {
+  id: string;
+  winnerId: string;
+  title: string;
+  posterUrl: string;
+  year: string;
+  stars: number;
+  thumbsUp: boolean;
+  createdAt: string;
+}
+
 interface SubEntry {
   id: string;
   movieTitle: string;
@@ -75,6 +86,7 @@ interface FullProfile {
   user: { id: string; name: string };
   profile: ProfileData;
   stats: Stats;
+  ratings: RatingEntry[];
   submissions: SubEntry[];
   weeksWon: WinEntry[];
   comments: CommentEntry[];
@@ -100,6 +112,9 @@ export default function ProfilePage() {
 
   // Crop modals
   const [cropTarget, setCropTarget] = useState<"avatar" | "banner" | null>(null);
+
+  // Ratings modal
+  const [showRatingsModal, setShowRatingsModal] = useState(false);
 
   const isOwnProfile = currentUser?.id === profileId;
 
@@ -203,7 +218,7 @@ export default function ProfilePage() {
     );
   }
 
-  const { user, profile, stats, submissions, weeksWon, comments } = data;
+  const { user, profile, stats, ratings, submissions, weeksWon, comments } = data;
 
   return (
     <div className="min-h-screen">
@@ -429,10 +444,14 @@ export default function ProfilePage() {
         )}
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <StatCard label="Submissions" value={stats.totalSubmissions} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
           <StatCard label="Weeks Won" value={stats.totalWins} icon="trophy" />
-          <StatCard label="Avg Rating" value={stats.avgStars ? `${stats.avgStars} / 5` : "—"} icon="star" />
+          <StatCard
+            label="Avg Rating"
+            value={stats.avgStars ? `${stats.avgStars} / 5` : "—"}
+            icon="star"
+            onClick={() => setShowRatingsModal(true)}
+          />
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="flex items-center gap-2 mb-1.5">
               <svg className="w-4 h-4 text-cyan-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -629,6 +648,143 @@ export default function ProfilePage() {
         </div>
       </main>
 
+      {/* Ratings modal */}
+      {showRatingsModal && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowRatingsModal(false)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div
+              className="w-full max-w-xl max-h-[80vh] rounded-2xl border border-white/[0.08] bg-[var(--background,#050509)] shadow-2xl overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+                <div>
+                  <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest">
+                    Your Ratings
+                  </h2>
+                  <p className="text-xs text-white/30 mt-0.5">
+                    Ranked from highest to lowest
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowRatingsModal(false)}
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                {ratings.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-white/40">
+                      You haven&apos;t rated any winners yet.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {ratings.map((r, idx) => (
+                      <li
+                        key={r.id}
+                        className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5"
+                      >
+                        <span className="w-6 text-xs font-semibold text-white/30 tabular-nums text-center">
+                          #{idx + 1}
+                        </span>
+                        <a
+                          href={`/winners/${r.winnerId}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.open(`/winners/${r.winnerId}`, "_blank", "noopener,noreferrer");
+                          }}
+                          className="flex items-center gap-3 flex-1 min-w-0 group cursor-pointer"
+                        >
+                          <div className="w-10 h-14 rounded-md overflow-hidden bg-gradient-to-br from-purple-900/40 to-indigo-900/40 flex-shrink-0 border border-white/[0.06]">
+                            {r.posterUrl ? (
+                              <img src={r.posterUrl} alt={r.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/10 text-xs font-bold">
+                                {r.title.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-white/85 truncate group-hover:text-purple-200 transition-colors">
+                                {r.title}
+                              </p>
+                              {r.year && (
+                                <span className="text-[11px] text-white/30 flex-shrink-0">
+                                  {r.year}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => {
+                                  const starVal = r.stars;
+                                  const filled = starVal >= s;
+                                  const half = !filled && starVal >= s - 0.5;
+                                  return (
+                                    <div key={s} className="relative w-3.5 h-3.5">
+                                      <svg className="w-3.5 h-3.5 text-white/10" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                      </svg>
+                                      {filled && (
+                                        <svg className="absolute inset-0 w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                        </svg>
+                                      )}
+                                      {half && (
+                                        <svg className="absolute inset-0 w-3.5 h-3.5 text-yellow-400" viewBox="0 0 24 24">
+                                          <defs>
+                                            <clipPath id={`profile-rating-half-${r.id}-${s}`}>
+                                              <rect x="0" y="0" width="12" height="24" />
+                                            </clipPath>
+                                          </defs>
+                                          <path
+                                            clipPath={`url(#profile-rating-half-${r.id}-${s})`}
+                                            fill="currentColor"
+                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                          />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <span className="text-[11px] text-yellow-400/70 font-medium tabular-nums">
+                                {r.stars.toFixed(1)} / 5
+                              </span>
+                              <span className="text-[11px] text-white/25">
+                                &middot; {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                              </span>
+                            </div>
+                          </div>
+                        </a>
+                        <span className="ml-1">
+                          {r.thumbsUp ? (
+                            <span className="text-green-400/70 text-lg leading-none">👍</span>
+                          ) : (
+                            <span className="text-red-400/70 text-lg leading-none">👎</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Crop modals */}
       <ImageCropModal
         open={cropTarget === "avatar"}
@@ -698,7 +854,19 @@ function ProfileFooter() {
 
 // ─── Helper components ───────────────────────────────────
 
-function StatCard({ label, value, icon, small }: { label: string; value: string | number; icon?: string; small?: boolean }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  small,
+  onClick,
+}: {
+  label: string;
+  value: string | number;
+  icon?: string;
+  small?: boolean;
+  onClick?: () => void;
+}) {
   const iconEl =
     icon === "trophy" ? (
       <svg className="w-4 h-4 text-amber-400/60" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172" /></svg>
@@ -708,8 +876,17 @@ function StatCard({ label, value, icon, small }: { label: string; value: string 
       <svg className="w-4 h-4 text-pink-400/60" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
     ) : null;
 
+  const clickable = !!onClick;
+
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+    <div
+      className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 ${
+        clickable ? "cursor-pointer hover:border-purple-500/40 hover:bg-white/[0.04] transition-colors" : ""
+      }`}
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="flex items-center gap-2 mb-1.5">
         {iconEl}
         <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">{label}</span>
