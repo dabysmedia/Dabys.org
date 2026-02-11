@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     overview: body.overview || undefined,
     trailerUrl: body.trailerUrl || undefined,
     backdropUrl: body.backdropUrl || undefined,
+    runtime: typeof body.runtime === "number" && body.runtime >= 0 ? body.runtime : undefined,
   };
 
   winners.push(newWinner);

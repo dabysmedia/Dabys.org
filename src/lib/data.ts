@@ -149,6 +149,7 @@ export interface Winner {
   overview?: string;
   trailerUrl?: string;
   backdropUrl?: string;
+  runtime?: number; // minutes (from TMDB)
 }
 
 export function getWinners(): Winner[] {

@@ -130,6 +130,7 @@ export async function PATCH(
   if (typeof body.trailerUrl === "string") w.trailerUrl = body.trailerUrl || undefined;
   if (typeof body.backdropUrl === "string") w.backdropUrl = body.backdropUrl || undefined;
   if (typeof body.tmdbId === "number") w.tmdbId = body.tmdbId;
+  if (typeof body.runtime === "number" && body.runtime >= 0) w.runtime = body.runtime;
 
   winners[idx] = w;
   saveWinners(winners);

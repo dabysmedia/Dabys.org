@@ -114,26 +114,17 @@ export async function GET() {
     }
   }
 
-  // Most discussed winner (comment count per winner)
-  const commentCountByWinner = new Map<string, number>();
-  for (const c of comments) {
-    commentCountByWinner.set(c.winnerId, (commentCountByWinner.get(c.winnerId) || 0) + 1);
-  }
-  let mostDiscussedWinner: { winnerId: string; movieTitle: string; posterUrl: string; commentCount: number } | null = null;
-  let maxComments = 0;
-  for (const [winnerId, commentCount] of commentCountByWinner.entries()) {
-    if (commentCount > maxComments) {
-      maxComments = commentCount;
-      const winner = winners.find((w) => w.id === winnerId);
-      if (winner) {
-        mostDiscussedWinner = {
-          winnerId,
-          movieTitle: winner.movieTitle,
-          posterUrl: winner.posterUrl || "",
-          commentCount,
-        };
-      }
-    }
+  // Longest movie (winners with runtime, pick max)
+  const withRuntime = winners.filter((w) => w.runtime != null && w.runtime > 0);
+  let longestWinner: { winnerId: string; movieTitle: string; posterUrl: string; runtimeMinutes: number } | null = null;
+  if (withRuntime.length > 0) {
+    const longest = withRuntime.reduce((a, b) => (a.runtime! > b.runtime! ? a : b));
+    longestWinner = {
+      winnerId: longest.id,
+      movieTitle: longest.movieTitle,
+      posterUrl: longest.posterUrl || "",
+      runtimeMinutes: longest.runtime!,
+    };
   }
 
   // Most popular decade (from winning films' release year)
@@ -158,7 +149,7 @@ export async function GET() {
     winLeaders,
     biggestSkippers,
     bestRatedWinner,
-    mostDiscussedWinner,
+    longestWinner,
     winnersByDecade,
   });
 }

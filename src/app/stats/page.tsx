@@ -20,7 +20,7 @@ interface StatsData {
   winLeaders: { userName: string; count: number }[];
   biggestSkippers: { userName: string; skipsUsed: number }[];
   bestRatedWinner: { winnerId: string; movieTitle: string; posterUrl: string; avgStars: number; ratingCount: number; dabysScorePct: number } | null;
-  mostDiscussedWinner: { winnerId: string; movieTitle: string; posterUrl: string; commentCount: number } | null;
+  longestWinner: { winnerId: string; movieTitle: string; posterUrl: string; runtimeMinutes: number } | null;
   winnersByDecade: { decade: string; count: number }[];
 }
 
@@ -433,7 +433,7 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Most submitted + Most discussed (under favorites, side by side) */}
+            {/* Most submitted + Longest movie (under favorites, side by side) */}
             <div className="grid sm:grid-cols-2 gap-6">
               <div className={cardClass}>
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most submitted movie</h2>
@@ -457,24 +457,28 @@ export default function StatsPage() {
                 )}
               </div>
               <div className={cardClass}>
-                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most discussed winner</h2>
-                {data.mostDiscussedWinner ? (
-                  <Link href={`/winners/${data.mostDiscussedWinner.winnerId}`} className="flex items-center gap-4 group">
-                    {data.mostDiscussedWinner.posterUrl ? (
-                      <img src={data.mostDiscussedWinner.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08] group-hover:border-purple-500/30 transition-colors" />
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Longest movie</h2>
+                {data.longestWinner ? (
+                  <Link href={`/winners/${data.longestWinner.winnerId}`} className="flex items-center gap-4 group">
+                    {data.longestWinner.posterUrl ? (
+                      <img src={data.longestWinner.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08] group-hover:border-purple-500/30 transition-colors" />
                     ) : (
                       <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
-                        {data.mostDiscussedWinner.movieTitle.charAt(0)}
+                        {data.longestWinner.movieTitle.charAt(0)}
                       </div>
                     )}
                     <div>
-                      <p className="text-lg font-semibold text-white/90 group-hover:text-purple-300 transition-colors">{data.mostDiscussedWinner.movieTitle}</p>
-                      <p className="text-white/50 text-sm mt-0.5">{data.mostDiscussedWinner.commentCount} comment{data.mostDiscussedWinner.commentCount !== 1 ? "s" : ""}</p>
+                      <p className="text-lg font-semibold text-white/90 group-hover:text-purple-300 transition-colors">{data.longestWinner.movieTitle}</p>
+                      <p className="text-white/50 text-sm mt-0.5">
+                        {data.longestWinner.runtimeMinutes >= 60
+                          ? `${Math.floor(data.longestWinner.runtimeMinutes / 60)}h${data.longestWinner.runtimeMinutes % 60 ? ` ${data.longestWinner.runtimeMinutes % 60}m` : ""}`
+                          : `${data.longestWinner.runtimeMinutes}m`}
+                      </p>
                       <p className="text-xs text-white/40 mt-1 group-hover:text-purple-400 transition-colors">View winner →</p>
                     </div>
                   </Link>
                 ) : (
-                  <p className="text-white/30 text-sm">No comments yet.</p>
+                  <p className="text-white/30 text-sm">No runtime data yet. Add or edit winners with TMDB to set runtime.</p>
                 )}
               </div>
             </div>

@@ -31,6 +31,7 @@ interface TmdbMovieDetail {
   backdropUrl: string;
   trailerUrl: string;
   letterboxdUrl: string;
+  runtime?: number;
 }
 
 interface WeekData {
@@ -275,6 +276,7 @@ export default function AdminWinnersPage() {
           overview: selectedMovie.overview,
           trailerUrl: selectedMovie.trailerUrl,
           backdropUrl: selectedMovie.backdropUrl,
+          runtime: selectedMovie.runtime,
           manual: true,
         }),
       });
@@ -417,6 +419,7 @@ export default function AdminWinnersPage() {
         payload.trailerUrl = editSelectedMovie.trailerUrl;
         payload.backdropUrl = editSelectedMovie.backdropUrl;
         payload.tmdbId = editSelectedMovie.tmdbId;
+        if (editSelectedMovie.runtime != null) payload.runtime = editSelectedMovie.runtime;
       }
 
       const res = await fetch(`/api/winners/${editingWinner.id}`, {
