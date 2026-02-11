@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
+// Store uploads on the same DATA_DIR-backed volume as JSON data,
+// so they persist on Railway. Falls back to src/data when DATA_DIR
+// is not set (local dev).
+const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
+const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 
 export async function POST(request: Request) {
   // Ensure upload directory exists
@@ -51,8 +56,10 @@ export async function POST(request: Request) {
 
   const mediaType = file.type === "image/gif" ? "gif" : "image";
 
+  // Files are served via /api/uploads/[filename], which reads from
+  // the same UPLOAD_DIR backed by DATA_DIR on Railway.
   return NextResponse.json({
-    url: `/uploads/${filename}`,
+    url: `/api/uploads/${filename}`,
     mediaType,
   });
 }
