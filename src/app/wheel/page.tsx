@@ -23,10 +23,16 @@ const SLOT_COLORS = [
   "#818cf8", "#6d28d9", "#4338ca", "#c084fc", "#7e22ce",
 ];
 
-const CARD_WIDTH = 160;
 const CARD_GAP = 8;
-const CARD_HEIGHT = 100;
-const CARD_STEP = CARD_WIDTH + CARD_GAP;
+// Left buffer repeats so centering winner 0 doesn't use positive offset (no missing tile on left)
+const BUFFER_REPEATS = 4;
+
+// Card size from viewport; min 118px so "Comedy"/"Animation" don't truncate
+function getCardMetrics(viewportWidth: number) {
+  const width = Math.min(200, Math.max(118, (viewportWidth - 48) / 5.2 - CARD_GAP));
+  const height = Math.round(width * 0.65);
+  return { width, gap: CARD_GAP, height, step: width + CARD_GAP };
+}
 
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
@@ -88,6 +94,11 @@ export default function WheelPage() {
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState("");
 
+  // Card dimensions from viewport (show more tiles, scale 90–200px)
+  const [cardMetrics, setCardMetrics] = useState(() => getCardMetrics(400));
+  const cardMetricsRef = useRef(cardMetrics);
+  cardMetricsRef.current = cardMetrics;
+
   // Case-style: strip offset (px). 0 = first card at left; negative = strip scrolled right
   const [stripOffset, setStripOffset] = useState(0);
   const offsetRef = useRef(0);
@@ -95,6 +106,14 @@ export default function WheelPage() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+
+  // Confirm theme / Use skip (when result is shown, Jerry only)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [skipModalOpen, setSkipModalOpen] = useState(false);
+  const [skipEligible, setSkipEligible] = useState<{ id: string; name: string; skipsAvailable: number }[]>([]);
+  const [selectedSkipUserId, setSelectedSkipUserId] = useState("");
+  const [skipLoading, setSkipLoading] = useState(false);
 
   // Track which spinStartedAt we've already animated/rotated to
   const lastAnimatedSpinRef = useRef<string | null>(null);
@@ -124,12 +143,30 @@ export default function WheelPage() {
 
   const getViewportWidth = useCallback(() => viewportRef.current?.clientWidth ?? 400, []);
 
-  // Smooth scroll to center winner (for manual sets — short glide)
+  // Update card size from viewport so more tiles are visible and scale with window
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const update = () => {
+      const vw = el.clientWidth || 400;
+      setCardMetrics(getCardMetrics(vw));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Smooth scroll to center winner (for manual sets — short glide). Use buffer so offset <= 0.
   const scrollToWinner = useCallback((entries: string[], winnerIndex: number) => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    const { step, width } = cardMetricsRef.current;
     const n = entries.length;
     const vw = getViewportWidth();
-    const targetOffset = Math.max(0, -(winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+    const logicalIndex = BUFFER_REPEATS * n + winnerIndex;
+    const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
+    const stripWidth = (BUFFER_REPEATS + 12) * n * step;
+    const targetOffset = Math.max(-(stripWidth - vw), Math.min(0, raw));
     const start = offsetRef.current;
     const duration = 2000;
     const startTime = performance.now();
@@ -166,11 +203,12 @@ export default function WheelPage() {
     onComplete: (winner: string) => void
   ) => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    const { step, width } = cardMetricsRef.current;
     const n = entries.length;
     const vw = getViewportWidth();
     const totalCards = (fullSpins + 1) * n + winnerIndex;
-    const startOffset = Math.max(0, vw / 2 - CARD_WIDTH / 2);
-    const endOffset = -(totalCards * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2);
+    const startOffset = 0;
+    const endOffset = -(totalCards * step) + (vw / 2 - width / 2);
     const start = offsetRef.current;
     const startTime = performance.now() - timeOffset;
 
@@ -220,9 +258,14 @@ export default function WheelPage() {
               });
             } else {
               lastAnimatedSpinRef.current = data.spinStartedAt;
-              if (data.winnerIndex !== null && viewportRef.current) {
+              if (data.winnerIndex !== null && viewportRef.current && data.entries.length > 0) {
                 const vw = viewportRef.current.clientWidth;
-                const snap = Math.max(0, -(data.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+                const { step, width } = cardMetricsRef.current;
+                const n = data.entries.length;
+                const logicalIndex = BUFFER_REPEATS * n + data.winnerIndex;
+                const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
+                const stripWidth = (BUFFER_REPEATS + 12) * n * step;
+                const snap = Math.max(-(stripWidth - vw), Math.min(0, raw));
                 offsetRef.current = snap;
                 setStripOffset(snap);
               }
@@ -230,9 +273,14 @@ export default function WheelPage() {
             }
           } else if (data.lastResult && data.winnerIndex !== null) {
             lastAnimatedSpinRef.current = data.spinStartedAt;
-            if (viewportRef.current) {
+            if (viewportRef.current && data.entries.length > 0) {
               const vw = viewportRef.current.clientWidth;
-              const snap = Math.max(0, -(data.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+              const { step, width } = cardMetricsRef.current;
+              const n = data.entries.length;
+              const logicalIndex = BUFFER_REPEATS * n + data.winnerIndex;
+              const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
+              const stripWidth = (BUFFER_REPEATS + 12) * n * step;
+              const snap = Math.max(-(stripWidth - vw), Math.min(0, raw));
               offsetRef.current = snap;
               setStripOffset(snap);
             }
@@ -314,23 +362,28 @@ export default function WheelPage() {
     return () => clearInterval(interval);
   }, [wheel, spinning, playSpin, scrollToWinner]);
 
-  // Repeats for case strip (enough for spin + buffer)
-  const stripRepeats = wheel && wheel.entries.length > 0 ? 12 : 0;
+  // Repeats: buffer (left) + main; centering uses buffer so offset stays <= 0 (no empty left)
+  const stripRepeats = wheel && wheel.entries.length > 0 ? BUFFER_REPEATS + 12 : 0;
   const stripEntries = wheel ? Array.from({ length: stripRepeats }, () => wheel.entries).flat() : [];
+  const n = wheel?.entries.length ?? 0;
 
   // Snap strip to last result when viewport is ready (in case init ran before ref mounted).
   // Skip one run after we complete our own spin so we don't overwrite the strip with stale wheel.
   useEffect(() => {
-    if (!wheel?.lastResult || wheel.winnerIndex == null || !viewportRef.current || spinning) return;
+    if (!wheel?.lastResult || wheel.winnerIndex == null || !viewportRef.current || spinning || n === 0) return;
     if (skipNextSnapRef.current) {
       skipNextSnapRef.current = false;
       return;
     }
     const vw = viewportRef.current.clientWidth;
-    const snap = Math.max(0, -(wheel.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+    const { step, width } = cardMetrics;
+    const logicalIndex = BUFFER_REPEATS * n + wheel.winnerIndex;
+    const rawSnap = -(logicalIndex * step) + (vw / 2 - width / 2);
+    const stripWidth = stripRepeats * n * step;
+    const snap = Math.max(-(stripWidth - vw), Math.min(0, rawSnap));
     offsetRef.current = snap;
     setStripOffset(snap);
-  }, [wheel?.lastResult, wheel?.winnerIndex, spinning]);
+  }, [wheel?.lastResult, wheel?.winnerIndex, spinning, cardMetrics, n, stripRepeats]);
 
   // Jerry's spin handler
   async function handleSpin() {
@@ -355,6 +408,55 @@ export default function WheelPage() {
         setShowResult(true);
       });
     } catch { /* ignore */ }
+  }
+
+  async function handleConfirmTheme() {
+    if (!result || confirmLoading) return;
+    setConfirmLoading(true);
+    try {
+      const res = await fetch("/api/wheel/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme: result }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWheel(data.wheel);
+        setShowResult(false);
+        setResult(null);
+        setConfirmDialogOpen(false);
+      }
+    } catch { /* ignore */ }
+    finally { setConfirmLoading(false); }
+  }
+
+  function openSkipModal() {
+    setSkipModalOpen(true);
+    setSelectedSkipUserId("");
+    fetch("/api/wheel/skip-eligible", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : [])
+      .then(setSkipEligible)
+      .catch(() => setSkipEligible([]));
+  }
+
+  async function handleUseSkip() {
+    if (!selectedSkipUserId || skipLoading) return;
+    setSkipLoading(true);
+    try {
+      const res = await fetch("/api/wheel/skip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedSkipUserId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setWheel(data.wheel);
+        setShowResult(false);
+        setResult(null);
+        setSkipModalOpen(false);
+      }
+    } catch { /* ignore */ }
+    finally { setSkipLoading(false); }
   }
 
   // Cleanup animation on unmount
@@ -432,14 +534,14 @@ export default function WheelPage() {
           </p>
         </div>
 
-        {/* Case-style strip container */}
-        <div className="flex flex-col items-center gap-8">
-          <div className="relative w-full" style={{ maxWidth: 520 }}>
+        {/* Case-style strip container — width scales so more tiles visible */}
+        <div className="flex flex-col items-center gap-8 w-full max-w-4xl mx-auto">
+          <div className="relative w-full">
             {/* Case window: overflow hidden, center slot highlighted */}
             <div
               ref={viewportRef}
               className="relative w-full overflow-hidden rounded-2xl border-2 border-purple-500/30 bg-black/40 shadow-2xl"
-              style={{ height: CARD_HEIGHT + 32 }}
+              style={{ height: cardMetrics.height + 32 }}
             >
               {/* Center line (CS:GO-style pointer) */}
               <div className="absolute left-1/2 top-0 bottom-0 z-10 w-1 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/90 to-transparent" />
@@ -447,8 +549,9 @@ export default function WheelPage() {
 
               {/* Scrolling strip */}
               <div
-                className="absolute left-0 top-4 flex h-[100px] items-stretch gap-0 transition-none"
+                className="absolute left-0 top-4 flex items-stretch gap-0 transition-none"
                 style={{
+                  height: cardMetrics.height,
                   transform: `translateX(${stripOffset}px)`,
                   willChange: spinning ? "transform" : "auto",
                 }}
@@ -458,9 +561,9 @@ export default function WheelPage() {
                     key={`${i}-${label}`}
                     className="flex shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 text-center font-bold text-white/95 shadow-inner"
                     style={{
-                      width: CARD_WIDTH,
-                      height: CARD_HEIGHT,
-                      marginRight: CARD_GAP,
+                      width: cardMetrics.width,
+                      height: cardMetrics.height,
+                      marginRight: cardMetrics.gap,
                       background: `linear-gradient(135deg, ${SLOT_COLORS[i % SLOT_COLORS.length]}40, ${SLOT_COLORS[(i + 1) % SLOT_COLORS.length]}20)`,
                       borderLeftWidth: i === 0 ? 0 : 1,
                     }}
@@ -505,14 +608,73 @@ export default function WheelPage() {
             </div>
           )}
 
-          {/* Result banner */}
+          {/* Result banner + Confirm / Use skip (Jerry only) */}
           {showResult && result && (
-            <div className="w-full max-w-md mx-auto">
+            <div className="w-full max-w-md mx-auto space-y-4">
               <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 backdrop-blur-xl p-8 text-center shadow-xl shadow-purple-500/10">
                 <p className="text-xs uppercase tracking-widest text-purple-400/60 mb-2">The wheel has spoken</p>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
                   {result}
                 </h2>
+              </div>
+              {isJerry && (
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={() => setConfirmDialogOpen(true)}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium hover:from-green-500 hover:to-emerald-500 transition-all cursor-pointer"
+                  >
+                    Confirm theme & create new week
+                  </button>
+                  <button
+                    onClick={openSkipModal}
+                    className="px-6 py-3 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-medium hover:bg-cyan-500/20 transition-all cursor-pointer"
+                  >
+                    Use skip
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Confirm theme dialog */}
+          {confirmDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !confirmLoading && setConfirmDialogOpen(false)}>
+              <div className="rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <p className="text-white/90 font-medium mb-2">Confirm theme & create new week?</p>
+                <p className="text-sm text-white/50 mb-4">Current week will be archived. Theme &quot;{result}&quot; will become the new week and be removed from the wheel.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => !confirmLoading && setConfirmDialogOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
+                  <button onClick={handleConfirmTheme} disabled={confirmLoading} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
+                    {confirmLoading ? "..." : "Confirm"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Use skip modal: whose skip? */}
+          {skipModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !skipLoading && setSkipModalOpen(false)}>
+              <div className="rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <p className="text-white/90 font-medium mb-2">Whose skip are we using?</p>
+                <p className="text-sm text-white/50 mb-4">One skip will be charged for the selected person. The result will be cleared and you can spin again.</p>
+                <select
+                  value={selectedSkipUserId}
+                  onChange={(e) => setSelectedSkipUserId(e.target.value)}
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-4 py-3 text-white/90 text-sm mb-4 cursor-pointer"
+                >
+                  <option value="">Select user...</option>
+                  {skipEligible.map((u) => (
+                    <option key={u.id} value={u.id} className="bg-[#1a1a2e]">{u.name} ({u.skipsAvailable} skip{u.skipsAvailable !== 1 ? "s" : ""})</option>
+                  ))}
+                </select>
+                {skipEligible.length === 0 && <p className="text-white/40 text-sm mb-4">No one has skips available.</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => !skipLoading && setSkipModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
+                  <button onClick={handleUseSkip} disabled={skipLoading || !selectedSkipUserId} className="flex-1 py-2.5 rounded-xl bg-cyan-600 text-white font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
+                    {skipLoading ? "..." : "Use skip"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

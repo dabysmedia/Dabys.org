@@ -6,15 +6,14 @@
     "Sci-Fi",
     "Drama",
     "Thriller",
-    "Romance",
     "Animation",
     "2000's"
   ],
-  "lastResult": "Comedy",
-  "lastSpunAt": "2026-02-11T22:21:00.200Z",
+  "lastResult": null,
+  "lastSpunAt": null,
   "spinning": false,
-  "spinStartedAt": "2026-02-11T22:21:00.200Z",
-  "winnerIndex": 1,
-  "fullSpins": 5,
-  "duration": 6000
+  "spinStartedAt": null,
+  "winnerIndex": null,
+  "fullSpins": null,
+  "duration": null
 }

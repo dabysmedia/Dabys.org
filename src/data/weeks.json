@@ -32,5 +32,12 @@
     "phase": "winner_published",
     "startedAt": "2026-01-19T00:00:00.000Z",
     "endedAt": "2026-01-20T00:00:00.000Z"
+  },
+  {
+    "id": "5",
+    "theme": "Romance",
+    "phase": "subs_open",
+    "startedAt": "2026-02-11T23:41:10.692Z",
+    "endedAt": "2026-02-11T23:45:55.914Z"
   }
 ]

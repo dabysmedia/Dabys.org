@@ -269,3 +269,21 @@ export function getWheel(): WheelData {
 export function saveWheel(wheel: WheelData) {
   writeJson("wheel.json", wheel);
 }
+
+// ──── Wheel history (confirmed themes for admin "previous winners" list) ────
+export interface WheelHistoryEntry {
+  theme: string;
+  confirmedAt: string; // ISO
+}
+
+export function getWheelHistory(): WheelHistoryEntry[] {
+  try {
+    return readJson<WheelHistoryEntry[]>("wheelHistory.json");
+  } catch {
+    return [];
+  }
+}
+
+export function saveWheelHistory(history: WheelHistoryEntry[]) {
+  writeJson("wheelHistory.json", history);
+}

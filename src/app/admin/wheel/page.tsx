@@ -9,6 +9,11 @@ interface WheelData {
   lastSpunAt: string | null;
 }
 
+interface WheelHistoryEntry {
+  theme: string;
+  confirmedAt: string;
+}
+
 export default function AdminWheelPage() {
   const [wheel, setWheel] = useState<WheelData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,9 +29,22 @@ export default function AdminWheelPage() {
   const [manualResult, setManualResult] = useState("");
   const [settingResult, setSettingResult] = useState(false);
 
+  // Theme wheel settings: show current wheel or previous wheel winners
+  const [showView, setShowView] = useState<"current" | "previous">("current");
+  const [wheelHistory, setWheelHistory] = useState<WheelHistoryEntry[]>([]);
+
   useEffect(() => {
     loadWheel();
   }, []);
+
+  useEffect(() => {
+    if (showView === "previous") {
+      fetch("/api/wheel/history")
+        .then((r) => (r.ok ? r.json() : []))
+        .then(setWheelHistory)
+        .catch(() => setWheelHistory([]));
+    }
+  }, [showView]);
 
   async function loadWheel() {
     try {
@@ -113,8 +131,39 @@ export default function AdminWheelPage() {
         </Link>
       </div>
 
-      {/* Last result */}
-      {wheel?.lastResult && (
+      {/* Theme wheel settings: dropdown to show current vs previous winners */}
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+        <h2 className="text-lg font-semibold text-white/80 mb-2">Theme wheel settings</h2>
+        <label className="block text-sm text-white/50 mb-2">Show</label>
+        <select
+          value={showView}
+          onChange={(e) => setShowView(e.target.value as "current" | "previous")}
+          className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors cursor-pointer"
+        >
+          <option value="current" className="bg-[#1a1a2e]">Current wheel</option>
+          <option value="previous" className="bg-[#1a1a2e]">Previous wheel winners</option>
+        </select>
+        {showView === "previous" && (
+          <div className="mt-4">
+            <p className="text-xs text-white/40 mb-2">Themes confirmed from the wheel (newest first)</p>
+            {wheelHistory.length === 0 ? (
+              <p className="text-white/30 text-sm py-2">No previous wheel winners yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {wheelHistory.map((entry, i) => (
+                  <li key={i} className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-2">
+                    <span className="text-white/80 font-medium">{entry.theme}</span>
+                    <span className="text-[11px] text-white/30">{new Date(entry.confirmedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Last result (when showing current wheel) */}
+      {showView === "current" && wheel?.lastResult && (
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5 mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -130,7 +179,8 @@ export default function AdminWheelPage() {
         </div>
       )}
 
-      {/* Manual set result */}
+      {/* Manual set result (when showing current wheel) */}
+      {showView === "current" && (
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
         <h2 className="text-lg font-semibold text-white/80 mb-2">Set Result Manually</h2>
         <p className="text-xs text-white/30 mb-4">Override the wheel result without spinning. Pick from the current entries or type a custom theme.</p>
@@ -187,8 +237,10 @@ export default function AdminWheelPage() {
           </button>
         </div>
       </div>
+      )}
 
-      {/* Entries management */}
+      {/* Entries management (when showing current wheel) */}
+      {showView === "current" && (
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
         <h2 className="text-lg font-semibold text-white/80 mb-4">Wheel Entries</h2>
         <p className="text-xs text-white/30 mb-6">Add, remove, or reorder themes on the wheel. Changes take effect after saving.</p>
@@ -280,6 +332,7 @@ export default function AdminWheelPage() {
           {saving ? "Saving..." : "Save Wheel"}
         </button>
       </div>
+      )}
     </div>
   );
 }

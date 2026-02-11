@@ -39,6 +39,10 @@ export default function AdminWeeksPage() {
   const [pastEndDate, setPastEndDate] = useState("");
   const [addingPast, setAddingPast] = useState(false);
 
+  // Restore week
+  const [restoringWeekId, setRestoringWeekId] = useState<string | null>(null);
+  const [restoreConfirm, setRestoreConfirm] = useState<{ id: string; theme: string } | null>(null);
+
   useEffect(() => {
     loadWeeks();
   }, []);
@@ -121,6 +125,23 @@ export default function AdminWeeksPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function restoreWeek(weekId: string) {
+    if (!restoreConfirm || restoreConfirm.id !== weekId) return;
+    setRestoringWeekId(weekId);
+    try {
+      const res = await fetch("/api/weeks/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekId }),
+      });
+      if (res.ok) {
+        setRestoreConfirm(null);
+        loadWeeks();
+      }
+    } catch { /* ignore */ }
+    finally { setRestoringWeekId(null); }
   }
 
   async function addPastWeek() {
@@ -329,9 +350,9 @@ export default function AdminWeeksPage() {
                   .map((week) => (
                     <div
                       key={week.id}
-                      className="px-6 py-4 flex items-center justify-between"
+                      className="px-6 py-4 flex items-center justify-between gap-4"
                     >
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-white/70">
                           {week.theme}
                         </p>
@@ -339,9 +360,43 @@ export default function AdminWeeksPage() {
                           {new Date(week.startedAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <span className="text-[11px] text-white/20">Week #{week.id}</span>
+                      <span className="text-[11px] text-white/20 shrink-0">Week #{week.id}</span>
+                      <button
+                        onClick={() => setRestoreConfirm({ id: week.id, theme: week.theme })}
+                        disabled={saving}
+                        className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400/90 text-xs font-medium hover:bg-amber-500/20 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        Restore week
+                      </button>
                     </div>
                   ))}
+              </div>
+            </div>
+          )}
+
+          {/* Restore week confirmation */}
+          {restoreConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !restoringWeekId && setRestoreConfirm(null)}>
+              <div className="rounded-xl border border-white/10 bg-[#1a1a2e] p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <p className="text-white/90 font-medium mb-2">Restore this week?</p>
+                <p className="text-sm text-white/50 mb-4">
+                  The current week will be ended (archived). Week #{restoreConfirm.id} &quot;{restoreConfirm.theme}&quot; will become the active week again, and its submissions will be current. This cannot be undone for the week being ended.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => !restoringWeekId && setRestoreConfirm(null)}
+                    className="flex-1 py-2.5 rounded-lg border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => restoreWeek(restoreConfirm.id)}
+                    disabled={restoringWeekId !== null}
+                    className="flex-1 py-2.5 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {restoringWeekId ? "Restoring..." : "Restore week"}
+                  </button>
+                </div>
               </div>
             </div>
           )}

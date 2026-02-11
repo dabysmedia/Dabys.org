@@ -4,5 +4,12 @@
     "avatarUrl": "/uploads/1770775722063-8mpxoy.jpg",
     "bannerUrl": "/uploads/1770776789479-lnlll7.jpg",
     "bio": ""
+  },
+  {
+    "userId": "1",
+    "avatarUrl": "",
+    "bannerUrl": "",
+    "bio": "",
+    "skipsUsed": 1
   }
 ]
