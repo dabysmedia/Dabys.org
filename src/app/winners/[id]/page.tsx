@@ -657,15 +657,7 @@ export default function WinnerDetailPage() {
               </p>
             ) : (
               (() => {
-                // Each rating: thumb 0 or 100, stars 0.5–5 → 0–100. Combined = average of the two.
-                const scores = winner.ratings.map((r) => {
-                  const thumbScore = r.thumbsUp ? 100 : 0;
-                  const starScore = ((r.stars - 0.5) / 4.5) * 100;
-                  return (thumbScore + starScore) / 2;
-                });
-                const pct = Math.round(
-                  scores.reduce((a, b) => a + b, 0) / scores.length
-                );
+                const pct = winner.stats?.dabysScorePct ?? 0;
                 const isFresh = pct >= 60;
                 return (
                   <div className="flex flex-wrap items-center gap-6">

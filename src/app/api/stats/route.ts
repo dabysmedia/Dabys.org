@@ -2,26 +2,26 @@ import { NextResponse } from "next/server";
 import {
   getSubmissions,
   getWinners,
-  getVotes,
   getRatings,
   getComments,
   getWeeks,
   getUsers,
+  getProfiles,
+  computeDabysScorePct,
 } from "@/lib/data";
 
 export async function GET() {
   const submissions = getSubmissions();
   const winners = getWinners();
-  const votes = getVotes();
   const ratings = getRatings();
   const comments = getComments();
   const weeks = getWeeks();
   const users = getUsers();
+  const profiles = getProfiles();
 
   // Totals
   const totalWeeks = weeks.length;
   const totalSubmissions = submissions.length;
-  const totalVotes = votes.length;
   const totalWinners = winners.length;
   const totalRatings = ratings.length;
   const totalComments = comments.length;
@@ -73,17 +73,14 @@ export async function GET() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Most active voters (userId -> count; we need userName from users)
-  const voteCountByUser = new Map<string, number>();
-  for (const v of votes) {
-    voteCountByUser.set(v.userId, (voteCountByUser.get(v.userId) || 0) + 1);
-  }
-  const mostActiveVoters = Array.from(voteCountByUser.entries())
-    .map(([userId, count]) => ({
-      userName: users.find((u) => u.id === userId)?.name || "Unknown",
-      count,
-    }))
-    .sort((a, b) => b.count - a.count)
+  // Biggest skippers (profiles sorted by skipsUsed desc, join with users for name)
+  const biggestSkippers = profiles
+    .filter((p) => (p.skipsUsed ?? 0) > 0)
+    .map((p) => {
+      const user = users.find((u) => u.id === p.userId);
+      return { userName: user?.name ?? p.userId, skipsUsed: p.skipsUsed ?? 0 };
+    })
+    .sort((a, b) => b.skipsUsed - a.skipsUsed)
     .slice(0, 5);
 
   // Best rated winner (avg stars, at least 1 rating)
@@ -94,7 +91,7 @@ export async function GET() {
     cur.count += 1;
     ratingByWinner.set(r.winnerId, cur);
   }
-  let bestRatedWinner: { winnerId: string; movieTitle: string; posterUrl: string; avgStars: number; ratingCount: number } | null = null;
+  let bestRatedWinner: { winnerId: string; movieTitle: string; posterUrl: string; avgStars: number; ratingCount: number; dabysScorePct: number } | null = null;
   let bestAvg = 0;
   for (const [winnerId, { sum, count }] of ratingByWinner.entries()) {
     if (count < 1) continue;
@@ -103,12 +100,15 @@ export async function GET() {
       bestAvg = avg;
       const winner = winners.find((w) => w.id === winnerId);
       if (winner) {
+        const winnerRatings = ratings.filter((r) => r.winnerId === winnerId);
+        const dabysScorePct = computeDabysScorePct(winnerRatings);
         bestRatedWinner = {
           winnerId,
           movieTitle: winner.movieTitle,
           posterUrl: winner.posterUrl || "",
           avgStars: Math.round(avg * 10) / 10,
           ratingCount: count,
+          dabysScorePct,
         };
       }
     }
@@ -136,33 +136,29 @@ export async function GET() {
     }
   }
 
-  // Submissions by theme (weekId -> count, then join with weeks for theme name)
-  const subsByWeek = new Map<string, number>();
-  for (const s of submissions) {
-    subsByWeek.set(s.weekId, (subsByWeek.get(s.weekId) || 0) + 1);
+  // Most popular decade (from winning films' release year)
+  const decadeCount = new Map<string, number>();
+  for (const w of winners) {
+    const y = w.year ? parseInt(w.year, 10) : NaN;
+    const decade = !Number.isNaN(y) ? `${Math.floor(y / 10) * 10}s` : "Unknown";
+    decadeCount.set(decade, (decadeCount.get(decade) || 0) + 1);
   }
-  const submissionsByTheme = weeks
-    .map((w) => ({
-      theme: w.theme,
-      weekId: w.id,
-      count: subsByWeek.get(w.id) || 0,
-    }))
-    .filter((x) => x.count > 0)
+  const winnersByDecade = Array.from(decadeCount.entries())
+    .map(([decade, count]) => ({ decade, count }))
     .sort((a, b) => b.count - a.count);
 
   return NextResponse.json({
     totalWeeks,
     totalSubmissions,
-    totalVotes,
     totalWinners,
     totalRatings,
     totalComments,
     mostSubmittedMovie,
     topSubmitters,
     winLeaders,
-    mostActiveVoters,
+    biggestSkippers,
     bestRatedWinner,
     mostDiscussedWinner,
-    submissionsByTheme,
+    winnersByDecade,
   });
 }

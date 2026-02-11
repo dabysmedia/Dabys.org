@@ -12,17 +12,89 @@ interface User {
 interface StatsData {
   totalWeeks: number;
   totalSubmissions: number;
-  totalVotes: number;
   totalWinners: number;
   totalRatings: number;
   totalComments: number;
   mostSubmittedMovie: { movieTitle: string; posterUrl: string; year?: string; count: number } | null;
   topSubmitters: { userName: string; count: number }[];
   winLeaders: { userName: string; count: number }[];
-  mostActiveVoters: { userName: string; count: number }[];
-  bestRatedWinner: { winnerId: string; movieTitle: string; posterUrl: string; avgStars: number; ratingCount: number } | null;
+  biggestSkippers: { userName: string; skipsUsed: number }[];
+  bestRatedWinner: { winnerId: string; movieTitle: string; posterUrl: string; avgStars: number; ratingCount: number; dabysScorePct: number } | null;
   mostDiscussedWinner: { winnerId: string; movieTitle: string; posterUrl: string; commentCount: number } | null;
-  submissionsByTheme: { theme: string; weekId: string; count: number }[];
+  winnersByDecade: { decade: string; count: number }[];
+}
+
+interface FavoriteSlice {
+  name: string;
+  count: number;
+}
+
+interface FavoritesData {
+  favoriteActors: FavoriteSlice[];
+  favoriteDirectors: FavoriteSlice[];
+  favoriteGenres: FavoriteSlice[];
+}
+
+function FavoriteBarList({ data, accent = "purple" }: { data: FavoriteSlice[]; accent?: "purple" | "violet" | "indigo" }) {
+  if (data.length === 0) return <p className="text-white/30 text-sm">No data</p>;
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const gradientClass =
+    accent === "purple" ? "bg-gradient-to-r from-purple-500/50 to-violet-500/50" :
+    accent === "violet" ? "bg-gradient-to-r from-violet-500/50 to-indigo-500/50" :
+    "bg-gradient-to-r from-indigo-500/50 to-purple-500/50";
+
+  const borderAccent =
+    accent === "purple" ? "border-purple-500/30 bg-purple-500/5" :
+    accent === "violet" ? "border-violet-500/30 bg-violet-500/5" :
+    "border-indigo-500/30 bg-indigo-500/5";
+
+  const winner = data[0];
+  const rest = data.slice(1);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Winner — separate highlighted area */}
+      <div className={`rounded-xl border ${borderAccent} p-4 shrink-0`}>
+        <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-2">Winner</p>
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white/90">1</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white/90 truncate">{winner.name}</p>
+            <p className="text-xs text-white/50 mt-0.5">{winner.count} appearance{winner.count !== 1 ? "s" : ""} in winning films</p>
+          </div>
+        </div>
+        <div className="mt-3 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-[width] duration-500 ease-out ${gradientClass}`}
+            style={{ width: `${(winner.count / maxCount) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Rest of list */}
+      {rest.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2">Also featured</p>
+          <ul className="space-y-2 max-h-48 overflow-y-auto scrollbar-autocomplete pr-1">
+            {rest.map((entry, i) => (
+              <li key={`${entry.name}-${i}`} className="flex items-center gap-3">
+                <span className="text-white/25 text-xs tabular-nums w-5 shrink-0">#{i + 2}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="h-4 rounded bg-white/[0.06] overflow-hidden">
+                    <div
+                      className={`h-full rounded transition-[width] duration-500 ease-out ${gradientClass}`}
+                      style={{ width: `${(entry.count / maxCount) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-white/60 mt-0.5 truncate">{entry.name} <span className="text-white/35">· {entry.count}</span></p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 const cardClass = "rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6";
@@ -98,6 +170,7 @@ export default function StatsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
   const [data, setData] = useState<StatsData | null>(null);
+  const [favorites, setFavorites] = useState<FavoritesData | null>(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState("");
 
   useEffect(() => {
@@ -128,6 +201,14 @@ export default function StatsPage() {
       .catch(() => setData(null));
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/stats/favorites")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setFavorites)
+      .catch(() => setFavorites(null));
+  }, [user]);
+
   if (checking || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -136,9 +217,9 @@ export default function StatsPage() {
     );
   }
 
-  const maxSubmitCount = data?.topSubmitters?.[0]?.count ?? 1;
   const maxWinCount = data?.winLeaders?.[0]?.count ?? 1;
-  const maxThemeCount = Math.max(...(data?.submissionsByTheme?.map((t) => t.count) ?? [1]), 1);
+  const maxSkipCount = data?.biggestSkippers?.[0]?.skipsUsed ?? 1;
+  const maxDecadeCount = Math.max(...(data?.winnersByDecade?.map((d) => d.count) ?? [1]), 1);
 
   return (
     <div className="min-h-screen">
@@ -194,7 +275,7 @@ export default function StatsPage() {
             {/* Totals */}
             <div className={cardClass}>
               <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Totals</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
                   <p className="text-3xl sm:text-4xl font-bold text-white/90">{data.totalWeeks}</p>
                   <p className="text-xs text-white/40 mt-0.5">Weeks</p>
@@ -202,10 +283,6 @@ export default function StatsPage() {
                 <div>
                   <p className="text-3xl sm:text-4xl font-bold text-white/90">{data.totalSubmissions}</p>
                   <p className="text-xs text-white/40 mt-0.5">Submissions</p>
-                </div>
-                <div>
-                  <p className="text-3xl sm:text-4xl font-bold text-white/90">{data.totalVotes}</p>
-                  <p className="text-xs text-white/40 mt-0.5">Votes</p>
                 </div>
                 <div>
                   <p className="text-3xl sm:text-4xl font-bold text-white/90">{data.totalWinners}</p>
@@ -222,51 +299,58 @@ export default function StatsPage() {
               </div>
             </div>
 
-            {/* Most submitted movie */}
-            <div className={cardClass}>
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most submitted movie</h2>
-              {data.mostSubmittedMovie ? (
-                <div className="flex items-center gap-4">
-                  {data.mostSubmittedMovie.posterUrl ? (
-                    <img src={data.mostSubmittedMovie.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08]" />
+            {/* Best Dabys score — prominent full-width, DABYS SCORE format */}
+            <div className={`${cardClass} border-amber-500/15 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent`}>
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Best Dabys score</h2>
+              {data.bestRatedWinner ? (
+                <Link href={`/winners/${data.bestRatedWinner.winnerId}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-6 group block">
+                  {data.bestRatedWinner.posterUrl ? (
+                    <img src={data.bestRatedWinner.posterUrl} alt="" className="w-24 h-36 sm:w-28 sm:h-40 rounded-xl object-cover border border-white/[0.08] group-hover:border-amber-500/30 transition-colors shadow-lg shrink-0" />
                   ) : (
-                    <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
-                      {data.mostSubmittedMovie.movieTitle.charAt(0)}
+                    <div className="w-24 h-36 sm:w-28 sm:h-40 rounded-xl bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-3xl font-bold shrink-0">
+                      {data.bestRatedWinner.movieTitle.charAt(0)}
                     </div>
                   )}
-                  <div>
-                    <p className="text-lg font-semibold text-white/90">{data.mostSubmittedMovie.movieTitle}</p>
-                    {data.mostSubmittedMovie.year && <p className="text-sm text-white/40">{data.mostSubmittedMovie.year}</p>}
-                    <p className="text-sm text-purple-400 mt-1">Submitted {data.mostSubmittedMovie.count} time{data.mostSubmittedMovie.count !== 1 ? "s" : ""}</p>
+                  <div className="flex-1 min-w-0 w-full">
+                    <p className="text-xl sm:text-2xl font-bold text-white/95 group-hover:text-amber-200 transition-colors mb-4">{data.bestRatedWinner.movieTitle}</p>
+                    <div className="mb-3">
+                      <h4 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">Dabys score</h4>
+                      {(() => {
+                        const pct = data.bestRatedWinner.dabysScorePct ?? Math.round((data.bestRatedWinner.avgStars / 5) * 100);
+                        const isFresh = pct >= 60;
+                        return (
+                          <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-baseline gap-2">
+                              <span className={`text-3xl sm:text-4xl font-bold tabular-nums ${isFresh ? "text-green-400" : "text-red-400"}`}>
+                                {pct}%
+                              </span>
+                              <span className={`text-sm font-semibold uppercase tracking-wide ${isFresh ? "text-green-400/80" : "text-red-400/80"}`}>
+                                {isFresh ? "Fresh" : "Rotten"}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-[160px] max-w-xs">
+                              <div className="h-2.5 rounded-full overflow-hidden flex bg-white/10">
+                                <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+                                <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${100 - pct}%` }} />
+                              </div>
+                              <p className="text-[11px] text-white/40 mt-1.5">
+                                Thumbs + stars · Based on {data.bestRatedWinner.ratingCount} rating{data.bestRatedWinner.ratingCount !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-amber-400/90 text-sm font-medium group-hover:text-amber-300 transition-colors">View winner →</p>
                   </div>
-                </div>
+                </Link>
               ) : (
-                <p className="text-white/30 text-sm">No submissions yet.</p>
+                <p className="text-white/30 text-sm">No ratings yet.</p>
               )}
             </div>
 
-            {/* Leaderboards */}
+            {/* Win leaders + Biggest skippers */}
             <div className="grid sm:grid-cols-2 gap-6">
-              <div className={cardClass}>
-                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Top submitters</h2>
-                {data.topSubmitters.length > 0 ? (
-                  <ul className="space-y-3">
-                    {data.topSubmitters.map((entry, i) => (
-                      <li key={entry.userName} className="flex items-center gap-3">
-                        <span className="text-white/30 text-sm w-5">#{i + 1}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="h-6 rounded bg-white/[0.06] overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500/40 to-violet-500/40 rounded" style={{ width: `${(entry.count / maxSubmitCount) * 100}%` }} />
-                          </div>
-                          <p className="text-xs text-white/70 mt-1 truncate">{entry.userName} · {entry.count}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-white/30 text-sm">No submitters yet.</p>
-                )}
-              </div>
               <div className={cardClass}>
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Win leaders</h2>
                 {data.winLeaders.length > 0 ? (
@@ -287,87 +371,133 @@ export default function StatsPage() {
                   <p className="text-white/30 text-sm">No winners yet.</p>
                 )}
               </div>
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Biggest skippers</h2>
+                {data.biggestSkippers && data.biggestSkippers.length > 0 ? (
+                  <ul className="space-y-3">
+                    {data.biggestSkippers.map((entry, i) => (
+                      <li key={entry.userName} className="flex items-center gap-3">
+                        <span className="text-white/30 text-sm w-5">#{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="h-6 rounded bg-white/[0.06] overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-violet-500/40 to-indigo-500/40 rounded" style={{ width: `${(entry.skipsUsed / maxSkipCount) * 100}%` }} />
+                          </div>
+                          <p className="text-xs text-white/70 mt-1 truncate">{entry.userName} · {entry.skipsUsed} skip{entry.skipsUsed !== 1 ? "s" : ""}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-white/30 text-sm">No skips used yet.</p>
+                )}
+              </div>
             </div>
 
-            {/* Most active voters (optional extra) */}
-            <div className={cardClass}>
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most active voters</h2>
-              {data.mostActiveVoters.length > 0 ? (
-                <ul className="flex flex-wrap gap-4">
-                  {data.mostActiveVoters.map((entry) => (
-                    <li key={entry.userName} className="text-white/80 text-sm">{entry.userName} <span className="text-white/40">({entry.count})</span></li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-white/30 text-sm">No votes yet.</p>
-              )}
-            </div>
-
-            {/* Best rated winner */}
-            <div className={cardClass}>
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Best rated winner</h2>
-              {data.bestRatedWinner ? (
-                <Link href={`/winners/${data.bestRatedWinner.winnerId}`} className="flex items-center gap-4 group">
-                  {data.bestRatedWinner.posterUrl ? (
-                    <img src={data.bestRatedWinner.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08] group-hover:border-purple-500/30 transition-colors" />
-                  ) : (
-                    <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
-                      {data.bestRatedWinner.movieTitle.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-lg font-semibold text-white/90 group-hover:text-purple-300 transition-colors">{data.bestRatedWinner.movieTitle}</p>
-                    <p className="text-amber-400 text-sm mt-0.5">★ {data.bestRatedWinner.avgStars} · Based on {data.bestRatedWinner.ratingCount} rating{data.bestRatedWinner.ratingCount !== 1 ? "s" : ""}</p>
-                    <p className="text-xs text-white/40 mt-1 group-hover:text-purple-400 transition-colors">View winner →</p>
+            {/* Dabys favorites (from winning films) */}
+            <div className="grid sm:grid-cols-3 gap-6">
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Dabys favorite actor</h2>
+                {favorites?.favoriteActors && favorites.favoriteActors.length > 0 ? (
+                  <FavoriteBarList data={favorites.favoriteActors} accent="purple" />
+                ) : favorites ? (
+                  <p className="text-white/30 text-sm">No winner data yet (TMDB needed).</p>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
                   </div>
-                </Link>
-              ) : (
-                <p className="text-white/30 text-sm">No ratings yet.</p>
-              )}
-            </div>
-
-            {/* Most discussed winner */}
-            <div className={cardClass}>
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most discussed winner</h2>
-              {data.mostDiscussedWinner ? (
-                <Link href={`/winners/${data.mostDiscussedWinner.winnerId}`} className="flex items-center gap-4 group">
-                  {data.mostDiscussedWinner.posterUrl ? (
-                    <img src={data.mostDiscussedWinner.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08] group-hover:border-purple-500/30 transition-colors" />
-                  ) : (
-                    <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
-                      {data.mostDiscussedWinner.movieTitle.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-lg font-semibold text-white/90 group-hover:text-purple-300 transition-colors">{data.mostDiscussedWinner.movieTitle}</p>
-                    <p className="text-white/50 text-sm mt-0.5">{data.mostDiscussedWinner.commentCount} comment{data.mostDiscussedWinner.commentCount !== 1 ? "s" : ""}</p>
-                    <p className="text-xs text-white/40 mt-1 group-hover:text-purple-400 transition-colors">View winner →</p>
+                )}
+              </div>
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Dabys favorite director</h2>
+                {favorites?.favoriteDirectors && favorites.favoriteDirectors.length > 0 ? (
+                  <FavoriteBarList data={favorites.favoriteDirectors} accent="violet" />
+                ) : favorites ? (
+                  <p className="text-white/30 text-sm">No winner data yet (TMDB needed).</p>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
                   </div>
-                </Link>
-              ) : (
-                <p className="text-white/30 text-sm">No comments yet.</p>
-              )}
+                )}
+              </div>
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Dabys favorite genre</h2>
+                {favorites?.favoriteGenres && favorites.favoriteGenres.length > 0 ? (
+                  <FavoriteBarList data={favorites.favoriteGenres} accent="indigo" />
+                ) : favorites ? (
+                  <p className="text-white/30 text-sm">No winner data yet (TMDB needed).</p>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Themes */}
+            {/* Most submitted + Most discussed (under favorites, side by side) */}
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most submitted movie</h2>
+                {data.mostSubmittedMovie ? (
+                  <div className="flex items-center gap-4">
+                    {data.mostSubmittedMovie.posterUrl ? (
+                      <img src={data.mostSubmittedMovie.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08]" />
+                    ) : (
+                      <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
+                        {data.mostSubmittedMovie.movieTitle.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-lg font-semibold text-white/90">{data.mostSubmittedMovie.movieTitle}</p>
+                      {data.mostSubmittedMovie.year && <p className="text-sm text-white/40">{data.mostSubmittedMovie.year}</p>}
+                      <p className="text-sm text-purple-400 mt-1">Submitted {data.mostSubmittedMovie.count} time{data.mostSubmittedMovie.count !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-white/30 text-sm">No submissions yet.</p>
+                )}
+              </div>
+              <div className={cardClass}>
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most discussed winner</h2>
+                {data.mostDiscussedWinner ? (
+                  <Link href={`/winners/${data.mostDiscussedWinner.winnerId}`} className="flex items-center gap-4 group">
+                    {data.mostDiscussedWinner.posterUrl ? (
+                      <img src={data.mostDiscussedWinner.posterUrl} alt="" className="w-16 h-24 rounded-lg object-cover border border-white/[0.08] group-hover:border-purple-500/30 transition-colors" />
+                    ) : (
+                      <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center text-white/20 text-2xl font-bold">
+                        {data.mostDiscussedWinner.movieTitle.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-lg font-semibold text-white/90 group-hover:text-purple-300 transition-colors">{data.mostDiscussedWinner.movieTitle}</p>
+                      <p className="text-white/50 text-sm mt-0.5">{data.mostDiscussedWinner.commentCount} comment{data.mostDiscussedWinner.commentCount !== 1 ? "s" : ""}</p>
+                      <p className="text-xs text-white/40 mt-1 group-hover:text-purple-400 transition-colors">View winner →</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <p className="text-white/30 text-sm">No comments yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Most popular decade (from winning films) */}
             <div className={cardClass}>
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Themes with most submissions</h2>
-              {data.submissionsByTheme && data.submissionsByTheme.length > 0 ? (
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Most popular decade</h2>
+              {data.winnersByDecade && data.winnersByDecade.length > 0 ? (
                 <ul className="space-y-3">
-                  {data.submissionsByTheme.map((entry) => (
-                    <li key={entry.weekId}>
+                  {data.winnersByDecade.map((entry) => (
+                    <li key={entry.decade}>
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-white/80 text-sm truncate">{entry.theme}</span>
-                        <span className="text-white/40 text-xs shrink-0">{entry.count}</span>
+                        <span className="text-white/80 text-sm truncate">{entry.decade}</span>
+                        <span className="text-white/40 text-xs shrink-0">{entry.count} winner{entry.count !== 1 ? "s" : ""}</span>
                       </div>
                       <div className="h-2 rounded bg-white/[0.06] overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-violet-500/40 to-indigo-500/40 rounded" style={{ width: `${(entry.count / maxThemeCount) * 100}%` }} />
+                        <div className="h-full bg-gradient-to-r from-violet-500/40 to-indigo-500/40 rounded" style={{ width: `${(entry.count / maxDecadeCount) * 100}%` }} />
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-white/30 text-sm">No theme data yet.</p>
+                <p className="text-white/30 text-sm">No winner data yet.</p>
               )}
             </div>
           </div>

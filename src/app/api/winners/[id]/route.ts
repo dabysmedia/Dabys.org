@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles } from "@/lib/data";
+import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
 
 export async function GET(
   _request: Request,
@@ -100,6 +100,7 @@ export async function GET(
       avgStars: Math.round(avgStars * 10) / 10,
       totalRatings: ratings.length,
       totalComments: sortedComments.length,
+      dabysScorePct: computeDabysScorePct(ratings),
     },
   });
 }

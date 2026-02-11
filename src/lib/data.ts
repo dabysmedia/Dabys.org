@@ -188,6 +188,17 @@ export interface Rating {
   createdAt: string;
 }
 
+/** Single source of truth: Dabys score 0–100 from thumbs + stars. Used by winner API and stats API. */
+export function computeDabysScorePct(ratings: { thumbsUp: boolean; stars: number }[]): number {
+  if (ratings.length === 0) return 0;
+  const scores = ratings.map((r) => {
+    const thumbScore = r.thumbsUp ? 100 : 0;
+    const starScore = ((r.stars - 0.5) / 4.5) * 100;
+    return (thumbScore + starScore) / 2;
+  });
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
+
 export function getRatings(): Rating[] {
   return readJson<Rating[]>("ratings.json");
 }
