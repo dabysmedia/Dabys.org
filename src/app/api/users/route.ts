@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
-import { getUsers, saveUsers } from "@/lib/data";
+import { getUsers, saveUsers, getProfiles } from "@/lib/data";
 
-export async function GET() {
-  return NextResponse.json(getUsers());
+export async function GET(request: Request) {
+  const users = getUsers();
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("includeProfile") === "1") {
+    const profiles = getProfiles();
+    const withAvatar = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      avatarUrl: profiles.find((p) => p.userId === u.id)?.avatarUrl || "",
+    }));
+    return NextResponse.json(withAvatar);
+  }
+  return NextResponse.json(users);
 }
 
 export async function POST(request: Request) {

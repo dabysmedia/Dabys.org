@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ScrollingWinnersBg } from "@/components/ScrollingWinnersBg";
+import { AppWithFriends } from "@/components/AppWithFriends";
 
 export const metadata: Metadata = {
   title: "Dabys.org",
@@ -20,8 +21,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
       </head>
       <body className="antialiased">
-        <ScrollingWinnersBg />
-        {children}
+        <AppWithFriends>
+          <ScrollingWinnersBg />
+          {children}
+        </AppWithFriends>
       </body>
     </html>
   );
