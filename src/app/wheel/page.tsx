@@ -17,29 +17,82 @@ interface WheelData {
 
 const JERRY_ID = "1";
 
-// Segment colours — cycle through these
-const SEGMENT_COLORS = [
+// Case-style slot colours (cycle per card)
+const SLOT_COLORS = [
   "#7c3aed", "#6366f1", "#8b5cf6", "#4f46e5", "#a78bfa",
   "#818cf8", "#6d28d9", "#4338ca", "#c084fc", "#7e22ce",
 ];
+
+const CARD_WIDTH = 160;
+const CARD_GAP = 8;
+const CARD_HEIGHT = 100;
+const CARD_STEP = CARD_WIDTH + CARD_GAP;
 
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
 }
 
+// CS:GO-style case sounds (Web Audio API — no assets, works everywhere)
+let caseAudioContext: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!caseAudioContext) caseAudioContext = new AudioContext();
+  return caseAudioContext;
+}
+async function playCaseOpen() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "square";
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.06);
+  } catch { /* ignore */ }
+}
+async function playReveal() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.08);
+    osc.frequency.setValueAtTime(783.99, t + 0.16);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+    gain.gain.setValueAtTime(0.15, t + 0.14);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t);
+    osc.stop(t + 0.35);
+  } catch { /* ignore */ }
+}
+
 export default function WheelPage() {
   const router = useRouter();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [wheel, setWheel] = useState<WheelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState("");
 
-  // Spin state
-  const [spinning, setSpinning] = useState(false);
-  const [currentAngle, setCurrentAngle] = useState(0);
-  const angleRef = useRef(0);
+  // Case-style: strip offset (px). 0 = first card at left; negative = strip scrolled right
+  const [stripOffset, setStripOffset] = useState(0);
+  const offsetRef = useRef(0);
   const animFrameRef = useRef<number>(0);
+  const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
 
@@ -47,6 +100,8 @@ export default function WheelPage() {
   const lastAnimatedSpinRef = useRef<string | null>(null);
   // Track last known lastSpunAt for detecting manual sets
   const lastKnownSpunAtRef = useRef<string | null>(null);
+  // Skip next snap so we don't overwrite strip after our own spin completes
+  const skipNextSnapRef = useRef(false);
 
   const isJerry = user?.id === JERRY_ID;
 
@@ -67,96 +122,86 @@ export default function WheelPage() {
       .catch(() => {});
   }, [user?.id]);
 
-  // Smooth rotate to a specific segment (for manual sets — no dramatic multi-spin, just glide)
-  const rotateToSegment = useCallback((entries: string[], winnerIndex: number) => {
+  const getViewportWidth = useCallback(() => viewportRef.current?.clientWidth ?? 400, []);
+
+  // Smooth scroll to center winner (for manual sets — short glide)
+  const scrollToWinner = useCallback((entries: string[], winnerIndex: number) => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-
     const n = entries.length;
-    const sliceAngle = (2 * Math.PI) / n;
-    const targetSliceCenter = winnerIndex * sliceAngle + sliceAngle / 2;
-    const finalAngle = -(targetSliceCenter) - Math.PI / 2;
-
-    const start = angleRef.current;
-    // Normalize final into a reasonable target (1 full rotation + land)
-    const normalizedFinal = finalAngle - Math.floor(finalAngle / (2 * Math.PI)) * 2 * Math.PI;
-    const target = start - 2 * Math.PI - ((start - normalizedFinal) % (2 * Math.PI));
-    const duration = 2000; // 2s smooth glide
+    const vw = getViewportWidth();
+    const targetOffset = Math.max(0, -(winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+    const start = offsetRef.current;
+    const duration = 2000;
     const startTime = performance.now();
 
     function animate(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
-      const current = start + (target - start) * eased;
-
-      angleRef.current = current;
-      setCurrentAngle(current);
-
-      if (progress < 1) {
-        animFrameRef.current = requestAnimationFrame(animate);
-      } else {
+      const current = start + (targetOffset - start) * eased;
+      offsetRef.current = current;
+      setStripOffset(current);
+      if (progress < 1) animFrameRef.current = requestAnimationFrame(animate);
+      else {
+        playReveal();
         setResult(entries[winnerIndex]);
         setShowResult(true);
         setSpinning(false);
       }
     }
-
+    playCaseOpen();
     setSpinning(true);
     setShowResult(false);
     setResult(null);
     animFrameRef.current = requestAnimationFrame(animate);
-  }, []);
+  }, [getViewportWidth]);
 
-  // Shared animation logic — given wheel params, plays the spin animation
+  // Case-style spin: strip scrolls then eases to stop with winner centered
   const playSpin = useCallback((
     entries: string[],
     winnerIndex: number,
     fullSpins: number,
     duration: number,
-    timeOffset: number, // how many ms have already elapsed (for late joiners)
+    timeOffset: number,
     onComplete: (winner: string) => void
   ) => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-
     const n = entries.length;
-    const sliceAngle = (2 * Math.PI) / n;
-    const targetSliceCenter = winnerIndex * sliceAngle + sliceAngle / 2;
-    const finalAngle = -(targetSliceCenter) - Math.PI / 2;
-
-    const totalRotation = fullSpins * 2 * Math.PI;
-    const start = angleRef.current;
-    const normalizedFinal = finalAngle - Math.floor(finalAngle / (2 * Math.PI)) * 2 * Math.PI;
-    const target = start - totalRotation - (start - normalizedFinal) % (2 * Math.PI) - 2 * Math.PI;
-
+    const vw = getViewportWidth();
+    const totalCards = (fullSpins + 1) * n + winnerIndex;
+    const startOffset = Math.max(0, vw / 2 - CARD_WIDTH / 2);
+    const endOffset = -(totalCards * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2);
+    const start = offsetRef.current;
     const startTime = performance.now() - timeOffset;
 
     function animate(now: number) {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
-      const current = start + (target - start) * eased;
-
-      angleRef.current = current;
-      setCurrentAngle(current);
-
+      const current = start + (endOffset - start) * eased;
+      offsetRef.current = current;
+      setStripOffset(current);
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
+        playReveal();
         onComplete(entries[winnerIndex]);
       }
     }
-
+    if (timeOffset === 0) playCaseOpen();
     setSpinning(true);
     setShowResult(false);
     setResult(null);
+    offsetRef.current = startOffset;
+    setStripOffset(startOffset);
     animFrameRef.current = requestAnimationFrame(animate);
-  }, []);
+  }, [getViewportWidth]);
 
   // Load initial wheel data
   useEffect(() => {
     async function init() {
       try {
-        const res = await fetch("/api/wheel");
+        const res = await fetch("/api/wheel", { cache: "no-store" });
         if (res.ok) {
           const data: WheelData = await res.json();
           setWheel(data);
@@ -168,30 +213,29 @@ export default function WheelPage() {
             if (elapsed < data.duration) {
               lastAnimatedSpinRef.current = data.spinStartedAt;
               playSpin(data.entries, data.winnerIndex, data.fullSpins, data.duration, elapsed, (winner) => {
+                skipNextSnapRef.current = true;
                 setSpinning(false);
                 setResult(winner);
                 setShowResult(true);
               });
             } else {
-              // Spin already finished — snap to correct segment
               lastAnimatedSpinRef.current = data.spinStartedAt;
-              if (data.winnerIndex !== null) {
-                const n = data.entries.length;
-                const sliceAngle = (2 * Math.PI) / n;
-                const snapAngle = -(data.winnerIndex * sliceAngle + sliceAngle / 2) - Math.PI / 2;
-                angleRef.current = snapAngle;
-                setCurrentAngle(snapAngle);
+              if (data.winnerIndex !== null && viewportRef.current) {
+                const vw = viewportRef.current.clientWidth;
+                const snap = Math.max(0, -(data.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+                offsetRef.current = snap;
+                setStripOffset(snap);
               }
               if (data.lastResult) setResult(data.lastResult);
             }
           } else if (data.lastResult && data.winnerIndex !== null) {
             lastAnimatedSpinRef.current = data.spinStartedAt;
-            // Snap wheel to the last result segment on load
-            const n = data.entries.length;
-            const sliceAngle = (2 * Math.PI) / n;
-            const snapAngle = -(data.winnerIndex * sliceAngle + sliceAngle / 2) - Math.PI / 2;
-            angleRef.current = snapAngle;
-            setCurrentAngle(snapAngle);
+            if (viewportRef.current) {
+              const vw = viewportRef.current.clientWidth;
+              const snap = Math.max(0, -(data.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+              offsetRef.current = snap;
+              setStripOffset(snap);
+            }
             setResult(data.lastResult);
           } else if (data.lastResult) {
             lastAnimatedSpinRef.current = data.spinStartedAt;
@@ -210,7 +254,7 @@ export default function WheelPage() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/wheel");
+        const res = await fetch("/api/wheel", { cache: "no-store" });
         if (!res.ok) return;
         const data: WheelData = await res.json();
 
@@ -230,6 +274,7 @@ export default function WheelPage() {
           const elapsed = Date.now() - new Date(data.spinStartedAt).getTime();
           if (elapsed < data.duration) {
             playSpin(data.entries, data.winnerIndex, data.fullSpins, data.duration, elapsed, (winner) => {
+              skipNextSnapRef.current = true;
               setSpinning(false);
               setResult(winner);
               setShowResult(true);
@@ -241,7 +286,8 @@ export default function WheelPage() {
             setSpinning(false);
           }
         }
-        // Detect a manual set (lastSpunAt changed but not spinning)
+        // Detect a manual set (lastSpunAt changed but not spinning). Do not run scrollToWinner
+        // if we already animated this spin (e.g. Jerry just finished spinning), or we get a double reveal sound.
         else if (
           !data.spinning &&
           !spinning &&
@@ -250,9 +296,13 @@ export default function WheelPage() {
           data.winnerIndex !== null
         ) {
           lastKnownSpunAtRef.current = data.lastSpunAt;
-          lastAnimatedSpinRef.current = data.spinStartedAt;
-          setWheel(data);
-          rotateToSegment(data.entries, data.winnerIndex);
+          if (data.spinStartedAt !== lastAnimatedSpinRef.current) {
+            lastAnimatedSpinRef.current = data.spinStartedAt;
+            setWheel(data);
+            scrollToWinner(data.entries, data.winnerIndex);
+          } else {
+            setWheel(data);
+          }
         }
         else if (!data.spinning && !spinning) {
           // Update entries if they changed (admin edited while idle)
@@ -262,109 +312,25 @@ export default function WheelPage() {
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [wheel, spinning, playSpin, rotateToSegment]);
+  }, [wheel, spinning, playSpin, scrollToWinner]);
 
-  // Draw the wheel
-  const drawWheel = useCallback((angle: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas || !wheel || wheel.entries.length === 0) return;
+  // Repeats for case strip (enough for spin + buffer)
+  const stripRepeats = wheel && wheel.entries.length > 0 ? 12 : 0;
+  const stripEntries = wheel ? Array.from({ length: stripRepeats }, () => wheel.entries).flat() : [];
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const size = Math.min(canvas.parentElement?.clientWidth || 400, 500);
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    ctx.scale(dpr, dpr);
-
-    const cx = size / 2;
-    const cy = size / 2;
-    const radius = size / 2 - 8;
-    const n = wheel.entries.length;
-    const sliceAngle = (2 * Math.PI) / n;
-
-    ctx.clearRect(0, 0, size, size);
-
-    // Shadow
-    ctx.save();
-    ctx.shadowColor = "rgba(139, 92, 246, 0.3)";
-    ctx.shadowBlur = 40;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fill();
-    ctx.restore();
-
-    // Segments
-    for (let i = 0; i < n; i++) {
-      const startAngle = angle + i * sliceAngle;
-      const endAngle = startAngle + sliceAngle;
-
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, startAngle, endAngle);
-      ctx.closePath();
-      ctx.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Text
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(startAngle + sliceAngle / 2);
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      const fontSize = Math.max(10, Math.min(16, radius * 0.16));
-      ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
-      ctx.shadowColor = "rgba(0,0,0,0.5)";
-      ctx.shadowBlur = 4;
-
-      const text = wheel.entries[i];
-      const maxWidth = radius * 0.7;
-      const displayText = ctx.measureText(text).width > maxWidth
-        ? text.slice(0, Math.floor(text.length * (maxWidth / ctx.measureText(text).width))) + "…"
-        : text;
-      ctx.fillText(displayText, radius - 18, fontSize / 3);
-      ctx.restore();
+  // Snap strip to last result when viewport is ready (in case init ran before ref mounted).
+  // Skip one run after we complete our own spin so we don't overwrite the strip with stale wheel.
+  useEffect(() => {
+    if (!wheel?.lastResult || wheel.winnerIndex == null || !viewportRef.current || spinning) return;
+    if (skipNextSnapRef.current) {
+      skipNextSnapRef.current = false;
+      return;
     }
-
-    // Center circle
-    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
-    gradient.addColorStop(0, "#1e1b4b");
-    gradient.addColorStop(1, "#0f0a2e");
-    ctx.beginPath();
-    ctx.arc(cx, cy, 26, 0, 2 * Math.PI);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-    ctx.strokeStyle = "rgba(139, 92, 246, 0.5)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Outer ring
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 2, 0, 2 * Math.PI);
-    ctx.strokeStyle = "rgba(139, 92, 246, 0.25)";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-  }, [wheel]);
-
-  // Redraw on angle or wheel change
-  useEffect(() => {
-    drawWheel(currentAngle);
-  }, [currentAngle, drawWheel]);
-
-  // Resize handler
-  useEffect(() => {
-    function handleResize() { drawWheel(angleRef.current); }
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [drawWheel]);
+    const vw = viewportRef.current.clientWidth;
+    const snap = Math.max(0, -(wheel.winnerIndex * CARD_STEP) + (vw / 2 - CARD_WIDTH / 2));
+    offsetRef.current = snap;
+    setStripOffset(snap);
+  }, [wheel?.lastResult, wheel?.winnerIndex, spinning]);
 
   // Jerry's spin handler
   async function handleSpin() {
@@ -383,6 +349,7 @@ export default function WheelPage() {
       setWheel(data.wheel);
 
       playSpin(wheel.entries, data.winnerIndex, data.fullSpins, data.duration, 0, (winner) => {
+        skipNextSnapRef.current = true;
         setSpinning(false);
         setResult(winner);
         setShowResult(true);
@@ -465,33 +432,48 @@ export default function WheelPage() {
           </p>
         </div>
 
-        {/* Wheel container */}
+        {/* Case-style strip container */}
         <div className="flex flex-col items-center gap-8">
-          <div className="relative" style={{ maxWidth: 500, width: "100%" }}>
-            {/* Pointer */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20">
-              <svg width="32" height="40" viewBox="0 0 32 40" fill="none">
-                <path d="M16 40 L2 8 Q0 2 6 2 H26 Q32 2 30 8 Z" fill="#c084fc" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-                <path d="M16 36 L5 10 Q4 6 8 6 H24 Q28 6 27 10 Z" fill="url(#pointerGrad)" />
-                <defs>
-                  <linearGradient id="pointerGrad" x1="16" y1="6" x2="16" y2="36" gradientUnits="userSpaceOnUse">
-                    <stop offset="0" stopColor="#e9d5ff" />
-                    <stop offset="1" stopColor="#7c3aed" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+          <div className="relative w-full" style={{ maxWidth: 520 }}>
+            {/* Case window: overflow hidden, center slot highlighted */}
+            <div
+              ref={viewportRef}
+              className="relative w-full overflow-hidden rounded-2xl border-2 border-purple-500/30 bg-black/40 shadow-2xl"
+              style={{ height: CARD_HEIGHT + 32 }}
+            >
+              {/* Center line (CS:GO-style pointer) */}
+              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-1 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/90 to-transparent" />
+              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-white/60" />
 
-            {/* Canvas */}
-            <canvas
-              ref={canvasRef}
-              className="w-full h-auto"
-              style={{ aspectRatio: "1 / 1" }}
-            />
+              {/* Scrolling strip */}
+              <div
+                className="absolute left-0 top-4 flex h-[100px] items-stretch gap-0 transition-none"
+                style={{
+                  transform: `translateX(${stripOffset}px)`,
+                  willChange: spinning ? "transform" : "auto",
+                }}
+              >
+                {stripEntries.map((label, i) => (
+                  <div
+                    key={`${i}-${label}`}
+                    className="flex shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 text-center font-bold text-white/95 shadow-inner"
+                    style={{
+                      width: CARD_WIDTH,
+                      height: CARD_HEIGHT,
+                      marginRight: CARD_GAP,
+                      background: `linear-gradient(135deg, ${SLOT_COLORS[i % SLOT_COLORS.length]}40, ${SLOT_COLORS[(i + 1) % SLOT_COLORS.length]}20)`,
+                      borderLeftWidth: i === 0 ? 0 : 1,
+                    }}
+                  >
+                    <span className="truncate text-sm sm:text-base">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Spinning overlay for non-Jerry users */}
             {spinning && !isJerry && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-2xl">
                 <div className="px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-sm border border-purple-500/20">
                   <p className="text-purple-300 text-sm font-medium animate-pulse">Jerry is spinning...</p>
                 </div>
