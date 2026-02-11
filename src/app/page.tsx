@@ -995,6 +995,33 @@ function SubmissionsGrid({
   const [pitchModalSub, setPitchModalSub] = useState<Submission | null>(null);
   const [draftPitch, setDraftPitch] = useState("");
   const [pitchSaving, setPitchSaving] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Scale pitch text to fit its box at any size/zoom
+  useEffect(() => {
+    const runFit = () => {
+      gridRef.current?.querySelectorAll(".pitch-bubble").forEach((bubbleEl) => {
+        const bubble = bubbleEl as HTMLElement;
+        const textEl = bubble.querySelector(".pitch-text") as HTMLElement | null;
+        if (!textEl) return;
+        const maxH = bubble.clientHeight;
+        const maxW = bubble.clientWidth;
+        let size = 13;
+        textEl.style.fontSize = `${size}px`;
+        while (size > 8 && (textEl.scrollHeight > maxH || textEl.scrollWidth > maxW)) {
+          size--;
+          textEl.style.fontSize = `${size}px`;
+        }
+      });
+    };
+    const el = gridRef.current;
+    if (!el) return;
+    const runAfterLayout = () => requestAnimationFrame(() => requestAnimationFrame(runFit));
+    runAfterLayout();
+    const ro = new ResizeObserver(runAfterLayout);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [submissions]);
 
   const items = sorted && voteTally
     ? [...submissions].sort((a, b) => (voteTally[b.id] || 0) - (voteTally[a.id] || 0))
@@ -1020,7 +1047,7 @@ function SubmissionsGrid({
 
   return (
     <>
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       {items.map((sub, i) => {
         const isActive = activeId === sub.id;
         const showTrailer = trailerId === sub.id;
@@ -1094,7 +1121,7 @@ function SubmissionsGrid({
                   {/* Pitch — Instagram reel style: pfp + bubble at bottom, hover only */}
                   {sub.pitch && (
                     <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end gap-2 p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none">
-                      <div className="shrink-0 w-8 h-8 rounded-full border-2 border-white/40 overflow-hidden bg-white/10 ring-2 ring-black/20">
+                      <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden bg-white/10">
                         {sub.avatarUrl ? (
                           <img src={sub.avatarUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -1103,8 +1130,8 @@ function SubmissionsGrid({
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0 flex-1 rounded-2xl rounded-bl-md bg-white/90 backdrop-blur-sm border border-white/30 px-3 py-2 shadow-lg">
-                        <p className="text-[13px] text-neutral-800 leading-snug line-clamp-2 break-words">{sub.pitch}</p>
+                      <div className="pitch-bubble min-w-0 flex-1 rounded-2xl rounded-bl-sm bg-white/90 backdrop-blur-sm border border-white/30 px-3 py-2 shadow-lg max-h-14 overflow-hidden flex items-center">
+                        <p className="pitch-text text-neutral-800 leading-snug break-words w-full" style={{ fontSize: 13 }}>{sub.pitch}</p>
                       </div>
                     </div>
                   )}
