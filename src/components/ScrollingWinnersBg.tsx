@@ -17,9 +17,27 @@ export function ScrollingWinnersBg() {
   useEffect(() => {
     fetch("/api/winners")
       .then((r) => (r.ok ? r.json() : []))
-      .then((winners: { backdropUrl?: string; posterUrl?: string }[]) => {
-        setWinnerArt(winners.map((w) => w.backdropUrl || w.posterUrl).filter((src): src is string => Boolean(src)));
-      })
+      .then(
+        (winners: {
+          backdropUrl?: string;
+          posterUrl?: string;
+          publishedAt?: string;
+        }[]) => {
+          const latestFive = [...winners]
+            .sort((a, b) => {
+              const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+              const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+              return bTime - aTime;
+            })
+            .slice(0, 5);
+
+          setWinnerArt(
+            latestFive
+              .map((w) => w.backdropUrl || w.posterUrl)
+              .filter((src): src is string => Boolean(src))
+          );
+        }
+      )
       .catch(() => setWinnerArt([]));
   }, []);
 
@@ -40,7 +58,7 @@ export function ScrollingWinnersBg() {
               <img
                 src={src}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover opacity-[0.07]"
+                className="absolute inset-0 w-full h-full object-cover opacity-[0.1]"
               />
             </div>
           ))}
