@@ -211,3 +211,19 @@ select option {
 .credits-delta-pop {
   animation: credits-delta-fade 0.8s ease-out forwards;
 }
+
+/* Trade accept/deny feedback toast */
+@keyframes trade-feedback-in {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes trade-feedback-out {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+.trade-feedback-toast {
+  animation: trade-feedback-in 0.35s ease-out forwards;
+}
+.trade-feedback-toast.exiting {
+  animation: trade-feedback-out 0.25s ease-in forwards;
+}

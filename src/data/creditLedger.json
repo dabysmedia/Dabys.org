@@ -624,5 +624,63 @@
       "packId": "pack-1770883960789-vqg92vi"
     },
     "createdAt": "2026-02-12T16:24:20.932Z"
+  },
+  {
+    "id": "cl-1770914058977-zokahaw",
+    "userId": "4",
+    "amount": 15,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "2",
+      "correctCount": 3,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T16:34:18.976Z"
+  },
+  {
+    "id": "cl-1770914068879-9r7341j",
+    "userId": "4",
+    "amount": 10,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "4",
+      "correctCount": 2,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T16:34:28.879Z"
+  },
+  {
+    "id": "cl-1770914082336-ogn1jpj",
+    "userId": "4",
+    "amount": 5,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "3",
+      "correctCount": 1,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T16:34:42.335Z"
+  },
+  {
+    "id": "cl-1770914090533-s79i81m",
+    "userId": "4",
+    "amount": 5,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "5",
+      "correctCount": 1,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T16:34:50.532Z"
+  },
+  {
+    "id": "cl-1770914096518-xj63d6t",
+    "userId": "4",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T16:34:56.517Z"
   }
 ]

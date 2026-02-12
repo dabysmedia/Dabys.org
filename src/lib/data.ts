@@ -817,6 +817,67 @@ export function getListing(listingId: string): Listing | undefined {
   return getListingsRaw().find((l) => l.id === listingId);
 }
 
+// ──── Trades (P2P card offers) ───────────────────────────
+export interface TradeOffer {
+  id: string;
+  initiatorUserId: string;
+  initiatorName: string;
+  counterpartyUserId: string;
+  counterpartyName: string;
+  offeredCardIds: string[];
+  requestedCardIds: string[];
+  status: "pending" | "accepted" | "denied";
+  createdAt: string;
+}
+
+function getTradesRaw(): TradeOffer[] {
+  try {
+    return readJson<TradeOffer[]>("trades.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveTradesRaw(trades: TradeOffer[]) {
+  writeJson("trades.json", trades);
+}
+
+export function getTradesForUser(userId: string, status?: "pending" | "accepted" | "denied"): TradeOffer[] {
+  const trades = getTradesRaw().filter(
+    (t) => t.initiatorUserId === userId || t.counterpartyUserId === userId
+  );
+  if (status) return trades.filter((t) => t.status === status);
+  return trades;
+}
+
+export function getTradeById(id: string): TradeOffer | undefined {
+  return getTradesRaw().find((t) => t.id === id);
+}
+
+export function addTrade(trade: Omit<TradeOffer, "id" | "createdAt">): TradeOffer {
+  const trades = getTradesRaw();
+  const newTrade: TradeOffer = {
+    ...trade,
+    id: `trd-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  trades.push(newTrade);
+  saveTradesRaw(trades);
+  return newTrade;
+}
+
+export function updateTradeStatus(
+  tradeId: string,
+  status: "pending" | "accepted" | "denied"
+): TradeOffer | undefined {
+  const trades = getTradesRaw();
+  const idx = trades.findIndex((t) => t.id === tradeId);
+  if (idx < 0) return undefined;
+  trades[idx] = { ...trades[idx], status };
+  saveTradesRaw(trades);
+  return trades[idx];
+}
+
 // ──── Store Packs (configurable card packs) ──────────────
 export interface Pack {
   id: string;

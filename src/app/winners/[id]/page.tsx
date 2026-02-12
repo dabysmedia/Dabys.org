@@ -1059,7 +1059,7 @@ export default function WinnerDetailPage() {
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden"
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
               role="dialog"
               aria-label="Trivia"
               onClick={(e) => e.stopPropagation()}
@@ -1085,7 +1085,7 @@ export default function WinnerDetailPage() {
                         setTriviaCompleted(true);
                         window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: earned } }));
                       }}
-                      className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-colors cursor-pointer"
+                      className="w-full px-4 py-3 rounded-xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md text-purple-200 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 transition-colors cursor-pointer"
                     >
                       Done
                     </button>
@@ -1136,7 +1136,7 @@ export default function WinnerDetailPage() {
                                 }
                               }}
                               disabled={triviaSubmitting}
-                              className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 hover:bg-white/[0.1] hover:border-purple-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                              className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.06] backdrop-blur-md border border-white/[0.12] text-white/90 hover:bg-white/[0.1] hover:border-purple-500/30 transition-colors cursor-pointer disabled:opacity-50"
                             >
                               {opt}
                             </button>

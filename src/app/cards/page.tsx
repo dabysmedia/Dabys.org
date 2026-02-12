@@ -47,7 +47,27 @@ interface Listing {
 
 const PACK_PRICE = 50;
 
-type TabKey = "store" | "collection" | "marketplace" | "trivia";
+type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
+
+interface TradeOfferEnriched {
+  id: string;
+  initiatorUserId: string;
+  initiatorName: string;
+  counterpartyUserId: string;
+  counterpartyName: string;
+  offeredCardIds: string[];
+  requestedCardIds: string[];
+  offeredCards: Card[];
+  requestedCards: Card[];
+  status: "pending" | "accepted" | "denied";
+  createdAt: string;
+}
+
+interface UserWithAvatar {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
 
 // Web Audio API sounds for trade-up (no assets, works everywhere)
 let tradeUpAudioContext: AudioContext | null = null;
@@ -114,6 +134,69 @@ async function playTradeUpReveal() {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     osc.start(t);
     osc.stop(t + 0.3);
+  } catch { /* ignore */ }
+}
+async function playTradeAcceptSound() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.06);
+    osc.frequency.setValueAtTime(783.99, t + 0.12);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+    gain.gain.setValueAtTime(0.12, t + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  } catch { /* ignore */ }
+}
+async function playTradeCreatedSound() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.setValueAtTime(554.37, t + 0.08);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.02);
+    gain.gain.setValueAtTime(0.1, t + 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.start(t);
+    osc.stop(t + 0.2);
+  } catch { /* ignore */ }
+}
+async function playTradeDenySound() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.setValueAtTime(320, t + 0.08);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.start(t);
+    osc.stop(t + 0.15);
   } catch { /* ignore */ }
 }
 async function playPackFlipSound(step: number) {
@@ -184,6 +267,18 @@ export default function CardsPage() {
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
+  const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeStep, setTradeStep] = useState<1 | 2 | 3>(1);
+  const [tradeCounterparty, setTradeCounterparty] = useState<UserWithAvatar | null>(null);
+  const [tradeOfferedIds, setTradeOfferedIds] = useState<Set<string>>(new Set());
+  const [tradeRequestedIds, setTradeRequestedIds] = useState<Set<string>>(new Set());
+  const [tradeUsers, setTradeUsers] = useState<UserWithAvatar[]>([]);
+  const [counterpartyCards, setCounterpartyCards] = useState<Card[]>([]);
+  const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeError, setTradeError] = useState("");
+  const [tradeActionId, setTradeActionId] = useState<string | null>(null);
+  const [tradeFeedback, setTradeFeedback] = useState<"accepted" | "denied" | "created" | null>(null);
 
   const myListedCardIds = new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
@@ -194,7 +289,7 @@ export default function CardsPage() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -202,6 +297,7 @@ export default function CardsPage() {
       fetch("/api/winners"),
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/packs"),
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
     ]);
 
     if (creditsRes.ok) {
@@ -226,6 +322,7 @@ export default function CardsPage() {
       const d = await packsRes.json();
       setPacks(d.packs || []);
     }
+    if (tradesRes.ok) setTrades(await tradesRes.json());
   }, []);
 
   useEffect(() => {
@@ -462,6 +559,162 @@ export default function CardsPage() {
     }
   }
 
+  function openTradeModal() {
+    setShowTradeModal(true);
+    setTradeStep(1);
+    setTradeCounterparty(null);
+    setTradeOfferedIds(new Set());
+    setTradeRequestedIds(new Set());
+    setCounterpartyCards([]);
+    setTradeError("");
+    fetch("/api/users?includeProfile=1")
+      .then((r) => r.json())
+      .then((data: UserWithAvatar[]) => setTradeUsers(data.filter((u) => u.id !== user?.id)))
+      .catch(() => setTradeUsers([]));
+  }
+
+  useEffect(() => {
+    if (!showTradeModal || !tradeCounterparty) return;
+    fetch(`/api/cards?userId=${encodeURIComponent(tradeCounterparty.id)}`)
+      .then((r) => r.json())
+      .then((data: Card[]) => setCounterpartyCards(data))
+      .catch(() => setCounterpartyCards([]));
+  }, [showTradeModal, tradeCounterparty?.id]);
+
+  const pendingTradeOfferedIds = new Set(
+    trades.filter((t) => t.initiatorUserId === user?.id && t.status === "pending").flatMap((t) => t.offeredCardIds)
+  );
+  const availableForOffer = cards.filter(
+    (c) => !myListedCardIds.has(c.id!) && !pendingTradeOfferedIds.has(c.id!)
+  );
+  const counterpartyListedIds = new Set(
+    listings.filter((l) => l.sellerUserId === tradeCounterparty?.id).map((l) => l.cardId)
+  );
+  const availableToRequest = counterpartyCards.filter((c) => !counterpartyListedIds.has(c.id!));
+
+  function toggleTradeOffer(cardId: string) {
+    setTradeOfferedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
+  }
+  function toggleTradeRequest(cardId: string) {
+    setTradeRequestedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
+  }
+
+  async function handleSendTrade() {
+    if (!user || !tradeCounterparty || tradeOfferedIds.size === 0 || tradeRequestedIds.size === 0) return;
+    setTradeLoading(true);
+    setTradeError("");
+    try {
+      const res = await fetch("/api/trades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          initiatorUserId: user.id,
+          initiatorName: user.name,
+          counterpartyUserId: tradeCounterparty.id,
+          counterpartyName: tradeCounterparty.name,
+          offeredCardIds: Array.from(tradeOfferedIds),
+          requestedCardIds: Array.from(tradeRequestedIds),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        playTradeCreatedSound();
+        setTradeFeedback("created");
+        setShowTradeModal(false);
+        await loadData();
+        setTimeout(() => setTradeFeedback(null), 2200);
+      } else {
+        setTradeError(data.error || "Failed to send offer");
+      }
+    } catch {
+      setTradeError("Failed to send offer");
+    } finally {
+      setTradeLoading(false);
+    }
+  }
+
+  async function handleAcceptTrade(tradeId: string) {
+    if (!user) return;
+    setTradeActionId(tradeId);
+    try {
+      const res = await fetch(`/api/trades/${tradeId}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        playTradeAcceptSound();
+        setTradeFeedback("accepted");
+        await loadData();
+        setTimeout(() => setTradeFeedback(null), 2200);
+      } else {
+        alert(data.error || "Failed to accept");
+      }
+    } catch {
+      alert("Failed to accept trade");
+    } finally {
+      setTradeActionId(null);
+    }
+  }
+
+  async function handleDenyTrade(tradeId: string) {
+    if (!user) return;
+    setTradeActionId(tradeId);
+    try {
+      const res = await fetch(`/api/trades/${tradeId}/deny`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        playTradeDenySound();
+        setTradeFeedback("denied");
+        await loadData();
+        setTimeout(() => setTradeFeedback(null), 2200);
+      } else {
+        alert(data.error || "Failed to deny");
+      }
+    } catch {
+      alert("Failed to deny trade");
+    } finally {
+      setTradeActionId(null);
+    }
+  }
+
+  async function handleCancelTrade(tradeId: string) {
+    if (!user) return;
+    setTradeActionId(tradeId);
+    try {
+      const res = await fetch(`/api/trades/${tradeId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok) await loadData();
+      else alert(data.error || "Failed to cancel");
+    } catch {
+      alert("Failed to cancel trade");
+    } finally {
+      setTradeActionId(null);
+    }
+  }
+
+  const sentTrades = trades.filter((t) => t.initiatorUserId === user?.id);
+  const receivedTrades = trades.filter((t) => t.counterpartyUserId === user?.id);
+
   const listedCardIds = new Set(listings.map((l) => l.cardId));
   const availableToList = cards.filter((c) => !listedCardIds.has(c.id));
 
@@ -478,6 +731,7 @@ export default function CardsPage() {
     { key: "collection", label: "Collection" },
     { key: "marketplace", label: "Marketplace" },
     { key: "trivia", label: "Trivia" },
+    { key: "trade", label: "Trade" },
   ];
 
   return (
@@ -1083,6 +1337,359 @@ export default function CardsPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Trade feedback toast */}
+        {tradeFeedback && (
+          <div
+            className={`fixed left-1/2 top-24 z-50 -translate-x-1/2 trade-feedback-toast pointer-events-none ${
+              tradeFeedback === "accepted"
+                ? "rounded-xl border border-green-500/40 bg-green-500/20 backdrop-blur-xl px-6 py-4 shadow-[0_8px_32px_rgba(34,197,94,0.25)]"
+                : tradeFeedback === "created"
+                  ? "rounded-xl border border-amber-500/40 bg-amber-500/20 backdrop-blur-xl px-6 py-4 shadow-[0_8px_32px_rgba(251,191,36,0.25)]"
+                  : "rounded-xl border border-white/20 bg-white/[0.08] backdrop-blur-xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+            }`}
+          >
+            <p className={`text-sm font-semibold ${
+              tradeFeedback === "accepted" ? "text-green-300" :
+              tradeFeedback === "created" ? "text-amber-300" : "text-white/80"
+            }`}>
+              {tradeFeedback === "accepted" ? "Trade accepted!" : tradeFeedback === "created" ? "Offer sent!" : "Offer denied"}
+            </p>
+          </div>
+        )}
+
+        {/* Trade */}
+        {tab === "trade" && (
+          <>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <p className="text-white/50 text-sm">
+                Trade cards directly with other users. Send offers and accept or deny incoming trades.
+              </p>
+              <button
+                onClick={openTradeModal}
+                className="px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-colors cursor-pointer"
+              >
+                Start Trade
+              </button>
+            </div>
+
+            {/* Sent offers */}
+            {sentTrades.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Sent</h3>
+                <div className="space-y-4">
+                  {sentTrades.map((t) => (
+                    <div
+                      key={t.id}
+                      className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+                    >
+                      <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {t.counterpartyUserId && (
+                            <Link href={`/profile/${t.counterpartyUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                {t.counterpartyName?.charAt(0) || "?"}
+                              </div>
+                              <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
+                            </Link>
+                          )}
+                        </div>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <span className="text-xs text-white/40">Your offer:</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {t.offeredCards.slice(0, 5).map((c) => (
+                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                {c.profilePath ? (
+                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
+                                )}
+                              </div>
+                            ))}
+                            {t.offeredCards.length > 5 && (
+                              <span className="text-xs text-white/40 self-center">+{t.offeredCards.length - 5}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-white/30">→</span>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <span className="text-xs text-white/40">Request:</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {t.requestedCards.slice(0, 5).map((c) => (
+                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                {c.profilePath ? (
+                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
+                                )}
+                              </div>
+                            ))}
+                            {t.requestedCards.length > 5 && (
+                              <span className="text-xs text-white/40 self-center">+{t.requestedCards.length - 5}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleCancelTrade(t.id)}
+                        disabled={tradeActionId === t.id}
+                        className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-400 text-sm hover:border-red-500/50 hover:bg-red-500/15 disabled:opacity-40 cursor-pointer shrink-0"
+                      >
+                        {tradeActionId === t.id ? "Cancelling..." : "Cancel"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Received offers */}
+            {receivedTrades.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Received</h3>
+                <div className="space-y-4">
+                  {receivedTrades.map((t) => (
+                    <div
+                      key={t.id}
+                      className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+                    >
+                      <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {t.initiatorUserId && (
+                            <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                {t.initiatorName?.charAt(0) || "?"}
+                              </div>
+                              <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
+                            </Link>
+                          )}
+                        </div>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <span className="text-xs text-white/40">They offer:</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {t.offeredCards.slice(0, 5).map((c) => (
+                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                {c.profilePath ? (
+                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
+                                )}
+                              </div>
+                            ))}
+                            {t.offeredCards.length > 5 && (
+                              <span className="text-xs text-white/40 self-center">+{t.offeredCards.length - 5}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-white/30">→</span>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <span className="text-xs text-white/40">For your:</span>
+                          <div className="flex gap-1 flex-wrap">
+                            {t.requestedCards.slice(0, 5).map((c) => (
+                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                {c.profilePath ? (
+                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
+                                )}
+                              </div>
+                            ))}
+                            {t.requestedCards.length > 5 && (
+                              <span className="text-xs text-white/40 self-center">+{t.requestedCards.length - 5}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button
+                          onClick={() => handleAcceptTrade(t.id)}
+                          disabled={tradeActionId === t.id}
+                          className="px-3 py-1.5 rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md text-green-400 text-sm hover:border-green-500/50 hover:bg-green-500/15 disabled:opacity-40 cursor-pointer"
+                        >
+                          {tradeActionId === t.id ? "..." : "Accept"}
+                        </button>
+                        <button
+                          onClick={() => handleDenyTrade(t.id)}
+                          disabled={tradeActionId === t.id}
+                          className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-400 text-sm hover:border-red-500/50 hover:bg-red-500/15 disabled:opacity-40 cursor-pointer"
+                        >
+                          Deny
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sentTrades.length === 0 && receivedTrades.length === 0 && (
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+                <p className="text-white/40 text-sm mb-2">No pending trades.</p>
+                <p className="text-white/30 text-xs">Click &quot;Start Trade&quot; to send an offer to another user.</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Start Trade modal */}
+        {showTradeModal && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => !tradeLoading && setShowTradeModal(false)}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col"
+              role="dialog"
+              aria-label="Start trade"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative p-6 flex flex-col flex-1 min-h-0 overflow-auto">
+                <h3 className="text-lg font-bold text-white/90 mb-4 shrink-0 pr-10">
+                  Start Trade
+                  {tradeStep === 1 && " — Select user"}
+                  {tradeStep === 2 && " — Your offer"}
+                  {tradeStep === 3 && " — Request from them"}
+                </h3>
+
+                {tradeStep === 1 && (
+                  <div className="space-y-4">
+                    <p className="text-white/50 text-sm">Choose a user to trade with.</p>
+                    {tradeUsers.length === 0 ? (
+                      <p className="text-white/40 text-sm">No other users yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {tradeUsers.map((u) => (
+                          <button
+                            key={u.id}
+                            onClick={() => {
+                              setTradeCounterparty(u);
+                              setTradeStep(2);
+                            }}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md hover:border-amber-500/40 hover:bg-amber-500/10 transition-colors cursor-pointer text-left"
+                          >
+                            {u.avatarUrl ? (
+                              <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                                {u.name.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-sm font-medium text-white/90 truncate">{u.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tradeStep === 2 && (
+                  <div className="space-y-4">
+                    <p className="text-white/50 text-sm">
+                      Select cards to offer. (Cards listed on marketplace cannot be traded.)
+                    </p>
+                    {availableForOffer.length === 0 ? (
+                      <p className="text-white/40 text-sm">No cards available to offer.</p>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-64 overflow-y-auto scrollbar-autocomplete">
+                        {availableForOffer.map((c) => {
+                          const selected = tradeOfferedIds.has(c.id!);
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => toggleTradeOffer(c.id!)}
+                              className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${
+                                selected ? "ring-amber-400 ring-offset-2 ring-offset-[var(--background)]" : "ring-transparent hover:ring-white/40"
+                              }`}
+                            >
+                              <CardDisplay card={c} />
+                              {selected && (
+                                <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTradeStep(1)}
+                        className="px-4 py-2 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.1] hover:border-white/20 cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={() => tradeOfferedIds.size > 0 && setTradeStep(3)}
+                        disabled={tradeOfferedIds.size === 0}
+                        className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {tradeStep === 3 && (
+                  <div className="space-y-4">
+                    <p className="text-white/50 text-sm">
+                      Select cards you want from {tradeCounterparty?.name}.
+                    </p>
+                    {availableToRequest.length === 0 ? (
+                      <p className="text-white/40 text-sm">{tradeCounterparty?.name} has no cards available to request.</p>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-64 overflow-y-auto scrollbar-autocomplete">
+                        {availableToRequest.map((c) => {
+                          const selected = tradeRequestedIds.has(c.id!);
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => toggleTradeRequest(c.id!)}
+                              className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${
+                                selected ? "ring-amber-400 ring-offset-2 ring-offset-[var(--background)]" : "ring-transparent hover:ring-white/40"
+                              }`}
+                            >
+                              <CardDisplay card={c} />
+                              {selected && (
+                                <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {tradeError && <p className="text-red-400 text-sm">{tradeError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTradeStep(2)}
+                        className="px-4 py-2 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.1] hover:border-white/20 cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleSendTrade}
+                        disabled={tradeLoading || tradeRequestedIds.size === 0}
+                        className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
+                      >
+                        {tradeLoading ? "Sending..." : "Send Offer"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => !tradeLoading && setShowTradeModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </main>
     </div>

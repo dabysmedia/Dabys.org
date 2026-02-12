@@ -1162,7 +1162,7 @@
     "acquiredAt": "2026-02-12T16:24:15.657Z"
   },
   {
-    "userId": "2",
+    "userId": "4",
     "characterId": "actor-1159-111",
     "rarity": "epic",
     "isFoil": false,
@@ -1218,7 +1218,7 @@
     "acquiredAt": "2026-02-12T16:24:20.935Z"
   },
   {
-    "userId": "2",
+    "userId": "4",
     "characterId": "actor-776-809",
     "rarity": "uncommon",
     "isFoil": false,
@@ -1232,7 +1232,7 @@
     "acquiredAt": "2026-02-12T16:24:20.936Z"
   },
   {
-    "userId": "2",
+    "userId": "4",
     "characterId": "actor-10959-1858",
     "rarity": "uncommon",
     "isFoil": false,
@@ -1258,5 +1258,75 @@
     "cardType": "actor",
     "id": "card-1770913460938-93psu1z",
     "acquiredAt": "2026-02-12T16:24:20.938Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1159-111",
+    "rarity": "epic",
+    "isFoil": false,
+    "actorName": "Steven Bauer",
+    "characterName": "Manny Ray",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
+    "cardType": "actor",
+    "id": "card-1770914096519-ewc74cc",
+    "acquiredAt": "2026-02-12T16:34:56.519Z"
+  },
+  {
+    "userId": "4",
+    "characterId": "actor-57410-9353",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Héctor Jiménez",
+    "characterName": "Esqueleto",
+    "movieTitle": "Nacho Libre",
+    "movieTmdbId": 9353,
+    "profilePath": "https://image.tmdb.org/t/p/w500/i6Q6G8HWLof7zXNbTgvpI6MuC3P.jpg",
+    "cardType": "actor",
+    "id": "card-1770914096520-a7iok1i",
+    "acquiredAt": "2026-02-12T16:34:56.520Z"
+  },
+  {
+    "userId": "4",
+    "characterId": "actor-19592-129",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Tatsuya Gashûin",
+    "characterName": "Aogaeru (voice)",
+    "movieTitle": "Spirited Away",
+    "movieTmdbId": 129,
+    "profilePath": "https://image.tmdb.org/t/p/w500/fLqIdkShknsJmZy4EfBWuWyHN4C.jpg",
+    "cardType": "actor",
+    "id": "card-1770914096520-v5m3vwg",
+    "acquiredAt": "2026-02-12T16:34:56.520Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1770914096521-i4nr5l9",
+    "acquiredAt": "2026-02-12T16:34:56.521Z"
+  },
+  {
+    "userId": "4",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1770914096522-4itqke3",
+    "acquiredAt": "2026-02-12T16:34:56.522Z"
   }
 ]
