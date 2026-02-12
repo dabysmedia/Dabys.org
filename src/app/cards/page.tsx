@@ -288,6 +288,10 @@ export default function CardsPage() {
   const [tradeError, setTradeError] = useState("");
   const [tradeActionId, setTradeActionId] = useState<string | null>(null);
   const [tradeFeedback, setTradeFeedback] = useState<"accepted" | "denied" | "created" | null>(null);
+  const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
+  const [expandedReceivedTradeId, setExpandedReceivedTradeId] = useState<string | null>(null);
+  const [expandedSentTradeId, setExpandedSentTradeId] = useState<string | null>(null);
+  const [userAvatarMap, setUserAvatarMap] = useState<Record<string, string>>({});
   const [badgeLossWarnings, setBadgeLossWarnings] = useState<{ movieTitle: string; isHolo: boolean }[] | null>(null);
   const [badgeLossOnConfirm, setBadgeLossOnConfirm] = useState<(() => void | Promise<void>) | null>(null);
   const [badgeLossIsListing, setBadgeLossIsListing] = useState(false);
@@ -314,7 +318,7 @@ export default function CardsPage() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -323,6 +327,7 @@ export default function CardsPage() {
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/packs"),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
+      fetch("/api/users?includeProfile=1"),
     ]);
 
     if (creditsRes.ok) {
@@ -348,6 +353,10 @@ export default function CardsPage() {
       setPacks(d.packs || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
+    if (usersRes.ok) {
+      const usersWithProfile = await usersRes.json() as { id: string; name: string; avatarUrl?: string }[];
+      setUserAvatarMap(usersWithProfile.reduce((acc, x) => ({ ...acc, [x.id]: x.avatarUrl || "" }), {}));
+    }
   }, []);
 
   useEffect(() => {
@@ -692,6 +701,7 @@ export default function CardsPage() {
   }
 
   function openTradeModal() {
+    setEditingTradeId(null);
     setShowTradeModal(true);
     setTradeStep(1);
     setTradeCounterparty(null);
@@ -700,6 +710,22 @@ export default function CardsPage() {
     setTradeOfferedCredits(0);
     setTradeRequestedCredits(0);
     setCounterpartyCards([]);
+    setTradeError("");
+    fetch("/api/users?includeProfile=1")
+      .then((r) => r.json())
+      .then((data: UserWithAvatar[]) => setTradeUsers(data.filter((u) => u.id !== user?.id)))
+      .catch(() => setTradeUsers([]));
+  }
+
+  function openEditTrade(t: TradeOfferEnriched) {
+    setEditingTradeId(t.id);
+    setShowTradeModal(true);
+    setTradeStep(2);
+    setTradeCounterparty({ id: t.initiatorUserId, name: t.initiatorName ?? "Unknown" });
+    setTradeOfferedIds(new Set(t.requestedCardIds));
+    setTradeRequestedIds(new Set(t.offeredCardIds));
+    setTradeOfferedCredits(t.requestedCredits ?? 0);
+    setTradeRequestedCredits(t.offeredCredits ?? 0);
     setTradeError("");
     fetch("/api/users?includeProfile=1")
       .then((r) => r.json())
@@ -774,6 +800,14 @@ export default function CardsPage() {
         playTradeCreatedSound();
         setTradeFeedback("created");
         setShowTradeModal(false);
+        if (editingTradeId && user) {
+          fetch(`/api/trades/${editingTradeId}/deny`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: user.id }),
+          }).catch(() => {});
+          setEditingTradeId(null);
+        }
         await loadData();
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
@@ -799,6 +833,7 @@ export default function CardsPage() {
       if (res.ok) {
         playTradeAcceptSound();
         setTradeFeedback("accepted");
+        setExpandedReceivedTradeId(null);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
         await loadData();
         setTimeout(() => setTradeFeedback(null), 2200);
@@ -825,6 +860,7 @@ export default function CardsPage() {
       if (res.ok) {
         playTradeDenySound();
         setTradeFeedback("denied");
+        setExpandedReceivedTradeId(null);
         await loadData();
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
@@ -1354,62 +1390,86 @@ export default function CardsPage() {
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
                 <p className="text-white/40 text-sm">No cards yet. Buy a pack in Store to get started!</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {cards
-                  .filter((c) => !filterRarity || c.rarity === filterRarity)
-                  .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
-                  .sort((a, b) => {
-                    if (filterSort === "recent") {
-                      const at = new Date(a.acquiredAt ?? 0).getTime();
-                      const bt = new Date(b.acquiredAt ?? 0).getTime();
-                      return bt - at;
-                    }
-                    if (filterSort === "name") {
-                      return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                    }
-                    if (filterSort === "movie") {
-                      const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
-                      return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                    }
-                    return 0;
-                  })
-                  .map((card) => {
-                    const inSlots = tradeUpCardIds.includes(card.id!);
-                    const canAdd = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
-                    const ineligible = tradeUpCardIds.length > 0 && !canAdd && !inSlots;
-                    return (
-                      <div
-                        key={card.id}
-                        onClick={() => {
-                          if (canAdd && card.id) addToTradeUpSlot(card.id!);
-                          else if (card.rarity === "legendary") {
-                            setLegendaryBlockShown(true);
-                            setTimeout(() => setLegendaryBlockShown(false), 2500);
-                          }
-                        }}
-                        className={`relative group/card transition-all duration-200 ${
-                          canAdd ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
-                        } ${card.rarity === "legendary" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
-                      >
-                        {inSlots && (
-                          <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
-                            ✓
-                          </span>
-                        )}
-                        {myListedCardIds.has(card.id!) && (
-                          <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl text-xs text-white/60">
-                            Listed
-                          </span>
-                        )}
-                        <div className={canAdd ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
-                          <CardDisplay card={card} />
+            ) : (() => {
+              const filtered = cards
+                .filter((c) => !filterRarity || c.rarity === filterRarity)
+                .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
+                .sort((a, b) => {
+                  if (filterSort === "recent") {
+                    const at = new Date(a.acquiredAt ?? 0).getTime();
+                    const bt = new Date(b.acquiredAt ?? 0).getTime();
+                    return bt - at;
+                  }
+                  if (filterSort === "name") {
+                    return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                  }
+                  if (filterSort === "movie") {
+                    const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
+                    return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                  }
+                  return 0;
+                });
+              const renderCard = (card: Card) => {
+                const inSlots = tradeUpCardIds.includes(card.id!);
+                const canAdd = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                const ineligible = tradeUpCardIds.length > 0 && !canAdd && !inSlots;
+                return (
+                  <div
+                    key={card.id}
+                    onClick={() => {
+                      if (canAdd && card.id) addToTradeUpSlot(card.id!);
+                      else if (card.rarity === "legendary") {
+                        setLegendaryBlockShown(true);
+                        setTimeout(() => setLegendaryBlockShown(false), 2500);
+                      }
+                    }}
+                    className={`relative group/card transition-all duration-200 ${
+                      canAdd ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                    } ${card.rarity === "legendary" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
+                  >
+                    {inSlots && (
+                      <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
+                        ✓
+                      </span>
+                    )}
+                    {myListedCardIds.has(card.id!) && (
+                      <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl text-xs text-white/60">
+                        Listed
+                      </span>
+                    )}
+                    <div className={canAdd ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
+                      <CardDisplay card={card} />
+                    </div>
+                  </div>
+                );
+              };
+              const gridClasses = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
+              if (filterSort === "movie") {
+                const byMovie = filtered.reduce((acc, c) => {
+                  const m = c.movieTitle || "Unknown";
+                  if (!acc[m]) acc[m] = [];
+                  acc[m].push(c);
+                  return acc;
+                }, {} as Record<string, Card[]>);
+                return (
+                  <div className="flex flex-col gap-8">
+                    {Object.entries(byMovie).map(([movieTitle, movieCards]) => (
+                      <div key={movieTitle}>
+                        <h3 className="text-sm font-medium text-white/70 mb-3">{movieTitle}</h3>
+                        <div className={gridClasses}>
+                          {movieCards.map(renderCard)}
                         </div>
                       </div>
-                    );
-                  })}
-              </div>
-            )}
+                    ))}
+                  </div>
+                );
+              }
+              return (
+                <div className={gridClasses}>
+                  {filtered.map(renderCard)}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1633,177 +1693,229 @@ export default function CardsPage() {
               </button>
             </div>
 
-            {/* Sent offers */}
+            {/* Sent offers — compact by default, expand on View */}
             {sentTrades.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Sent</h3>
-                <div className="space-y-4">
-                  {sentTrades.map((t) => (
-                    <div
-                      key={t.id}
-                      className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center"
-                    >
-                      <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
-                        <div className="flex items-center gap-2 shrink-0">
-                          {t.counterpartyUserId && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Link href={`/profile/${t.counterpartyUserId}`} className="flex items-center gap-2 hover:opacity-80">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                  {t.counterpartyName?.charAt(0) || "?"}
-                                </div>
-                                <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
-                              </Link>
-                              {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} />}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <span className="text-xs text-white/40">Your offer:</span>
-                          <div className="flex gap-1 flex-wrap items-center">
-                            {t.offeredCards.slice(0, 5).map((c) => (
-                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
-                                {c.profilePath ? (
-                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
-                                )}
-                              </div>
-                            ))}
-                            {t.offeredCards.length > 5 && (
-                              <span className="text-xs text-white/40">+{t.offeredCards.length - 5}</span>
-                            )}
-                            {(t.offeredCredits ?? 0) > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
-                                {(t.offeredCredits ?? 0)} cr
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="text-white/30">→</span>
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <span className="text-xs text-white/40">Request:</span>
-                          <div className="flex gap-1 flex-wrap items-center">
-                            {t.requestedCards.slice(0, 5).map((c) => (
-                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
-                                {c.profilePath ? (
-                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
-                                )}
-                              </div>
-                            ))}
-                            {t.requestedCards.length > 5 && (
-                              <span className="text-xs text-white/40">+{t.requestedCards.length - 5}</span>
-                            )}
-                            {(t.requestedCredits ?? 0) > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
-                                {(t.requestedCredits ?? 0)} cr
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleCancelTrade(t.id)}
-                        disabled={tradeActionId === t.id}
-                        className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-400 text-sm hover:border-red-500/50 hover:bg-red-500/15 disabled:opacity-40 cursor-pointer shrink-0"
+                <div className="space-y-2">
+                  {sentTrades.map((t) => {
+                    const expanded = expandedSentTradeId === t.id;
+                    const offerSummary = `${t.offeredCards.length} card${t.offeredCards.length !== 1 ? "s" : ""}${(t.offeredCredits ?? 0) > 0 ? ` + ${t.offeredCredits} cr` : ""}`;
+                    const requestSummary = `${t.requestedCards.length} card${t.requestedCards.length !== 1 ? "s" : ""}${(t.requestedCredits ?? 0) > 0 ? ` + ${t.requestedCredits} cr` : ""}`;
+                    return (
+                      <div
+                        key={t.id}
+                        className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl overflow-hidden"
                       >
-                        {tradeActionId === t.id ? "Cancelling..." : "Cancel"}
-                      </button>
-                    </div>
-                  ))}
+                        {!expanded ? (
+                          <div className="flex items-center gap-3 p-3 min-h-0">
+                            {t.counterpartyUserId && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Link href={`/profile/${t.counterpartyUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                                  {userAvatarMap[t.counterpartyUserId] ? (
+                                    <img src={userAvatarMap[t.counterpartyUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                      {t.counterpartyName?.charAt(0) || "?"}
+                                    </div>
+                                  )}
+                                  <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
+                                </Link>
+                                {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} />}
+                              </div>
+                            )}
+                            <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.offeredCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.offeredCards.length > 3 && <span className="text-[10px] text-white/40">+{t.offeredCards.length - 3}</span>}
+                                  {(t.offeredCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.offeredCredits ?? 0)} cr</span>}
+                                </div>
+                                <span className="text-white/30 text-xs shrink-0">→</span>
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.requestedCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.requestedCards.length > 3 && <span className="text-[10px] text-white/40">+{t.requestedCards.length - 3}</span>}
+                                  {(t.requestedCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.requestedCredits ?? 0)} cr</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button onClick={() => setExpandedSentTradeId(t.id)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/80 text-sm hover:bg-white/10 cursor-pointer">View</button>
+                              <button onClick={() => handleCancelTrade(t.id)} disabled={tradeActionId === t.id} className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "..." : "Cancel"}</button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Trade window — Steam/WoW style */
+                          <div className="border-t border-white/10">
+                            <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/10">
+                              <span className="text-sm font-medium text-white/90">Trade with {t.counterpartyName || "Unknown"}</span>
+                              <button onClick={() => setExpandedSentTradeId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Close">×</button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-0 min-h-[200px]">
+                              <div className="p-4 border-r border-white/10 bg-black/20 flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                  {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{user.name?.charAt(0) || "?"}</div>)}
+                                  <span className="text-xs font-medium text-white/80">You give</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                  {t.offeredCards.slice(0, 8).map((c) => (
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
+                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
+                              </div>
+                              <div className="p-4 bg-black/20 flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                  {t.counterpartyUserId && (userAvatarMap[t.counterpartyUserId] ? <img src={userAvatarMap[t.counterpartyUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.counterpartyName || "?")[0]}</div>)}
+                                  <span className="text-xs font-medium text-white/80">You receive</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                  {t.requestedCards.slice(0, 8).map((c) => (
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
+                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 bg-black/30 border-t border-white/10 flex flex-wrap gap-2">
+                              <button onClick={() => setExpandedSentTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/70 text-sm hover:bg-white/10 cursor-pointer">Collapse</button>
+                              <button onClick={() => handleCancelTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "Cancelling..." : "Cancel offer"}</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Received offers */}
+            {/* Received offers — compact by default, View trade expands to clear detail + Accept / Edit / Deny */}
             {receivedTrades.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Received</h3>
-                <div className="space-y-4">
-                  {receivedTrades.map((t) => (
-                    <div
-                      key={t.id}
-                      className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center"
-                    >
-                      <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
-                        <div className="flex items-center gap-2 shrink-0">
-                          {t.initiatorUserId && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                  {t.initiatorName?.charAt(0) || "?"}
+                <div className="space-y-2">
+                  {receivedTrades.map((t) => {
+                    const expanded = expandedReceivedTradeId === t.id;
+                    return (
+                      <div
+                        key={t.id}
+                        className="rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-2xl overflow-hidden"
+                      >
+                        {!expanded ? (
+                          <div className="flex items-center gap-3 p-3 min-h-0">
+                            {t.initiatorUserId && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                                  {userAvatarMap[t.initiatorUserId] ? (
+                                    <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                      {t.initiatorName?.charAt(0) || "?"}
+                                    </div>
+                                  )}
+                                  <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
+                                </Link>
+                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                              </div>
+                            )}
+                            <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.offeredCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.offeredCards.length > 3 && <span className="text-[10px] text-white/40">+{t.offeredCards.length - 3}</span>}
+                                  {(t.offeredCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.offeredCredits ?? 0)} cr</span>}
                                 </div>
-                                <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
-                              </Link>
-                              {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                <span className="text-white/30 text-xs shrink-0">→</span>
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.requestedCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.requestedCards.length > 3 && <span className="text-[10px] text-white/40">+{t.requestedCards.length - 3}</span>}
+                                  {(t.requestedCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.requestedCredits ?? 0)} cr</span>}
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <span className="text-xs text-white/40">They offer:</span>
-                          <div className="flex gap-1 flex-wrap items-center">
-                            {t.offeredCards.slice(0, 5).map((c) => (
-                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
-                                {c.profilePath ? (
-                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
-                                )}
-                              </div>
-                            ))}
-                            {t.offeredCards.length > 5 && (
-                              <span className="text-xs text-white/40">+{t.offeredCards.length - 5}</span>
-                            )}
-                            {(t.offeredCredits ?? 0) > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
-                                {(t.offeredCredits ?? 0)} cr
-                              </span>
-                            )}
+                            <button
+                              onClick={() => setExpandedReceivedTradeId(t.id)}
+                              className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm hover:bg-amber-500/20 cursor-pointer shrink-0"
+                            >
+                              View trade
+                            </button>
                           </div>
-                        </div>
-                        <span className="text-white/30">→</span>
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <span className="text-xs text-white/40">For your:</span>
-                          <div className="flex gap-1 flex-wrap items-center">
-                            {t.requestedCards.slice(0, 5).map((c) => (
-                              <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
-                                {c.profilePath ? (
-                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>
-                                )}
+                        ) : (
+                          /* Trade window — Steam/WoW style (incoming) */
+                          <div className="border-t border-white/10">
+                            <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/10">
+                              <span className="text-sm font-medium text-white/90">{t.initiatorName || "Unknown"} wants to trade</span>
+                              <button onClick={() => setExpandedReceivedTradeId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Close">×</button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-0 min-h-[200px]">
+                              <div className="p-4 border-r border-white/10 bg-black/20 flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80 shrink-0">
+                                    {t.initiatorUserId && (userAvatarMap[t.initiatorUserId] ? <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.initiatorName || "?")[0]}</div>)}
+                                    <span className="text-xs font-medium text-white/80 truncate">They give</span>
+                                  </Link>
+                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                  {t.offeredCards.slice(0, 8).map((c) => (
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
+                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
                               </div>
-                            ))}
-                            {t.requestedCards.length > 5 && (
-                              <span className="text-xs text-white/40">+{t.requestedCards.length - 5}</span>
-                            )}
-                            {(t.requestedCredits ?? 0) > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
-                                {(t.requestedCredits ?? 0)} cr
-                              </span>
-                            )}
+                              <div className="p-4 bg-black/20 flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                  {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{user.name?.charAt(0) || "?"}</div>)}
+                                  <span className="text-xs font-medium text-white/80">You give</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
+                                  {t.requestedCards.slice(0, 8).map((c) => (
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
+                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                </div>
+                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 bg-black/30 border-t border-white/10 flex flex-wrap gap-2">
+                              <button onClick={() => setExpandedReceivedTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/70 text-sm hover:bg-white/10 cursor-pointer">Collapse</button>
+                              <button onClick={() => checkBadgeLossThen(t.requestedCardIds, () => handleAcceptTrade(t.id))} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm hover:bg-green-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "..." : "Accept"}</button>
+                              <button onClick={() => openEditTrade(t)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer">Edit trade</button>
+                              <button onClick={() => handleDenyTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">Decline</button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <button
-                          onClick={() => checkBadgeLossThen(t.requestedCardIds, () => handleAcceptTrade(t.id))}
-                          disabled={tradeActionId === t.id}
-                          className="px-3 py-1.5 rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md text-green-400 text-sm hover:border-green-500/50 hover:bg-green-500/15 disabled:opacity-40 cursor-pointer"
-                        >
-                          {tradeActionId === t.id ? "..." : "Accept"}
-                        </button>
-                        <button
-                          onClick={() => handleDenyTrade(t.id)}
-                          disabled={tradeActionId === t.id}
-                          className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-400 text-sm hover:border-red-500/50 hover:bg-red-500/15 disabled:opacity-40 cursor-pointer"
-                        >
-                          Deny
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1826,7 +1938,7 @@ export default function CardsPage() {
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col"
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col"
               role="dialog"
               aria-label="Start trade"
               onClick={(e) => e.stopPropagation()}
@@ -1878,7 +1990,7 @@ export default function CardsPage() {
                     {availableForOffer.length === 0 ? (
                       <p className="text-white/40 text-sm">No cards available to offer.</p>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-64 overflow-y-auto scrollbar-autocomplete">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto scrollbar-autocomplete">
                         {availableForOffer.map((c) => {
                           const selected = tradeOfferedIds.has(c.id!);
                           return (
@@ -1940,7 +2052,7 @@ export default function CardsPage() {
                     {availableToRequest.length === 0 ? (
                       <p className="text-white/40 text-sm">{tradeCounterparty?.name} has no cards available to request.</p>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-64 overflow-y-auto scrollbar-autocomplete">
+                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto scrollbar-autocomplete">
                         {availableToRequest.map((c) => {
                           const selected = tradeRequestedIds.has(c.id!);
                           return (

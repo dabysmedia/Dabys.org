@@ -187,6 +187,11 @@ export default function ProfilePage() {
   // Badges modal
   const [badgesSelecting, setBadgesSelecting] = useState<string | null>(null);
 
+  // View collection modal (when viewing another user's profile)
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [collectionCards, setCollectionCards] = useState<FeaturedCard[]>([]);
+  const [collectionLoading, setCollectionLoading] = useState(false);
+
   // Credits (for profile user)
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
@@ -707,25 +712,44 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Featured Collection */}
+        {/* Featured Cards */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Featured Collection</h3>
-            {isOwnProfile && (
-              <button
-                onClick={() => {
-                  setShowFeaturedModal(true);
-                  setFeaturedSelecting(profile.featuredCardIds ?? []);
-                  fetch(`/api/cards?userId=${profileId}`)
-                    .then((r) => r.json())
-                    .then((cards: FeaturedCard[]) => setUserCardsForFeatured(cards))
-                    .catch(() => setUserCardsForFeatured([]));
-                }}
-                className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
-              >
-                Edit
-              </button>
-            )}
+            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Featured Cards</h3>
+            <div className="flex items-center gap-3">
+              {!isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setShowCollectionModal(true);
+                    setCollectionLoading(true);
+                    setCollectionCards([]);
+                    fetch(`/api/cards?userId=${encodeURIComponent(profileId)}`)
+                      .then((r) => r.json())
+                      .then((cards: FeaturedCard[]) => setCollectionCards(Array.isArray(cards) ? cards : []))
+                      .catch(() => setCollectionCards([]))
+                      .finally(() => setCollectionLoading(false));
+                  }}
+                  className="text-xs font-medium text-amber-400/90 hover:text-amber-400 border border-amber-500/30 rounded-lg px-3 py-1.5 hover:bg-amber-500/10 transition-colors"
+                >
+                  View collection
+                </button>
+              )}
+              {isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setShowFeaturedModal(true);
+                    setFeaturedSelecting(profile.featuredCardIds ?? []);
+                    fetch(`/api/cards?userId=${profileId}`)
+                      .then((r) => r.json())
+                      .then((cards: FeaturedCard[]) => setUserCardsForFeatured(cards))
+                      .catch(() => setUserCardsForFeatured([]));
+                  }}
+                  className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
           </div>
           {featuredCards.length === 0 ? (
             <p className="text-sm text-white/40">
@@ -1185,7 +1209,7 @@ export default function ProfilePage() {
         </>
       )}
 
-      {/* Featured Collection modal */}
+      {/* Featured Cards modal */}
       {showFeaturedModal && (
         <>
           <div
@@ -1196,11 +1220,11 @@ export default function ProfilePage() {
           <div
             className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
             role="dialog"
-            aria-label="Edit featured collection"
+            aria-label="Edit featured cards"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className="text-lg font-bold text-white/90 mb-4">Featured Collection</h3>
+              <h3 className="text-lg font-bold text-white/90 mb-4">Featured Cards</h3>
               <p className="text-sm text-white/50 mb-4">Select up to 6 cards to display (click to toggle)</p>
               <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto scrollbar-autocomplete mb-4">
                 {userCardsForFeatured.map((card) => {
@@ -1255,6 +1279,51 @@ export default function ProfilePage() {
                   {featuredSaving ? "Saving..." : "Save"}
                 </button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* View collection modal (another user's full collection) */}
+      {showCollectionModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowCollectionModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+            role="dialog"
+            aria-label="View collection"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+              <h3 className="text-lg font-bold text-white/90">{user.name}&apos;s collection</h3>
+              <button
+                onClick={() => setShowCollectionModal(false)}
+                className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              {collectionLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                </div>
+              ) : collectionCards.length === 0 ? (
+                <p className="text-sm text-white/40 text-center py-8">No cards in this collection.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                  {collectionCards.map((card) => (
+                    <div key={card.id} className="w-full max-w-[140px] mx-auto">
+                      <CardDisplay card={card} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </>
