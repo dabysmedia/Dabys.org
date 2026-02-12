@@ -5,6 +5,9 @@ import {
   addTrade,
   getTradeById,
   updateTradeStatus,
+  getCredits,
+  deductCredits,
+  addCredits,
   TradeOffer,
 } from "@/lib/data";
 
@@ -14,13 +17,25 @@ export function createTrade(
   offeredCardIds: string[],
   requestedCardIds: string[],
   initiatorName: string,
-  counterpartyName: string
+  counterpartyName: string,
+  offeredCredits: number = 0,
+  requestedCredits: number = 0
 ): { success: boolean; trade?: TradeOffer; error?: string } {
   if (initiatorUserId === counterpartyUserId) {
     return { success: false, error: "Cannot trade with yourself" };
   }
-  if (!offeredCardIds.length || !requestedCardIds.length) {
-    return { success: false, error: "Each side must offer at least one card" };
+  const offered = offeredCardIds.length > 0 || (offeredCredits > 0 && Number.isFinite(offeredCredits));
+  const requested = requestedCardIds.length > 0 || (requestedCredits > 0 && Number.isFinite(requestedCredits));
+  if (!offered || !requested) {
+    return { success: false, error: "Each side must offer at least one card or credits" };
+  }
+
+  const offCr = Math.max(0, Math.floor(offeredCredits || 0));
+  const reqCr = Math.max(0, Math.floor(requestedCredits || 0));
+
+  if (offCr > 0) {
+    const balance = getCredits(initiatorUserId);
+    if (balance < offCr) return { success: false, error: "Not enough credits for your offer" };
   }
 
   const listedCardIds = new Set(getListings().map((l) => l.cardId));
@@ -46,6 +61,8 @@ export function createTrade(
     counterpartyName,
     offeredCardIds,
     requestedCardIds,
+    offeredCredits: offCr,
+    requestedCredits: reqCr,
     status: "pending",
   });
   return { success: true, trade };
@@ -73,11 +90,32 @@ export function acceptTrade(tradeId: string, userId: string): { success: boolean
     if (listedCardIds.has(cardId)) return { success: false, error: "One of the requested cards is now listed" };
   }
 
+  const offCr = Math.max(0, Math.floor(trade.offeredCredits ?? 0));
+  const reqCr = Math.max(0, Math.floor(trade.requestedCredits ?? 0));
+
+  if (offCr > 0) {
+    const initBalance = getCredits(trade.initiatorUserId);
+    if (initBalance < offCr) return { success: false, error: "Initiator no longer has enough credits" };
+  }
+  if (reqCr > 0) {
+    const cpBalance = getCredits(trade.counterpartyUserId);
+    if (cpBalance < reqCr) return { success: false, error: "Not enough credits for this trade" };
+  }
+
   for (const cardId of trade.offeredCardIds) {
     transferCard(cardId, trade.counterpartyUserId);
   }
   for (const cardId of trade.requestedCardIds) {
     transferCard(cardId, trade.initiatorUserId);
+  }
+
+  if (offCr > 0) {
+    deductCredits(trade.initiatorUserId, offCr, "trade", { tradeId, direction: "offered" });
+    addCredits(trade.counterpartyUserId, offCr, "trade", { tradeId, direction: "received" });
+  }
+  if (reqCr > 0) {
+    deductCredits(trade.counterpartyUserId, reqCr, "trade", { tradeId, direction: "offered" });
+    addCredits(trade.initiatorUserId, reqCr, "trade", { tradeId, direction: "received" });
   }
 
   updateTradeStatus(tradeId, "accepted");

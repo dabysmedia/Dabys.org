@@ -1,0 +1,8 @@
+{"location":"cards/page.tsx:handleTradeUp:entry","message":"Trade up started","data":{"cardIds":5,"rarity":"epic"},"timestamp":1770916505674,"hypothesisId":"A"}
+{"location":"api/cards/trade-up/route.ts:afterTradeUp","message":"tradeUp result","data":{"success":true,"hasCard":false,"credits":100},"timestamp":1770916505736,"hypothesisId":"A"}
+{"location":"lib/cards.ts:tradeUp:epicRoll","message":"Epic trade-up roll","data":{"targetRarity":"legendary","giveCredits":true,"roll":0.5129849050945717,"subsetCheckNext":false},"timestamp":1770916505728,"hypothesisId":"A"}
+{"location":"cards/page.tsx:handleTradeUp:afterFetch","message":"Response received","data":{"resOk":true,"status":200,"hasCard":false,"hasCredits":true,"creditsType":"number"},"timestamp":1770916505747,"hypothesisId":"D"}
+{"location":"cards/page.tsx:handleTradeUp:entry","message":"Trade up started","data":{"cardIds":5,"rarity":"uncommon"},"timestamp":1770916527538,"hypothesisId":"A"}
+{"location":"api/cards/trade-up/route.ts:afterTradeUp","message":"tradeUp result","data":{"success":true,"hasCard":true},"timestamp":1770916527554,"hypothesisId":"A"}
+{"location":"lib/cards.ts:tradeUp:epicRoll","message":"Epic trade-up roll","data":{"targetRarity":"rare","giveCredits":false,"roll":0.7343072901734582,"subsetCheckNext":true},"timestamp":1770916527547,"hypothesisId":"A"}
+{"location":"cards/page.tsx:handleTradeUp:afterFetch","message":"Response received","data":{"resOk":true,"status":200,"hasCard":true,"hasCredits":false,"creditsType":"undefined"},"timestamp":1770916527601,"hypothesisId":"D"}

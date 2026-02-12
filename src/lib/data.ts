@@ -723,6 +723,31 @@ export function saveTriviaAttempt(attempt: TriviaAttempt) {
   saveTriviaAttemptsRaw(attempts);
 }
 
+/** Remove all trivia attempts for a user+winner (reopen trivia for that user). Returns number removed. */
+export function removeTriviaAttemptsForUserAndWinner(userId: string, winnerId: string): number {
+  const attempts = getTriviaAttemptsRaw();
+  const before = attempts.length;
+  const filtered = attempts.filter(
+    (a) => !(a.userId === userId && a.winnerId === winnerId)
+  );
+  if (filtered.length < before) {
+    saveTriviaAttemptsRaw(filtered);
+    return before - filtered.length;
+  }
+  return 0;
+}
+
+/** Remove all trivia attempts for all users (reopen all trivia). Returns number removed. */
+export function removeAllTriviaAttempts(): number {
+  const attempts = getTriviaAttemptsRaw();
+  const count = attempts.length;
+  if (count > 0) {
+    saveTriviaAttemptsRaw([]);
+    return count;
+  }
+  return 0;
+}
+
 export interface TriviaSession {
   userId: string;
   winnerId: string;
@@ -826,6 +851,10 @@ export interface TradeOffer {
   counterpartyName: string;
   offeredCardIds: string[];
   requestedCardIds: string[];
+  /** Credits initiator adds to the trade (0 if omitted for backward compat) */
+  offeredCredits?: number;
+  /** Credits initiator requests from counterparty (0 if omitted for backward compat) */
+  requestedCredits?: number;
   status: "pending" | "accepted" | "denied";
   createdAt: string;
 }

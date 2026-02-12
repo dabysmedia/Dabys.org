@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
 
-  const { initiatorUserId, counterpartyUserId, offeredCardIds, requestedCardIds } = body;
+  const { initiatorUserId, counterpartyUserId, offeredCardIds, requestedCardIds, offeredCredits, requestedCredits } = body;
 
   if (!initiatorUserId || !counterpartyUserId) {
     return NextResponse.json(
@@ -37,14 +37,14 @@ export async function POST(request: Request) {
     );
   }
 
-  if (
-    !Array.isArray(offeredCardIds) ||
-    !Array.isArray(requestedCardIds) ||
-    offeredCardIds.length === 0 ||
-    requestedCardIds.length === 0
-  ) {
+  const offered = Array.isArray(offeredCardIds) ? offeredCardIds : [];
+  const requested = Array.isArray(requestedCardIds) ? requestedCardIds : [];
+  const offCr = Math.max(0, Math.floor(Number(offeredCredits) || 0));
+  const reqCr = Math.max(0, Math.floor(Number(requestedCredits) || 0));
+
+  if ((offered.length === 0 && offCr === 0) || (requested.length === 0 && reqCr === 0)) {
     return NextResponse.json(
-      { error: "offeredCardIds and requestedCardIds must be non-empty arrays" },
+      { error: "Each side must offer at least one card or credits" },
       { status: 400 }
     );
   }
@@ -55,10 +55,12 @@ export async function POST(request: Request) {
   const result = createTrade(
     initiatorUserId,
     counterpartyUserId,
-    offeredCardIds,
-    requestedCardIds,
+    offered,
+    requested,
     initiatorName,
-    counterpartyName
+    counterpartyName,
+    offCr,
+    reqCr
   );
 
   if (!result.success) {

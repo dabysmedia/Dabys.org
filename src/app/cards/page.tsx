@@ -57,6 +57,8 @@ interface TradeOfferEnriched {
   counterpartyName: string;
   offeredCardIds: string[];
   requestedCardIds: string[];
+  offeredCredits?: number;
+  requestedCredits?: number;
   offeredCards: Card[];
   requestedCards: Card[];
   status: "pending" | "accepted" | "denied";
@@ -253,6 +255,7 @@ export default function CardsPage() {
   const [revealCount, setRevealCount] = useState(0);
   const [filterRarity, setFilterRarity] = useState<string>("");
   const [filterFoil, setFilterFoil] = useState<"all" | "foil" | "normal">("all");
+  const [filterSort, setFilterSort] = useState<"recent" | "name" | "movie">("recent");
   const [showListModal, setShowListModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [listPrice, setListPrice] = useState("");
@@ -264,6 +267,7 @@ export default function CardsPage() {
   const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [tradingUp, setTradingUp] = useState(false);
   const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
+  const [tradeUpResultCredits, setTradeUpResultCredits] = useState<number | null>(null);
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
@@ -273,6 +277,8 @@ export default function CardsPage() {
   const [tradeCounterparty, setTradeCounterparty] = useState<UserWithAvatar | null>(null);
   const [tradeOfferedIds, setTradeOfferedIds] = useState<Set<string>>(new Set());
   const [tradeRequestedIds, setTradeRequestedIds] = useState<Set<string>>(new Set());
+  const [tradeOfferedCredits, setTradeOfferedCredits] = useState(0);
+  const [tradeRequestedCredits, setTradeRequestedCredits] = useState(0);
   const [tradeUsers, setTradeUsers] = useState<UserWithAvatar[]>([]);
   const [counterpartyCards, setCounterpartyCards] = useState<Card[]>([]);
   const [tradeLoading, setTradeLoading] = useState(false);
@@ -348,14 +354,16 @@ export default function CardsPage() {
     return () => window.removeEventListener("dabys-credits-refresh", handler);
   }, [loadData]);
 
+  const tradeUpHasResult = tradeUpResult || tradeUpResultCredits != null;
   useEffect(() => {
-    if (!tradeUpResult) return;
+    if (!tradeUpHasResult) return;
     setTradeUpResultFading(false);
     let clearTimer: ReturnType<typeof setTimeout> | null = null;
     const fadeTimer = setTimeout(() => {
       setTradeUpResultFading(true);
       clearTimer = setTimeout(() => {
         setTradeUpResult(null);
+        setTradeUpResultCredits(null);
         setTradeUpResultFading(false);
       }, 500);
     }, 5000);
@@ -363,7 +371,7 @@ export default function CardsPage() {
       clearTimeout(fadeTimer);
       if (clearTimer) clearTimeout(clearTimer);
     };
-  }, [tradeUpResult]);
+  }, [tradeUpHasResult]);
 
   useEffect(() => {
     if (!newCards || newCards.length === 0) {
@@ -419,10 +427,17 @@ export default function CardsPage() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (res.ok && data.card) {
+      if (res.ok) {
         playTradeUpReveal();
-        setTradeUpResult(data.card);
         setTradeUpSlots([null, null, null, null, null]);
+        if (data.card) {
+          setTradeUpResult(data.card);
+          setTradeUpResultCredits(null);
+        } else if (typeof data.credits === "number") {
+          setTradeUpResult(null);
+          setTradeUpResultCredits(data.credits);
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: data.credits } }));
+        }
         await loadData();
       } else {
         alert(data.error || "Trade up failed");
@@ -565,6 +580,8 @@ export default function CardsPage() {
     setTradeCounterparty(null);
     setTradeOfferedIds(new Set());
     setTradeRequestedIds(new Set());
+    setTradeOfferedCredits(0);
+    setTradeRequestedCredits(0);
     setCounterpartyCards([]);
     setTradeError("");
     fetch("/api/users?includeProfile=1")
@@ -610,7 +627,14 @@ export default function CardsPage() {
   }
 
   async function handleSendTrade() {
-    if (!user || !tradeCounterparty || tradeOfferedIds.size === 0 || tradeRequestedIds.size === 0) return;
+    const hasOffer = tradeOfferedIds.size > 0 || (tradeOfferedCredits > 0 && Number.isFinite(tradeOfferedCredits));
+    const hasRequest = tradeRequestedIds.size > 0 || (tradeRequestedCredits > 0 && Number.isFinite(tradeRequestedCredits));
+    if (!user || !tradeCounterparty || !hasOffer || !hasRequest) return;
+    const offCr = Math.max(0, Math.floor(tradeOfferedCredits || 0));
+    if (offCr > creditBalance) {
+      setTradeError("Not enough credits for your offer");
+      return;
+    }
     setTradeLoading(true);
     setTradeError("");
     try {
@@ -624,6 +648,8 @@ export default function CardsPage() {
           counterpartyName: tradeCounterparty.name,
           offeredCardIds: Array.from(tradeOfferedIds),
           requestedCardIds: Array.from(tradeRequestedIds),
+          offeredCredits: Math.max(0, Math.floor(tradeOfferedCredits || 0)),
+          requestedCredits: Math.max(0, Math.floor(tradeRequestedCredits || 0)),
         }),
       });
       const data = await res.json();
@@ -656,6 +682,7 @@ export default function CardsPage() {
       if (res.ok) {
         playTradeAcceptSound();
         setTradeFeedback("accepted");
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
         await loadData();
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
@@ -928,7 +955,7 @@ export default function CardsPage() {
         {/* Collection */}
         {tab === "collection" && (
           <div>
-            {tradeUpResult && (
+            {(tradeUpResult || tradeUpResultCredits != null) && (
               <div className="flex justify-center mb-6">
                 <div
                   className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
@@ -937,14 +964,26 @@ export default function CardsPage() {
                 >
                   <h2 className="text-center text-lg font-semibold text-amber-400/90 mb-4">Trade Up Result</h2>
                   <div className="flex flex-col items-center gap-4">
-                    <div className="w-36 mx-auto">
-                      <CardDisplay card={tradeUpResult} />
-                    </div>
-                    <p className="text-sm text-white/60 text-center capitalize">
-                      {tradeUpResult.rarity} card
-                    </p>
+                    {tradeUpResult ? (
+                      <>
+                        <div className="w-36 mx-auto">
+                          <CardDisplay card={tradeUpResult} />
+                        </div>
+                        <p className="text-sm text-white/60 text-center capitalize">
+                          {tradeUpResult.rarity} card
+                        </p>
+                      </>
+                    ) : tradeUpResultCredits != null ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="text-4xl font-bold text-amber-400">{tradeUpResultCredits}</span>
+                        <p className="text-sm text-white/60 text-center">credits</p>
+                      </div>
+                    ) : null}
                     <button
-                      onClick={() => setTradeUpResult(null)}
+                      onClick={() => {
+                        setTradeUpResult(null);
+                        setTradeUpResultCredits(null);
+                      }}
                       className="px-4 py-2 rounded-lg border border-white/20 text-amber-400/90 text-sm font-medium hover:bg-white/[0.06] hover:border-amber-400/50 transition-colors"
                     >
                       Dismiss
@@ -965,7 +1004,7 @@ export default function CardsPage() {
             <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
-                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity.
+                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
               </p>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {/* Input slots - 5 cards */}
@@ -1015,13 +1054,20 @@ export default function CardsPage() {
                   →
                 </div>
                 {/* Output slot */}
-                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex items-center justify-center transition-all ${
+                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
                   canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : currentRarity ? SLOT_OUTPUT_STYLE[currentRarity] ?? SLOT_OUTPUT_STYLE.uncommon : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canTradeUp ? (
-                    <span className="text-xs text-amber-400 font-medium text-center px-1">
-                      1 {TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""]}
-                    </span>
+                    currentRarity === "epic" ? (
+                      <span className="text-[9px] sm:text-[10px] text-amber-400 font-medium text-center px-1 leading-tight">
+                        <span className="block font-semibold">33% Legendary</span>
+                        <span className="block mt-0.5 text-white/70">67% 100 credits</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-amber-400 font-medium text-center px-1">
+                        1 {TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""]}
+                      </span>
+                    )
                   ) : (
                     <span className="text-[10px] text-white/40 text-center px-1">?</span>
                   )}
@@ -1069,6 +1115,15 @@ export default function CardsPage() {
                   <option value="foil">Holo only</option>
                   <option value="normal">Normal only</option>
                 </select>
+                <select
+                  value={filterSort}
+                  onChange={(e) => setFilterSort(e.target.value as "recent" | "name" | "movie")}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
+                >
+                  <option value="recent">Most recent</option>
+                  <option value="name">Name</option>
+                  <option value="movie">Movie</option>
+                </select>
               </div>
             </div>
             {cards.length === 0 ? (
@@ -1080,6 +1135,21 @@ export default function CardsPage() {
                 {cards
                   .filter((c) => !filterRarity || c.rarity === filterRarity)
                   .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
+                  .sort((a, b) => {
+                    if (filterSort === "recent") {
+                      const at = new Date(a.acquiredAt ?? 0).getTime();
+                      const bt = new Date(b.acquiredAt ?? 0).getTime();
+                      return bt - at;
+                    }
+                    if (filterSort === "name") {
+                      return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                    }
+                    if (filterSort === "movie") {
+                      const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
+                      return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                    }
+                    return 0;
+                  })
                   .map((card) => {
                     const inSlots = tradeUpCardIds.includes(card.id!);
                     const canAdd = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
@@ -1397,7 +1467,7 @@ export default function CardsPage() {
                         </div>
                         <div className="flex gap-2 items-center flex-wrap">
                           <span className="text-xs text-white/40">Your offer:</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-wrap items-center">
                             {t.offeredCards.slice(0, 5).map((c) => (
                               <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
                                 {c.profilePath ? (
@@ -1408,14 +1478,19 @@ export default function CardsPage() {
                               </div>
                             ))}
                             {t.offeredCards.length > 5 && (
-                              <span className="text-xs text-white/40 self-center">+{t.offeredCards.length - 5}</span>
+                              <span className="text-xs text-white/40">+{t.offeredCards.length - 5}</span>
+                            )}
+                            {(t.offeredCredits ?? 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                                {(t.offeredCredits ?? 0)} cr
+                              </span>
                             )}
                           </div>
                         </div>
                         <span className="text-white/30">→</span>
                         <div className="flex gap-2 items-center flex-wrap">
                           <span className="text-xs text-white/40">Request:</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-wrap items-center">
                             {t.requestedCards.slice(0, 5).map((c) => (
                               <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
                                 {c.profilePath ? (
@@ -1426,7 +1501,12 @@ export default function CardsPage() {
                               </div>
                             ))}
                             {t.requestedCards.length > 5 && (
-                              <span className="text-xs text-white/40 self-center">+{t.requestedCards.length - 5}</span>
+                              <span className="text-xs text-white/40">+{t.requestedCards.length - 5}</span>
+                            )}
+                            {(t.requestedCredits ?? 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                                {(t.requestedCredits ?? 0)} cr
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1467,7 +1547,7 @@ export default function CardsPage() {
                         </div>
                         <div className="flex gap-2 items-center flex-wrap">
                           <span className="text-xs text-white/40">They offer:</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-wrap items-center">
                             {t.offeredCards.slice(0, 5).map((c) => (
                               <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
                                 {c.profilePath ? (
@@ -1478,14 +1558,19 @@ export default function CardsPage() {
                               </div>
                             ))}
                             {t.offeredCards.length > 5 && (
-                              <span className="text-xs text-white/40 self-center">+{t.offeredCards.length - 5}</span>
+                              <span className="text-xs text-white/40">+{t.offeredCards.length - 5}</span>
+                            )}
+                            {(t.offeredCredits ?? 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                                {(t.offeredCredits ?? 0)} cr
+                              </span>
                             )}
                           </div>
                         </div>
                         <span className="text-white/30">→</span>
                         <div className="flex gap-2 items-center flex-wrap">
                           <span className="text-xs text-white/40">For your:</span>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-wrap items-center">
                             {t.requestedCards.slice(0, 5).map((c) => (
                               <div key={c.id} className="w-10 h-14 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
                                 {c.profilePath ? (
@@ -1496,7 +1581,12 @@ export default function CardsPage() {
                               </div>
                             ))}
                             {t.requestedCards.length > 5 && (
-                              <span className="text-xs text-white/40 self-center">+{t.requestedCards.length - 5}</span>
+                              <span className="text-xs text-white/40">+{t.requestedCards.length - 5}</span>
+                            )}
+                            {(t.requestedCredits ?? 0) > 0 && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                                {(t.requestedCredits ?? 0)} cr
+                              </span>
                             )}
                           </div>
                         </div>
@@ -1588,7 +1678,7 @@ export default function CardsPage() {
                 {tradeStep === 2 && (
                   <div className="space-y-4">
                     <p className="text-white/50 text-sm">
-                      Select cards to offer. (Cards listed on marketplace cannot be traded.)
+                      Select cards and/or credits to offer. (Cards listed on marketplace cannot be traded.)
                     </p>
                     {availableForOffer.length === 0 ? (
                       <p className="text-white/40 text-sm">No cards available to offer.</p>
@@ -1613,6 +1703,22 @@ export default function CardsPage() {
                         })}
                       </div>
                     )}
+                    <div className="flex items-center gap-3 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3">
+                      <label className="text-sm text-sky-300 font-medium">Add credits:</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={creditBalance}
+                        value={tradeOfferedCredits || ""}
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                          setTradeOfferedCredits(isNaN(v) ? 0 : Math.max(0, v));
+                        }}
+                        placeholder="0"
+                        className="w-24 px-3 py-2 rounded-xl bg-sky-400/10 border border-sky-400/30 text-sky-300 text-sm outline-none focus:border-sky-400/50 placeholder-sky-300/40"
+                      />
+                      <span className="text-xs text-sky-300/60">(balance: {creditBalance})</span>
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setTradeStep(1)}
@@ -1621,8 +1727,8 @@ export default function CardsPage() {
                         Back
                       </button>
                       <button
-                        onClick={() => tradeOfferedIds.size > 0 && setTradeStep(3)}
-                        disabled={tradeOfferedIds.size === 0}
+                        onClick={() => (tradeOfferedIds.size > 0 || tradeOfferedCredits > 0) && setTradeStep(3)}
+                        disabled={tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0}
                         className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
                       >
                         Next
@@ -1634,7 +1740,7 @@ export default function CardsPage() {
                 {tradeStep === 3 && (
                   <div className="space-y-4">
                     <p className="text-white/50 text-sm">
-                      Select cards you want from {tradeCounterparty?.name}.
+                      Select cards and/or credits you want from {tradeCounterparty?.name}.
                     </p>
                     {availableToRequest.length === 0 ? (
                       <p className="text-white/40 text-sm">{tradeCounterparty?.name} has no cards available to request.</p>
@@ -1659,6 +1765,20 @@ export default function CardsPage() {
                         })}
                       </div>
                     )}
+                    <div className="flex items-center gap-3 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3">
+                      <label className="text-sm text-sky-300 font-medium">Request credits:</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={tradeRequestedCredits || ""}
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                          setTradeRequestedCredits(isNaN(v) ? 0 : Math.max(0, v));
+                        }}
+                        placeholder="0"
+                        className="w-24 px-3 py-2 rounded-xl bg-sky-400/10 border border-sky-400/30 text-sky-300 text-sm outline-none focus:border-sky-400/50 placeholder-sky-300/40"
+                      />
+                    </div>
                     {tradeError && <p className="text-red-400 text-sm">{tradeError}</p>}
                     <div className="flex gap-2">
                       <button
@@ -1669,7 +1789,7 @@ export default function CardsPage() {
                       </button>
                       <button
                         onClick={handleSendTrade}
-                        disabled={tradeLoading || tradeRequestedIds.size === 0}
+                        disabled={tradeLoading || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
                         className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
                       >
                         {tradeLoading ? "Sending..." : "Send Offer"}

@@ -20,5 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ card: result.card });
+  return NextResponse.json(
+    result.credits != null ? { credits: result.credits } : { card: result.card }
+  );
 }

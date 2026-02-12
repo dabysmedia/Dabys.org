@@ -5,6 +5,7 @@ import {
   addCard,
   deductCredits,
   getCredits,
+  addCredits,
   getOwnedLegendaryCharacterIds,
   migrateCommonToUncommon,
   getCards,
@@ -309,11 +310,11 @@ export function buyPack(
   return { success: true, cards };
 }
 
-/** Trade up: consume 5 cards of same rarity for 1 of next rarity. Works up to legendary (1-of-1). */
+/** Trade up: consume 5 cards of same rarity for 1 of next rarity. Epic→legendary: 33% legendary card, 67% 100 credits. */
 export function tradeUp(
   userId: string,
   cardIds: string[]
-): { success: boolean; card?: ReturnType<typeof addCard>; error?: string } {
+): { success: boolean; card?: ReturnType<typeof addCard>; credits?: number; error?: string } {
   if (!Array.isArray(cardIds) || cardIds.length !== 5) {
     return { success: false, error: "Select exactly 5 cards" };
   }
@@ -342,6 +343,17 @@ export function tradeUp(
   const targetRarity = TRADE_UP_MAP[first];
   if (!targetRarity) return { success: false, error: "Cannot trade up legendary cards" };
 
+  // Epic→legendary: 33% legendary card, 67% 100 credits. Roll first so credits path doesn't require pool.
+  const EPIC_TO_LEGENDARY_LEGENDARY_CHANCE = 0.33;
+  const giveCredits = targetRarity === "legendary" && Math.random() >= EPIC_TO_LEGENDARY_LEGENDARY_CHANCE;
+
+  if (giveCredits) {
+    for (const c of selected) removeCard(c.id);
+    const CREDITS_REWARD = 100;
+    addCredits(userId, CREDITS_REWARD, "trade_up_epic", { source: "epic_trade_up" });
+    return { success: true, credits: CREDITS_REWARD };
+  }
+
   const pool = getCharacterPool().filter((c) => c.profilePath?.trim());
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
   const CASCADE: ("rare" | "epic" | "legendary")[] =
@@ -355,10 +367,7 @@ export function tradeUp(
   }
   if (subset.length === 0) return { success: false, error: `No ${targetRarity}+ cards available in the character pool` };
 
-  for (const c of selected) {
-    removeCard(c.id);
-  }
-
+  for (const c of selected) removeCard(c.id);
   const char = subset[Math.floor(Math.random() * subset.length)];
   const isFoil = Math.random() < FOIL_CHANCE;
   const newCard = addCard({

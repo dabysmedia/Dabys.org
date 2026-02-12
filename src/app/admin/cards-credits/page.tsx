@@ -166,6 +166,10 @@ export default function AdminCardsCreditsPage() {
   const [savingPack, setSavingPack] = useState(false);
   const [deletingPackId, setDeletingPackId] = useState<string | null>(null);
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
+  const [triviaAttempts, setTriviaAttempts] = useState<{ id: string; userId: string; winnerId: string; correctCount: number; totalCount: number; creditsEarned: number; completedAt: string }[]>([]);
+  const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string }[]>([]);
+  const [reopeningWinnerId, setReopeningWinnerId] = useState<string | null>(null);
+  const [reopeningAll, setReopeningAll] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -265,10 +269,12 @@ export default function AdminCardsCreditsPage() {
     setLoading(true);
     setError("");
     try {
-      const [creditsRes, cardsRes, poolRes] = await Promise.all([
+      const [creditsRes, cardsRes, poolRes, attemptsRes, winnersRes] = await Promise.all([
         fetch(`/api/credits?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/admin/cards?userId=${encodeURIComponent(selectedUserId)}`),
         fetch("/api/admin/character-pool"),
+        fetch(`/api/trivia/attempts?userId=${encodeURIComponent(selectedUserId)}`),
+        fetch("/api/winners"),
       ]);
 
       if (creditsRes.ok) {
@@ -283,6 +289,14 @@ export default function AdminCardsCreditsPage() {
         const p = await poolRes.json();
         setPool(p.pool || []);
       }
+      if (attemptsRes.ok) {
+        const a = await attemptsRes.json();
+        setTriviaAttempts(a.attempts || []);
+      } else setTriviaAttempts([]);
+      if (winnersRes.ok) {
+        const w = await winnersRes.json();
+        setWinners(w || []);
+      } else setWinners([]);
     } catch {
       setError("Failed to load data");
     } finally {
@@ -398,6 +412,48 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to delete pack");
     } finally {
       setDeletingPackId(null);
+    }
+  }
+
+  async function handleReopenAllTrivia() {
+    if (reopeningAll) return;
+    setReopeningAll(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/trivia/reopen-all", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setTriviaAttempts([]);
+      } else {
+        setError(data.error || "Failed to reopen all trivia");
+      }
+    } catch {
+      setError("Failed to reopen all trivia");
+    } finally {
+      setReopeningAll(false);
+    }
+  }
+
+  async function handleReopenTrivia(winnerId: string) {
+    if (!selectedUserId || reopeningWinnerId) return;
+    setReopeningWinnerId(winnerId);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/trivia/reopen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, winnerId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTriviaAttempts((prev) => prev.filter((a) => a.winnerId !== winnerId));
+      } else {
+        setError(data.error || "Failed to reopen trivia");
+      }
+    } catch {
+      setError("Failed to reopen trivia");
+    } finally {
+      setReopeningWinnerId(null);
     }
   }
 
@@ -1231,6 +1287,55 @@ export default function AdminCardsCreditsPage() {
                 {savingCredits ? "Saving..." : "Save Credits"}
               </button>
             </form>
+          </div>
+
+          {/* Trivia */}
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+                Trivia (completed)
+              </h2>
+              <button
+                onClick={handleReopenAllTrivia}
+                disabled={reopeningAll}
+                className="px-3 py-1.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-500/80 disabled:opacity-40 cursor-pointer"
+                title="Reopen all trivia for all users"
+              >
+                {reopeningAll ? "Reopening All..." : "Reopen All (all users)"}
+              </button>
+            </div>
+            <p className="text-white/40 text-sm mb-4">
+              Reopen trivia for this user so they can play again.
+            </p>
+            {triviaAttempts.length === 0 ? (
+              <p className="text-white/40 text-sm">No completed trivia for this user.</p>
+            ) : (
+              <div className="space-y-2">
+                {Array.from(new Map(triviaAttempts.map((a) => [a.winnerId, a])).values()).map((a) => {
+                  const winner = winners.find((w) => w.id === a.winnerId);
+                  const title = winner?.movieTitle ?? `Winner #${a.winnerId}`;
+                  const isReopening = reopeningWinnerId === a.winnerId;
+                  return (
+                    <div
+                      key={a.winnerId}
+                      className="flex items-center justify-between gap-4 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]"
+                    >
+                      <span className="text-white/90 truncate">{title}</span>
+                      <span className="text-white/40 text-sm shrink-0">
+                        {a.correctCount}/{a.totalCount} · {a.creditsEarned} credits
+                      </span>
+                      <button
+                        onClick={() => handleReopenTrivia(a.winnerId)}
+                        disabled={isReopening}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600/80 text-white text-sm font-medium hover:bg-amber-500/80 disabled:opacity-40 cursor-pointer shrink-0"
+                      >
+                        {isReopening ? "Reopening..." : "Reopen"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Cards / Collection */}
