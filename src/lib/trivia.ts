@@ -3,8 +3,8 @@ import { addCredits, saveTriviaAttempt } from "@/lib/data";
 import type { TriviaAttempt } from "@/lib/data";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
-const CREDITS_PER_CORRECT = 5;
-const CREDITS_FULL_SCORE_BONUS = 25;
+const CREDITS_PER_CORRECT = 10;
+const CREDITS_FULL_SCORE_BONUS = 10;
 const QUESTIONS_PER_ROUND = 5;
 
 export interface TriviaQuestion {
@@ -19,6 +19,8 @@ async function fetchTmdbCredits(tmdbId: number): Promise<{
   crew: { name: string; job: string }[];
   year: string;
   title: string;
+  runtime: number | null;
+  genres: { id: number; name: string }[];
 } | null> {
   if (!TMDB_API_KEY) return null;
   const url = new URL(`https://api.themoviedb.org/3/movie/${tmdbId}`);
@@ -35,8 +37,35 @@ async function fetchTmdbCredits(tmdbId: number): Promise<{
     (c: { job?: string }) => c.job === "Director"
   );
   const year = m.release_date ? m.release_date.slice(0, 4) : "";
-  return { cast, crew, year, title: m.title || "" };
+  const runtime = typeof m.runtime === "number" && m.runtime > 0 ? m.runtime : null;
+  const genres = Array.isArray(m.genres) ? m.genres.map((g: { id?: number; name?: string }) => ({ id: g.id ?? 0, name: g.name ?? "" })).filter((g: { name: string }) => g.name) : [];
+  return { cast, crew, year, title: m.title || "", runtime, genres };
 }
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+const YEAR_PHRASES = [
+  (t: string) => `When did ${t} hit the big screen?`,
+  (t: string) => `In what year did ${t} premiere?`,
+  (t: string) => `What year did ${t} come out?`,
+];
+const DIRECTOR_PHRASES = [
+  (t: string) => `Who's behind the camera for ${t}?`,
+  (t: string) => `Which director called the shots on ${t}?`,
+  (t: string) => `Who directed ${t}?`,
+];
+const ACTOR_PHRASES = [
+  (char: string, title: string) => `Which actor brought ${char} to life in ${title}?`,
+  (char: string, title: string) => `Who stepped into the role of ${char} in ${title}?`,
+  (char: string, title: string) => `Who played ${char} in ${title}?`,
+];
+const CHARACTER_PHRASES = [
+  (actor: string, title: string) => `What role did ${actor} play in ${title}?`,
+  (actor: string, title: string) => `Which character did ${actor} play in ${title}?`,
+  (actor: string, title: string) => `Who did ${actor} play in ${title}?`,
+];
 
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
@@ -104,7 +133,7 @@ export async function generateTriviaQuestions(
     const correctIdx = opts.indexOf(year);
     questions.push({
       id: `y-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      question: `What year was ${movieTitle} released?`,
+      question: pickRandom(YEAR_PHRASES)(movieTitle),
       options: opts,
       correctIndex: correctIdx,
     });
@@ -122,39 +151,80 @@ export async function generateTriviaQuestions(
     const correctIdx = opts.indexOf(director);
     questions.push({
       id: `d-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      question: `Who directed ${movieTitle}?`,
+      question: pickRandom(DIRECTOR_PHRASES)(movieTitle),
       options: opts,
       correctIndex: correctIdx,
     });
   }
 
-  for (const c of cast.slice(0, 5)) {
+  // At most 1 actor question per round; ask either "who played X?" OR "X played who?" so we never add both for the same role
+  for (const c of cast.slice(0, 1)) {
     const actor = c.name;
     const character = c.character;
-    const otherActors = cast.filter((x) => x.name !== actor).map((x) => x.name);
-    const decoys = pickDecoys(actor, otherActors.length >= 3 ? otherActors : ["Unknown", "Various", "N/A"], 3, (a, b) => a === b);
-    const opts = shuffle(decoys);
-    const correctIdx = opts.indexOf(actor);
+    const askActor = Math.random() < 0.5; // who played character vs which character did actor play
+    if (askActor) {
+      const otherActors = cast.filter((x) => x.name !== actor).map((x) => x.name);
+      const decoys = pickDecoys(actor, otherActors.length >= 3 ? otherActors : ["Unknown", "Various", "N/A"], 3, (a, b) => a === b);
+      const opts = shuffle(decoys);
+      const correctIdx = opts.indexOf(actor);
+      questions.push({
+        id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        question: pickRandom(ACTOR_PHRASES)(character, movieTitle),
+        options: opts,
+        correctIndex: correctIdx,
+      });
+    } else {
+      const otherChars = cast.filter((x) => x.character !== character).map((x) => x.character);
+      const decoys = pickDecoys(character, otherChars.length >= 3 ? otherChars : ["Unknown", "Various", "N/A"], 3, (a, b) => a === b);
+      const opts = shuffle(decoys);
+      const correctIdx = opts.indexOf(character);
+      questions.push({
+        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        question: pickRandom(CHARACTER_PHRASES)(actor, movieTitle),
+        options: opts,
+        correctIndex: correctIdx,
+      });
+    }
+  }
+
+  // Runtime (TMDB)
+  if (data.runtime != null && data.runtime > 0) {
+    const ranges = [
+      { label: "Under 90 min", min: 0, max: 90 },
+      { label: "90–120 min", min: 90, max: 120 },
+      { label: "2–3 hours", min: 120, max: 180 },
+      { label: "Over 3 hours", min: 180, max: 999 },
+    ];
+    const correctRange = ranges.find((r) => data.runtime! >= r.min && data.runtime! < r.max) ?? ranges[0];
+    const otherLabels = ranges.filter((r) => r.label !== correctRange.label).map((r) => r.label);
+    const runtimeOpts = shuffle([correctRange.label, ...otherLabels.slice(0, 3)]);
+    const runtimeCorrectIdx = runtimeOpts.indexOf(correctRange.label);
     questions.push({
-      id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      question: `Who played ${character} in ${movieTitle}?`,
-      options: opts,
-      correctIndex: correctIdx,
+      id: `r-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      question: `How long is ${movieTitle}?`,
+      options: runtimeOpts,
+      correctIndex: runtimeCorrectIdx >= 0 ? runtimeCorrectIdx : 0,
     });
   }
 
-  for (const c of cast.slice(0, 5)) {
-    const actor = c.name;
-    const character = c.character;
-    const otherChars = cast.filter((x) => x.character !== character).map((x) => x.character);
-    const decoys = pickDecoys(character, otherChars.length >= 3 ? otherChars : ["Unknown", "Various", "N/A"], 3, (a, b) => a === b);
-    const opts = shuffle(decoys);
-    const correctIdx = opts.indexOf(character);
+  // Genre (TMDB)
+  if (data.genres.length > 0) {
+    const primaryGenre = data.genres[0].name;
+    const otherGenreNames = new Set<string>();
+    for (const w of allWinners.slice(0, 15)) {
+      const d = await fetchTmdbCredits(w.tmdbId!);
+      if (d?.genres?.length) d.genres.forEach((g) => g.name && otherGenreNames.add(g.name));
+    }
+    const fallbackGenres = ["Drama", "Comedy", "Action", "Horror", "Thriller", "Sci-Fi", "Romance"];
+    const decoyPool = otherGenreNames.size >= 3 ? [...otherGenreNames] : fallbackGenres.filter((g) => g !== primaryGenre);
+    const genreDecoys = pickDecoys(primaryGenre, decoyPool, 3, (a, b) => a === b);
+    const genreOpts = shuffle(genreDecoys);
+    const genreCorrectIdx = genreOpts.indexOf(primaryGenre);
     questions.push({
-      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      question: `${actor} played which character in ${movieTitle}?`,
-      options: opts,
-      correctIndex: correctIdx,
+      id: `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      question: `Which genre best describes ${movieTitle}?`,
+      options: genreOpts,
+      correctIndex: genreCorrectIdx,
     });
   }
 

@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "ta-1770917474102-wqspfjo",
+    "userId": "2",
+    "winnerId": "2",
+    "score": 80,
+    "correctCount": 4,
+    "totalCount": 5,
+    "creditsEarned": 40,
+    "completedAt": "2026-02-12T17:31:14.102Z"
+  },
+  {
+    "id": "ta-1770917593179-nukxi82",
+    "userId": "4",
+    "winnerId": "2",
+    "score": 80,
+    "correctCount": 4,
+    "totalCount": 5,
+    "creditsEarned": 40,
+    "completedAt": "2026-02-12T17:33:13.179Z"
+  },
+  {
+    "id": "ta-1770917744158-t90qa7s",
+    "userId": "2",
+    "winnerId": "4",
+    "score": 80,
+    "correctCount": 4,
+    "totalCount": 5,
+    "creditsEarned": 40,
+    "completedAt": "2026-02-12T17:35:44.158Z"
+  },
+  {
+    "id": "ta-1770917887599-0kiuoyp",
+    "userId": "2",
+    "winnerId": "3",
+    "score": 40,
+    "correctCount": 2,
+    "totalCount": 5,
+    "creditsEarned": 20,
+    "completedAt": "2026-02-12T17:38:07.599Z"
+  }
+]

@@ -702,5 +702,53 @@
       "source": "epic_trade_up"
     },
     "createdAt": "2026-02-12T17:15:05.735Z"
+  },
+  {
+    "id": "cl-1770917474101-pmynunx",
+    "userId": "2",
+    "amount": 40,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "2",
+      "correctCount": 4,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T17:31:14.100Z"
+  },
+  {
+    "id": "cl-1770917593179-z98mzhm",
+    "userId": "4",
+    "amount": 40,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "2",
+      "correctCount": 4,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T17:33:13.178Z"
+  },
+  {
+    "id": "cl-1770917744157-8jka51y",
+    "userId": "2",
+    "amount": 40,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "4",
+      "correctCount": 4,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T17:35:44.157Z"
+  },
+  {
+    "id": "cl-1770917887598-m3w4gbt",
+    "userId": "2",
+    "amount": 20,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "3",
+      "correctCount": 2,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-12T17:38:07.598Z"
   }
 ]
