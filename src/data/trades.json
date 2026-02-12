@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "initiatorUserId": "2",
+    "initiatorName": "Carlos",
+    "counterpartyUserId": "1",
+    "counterpartyName": "Jerry",
+    "offeredCardIds": [
+      "card-1770920723418-m69zo8o"
+    ],
+    "requestedCardIds": [],
+    "offeredCredits": 0,
+    "requestedCredits": 123,
+    "status": "pending",
+    "id": "trd-1770925675039-wznwwm3",
+    "createdAt": "2026-02-12T19:47:55.039Z"
+  }
+]

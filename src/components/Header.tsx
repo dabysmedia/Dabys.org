@@ -149,6 +149,7 @@ export default function Header() {
   const isWheel = pathname === "/wheel";
   const isStats = pathname === "/stats";
   const isCards = pathname === "/cards";
+  const isCasino = pathname === "/casino";
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
@@ -164,7 +165,8 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <NavLink href="/wheel" label="Theme Wheel" active={isWheel} />
           <NavLink href="/stats" label="Stats" active={isStats} />
-          <NavLink href="/cards" label="Cards" active={isCards} />
+          <NavLink href="/cards" label="TCG" active={isCards} />
+          <NavLink href="/casino" label="Casino" active={isCasino} />
           <Link
             href="/cards"
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative overflow-visible ${

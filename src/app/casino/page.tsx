@@ -1,0 +1,778 @@
+"use client";
+
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Header from "@/components/Header";
+
+type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
+
+const TABS: { key: GameTab; label: string }[] = [
+  { key: "slots", label: "Slots" },
+  { key: "blackjack", label: "Blackjack" },
+  { key: "roulette", label: "Roulette" },
+  { key: "dabys-bets", label: "Dabys Bets" },
+];
+
+function CasinoContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [user, setUser] = useState<{ id: string; name: string } | null>(null);
+  const [creditBalance, setCreditBalance] = useState(0);
+
+  const gameParam = searchParams.get("game") as GameTab | null;
+  const activeTab: GameTab =
+    gameParam && TABS.some((t) => t.key === gameParam) ? gameParam : "slots";
+
+  const setTab = (tab: GameTab) => {
+    router.replace(`/casino?game=${tab}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    const cached = localStorage.getItem("dabys_user");
+    if (!cached) {
+      router.replace("/login");
+      return;
+    }
+    try {
+      const u = JSON.parse(cached) as { id: string; name: string };
+      setUser(u);
+      fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (typeof d?.balance === "number") setCreditBalance(d.balance);
+        })
+        .catch(() => {});
+    } catch {
+      router.replace("/login");
+    }
+  }, [router]);
+
+  const refreshCredits = (delta?: number) => {
+    const cached = localStorage.getItem("dabys_user");
+    if (!cached) return;
+    try {
+      const u = JSON.parse(cached) as { id: string };
+      fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (typeof d?.balance === "number") {
+            setCreditBalance(d.balance);
+            if (typeof delta === "number" && delta !== 0) {
+              window.dispatchEvent(
+                new CustomEvent("dabys-credits-refresh", { detail: { delta } })
+              );
+            }
+          }
+        })
+        .catch(() => {});
+    } catch {}
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <Header />
+
+      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Header block */}
+        <div className="flex flex-col gap-5 mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
+              Casino
+            </h1>
+            <p className="text-white/45 text-sm mt-0.5">
+              Slots · Blackjack · Roulette · Dabys Bets
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Tab bar */}
+            <div className="flex gap-1.5">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setTab(tab.key)}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer backdrop-blur-xl ${
+                    activeTab === tab.key
+                      ? "bg-white/15 border border-white/25 text-white"
+                      : "bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-white/85 hover:bg-white/[0.08] hover:border-white/[0.12]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {/* Credit balance */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl text-sky-200 shrink-0">
+              <svg className="w-4 h-4 text-sky-300/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="tabular-nums font-semibold text-sm">{creditBalance}</span>
+              <span className="text-sky-300/50 text-[11px]">credits</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Game content — main glass panel */}
+        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.05] backdrop-blur-2xl p-6 sm:p-10 shadow-xl shadow-black/30">
+          {activeTab === "slots" && (
+            <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+          )}
+          {activeTab === "blackjack" && (
+            <BlackjackGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+          )}
+          {activeTab === "roulette" && (
+            <RouletteGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+          )}
+          {activeTab === "dabys-bets" && (
+            <DabysBetsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+const SLOT_BETS = [5, 10, 25, 50, 100];
+const SLOT_SYMBOLS = ["7", "BAR", "cherry", "star", "bell"];
+
+function SlotsGame({
+  userId,
+  balance,
+  onCreditsChange,
+}: {
+  userId: string;
+  balance: number;
+  onCreditsChange: (delta?: number) => void;
+}) {
+  const [bet, setBet] = useState(10);
+  const [spinning, setSpinning] = useState(false);
+  const [symbols, setSymbols] = useState<string[] | null>(null);
+  const [lastResult, setLastResult] = useState<{ win: boolean; payout: number; netChange: number } | null>(null);
+
+  async function handleSpin() {
+    if (spinning || balance < bet) return;
+    setSpinning(true);
+    setLastResult(null);
+    setSymbols(null);
+    try {
+      const res = await fetch("/api/casino/slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, bet }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Spin failed");
+        setSpinning(false);
+        return;
+      }
+      setSymbols(data.symbols);
+      setLastResult({
+        win: data.win,
+        payout: data.payout,
+        netChange: data.netChange,
+      });
+      onCreditsChange(data.netChange);
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setSpinning(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">3-Reel Slots</p>
+
+      {/* Reels */}
+      <div className="flex justify-center gap-2 sm:gap-4 mb-10">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden"
+          >
+            {spinning ? (
+              <span className="animate-pulse text-white/50">?</span>
+            ) : symbols ? (
+              <span className="capitalize">{symbols[i]}</span>
+            ) : (
+              <span className="text-white/25">—</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Bet selector */}
+      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-5">
+        {SLOT_BETS.map((b) => (
+          <button
+            key={b}
+            onClick={() => setBet(b)}
+            disabled={spinning || balance < b}
+            className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-xl ${
+              bet === b
+                ? "bg-white/12 border border-white/20 text-white"
+                : "bg-white/[0.05] border border-white/[0.08] text-white/65 hover:bg-white/[0.08] hover:border-white/[0.12]"
+            }`}
+          >
+            {b}
+          </button>
+        ))}
+      </div>
+
+      {/* Spin button */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={handleSpin}
+          disabled={spinning || balance < bet}
+          className={`min-w-[140px] px-10 py-3.5 rounded-xl text-base font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-xl ${
+            spinning
+              ? "bg-white/10 border border-white/20 text-white/70 animate-pulse"
+              : "bg-white/12 border border-white/20 text-white hover:bg-white/18 hover:border-white/30"
+          }`}
+        >
+          {spinning ? "Spinning…" : "Spin"}
+        </button>
+      </div>
+
+      {/* Result */}
+      {lastResult && (
+        <div
+          className={
+            lastResult.win
+              ? "text-center py-4 px-5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 backdrop-blur-xl text-emerald-200"
+              : "text-center py-4 px-5 rounded-xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-white/60"
+          }
+        >
+          {lastResult.win ? (
+            <p className="font-medium text-sm">You won {lastResult.payout} credits!</p>
+          ) : (
+            <p className="text-sm">No match. Better luck next time!</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderCard(c: { suit: string; rank: string }, idx: number) {
+  const isHidden = c.suit === "?" && c.rank === "?";
+  const color = c.suit === "♥" || c.suit === "♦" ? "text-red-400" : "text-white/90";
+  return (
+    <div
+      key={idx}
+      className={`w-11 h-14 sm:w-12 sm:h-16 rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-xs sm:text-sm font-bold ${color}`}
+    >
+      {isHidden ? "?" : `${c.rank}${c.suit}`}
+    </div>
+  );
+}
+
+function BlackjackGame({
+  userId,
+  balance,
+  onCreditsChange,
+}: {
+  userId: string;
+  balance: number;
+  onCreditsChange: (delta?: number) => void;
+}) {
+  const [bet, setBet] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState<{ status: string; bet: number } | null>(null);
+  const [playerHand, setPlayerHand] = useState<{ suit: string; rank: string }[]>([]);
+  const [dealerHand, setDealerHand] = useState<{ suit: string; rank: string }[]>([]);
+  const [playerValue, setPlayerValue] = useState(0);
+  const [dealerValue, setDealerValue] = useState(0);
+  const [lastResult, setLastResult] = useState<{ result: string; payout: number; netChange: number } | null>(null);
+
+  async function loadSession() {
+    try {
+      const res = await fetch(`/api/casino/blackjack?userId=${encodeURIComponent(userId)}`);
+      const data = await res.json();
+      if (data.session) {
+        setSession(data.session);
+        setPlayerHand(data.playerHand || []);
+        setDealerHand(data.dealerHand || []);
+        setPlayerValue(data.playerValue || 0);
+        setDealerValue(data.dealerValue || 0);
+      } else {
+        setSession(null);
+        setPlayerHand([]);
+        setDealerHand([]);
+        setLastResult(null);
+      }
+    } catch {
+      setSession(null);
+    }
+  }
+
+  useEffect(() => {
+    loadSession();
+  }, [userId]);
+
+  async function handleAction(action: "deal" | "hit" | "stand") {
+    if (loading) return;
+    setLoading(true);
+    setLastResult(null);
+    try {
+      const body: Record<string, unknown> = { userId, action };
+      if (action === "deal") body.bet = bet;
+      const res = await fetch("/api/casino/blackjack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Action failed");
+        setLoading(false);
+        return;
+      }
+      setSession(data.session);
+      setPlayerHand(data.playerHand || []);
+      setDealerHand(data.dealerHand || []);
+      setPlayerValue(data.playerValue ?? 0);
+      setDealerValue(data.dealerValue ?? 0);
+      if (data.result !== null && data.result !== undefined) {
+        setLastResult({
+          result: data.result,
+          payout: data.payout ?? 0,
+          netChange: data.netChange ?? 0,
+        });
+        onCreditsChange(data.netChange);
+      }
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Blackjack</p>
+
+      {/* Dealer hand */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-5">
+        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Dealer</p>
+        <div className="flex gap-2 flex-wrap min-h-[4rem]">
+          {dealerHand.map((c, i) => renderCard(c, i))}
+        </div>
+        {dealerValue > 0 && (
+          <p className="text-white/50 text-xs mt-2 tabular-nums">Value: {dealerValue}</p>
+        )}
+      </div>
+
+      {/* Player hand */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-6">
+        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Your hand</p>
+        <div className="flex gap-2 flex-wrap min-h-[4rem]">
+          {playerHand.map((c, i) => renderCard(c, i))}
+        </div>
+        {playerValue > 0 && (
+          <p className="text-white/50 text-xs mt-2 tabular-nums">Value: {playerValue}</p>
+        )}
+      </div>
+
+      {/* Controls */}
+      {!session ? (
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-full max-w-[120px]">
+            <label className="block text-[11px] uppercase tracking-wider text-white/40 mb-1.5">Bet</label>
+            <input
+              type="number"
+              min={5}
+              max={500}
+              value={bet}
+              onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
+              className="w-full bg-white/[0.06] border border-white/[0.1] rounded-lg px-4 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+            />
+          </div>
+          <button
+            onClick={() => handleAction("deal")}
+            disabled={loading || balance < bet}
+            className="min-w-[120px] px-8 py-3 rounded-xl text-sm font-semibold bg-white/12 border border-white/20 text-white hover:bg-white/18 backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {loading ? "…" : "Deal"}
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-center gap-3">
+          <button
+            onClick={() => handleAction("hit")}
+            disabled={loading || playerValue >= 21}
+            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] border border-white/[0.12] hover:bg-emerald-500/20 hover:border-emerald-400/25 text-white backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+          >
+            Hit
+          </button>
+          <button
+            onClick={() => handleAction("stand")}
+            disabled={loading}
+            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] border border-white/[0.12] hover:bg-amber-500/20 hover:border-amber-400/25 text-white backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+          >
+            Stand
+          </button>
+        </div>
+      )}
+
+      {/* Result */}
+      {lastResult && (
+        <div
+          className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
+            lastResult.result === "win"
+              ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-200"
+              : lastResult.result === "push"
+                ? "bg-white/[0.06] border-white/[0.12] text-white/70"
+                : "bg-red-500/15 border-red-400/30 text-red-200"
+          }`}
+        >
+          {lastResult.result === "win" && (
+            <p className="font-medium text-sm">You won {lastResult.payout} credits!</p>
+          )}
+          {lastResult.result === "push" && <p className="text-sm">Push — bet returned</p>}
+          {lastResult.result === "loss" && <p className="text-sm">Dealer wins</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RouletteGame({
+  userId,
+  balance,
+  onCreditsChange,
+}: {
+  userId: string;
+  balance: number;
+  onCreditsChange: (delta?: number) => void;
+}) {
+  const [bet, setBet] = useState(10);
+  const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
+  const [spinning, setSpinning] = useState(false);
+  const [lastResult, setLastResult] = useState<{
+    result: number;
+    resultColor: string;
+    win: boolean;
+    payout: number;
+    netChange: number;
+  } | null>(null);
+
+  async function handleSpin() {
+    if (spinning || balance < bet || selection === null) return;
+    setSpinning(true);
+    setLastResult(null);
+    try {
+      const res = await fetch("/api/casino/roulette", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, bet, selection }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Spin failed");
+        setSpinning(false);
+        return;
+      }
+      setLastResult({
+        result: data.result,
+        resultColor: data.resultColor,
+        win: data.win,
+        payout: data.payout,
+        netChange: data.netChange,
+      });
+      onCreditsChange(data.netChange);
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setSpinning(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Roulette</p>
+
+      {/* Bet & selection */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-6 sm:gap-8">
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-white/40 mb-1.5">Bet</label>
+            <input
+              type="number"
+              min={5}
+              max={500}
+              value={bet}
+              onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
+              className="w-24 bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+            />
+          </div>
+          <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+            <button
+              onClick={() => setSelection("red")}
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer backdrop-blur-xl ${
+                selection === "red"
+                  ? "bg-red-500/25 border border-red-400/50 text-red-100"
+                  : "bg-white/[0.05] border border-white/[0.1] text-red-300/80 hover:bg-red-500/15 hover:border-red-400/30"
+              }`}
+            >
+              Red (2x)
+            </button>
+            <button
+              onClick={() => setSelection("black")}
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer backdrop-blur-xl ${
+                selection === "black"
+                  ? "bg-white/12 border border-gray-300/50 text-gray-100"
+                  : "bg-white/[0.05] border border-white/[0.1] text-gray-300 hover:bg-white/[0.1] hover:border-white/[0.15]"
+              }`}
+            >
+              Black (2x)
+            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={36}
+                placeholder="0–36"
+                value={selection === null || typeof selection !== "number" ? "" : selection}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                  if (v === null) setSelection(null);
+                  else if (!isNaN(v) && v >= 0 && v <= 36) setSelection(v);
+                }}
+                className="w-16 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+              />
+              <span className="text-white/40 text-xs">(35x)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Spin button */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={handleSpin}
+          disabled={spinning || balance < bet || selection === null}
+          className={`min-w-[140px] px-10 py-3.5 rounded-xl text-base font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-xl ${
+            spinning
+              ? "bg-white/10 border border-white/20 text-white/70 animate-pulse"
+              : "bg-white/12 border border-white/20 text-white hover:bg-white/18 hover:border-white/30"
+          }`}
+        >
+          {spinning ? "Spinning…" : "Spin"}
+        </button>
+      </div>
+
+      {/* Result */}
+      {lastResult && (
+        <div
+          className={`text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
+            lastResult.win
+              ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-200"
+              : "bg-white/[0.04] border-white/[0.1] text-white/60"
+          }`}
+        >
+          <p className="text-[11px] uppercase tracking-wider text-white/45 mb-1">Landed on</p>
+          <p
+            className={`text-2xl font-bold tabular-nums ${
+              lastResult.resultColor === "red"
+                ? "text-red-400"
+                : lastResult.resultColor === "black"
+                  ? "text-gray-300"
+                  : "text-green-400"
+            }`}
+          >
+            {lastResult.result}
+          </p>
+          {lastResult.win ? (
+            <p className="mt-2 text-sm font-medium">You won {lastResult.payout} credits!</p>
+          ) : (
+            <p className="mt-2 text-sm">No win.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DabysBetsEvent {
+  id: string;
+  title: string;
+  sideA: string;
+  sideB: string;
+  oddsA: number;
+  oddsB: number;
+  minBet: number;
+  maxBet: number;
+  isActive: boolean;
+}
+
+function DabysBetsGame({
+  userId,
+  balance,
+  onCreditsChange,
+}: {
+  userId: string;
+  balance: number;
+  onCreditsChange: (delta?: number) => void;
+}) {
+  const [events, setEvents] = useState<DabysBetsEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [betting, setBetting] = useState<string | null>(null);
+  const [betAmount, setBetAmount] = useState<Record<string, number>>({});
+  const [lastResult, setLastResult] = useState<{
+    eventTitle: string;
+    side: string;
+    userWon: boolean;
+    payout: number;
+    netChange: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/casino/dabys-bets")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setEvents)
+      .catch(() => setEvents([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function placeBet(eventId: string, side: "A" | "B") {
+    const amount = betAmount[eventId] ?? 10;
+    const evt = events.find((e) => e.id === eventId);
+    if (!evt || amount < evt.minBet || amount > evt.maxBet || balance < amount) return;
+    setBetting(eventId);
+    setLastResult(null);
+    try {
+      const res = await fetch("/api/casino/dabys-bets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, eventId, side, bet: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Bet failed");
+        setBetting(null);
+        return;
+      }
+      setLastResult({
+        eventTitle: data.eventTitle,
+        side: side === "A" ? evt.sideA : evt.sideB,
+        userWon: data.userWon,
+        payout: data.payout,
+        netChange: data.netChange,
+      });
+      onCreditsChange(data.netChange);
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setBetting(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white/50 rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-sm text-white/40">No events available. Check back later.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Dabys Bets</p>
+
+      <div className="space-y-4">
+        {events.map((evt) => (
+          <div
+            key={evt.id}
+            className="rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-5"
+          >
+            <p className="text-white/90 font-medium text-sm mb-4">{evt.title}</p>
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+              <div className="flex-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                  onClick={() => placeBet(evt.id, "A")}
+                  disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-purple-200 hover:bg-purple-500/15 hover:border-purple-400/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+                >
+                  {evt.sideA} <span className="text-white/50">({evt.oddsA}x)</span>
+                </button>
+                <span className="hidden sm:inline text-white/25 self-center text-xs">vs</span>
+                <button
+                  onClick={() => placeBet(evt.id, "B")}
+                  disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-indigo-200 hover:bg-indigo-500/15 hover:border-indigo-400/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+                >
+                  {evt.sideB} <span className="text-white/50">({evt.oddsB}x)</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2 sm:flex-shrink-0">
+                <input
+                  type="number"
+                  min={evt.minBet}
+                  max={evt.maxBet}
+                  value={betAmount[evt.id] ?? evt.minBet}
+                  onChange={(e) =>
+                    setBetAmount((prev) => ({
+                      ...prev,
+                      [evt.id]: Math.max(evt.minBet, Math.min(evt.maxBet, parseInt(e.target.value, 10) || evt.minBet)),
+                    }))
+                  }
+                  className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2.5 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+                />
+                <span className="text-white/35 text-[11px]">credits</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-white/30 mt-3">
+              Bet {evt.minBet}–{evt.maxBet}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {lastResult && (
+        <div
+          className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
+            lastResult.userWon
+              ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-200"
+              : "bg-red-500/10 border-red-400/25 text-red-200"
+          }`}
+        >
+          <p className="font-medium text-sm">{lastResult.eventTitle}</p>
+          <p className="text-sm mt-0.5 text-white/80">
+            {lastResult.userWon ? `Won ${lastResult.payout} on ${lastResult.side}` : `Lost — ${lastResult.side}`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CasinoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <CasinoContent />
+    </Suspense>
+  );
+}

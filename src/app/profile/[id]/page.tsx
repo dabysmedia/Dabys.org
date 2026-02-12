@@ -1194,7 +1194,7 @@ export default function ProfilePage() {
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-[var(--background)] shadow-2xl overflow-hidden"
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
             role="dialog"
             aria-label="Edit featured collection"
             onClick={(e) => e.stopPropagation()}
@@ -1243,14 +1243,14 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowFeaturedModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04]"
+                  className="flex-1 px-4 py-2 rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-md text-white/80 hover:bg-white/[0.08] hover:border-white/30 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveFeaturedCards}
                   disabled={featuredSaving}
-                  className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   {featuredSaving ? "Saving..." : "Save"}
                 </button>

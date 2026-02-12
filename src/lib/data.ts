@@ -802,6 +802,130 @@ export function getAndConsumeTriviaSession(userId: string, winnerId: string): Tr
   return session;
 }
 
+// ──── Blackjack sessions ─────────────────────────────────
+export interface BlackjackCard {
+  suit: string;
+  rank: string;
+}
+
+export interface BlackjackSession {
+  userId: string;
+  deck: BlackjackCard[];
+  playerHand: BlackjackCard[];
+  dealerHand: BlackjackCard[];
+  bet: number;
+  status: "dealing" | "player_turn" | "dealer_turn" | "resolved";
+  result?: "win" | "loss" | "push";
+  payout?: number;
+  createdAt: string;
+}
+
+function getBlackjackSessionsRaw(): BlackjackSession[] {
+  try {
+    return readJson<BlackjackSession[]>("blackjackSessions.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveBlackjackSessionsRaw(sessions: BlackjackSession[]) {
+  writeJson("blackjackSessions.json", sessions);
+}
+
+const BLACKJACK_SESSION_TTL_MS = 30 * 60 * 1000; // 30 min
+
+export function getBlackjackSession(userId: string): BlackjackSession | null {
+  const sessions = getBlackjackSessionsRaw();
+  const session = sessions.find((s) => s.userId === userId);
+  if (!session) return null;
+  const age = Date.now() - new Date(session.createdAt).getTime();
+  if (age >= BLACKJACK_SESSION_TTL_MS) return null;
+  return session;
+}
+
+export function saveBlackjackSession(session: BlackjackSession): void {
+  const sessions = getBlackjackSessionsRaw().filter((s) => s.userId !== session.userId);
+  sessions.push(session);
+  saveBlackjackSessionsRaw(sessions);
+}
+
+export function removeBlackjackSession(userId: string): boolean {
+  const sessions = getBlackjackSessionsRaw().filter((s) => s.userId !== userId);
+  if (sessions.length === getBlackjackSessionsRaw().length) return false;
+  saveBlackjackSessionsRaw(sessions);
+  return true;
+}
+
+// ──── Dabys Bets (sports-style events) ───────────────────
+export interface DabysBetsEvent {
+  id: string;
+  title: string;
+  sideA: string;
+  sideB: string;
+  oddsA: number;
+  oddsB: number;
+  minBet: number;
+  maxBet: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+function getDabysBetsEventsRaw(): DabysBetsEvent[] {
+  try {
+    return readJson<DabysBetsEvent[]>("dabysBetsEvents.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveDabysBetsEventsRaw(events: DabysBetsEvent[]) {
+  writeJson("dabysBetsEvents.json", events);
+}
+
+export function getDabysBetsEvents(activeOnly = false): DabysBetsEvent[] {
+  const events = getDabysBetsEventsRaw();
+  if (activeOnly) return events.filter((e) => e.isActive);
+  return events;
+}
+
+export function getDabysBetsEvent(id: string): DabysBetsEvent | undefined {
+  return getDabysBetsEventsRaw().find((e) => e.id === id);
+}
+
+export function addDabysBetsEvent(
+  input: Omit<DabysBetsEvent, "id" | "createdAt">
+): DabysBetsEvent {
+  const events = getDabysBetsEventsRaw();
+  const now = new Date().toISOString();
+  const newEvent: DabysBetsEvent = {
+    ...input,
+    id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: now,
+  };
+  events.push(newEvent);
+  saveDabysBetsEventsRaw(events);
+  return newEvent;
+}
+
+export function updateDabysBetsEvent(
+  id: string,
+  updates: Partial<Omit<DabysBetsEvent, "id" | "createdAt">>
+): DabysBetsEvent | undefined {
+  const events = getDabysBetsEventsRaw();
+  const idx = events.findIndex((e) => e.id === id);
+  if (idx < 0) return undefined;
+  events[idx] = { ...events[idx], ...updates };
+  saveDabysBetsEventsRaw(events);
+  return events[idx];
+}
+
+export function deleteDabysBetsEvent(id: string): boolean {
+  const events = getDabysBetsEventsRaw().filter((e) => e.id !== id);
+  if (events.length === getDabysBetsEventsRaw().length) return false;
+  saveDabysBetsEventsRaw(events);
+  return true;
+}
+
 // ──── Marketplace (listings) ─────────────────────────────
 export interface Listing {
   id: string;

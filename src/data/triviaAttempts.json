@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "ta-1770925206536-ea1w7j7",
+    "userId": "2",
+    "winnerId": "1",
+    "score": 40,
+    "correctCount": 2,
+    "totalCount": 5,
+    "creditsEarned": 20,
+    "completedAt": "2026-02-12T19:40:06.536Z"
+  }
+]

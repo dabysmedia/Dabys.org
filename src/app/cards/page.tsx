@@ -6,7 +6,6 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
-import { RARITY_COLORS } from "@/lib/constants";
 
 interface User {
   id: string;
@@ -816,7 +815,7 @@ export default function CardsPage() {
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white/90 mb-2">Cards</h1>
+            <h1 className="text-2xl font-bold text-white/90 mb-2">Trading Card Game</h1>
             <p className="text-white/50 text-sm">
               Buy packs, manage your collection, trade on the marketplace, and play trivia to earn credits.
             </p>
@@ -1293,56 +1292,21 @@ export default function CardsPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {listings.map((listing) => (
-                  <div
-                    key={listing.id}
-                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[listing.card.rarity] || RARITY_COLORS.uncommon} ${listing.card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}
-                  >
-                    <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
-                      {listing.card.profilePath ? (
-                        <img
-                          src={listing.card.profilePath}
-                          alt={listing.card.actorName}
-                          className={`w-full h-full object-cover ${listing.card.isFoil ? "holo-sheen" : ""}`}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
-                          {listing.card.actorName.charAt(0)}
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-                      {listing.card.isFoil && (
-                        <span
-                          className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-                          style={{
-                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
-                            boxShadow: "0 0 8px rgba(255,255,255,0.5)",
-                          }}
-                        >HOLO</span>
-                      )}
-                      <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
-                        {listing.card.rarity}
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      {(() => {
-                        const { title, subtitle } = cardLabelLines(listing.card);
-                        return (
-                          <>
-                            <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
-                            <p className="text-xs text-white/60 truncate">{subtitle}</p>
-                            <p className="text-[10px] text-white/40 truncate mt-0.5">{listing.card.movieTitle}</p>
-                          </>
-                        );
-                      })()}
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.06]">
-                        <span className="text-amber-400 font-bold">{listing.askingPrice} cr</span>
-                        <span className="text-[10px] text-white/40 flex items-center gap-1.5 flex-wrap">by {listing.sellerName}{listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}</span>
+                  <div key={listing.id} className="flex flex-col">
+                    <CardDisplay card={listing.card} />
+                    <div className="mt-0 rounded-b-xl border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-amber-400 font-bold text-sm">{listing.askingPrice} cr</span>
+                        <span className="text-[10px] text-white/40 truncate flex items-center gap-1.5 flex-wrap min-w-0">
+                          by {listing.sellerName}
+                          {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}
+                        </span>
                       </div>
                       {listing.sellerUserId === user.id ? (
                         <button
                           onClick={() => handleDelist(listing.id)}
                           disabled={delistingId === listing.id}
-                          className="w-full mt-2 px-3 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 transition-colors cursor-pointer"
+                          className="w-full px-3 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 transition-colors cursor-pointer"
                         >
                           {delistingId === listing.id ? "Delisting..." : "Delist"}
                         </button>
@@ -1350,7 +1314,7 @@ export default function CardsPage() {
                         <button
                           onClick={() => handleBuyListing(listing.id)}
                           disabled={creditBalance < listing.askingPrice || buyingId === listing.id}
-                          className="w-full mt-2 px-3 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="w-full px-3 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           {buyingId === listing.id ? "Buying..." : "Buy"}
                         </button>
