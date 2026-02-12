@@ -38,6 +38,8 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    winnerId,
+    movieTitle: winner.movieTitle ?? "",
     poolEntries,
     ownedCharacterIds,
     ownedCards,

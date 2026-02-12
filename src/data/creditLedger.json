@@ -2339,5 +2339,71 @@
       "selection": 19
     },
     "createdAt": "2026-02-12T22:06:56.941Z"
+  },
+  {
+    "id": "cl-1770935020107-2kad1mb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:23:40.106Z"
+  },
+  {
+    "id": "cl-1770935024306-csdvwul",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:23:44.305Z"
+  },
+  {
+    "id": "cl-1770935028224-m7knood",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:23:48.223Z"
+  },
+  {
+    "id": "cl-1770935032536-rgan2w0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:23:52.535Z"
+  },
+  {
+    "id": "cl-1770935037292-klugjqo",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:23:57.291Z"
+  },
+  {
+    "id": "cl-1770935043124-tw87jft",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 0
+    },
+    "createdAt": "2026-02-12T22:24:03.123Z"
   }
 ]
