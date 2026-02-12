@@ -212,7 +212,9 @@ type PackTier = (typeof PACK_TIERS)[number];
 const CASCADE_ORDER: Rarity[] = ["legendary", "epic", "rare", "uncommon"];
 
 function normRarity(r: string | undefined): Rarity {
-  return (r === "common" ? "uncommon" : r) || "uncommon";
+  const s = (r === "common" ? "uncommon" : r) || "uncommon";
+  if (s === "uncommon" || s === "rare" || s === "epic" || s === "legendary") return s;
+  return "uncommon";
 }
 
 /** One roll per pack: returns which tier this pack is (determines best card in pack). */
