@@ -377,7 +377,7 @@ export default function CardsPage() {
       if (res.ok && data.cards) {
         setNewCards(data.cards);
         await loadData();
-        window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -pack.price } }));
       } else {
         alert(data.error || "Failed to buy pack");
       }
@@ -390,6 +390,7 @@ export default function CardsPage() {
 
   async function handleBuyListing(listingId: string) {
     if (!user) return;
+    const listing = listings.find((l) => l.id === listingId);
     setBuyingId(listingId);
     try {
       const res = await fetch("/api/marketplace/buy", {
@@ -400,7 +401,8 @@ export default function CardsPage() {
       const data = await res.json();
       if (res.ok) {
         await loadData();
-        window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+        const delta = listing ? -listing.askingPrice : undefined;
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
       } else {
         alert(data.error || "Failed to buy");
       }

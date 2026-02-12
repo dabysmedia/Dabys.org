@@ -38,5 +38,15 @@
     "totalCount": 5,
     "creditsEarned": 20,
     "completedAt": "2026-02-12T01:36:30.740Z"
+  },
+  {
+    "id": "ta-1770913077600-ciux5xy",
+    "userId": "4",
+    "winnerId": "1",
+    "score": 40,
+    "correctCount": 2,
+    "totalCount": 5,
+    "creditsEarned": 10,
+    "completedAt": "2026-02-12T16:17:57.600Z"
   }
 ]

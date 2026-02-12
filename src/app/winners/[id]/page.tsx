@@ -261,7 +261,7 @@ export default function WinnerDetailPage() {
     if (!user || myThumb === null || myStars === 0) return;
 
     try {
-      await fetch(`/api/winners/${winnerId}/ratings`, {
+      const res = await fetch(`/api/winners/${winnerId}/ratings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -273,7 +273,9 @@ export default function WinnerDetailPage() {
       });
       setRatingSubmitted(true);
       loadWinner();
-      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+      // Only animate/play sound for first rating (201); edits (200) don't add credits
+      const delta = res.status === 201 ? 2 : undefined;
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
     } catch {
       console.error("Failed to submit rating");
     }
@@ -330,7 +332,7 @@ export default function WinnerDetailPage() {
       setGiphyPasteUrl("");
       setReplyingTo(null);
       loadWinner();
-      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: 5 } }));
     } catch {
       console.error("Failed to post comment");
     } finally {
@@ -361,7 +363,7 @@ export default function WinnerDetailPage() {
         body: JSON.stringify({ userId: user.id }),
       });
       loadWinner();
-      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: 1 } }));
     } catch {
       console.error("Failed to toggle like");
     } finally {
@@ -1078,9 +1080,10 @@ export default function WinnerDetailPage() {
                     <button
                       onClick={() => {
                         setShowTrivia(false);
+                        const earned = triviaResult?.creditsEarned ?? 0;
                         setTriviaResult(null);
                         setTriviaCompleted(true);
-                        window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+                        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: earned } }));
                       }}
                       className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-colors cursor-pointer"
                     >

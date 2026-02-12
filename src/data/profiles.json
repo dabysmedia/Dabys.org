@@ -7,7 +7,10 @@
     "featuredCardIds": [
       "card-1770871972207-53u4uns"
     ],
-    "displayedBadgeWinnerIds": []
+    "displayedBadgeWinnerIds": [
+      "1",
+      "2"
+    ]
   },
   {
     "userId": "1",

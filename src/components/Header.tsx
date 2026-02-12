@@ -1,12 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+
+// Web Audio API — credit gain chime (no assets)
+let creditsAudioContext: AudioContext | null = null;
+function getCreditsAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!creditsAudioContext) creditsAudioContext = new AudioContext();
+  return creditsAudioContext;
+}
+async function playCreditsGainedSound() {
+  const ctx = getCreditsAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.06);
+    osc.frequency.setValueAtTime(783.99, t + 0.12);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.02);
+    gain.gain.setValueAtTime(0.1, t + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.start(t);
+    osc.stop(t + 0.25);
+  } catch { /* ignore */ }
+}
 
 interface User {
   id: string;
   name: string;
+}
+
+interface CreditsRefreshDetail {
+  delta?: number;
 }
 
 function NavLink({
@@ -33,8 +67,11 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [creditBalance, setCreditBalance] = useState(0);
+  const [creditDelta, setCreditDelta] = useState<number | null>(null);
+  const [creditAnimClass, setCreditAnimClass] = useState("");
+  const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const refreshCredits = () => {
+  const refreshCredits = (delta?: number) => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) return;
     try {
@@ -42,7 +79,20 @@ export default function Header() {
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (typeof d?.balance === "number") setCreditBalance(d.balance);
+          if (typeof d?.balance === "number") {
+            setCreditBalance(d.balance);
+            if (typeof delta === "number" && delta !== 0) {
+              if (delta > 0) playCreditsGainedSound();
+              setCreditDelta(delta);
+              setCreditAnimClass(delta > 0 ? "credits-animate-add" : "credits-animate-subtract");
+              animTimeoutRef.current && clearTimeout(animTimeoutRef.current);
+              animTimeoutRef.current = setTimeout(() => {
+                setCreditDelta(null);
+                setCreditAnimClass("");
+                animTimeoutRef.current = null;
+              }, 900);
+            }
+          }
         })
         .catch(() => {});
     } catch {}
@@ -70,9 +120,15 @@ export default function Header() {
   }, [router]);
 
   useEffect(() => {
-    const handler = () => refreshCredits();
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<CreditsRefreshDetail>).detail;
+      refreshCredits(detail?.delta);
+    };
     window.addEventListener("dabys-credits-refresh", handler);
-    return () => window.removeEventListener("dabys-credits-refresh", handler);
+    return () => {
+      window.removeEventListener("dabys-credits-refresh", handler);
+      animTimeoutRef.current && clearTimeout(animTimeoutRef.current);
+    };
   }, []);
 
   const logout = () => {
@@ -82,7 +138,7 @@ export default function Header() {
 
   if (!user) {
     return (
-      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
@@ -95,7 +151,7 @@ export default function Header() {
   const isCards = pathname === "/cards";
 
   return (
-    <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -111,17 +167,26 @@ export default function Header() {
           <NavLink href="/cards" label="Cards" active={isCards} />
           <Link
             href="/cards"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative overflow-visible ${
               isCards
                 ? "bg-sky-400/15 border-sky-400/30 text-sky-300"
                 : "bg-sky-400/10 border-sky-400/20 text-sky-300 hover:bg-sky-400/15"
             }`}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{creditBalance}</span>
+            <span className={`tabular-nums ${creditAnimClass}`}>{creditBalance}</span>
             <span className="text-sky-300/60 text-xs">credits</span>
+            {creditDelta !== null && (
+              <span
+                className={`absolute -top-1 -right-1 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold credits-delta-pop pointer-events-none ${
+                  creditDelta > 0 ? "text-emerald-400 bg-emerald-500/20" : "text-amber-400 bg-amber-500/20"
+                }`}
+              >
+                {creditDelta > 0 ? `+${creditDelta}` : creditDelta}
+              </span>
+            )}
           </Link>
           <Link
             href={`/profile/${user.id}`}
