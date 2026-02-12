@@ -1192,5 +1192,1152 @@
       "bet": 10
     },
     "createdAt": "2026-02-12T20:45:53.870Z"
+  },
+  {
+    "id": "cl-1770929795157-74ekoy6",
+    "userId": "2",
+    "amount": 997,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 3
+    },
+    "createdAt": "2026-02-12T20:56:35.156Z"
+  },
+  {
+    "id": "cl-1770929827138-bqbg9np",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T20:57:07.137Z"
+  },
+  {
+    "id": "cl-1770930018031-riyh2ry",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:00:18.031Z"
+  },
+  {
+    "id": "cl-1770930024037-jcrs13z",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:00:24.036Z"
+  },
+  {
+    "id": "cl-1770930024039-p8onlzo",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 35,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:00:24.038Z"
+  },
+  {
+    "id": "cl-1770930036977-p0opclo",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:00:36.976Z"
+  },
+  {
+    "id": "cl-1770930036979-qui8g5k",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 15,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:00:36.978Z"
+  },
+  {
+    "id": "cl-1770930042640-bgl8lit",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:00:42.639Z"
+  },
+  {
+    "id": "cl-1770930042641-um9zl1t",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 11,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:00:42.641Z"
+  },
+  {
+    "id": "cl-1770930149625-h2oqhop",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:02:29.624Z"
+  },
+  {
+    "id": "cl-1770930149627-60tw9k9",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 28,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:02:29.626Z"
+  },
+  {
+    "id": "cl-1770930189108-vbbvhk6",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:03:09.107Z"
+  },
+  {
+    "id": "cl-1770930189109-e7s6bfq",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 22,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:03:09.109Z"
+  },
+  {
+    "id": "cl-1770930195187-e684xmr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:03:15.186Z"
+  },
+  {
+    "id": "cl-1770930195188-ozvmcxz",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 8,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:03:15.187Z"
+  },
+  {
+    "id": "cl-1770930339680-tf07g9e",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:05:39.677Z"
+  },
+  {
+    "id": "cl-1770930339682-y554jym",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 10,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:05:39.681Z"
+  },
+  {
+    "id": "cl-1770930345820-cr3t2cb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:05:45.819Z"
+  },
+  {
+    "id": "cl-1770930353524-uiuhadi",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:05:53.523Z"
+  },
+  {
+    "id": "cl-1770930353525-akw6pr4",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 11,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:05:53.525Z"
+  },
+  {
+    "id": "cl-1770930357386-fpan76x",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:05:57.386Z"
+  },
+  {
+    "id": "cl-1770930357388-bih8728",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 20,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:05:57.387Z"
+  },
+  {
+    "id": "cl-1770930362091-bc3emrs",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:06:02.091Z"
+  },
+  {
+    "id": "cl-1770930362093-334z1ld",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 26,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:06:02.092Z"
+  },
+  {
+    "id": "cl-1770930367179-esihqy2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:06:07.178Z"
+  },
+  {
+    "id": "cl-1770930372305-ppxsqfn",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:06:12.304Z"
+  },
+  {
+    "id": "cl-1770930372306-63e24nb",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 16,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:06:12.306Z"
+  },
+  {
+    "id": "cl-1770930377300-ermonu0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:06:17.300Z"
+  },
+  {
+    "id": "cl-1770930377302-in2y8i9",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 21,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:06:17.301Z"
+  },
+  {
+    "id": "cl-1770930467087-khum1f5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:07:47.086Z"
+  },
+  {
+    "id": "cl-1770930472402-71di7ml",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:07:52.401Z"
+  },
+  {
+    "id": "cl-1770930472403-6y8ufgj",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 7,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:07:52.402Z"
+  },
+  {
+    "id": "cl-1770930477686-rlk39m9",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:07:57.685Z"
+  },
+  {
+    "id": "cl-1770930483619-88gmo88",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:08:03.618Z"
+  },
+  {
+    "id": "cl-1770930488512-l1bxksg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:08:08.511Z"
+  },
+  {
+    "id": "cl-1770930488514-hyj7q98",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 26,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:08:08.513Z"
+  },
+  {
+    "id": "cl-1770930496513-3tnqs9n",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:08:16.512Z"
+  },
+  {
+    "id": "cl-1770930496515-8xxwu5y",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 4,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:08:16.514Z"
+  },
+  {
+    "id": "cl-1770930500596-d1za2wm",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:08:20.595Z"
+  },
+  {
+    "id": "cl-1770930500597-fyvlily",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 6,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:08:20.597Z"
+  },
+  {
+    "id": "cl-1770930558637-4xrvk0k",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:09:18.636Z"
+  },
+  {
+    "id": "cl-1770930558638-cywj88n",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 29,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:09:18.638Z"
+  },
+  {
+    "id": "cl-1770930563106-v3krdg5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:09:23.106Z"
+  },
+  {
+    "id": "cl-1770930571066-rm3sjtq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:09:31.065Z"
+  },
+  {
+    "id": "cl-1770930576157-55i2k0n",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:09:36.156Z"
+  },
+  {
+    "id": "cl-1770930581363-na671yx",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:09:41.362Z"
+  },
+  {
+    "id": "cl-1770930581365-gy6bz23",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 21,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:09:41.364Z"
+  },
+  {
+    "id": "cl-1770930585009-dny1ssx",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:09:45.008Z"
+  },
+  {
+    "id": "cl-1770930589068-yhq1yzq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:09:49.067Z"
+  },
+  {
+    "id": "cl-1770930589069-rs0dns8",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 23,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:09:49.068Z"
+  },
+  {
+    "id": "cl-1770930592666-16tn2sy",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:09:52.665Z"
+  },
+  {
+    "id": "cl-1770930592667-686tmqh",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 19,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:09:52.667Z"
+  },
+  {
+    "id": "cl-1770930683822-xzqafk5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:11:23.821Z"
+  },
+  {
+    "id": "cl-1770930688095-9ic8qz0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:11:28.094Z"
+  },
+  {
+    "id": "cl-1770930691898-z799fzg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:11:31.897Z"
+  },
+  {
+    "id": "cl-1770930691900-56elvtm",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 30,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:11:31.900Z"
+  },
+  {
+    "id": "cl-1770930696049-b8zzqxy",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:11:36.048Z"
+  },
+  {
+    "id": "cl-1770930700751-g48wuv2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:11:40.750Z"
+  },
+  {
+    "id": "cl-1770930700752-bgeiqd9",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 25,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:11:40.751Z"
+  },
+  {
+    "id": "cl-1770930705586-awqbt0u",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:11:45.585Z"
+  },
+  {
+    "id": "cl-1770930709449-5ue1dg0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:11:49.449Z"
+  },
+  {
+    "id": "cl-1770930713753-uttkgbr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:11:53.752Z"
+  },
+  {
+    "id": "cl-1770930717464-h3ilqqs",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:11:57.463Z"
+  },
+  {
+    "id": "cl-1770930717466-x1ucllx",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 11,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:11:57.465Z"
+  },
+  {
+    "id": "cl-1770930723221-tce5nfp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:12:03.220Z"
+  },
+  {
+    "id": "cl-1770930723222-70g1kr3",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 15,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:12:03.222Z"
+  },
+  {
+    "id": "cl-1770930766074-p4h3vsi",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:12:46.073Z"
+  },
+  {
+    "id": "cl-1770930766076-vqh8dhr",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 27,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:12:46.075Z"
+  },
+  {
+    "id": "cl-1770930772274-25ertis",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:12:52.273Z"
+  },
+  {
+    "id": "cl-1770930772275-6jtfsmx",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 12,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:12:52.275Z"
+  },
+  {
+    "id": "cl-1770931033203-t86zrlj",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:17:13.202Z"
+  },
+  {
+    "id": "cl-1770931053059-p0w01ml",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:17:33.058Z"
+  },
+  {
+    "id": "cl-1770931053060-gby3jpa",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "red",
+      "result": 14,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:17:33.060Z"
+  },
+  {
+    "id": "cl-1770931161331-c5uxhf7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:19:21.330Z"
+  },
+  {
+    "id": "cl-1770931165866-hr4flni",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "red"
+    },
+    "createdAt": "2026-02-12T21:19:25.865Z"
+  },
+  {
+    "id": "cl-1770931171029-nfk2shv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:19:31.028Z"
+  },
+  {
+    "id": "cl-1770931175601-mu8buhf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:19:35.600Z"
+  },
+  {
+    "id": "cl-1770931175602-1bmrrra",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 2,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:19:35.601Z"
+  },
+  {
+    "id": "cl-1770931179392-99v8ale",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T21:19:39.392Z"
+  },
+  {
+    "id": "cl-1770931179394-69ktl3s",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 6,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T21:19:39.393Z"
+  },
+  {
+    "id": "cl-1770933675313-eke2lfh",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:01:15.312Z"
+  },
+  {
+    "id": "cl-1770933675315-b8o06s4",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 10,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:01:15.314Z"
+  },
+  {
+    "id": "cl-1770933681002-zifkx1o",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:01:21.001Z"
+  },
+  {
+    "id": "cl-1770933681003-sykffqu",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 13,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:01:21.002Z"
+  },
+  {
+    "id": "cl-1770933684889-s6961bg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:01:24.888Z"
+  },
+  {
+    "id": "cl-1770933729837-v2l7ggj",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:02:09.836Z"
+  },
+  {
+    "id": "cl-1770933729839-es1uw6s",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 11,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:02:09.838Z"
+  },
+  {
+    "id": "cl-1770933734002-ayq2o53",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:02:14.001Z"
+  },
+  {
+    "id": "cl-1770933734004-t26tlpn",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 10,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:02:14.003Z"
+  },
+  {
+    "id": "cl-1770933821019-due63f4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:03:41.018Z"
+  },
+  {
+    "id": "cl-1770933826230-lcbu1gt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:03:46.229Z"
+  },
+  {
+    "id": "cl-1770933997279-rinhm6f",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:06:37.278Z"
+  },
+  {
+    "id": "cl-1770933997281-rcm0uk1",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 2,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:06:37.280Z"
+  },
+  {
+    "id": "cl-1770934002909-ap6xyy7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:06:42.908Z"
+  },
+  {
+    "id": "cl-1770934007575-fnkdraz",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-12T22:06:47.574Z"
+  },
+  {
+    "id": "cl-1770934007576-femh042",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 17,
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T22:06:47.576Z"
+  },
+  {
+    "id": "cl-1770934012800-iahzo2b",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 19
+    },
+    "createdAt": "2026-02-12T22:06:52.799Z"
+  },
+  {
+    "id": "cl-1770934016942-mr7hdx2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": 19
+    },
+    "createdAt": "2026-02-12T22:06:56.941Z"
   }
 ]

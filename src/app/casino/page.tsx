@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
+import { RED_NUMBERS, ROULETTE_WHEEL_ORDER } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
 
@@ -540,6 +541,11 @@ function BlackjackGame({
   );
 }
 
+function rouletteColor(n: number): "red" | "black" | "green" {
+  if (n === 0) return "green";
+  return RED_NUMBERS.includes(n) ? "red" : "black";
+}
+
 function RouletteGame({
   userId,
   balance,
@@ -552,6 +558,8 @@ function RouletteGame({
   const [bet, setBet] = useState(10);
   const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
+  const wheelRef = useRef<HTMLDivElement>(null);
   const [lastResult, setLastResult] = useState<{
     result: number;
     resultColor: string;
@@ -560,11 +568,15 @@ function RouletteGame({
     netChange: number;
   } | null>(null);
 
+  const SEGMENT_ANGLE = 360 / 37;
+  const SPIN_DURATION_MS = 3500;
+
   async function handleSpin() {
     if (spinning || balance < bet || selection === null) return;
     setSpinning(true);
     setLastResult(null);
     try {
+      // 1. Get result from API first
       const res = await fetch("/api/casino/roulette", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -576,8 +588,25 @@ function RouletteGame({
         setSpinning(false);
         return;
       }
+      const resultNum = data.result as number;
+      const resultIdx = ROULETTE_WHEEL_ORDER.indexOf(resultNum);
+
+      // 2. Spin wheel to land on result: segment 0 is at top, so rotate by resultIdx segments
+      const extraRevolutions = 7 + Math.floor(Math.random() * 2);
+      const landAngle = resultIdx * SEGMENT_ANGLE;
+      const targetRotation = wheelRotation + 360 * extraRevolutions + landAngle;
+
+      setWheelRotation(targetRotation);
+
+      if (wheelRef.current) {
+        wheelRef.current.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+        wheelRef.current.style.transform = `rotate(${targetRotation}deg)`;
+      }
+
+      await new Promise((r) => setTimeout(r, SPIN_DURATION_MS));
+
       setLastResult({
-        result: data.result,
+        result: resultNum,
         resultColor: data.resultColor,
         win: data.win,
         payout: data.payout,
@@ -595,63 +624,147 @@ function RouletteGame({
     <div>
       <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Roulette</p>
 
-      {/* Bet & selection */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-6 sm:gap-8">
-          <div>
-            <label className="block text-[11px] uppercase tracking-wider text-white/40 mb-1.5">Bet</label>
+      <div className="flex flex-col items-center gap-8">
+        {/* Wheel — scaled up for real table feel */}
+        <div className="relative shrink-0">
+          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 [perspective:1000px]">
+            <div
+              ref={wheelRef}
+              className="absolute inset-0 rounded-full overflow-hidden border-[6px] border-amber-600/70 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]"
+              style={{ transform: `rotate(${wheelRotation}deg)` }}
+            >
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                {ROULETTE_WHEEL_ORDER.map((n, i) => {
+                  const color = rouletteColor(n);
+                  const fill =
+                    color === "green"
+                      ? "#166534"
+                      : color === "red"
+                        ? "#b91c1c"
+                        : "#1f2937";
+                  // Segment 0 at top (12 o'clock): offset by -90°
+                  const startAngle = -90 + (i / 37) * 360;
+                  const endAngle = -90 + ((i + 1) / 37) * 360;
+                  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+                  const r = 48;
+                  const cx = 50;
+                  const cy = 50;
+                  const x1 = cx + r * Math.cos((startAngle * Math.PI) / 180);
+                  const y1 = cy - r * Math.sin((startAngle * Math.PI) / 180);
+                  const x2 = cx + r * Math.cos((endAngle * Math.PI) / 180);
+                  const y2 = cy - r * Math.sin((endAngle * Math.PI) / 180);
+                  const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                  const midAngle = ((startAngle + endAngle) / 2) * (Math.PI / 180);
+                  const tx = cx + 32 * Math.cos(midAngle);
+                  const ty = cy - 32 * Math.sin(midAngle);
+                  const rot = midAngle * (180 / Math.PI) + 90;
+                  return (
+                    <g key={i}>
+                      <path d={path} fill={fill} stroke="rgba(0,0,0,0.3)" strokeWidth="0.3" />
+                      <text
+                        x={tx}
+                        y={ty}
+                        fill="white"
+                        fontSize="3.2"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        transform={`rotate(${rot} ${tx} ${ty})`}
+                      >
+                        {n}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+            <div
+              className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-md z-10"
+              aria-hidden
+            />
+          </div>
+        </div>
+
+        {/* Betting board — horizontal table layout */}
+        <div className="w-full max-w-3xl rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
+            <label className="text-[11px] uppercase tracking-wider text-white/40 shrink-0">Bet</label>
             <input
               type="number"
               min={5}
               max={500}
               value={bet}
               onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
-              className="w-24 bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+              className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
             />
-          </div>
-          <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-            <button
-              onClick={() => setSelection("red")}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer backdrop-blur-xl ${
-                selection === "red"
-                  ? "bg-red-500/25 border border-red-400/50 text-red-100"
-                  : "bg-white/[0.05] border border-white/[0.1] text-red-300/80 hover:bg-red-500/15 hover:border-red-400/30"
-              }`}
-            >
-              Red (2x)
-            </button>
-            <button
-              onClick={() => setSelection("black")}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer backdrop-blur-xl ${
-                selection === "black"
-                  ? "bg-white/12 border border-gray-300/50 text-gray-100"
-                  : "bg-white/[0.05] border border-white/[0.1] text-gray-300 hover:bg-white/[0.1] hover:border-white/[0.15]"
-              }`}
-            >
-              Black (2x)
-            </button>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0}
-                max={36}
-                placeholder="0–36"
-                value={selection === null || typeof selection !== "number" ? "" : selection}
-                onChange={(e) => {
-                  const v = e.target.value === "" ? null : parseInt(e.target.value, 10);
-                  if (v === null) setSelection(null);
-                  else if (!isNaN(v) && v >= 0 && v <= 36) setSelection(v);
-                }}
-                className="w-16 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
-              />
-              <span className="text-white/40 text-xs">(35x)</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelection(selection === "red" ? null : "red")}
+                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                  selection === "red"
+                    ? "bg-red-600 border-2 border-red-400 text-white shadow-lg shadow-red-500/30"
+                    : "bg-red-900/50 border border-red-500/40 text-red-200 hover:bg-red-800/60"
+                }`}
+              >
+                Red 2×
+              </button>
+              <button
+                onClick={() => setSelection(selection === "black" ? null : "black")}
+                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                  selection === "black"
+                    ? "bg-gray-600 border-2 border-gray-300 text-white shadow-lg"
+                    : "bg-gray-800/50 border border-gray-500/40 text-gray-200 hover:bg-gray-700/60"
+                }`}
+              >
+                Black 2×
+              </button>
+              <button
+                onClick={() => setSelection(selection === 0 ? null : 0)}
+                className={`w-12 py-2.5 rounded-lg text-xs font-bold ${
+                  selection === 0
+                    ? "bg-emerald-600 border-2 border-emerald-400 text-white"
+                    : "bg-emerald-900/50 border border-emerald-600/50 text-emerald-200 hover:bg-emerald-800/60"
+                }`}
+              >
+                0
+              </button>
             </div>
           </div>
+          {/* Horizontal number grid — 12 cols × 3 rows (real table layout) */}
+          <div className="grid grid-cols-12 gap-1">
+            {[0, 1, 2].map((row) =>
+              Array.from({ length: 12 }, (_, col) => {
+                const n = col * 3 + row + 1;
+                const isRed = RED_NUMBERS.includes(n);
+                const sel = selection === n;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => setSelection(selection === n ? null : n)}
+                    className={`aspect-[4/3] min-h-[28px] rounded text-[11px] sm:text-xs font-bold ${
+                      sel ? "ring-2 ring-white ring-offset-1 ring-offset-[#0a0a0f]" : "hover:opacity-90"
+                    } ${
+                      isRed
+                        ? sel
+                          ? "bg-red-600 text-white"
+                          : "bg-red-900/60 border border-red-600/50 text-red-200"
+                        : sel
+                          ? "bg-gray-600 text-white"
+                          : "bg-gray-800/60 border border-gray-600/50 text-gray-200"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <p className="text-[10px] text-white/40 text-center mt-2">Straight up 35×</p>
         </div>
       </div>
 
       {/* Spin button */}
-      <div className="flex justify-center mb-6">
+      <div className="flex justify-center mt-6 mb-4">
         <button
           onClick={handleSpin}
           disabled={spinning || balance < bet || selection === null}
