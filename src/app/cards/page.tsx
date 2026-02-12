@@ -54,6 +54,74 @@ const PACK_PRICE = 50;
 
 type TabKey = "store" | "collection" | "marketplace" | "trivia";
 
+// Web Audio API sounds for trade-up (no assets, works everywhere)
+let tradeUpAudioContext: AudioContext | null = null;
+function getTradeUpAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!tradeUpAudioContext) tradeUpAudioContext = new AudioContext();
+  return tradeUpAudioContext;
+}
+async function playTradeUpAdd() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(440, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc.start(t);
+    osc.stop(t + 0.08);
+  } catch { /* ignore */ }
+}
+async function playTradeUpSubmit() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "square";
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(120, t + 0.1);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  } catch { /* ignore */ }
+}
+async function playTradeUpReveal() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.08);
+    osc.frequency.setValueAtTime(783.99, t + 0.16);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+    gain.gain.setValueAtTime(0.12, t + 0.14);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  } catch { /* ignore */ }
+}
+
 interface Winner {
   id: string;
   movieTitle: string;
@@ -83,6 +151,14 @@ export default function CardsPage() {
   const [delistingId, setDelistingId] = useState<string | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [triviaCompletedIds, setTriviaCompletedIds] = useState<Set<string>>(new Set());
+  const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [tradingUp, setTradingUp] = useState(false);
+  const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
+  const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
+
+  const myListedCardIds = new Set(
+    listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
+  );
 
   const loadData = useCallback(async () => {
     const cached = localStorage.getItem("dabys_user");
@@ -140,6 +216,81 @@ export default function CardsPage() {
     window.addEventListener("dabys-credits-refresh", handler);
     return () => window.removeEventListener("dabys-credits-refresh", handler);
   }, [loadData]);
+
+  useEffect(() => {
+    if (!tradeUpResult) return;
+    setTradeUpResultFading(false);
+    let clearTimer: ReturnType<typeof setTimeout> | null = null;
+    const fadeTimer = setTimeout(() => {
+      setTradeUpResultFading(true);
+      clearTimer = setTimeout(() => {
+        setTradeUpResult(null);
+        setTradeUpResultFading(false);
+      }, 500);
+    }, 5000);
+    return () => {
+      clearTimeout(fadeTimer);
+      if (clearTimer) clearTimeout(clearTimer);
+    };
+  }, [tradeUpResult]);
+
+  const TRADE_UP_NEXT: Record<string, string> = { uncommon: "rare", rare: "epic", epic: "legendary" };
+  const tradeUpCardIds = tradeUpSlots.filter((id): id is string => id != null);
+  const tradeUpCards = cards.filter((c) => c.id && tradeUpCardIds.includes(c.id));
+  const canTradeUp =
+    tradeUpCardIds.length === 5 &&
+    tradeUpCards.length === 5 &&
+    tradeUpCards.every((c) => c.rarity === tradeUpCards[0]?.rarity) &&
+    TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""];
+
+  async function handleTradeUp() {
+    if (!user || !canTradeUp || tradingUp) return;
+    playTradeUpSubmit();
+    setTradingUp(true);
+    try {
+      const payload = { userId: user.id, cardIds: tradeUpCardIds };
+      const res = await fetch("/api/cards/trade-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.card) {
+        playTradeUpReveal();
+        setTradeUpResult(data.card);
+        setTradeUpSlots([null, null, null, null, null]);
+        await loadData();
+      } else {
+        alert(data.error || "Trade up failed");
+      }
+    } catch (e) {
+      alert("Trade up failed");
+    } finally {
+      setTradingUp(false);
+    }
+  }
+
+  function addToTradeUpSlot(cardId: string) {
+    if (myListedCardIds.has(cardId)) return;
+    const card = cards.find((c) => c.id === cardId);
+    if (!card) return;
+    const filled = tradeUpSlots.filter((id): id is string => id != null);
+    if (filled.includes(cardId)) return;
+    if (filled.length >= 5) return;
+    const firstCard = filled[0] ? cards.find((c) => c.id === filled[0]) : null;
+    if (firstCard && card.rarity !== firstCard.rarity) return;
+    playTradeUpAdd();
+    setTradeUpSlots((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((id) => id == null);
+      if (idx >= 0) next[idx] = cardId;
+      return next;
+    });
+  }
+
+  function removeFromTradeUpSlot(cardId: string) {
+    setTradeUpSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
 
   async function handleBuyPack() {
     if (!user || creditBalance < PACK_PRICE || buying) return;
@@ -350,6 +501,116 @@ export default function CardsPage() {
         {/* Collection */}
         {tab === "collection" && (
           <div>
+            {tradeUpResult && (
+              <div className="flex justify-center mb-6">
+                <div
+                  className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
+                    tradeUpResultFading ? "opacity-0" : "opacity-100"
+                  }`}
+                >
+                  <h2 className="text-center text-lg font-semibold text-amber-400/90 mb-4">Trade Up Result</h2>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-36 mx-auto">
+                      <CardDisplay card={tradeUpResult} />
+                    </div>
+                    <p className="text-sm text-white/60 text-center capitalize">
+                      {tradeUpResult.rarity} card
+                    </p>
+                    <button
+                      onClick={() => setTradeUpResult(null)}
+                      className="px-4 py-2 rounded-lg border border-white/20 text-amber-400/90 text-sm font-medium hover:bg-white/[0.06] hover:border-amber-400/50 transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Trade Up - frosted glass section */}
+            <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
+              <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
+              <p className="text-sm text-white/60 mb-4">
+                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity. Uncommon → Rare, Rare → Epic, Epic → Legendary.
+              </p>
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                {/* Input slots - 5 cards */}
+                <div className="flex gap-2">
+                  {tradeUpSlots.map((cardId, i) => (
+                    <div
+                      key={`${cardId ?? "empty"}-${i}`}
+                      className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        cardId
+                          ? "border-amber-400/50 bg-amber-500/10 hover:border-amber-400/70 tradeup-slot-pop"
+                          : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
+                      }`}
+                      onClick={() => cardId && removeFromTradeUpSlot(cardId)}
+                    >
+                      {cardId ? (
+                        <div className="w-full h-full relative group bg-black/20">
+                          {(() => {
+                            const c = cards.find((x) => x.id === cardId);
+                            if (!c) return null;
+                            return (
+                              <>
+                                {c.profilePath ? (
+                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                                    {(c.actorName || "?")[0]}
+                                  </div>
+                                )}
+                                <span className="absolute bottom-0 left-0 right-0 text-[8px] font-medium uppercase py-0.5 text-center bg-black/70 text-amber-400/90">
+                                  {c.rarity}
+                                </span>
+                                <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-400 text-[10px] font-medium transition-opacity text-center px-1">
+                                  Click to remove
+                                </span>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-white/40 text-center px-1">Empty</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Arrow */}
+                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">
+                  →
+                </div>
+                {/* Output slot */}
+                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 border-amber-500/40 flex items-center justify-center transition-all ${
+                  canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : "bg-white/[0.04]"
+                }`}>
+                  {canTradeUp ? (
+                    <span className="text-xs text-amber-400 font-medium text-center px-1">
+                      1 {TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""]}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-white/40 text-center px-1">?</span>
+                  )}
+                </div>
+                {/* Submit button */}
+                <button
+                  onClick={handleTradeUp}
+                  disabled={!canTradeUp || tradingUp}
+                  className={`ml-auto px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                    canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.3)]" : ""
+                  }`}
+                >
+                  {tradingUp ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Submitting...
+                    </span>
+                  ) : (
+                    "Submit Trade Up"
+                  )}
+                </button>
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold text-white/90">Your Collection ({cards.length})</h2>
               <div className="flex items-center gap-3">
@@ -384,9 +645,37 @@ export default function CardsPage() {
                 {cards
                   .filter((c) => !filterRarity || c.rarity === filterRarity)
                   .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
-                  .map((card) => (
-                    <CardDisplay key={card.id} card={card} />
-                  ))}
+                  .map((card) => {
+                    const inSlots = tradeUpCardIds.includes(card.id!);
+                    const canAdd = !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                    const ineligible = tradeUpCardIds.length > 0 && !canAdd && !inSlots;
+                    return (
+                      <div
+                        key={card.id}
+                        onClick={() => canAdd && card.id && addToTradeUpSlot(card.id!)}
+                        className={`relative transition-all ${
+                          canAdd ? "cursor-pointer hover:ring-2 hover:ring-amber-500/50 rounded-xl" : ""
+                        } ${ineligible ? "opacity-40 grayscale" : ""}`}
+                      >
+                        {inSlots && (
+                          <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
+                            ✓
+                          </span>
+                        )}
+                        {myListedCardIds.has(card.id!) && (
+                          <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl text-xs text-white/60">
+                            Listed
+                          </span>
+                        )}
+                        {canAdd && (
+                          <span className="absolute bottom-1 left-1 right-1 z-10 text-[10px] text-amber-400/90 font-medium text-center bg-black/60 rounded px-1 py-0.5">
+                            Click to add
+                          </span>
+                        )}
+                        <CardDisplay card={card} />
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

@@ -37,7 +37,7 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-l-xl border border-r-0 border-white/[0.08] bg-[#0a0a0f]/95 backdrop-blur-xl text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-all cursor-pointer shadow-lg"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-l-xl border border-r-0 border-white/20 bg-white/[0.08] backdrop-blur-2xl text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
           aria-label="Open friends list"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -57,13 +57,13 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
 
       {/* Panel */}
       <aside
-        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] border-l border-white/[0.08] bg-[#0a0a0f]/98 backdrop-blur-xl shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] border-l border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
         aria-label="Friends list"
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-white/20">
             <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest">Friends</h2>
             <button
               type="button"

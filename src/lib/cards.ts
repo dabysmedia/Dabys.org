@@ -7,6 +7,10 @@ import {
   getCredits,
   getOwnedLegendaryCharacterIds,
   migrateCommonToUncommon,
+  getCards,
+  getCardById,
+  removeCard,
+  getListings,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner } from "@/lib/data";
 
@@ -273,6 +277,74 @@ export function buyPack(userId: string): { success: boolean; cards?: ReturnType<
   }
 
   return { success: true, cards };
+}
+
+/** Trade up: consume 5 cards of same rarity for 1 of next rarity. Works up to legendary (1-of-1). */
+export function tradeUp(
+  userId: string,
+  cardIds: string[]
+): { success: boolean; card?: ReturnType<typeof addCard>; error?: string } {
+  if (!Array.isArray(cardIds) || cardIds.length !== 5) {
+    return { success: false, error: "Select exactly 5 cards" };
+  }
+  const uniqueIds = [...new Set(cardIds)];
+  if (uniqueIds.length !== 5) return { success: false, error: "Select 5 different cards" };
+
+  const listedCardIds = new Set(getListings().map((l) => l.cardId));
+
+  const selected: ReturnType<typeof getCards> = [];
+  for (const id of uniqueIds) {
+    const card = getCardById(id);
+    if (!card || card.userId !== userId) return { success: false, error: "You don't own one or more of these cards" };
+    if (listedCardIds.has(id)) return { success: false, error: "Cannot trade up cards listed on the marketplace" };
+    selected.push(card);
+  }
+
+  const rarities = selected.map((c) => c.rarity);
+  const first = rarities[0];
+  if (rarities.some((r) => r !== first)) return { success: false, error: "All 5 cards must be the same rarity" };
+
+  const TRADE_UP_MAP: Record<string, "rare" | "epic" | "legendary"> = {
+    uncommon: "rare",
+    rare: "epic",
+    epic: "legendary",
+  };
+  const targetRarity = TRADE_UP_MAP[first];
+  if (!targetRarity) return { success: false, error: "Cannot trade up legendary cards" };
+
+  const pool = getCharacterPool().filter((c) => c.profilePath?.trim());
+  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
+  const CASCADE: ("rare" | "epic" | "legendary")[] =
+    targetRarity === "rare" ? ["rare", "epic", "legendary"] : targetRarity === "epic" ? ["epic", "legendary"] : ["legendary"];
+  const ownedLegendaryIds = getOwnedLegendaryCharacterIds();
+  let subset: typeof pool = [];
+  for (const tier of CASCADE) {
+    subset = pool.filter((c) => norm(c.rarity) === tier);
+    if (tier === "legendary") subset = subset.filter((c) => !ownedLegendaryIds.has(c.characterId));
+    if (subset.length > 0) break;
+  }
+  if (subset.length === 0) return { success: false, error: `No ${targetRarity}+ cards available in the character pool` };
+
+  for (const c of selected) {
+    removeCard(c.id);
+  }
+
+  const char = subset[Math.floor(Math.random() * subset.length)];
+  const isFoil = Math.random() < FOIL_CHANCE;
+  const newCard = addCard({
+    userId,
+    characterId: char.characterId,
+    rarity: char.rarity,
+    isFoil,
+    actorName: char.actorName,
+    characterName: char.characterName,
+    movieTitle: char.movieTitle,
+    movieTmdbId: char.movieTmdbId,
+    profilePath: char.profilePath,
+    cardType: char.cardType ?? "actor",
+  });
+
+  return { success: true, card: newCard };
 }
 
 export { PACK_PRICE, CARDS_PER_PACK };
