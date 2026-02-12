@@ -193,5 +193,19 @@
     "trailerUrl": "https://www.youtube.com/embed/bM9QabAojCg",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/hiKmpZMGZsrkA3cdce8a7Dpos1j.jpg",
     "createdAt": "2026-02-11T04:58:38.286Z"
+  },
+  {
+    "id": "15",
+    "weekId": "8",
+    "userId": "1",
+    "userName": "Jerry",
+    "movieTitle": "Dracula",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/aS2ixprqWHanYhhAOL7qVJTLoSN.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/dracula-2006/",
+    "tmdbId": 40631,
+    "year": "2006",
+    "overview": "The Romanian count known as Dracula is summoned to London by Arthur Holmwood, a young Lord who is one the verge of being wed. Unknown to Arthur's future bride Lucy, her future husband is infected with syphilis and therefore cannot consummate their marriage. Arthur has laid his hopes of being cured on the enigmatic count; as it is said that Dracula has extraordinary powers. But these supernatural powers have sinister origins. The Count is a vampire. Soon Arthur realizes his serious mistake as all hell breaks loose and the Count infects others with his ancient curse. But Dracula has not counted on the young Lord acquiring the assistance of the Dutch Vampire expert Prof. Abraham Van Helsing.",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mAEMFpc3V2fCGV2JEs9YLIpUs3Z.jpg",
+    "createdAt": "2026-02-12T00:28:08.795Z"
   }
 ]

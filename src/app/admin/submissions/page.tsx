@@ -31,6 +31,15 @@ interface UserData {
   name: string;
 }
 
+interface VoteData {
+  id: string;
+  weekId: string;
+  userId: string;
+  userName: string;
+  submissionId: string;
+  createdAt: string;
+}
+
 interface TmdbSearchResult {
   id: number;
   title: string;
@@ -55,6 +64,7 @@ export default function AdminSubmissionsPage() {
   const [weeks, setWeeks] = useState<WeekData[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
   const [currentWeek, setCurrentWeek] = useState<WeekData | null>(null);
+  const [currentWeekVotes, setCurrentWeekVotes] = useState<VoteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
 
@@ -159,8 +169,9 @@ export default function AdminSubmissionsPage() {
         setWeeks(weeksData);
       }
 
+      let weekData: WeekData | null = null;
       if (weekRes.ok) {
-        const weekData: WeekData = await weekRes.json();
+        weekData = await weekRes.json();
         setCurrentWeek(weekData);
       }
 
@@ -172,6 +183,19 @@ export default function AdminSubmissionsPage() {
       if (usersRes.ok) {
         const usersData: UserData[] = await usersRes.json();
         setUsers(usersData);
+      }
+
+      // Load votes for current week when voting is open or closed
+      if (weekData?.id) {
+        const votesRes = await fetch(`/api/votes?weekId=${weekData.id}`);
+        if (votesRes.ok) {
+          const votesData: VoteData[] = await votesRes.json();
+          setCurrentWeekVotes(votesData);
+        } else {
+          setCurrentWeekVotes([]);
+        }
+      } else {
+        setCurrentWeekVotes([]);
       }
     } catch (err) {
       console.error("Failed to load submissions", err);
@@ -333,6 +357,15 @@ export default function AdminSubmissionsPage() {
     ? allSubmissions.filter((s) => s.weekId === currentWeek.id)
     : [];
 
+  // Vote tally for current week (when vote_open or vote_closed)
+  const showVotes = currentWeek && (currentWeek.phase === "vote_open" || currentWeek.phase === "vote_closed");
+  const voteTally: Record<string, number> = {};
+  if (showVotes) {
+    currentWeekVotes.forEach((v) => {
+      voteTally[v.submissionId] = (voteTally[v.submissionId] || 0) + 1;
+    });
+  }
+
   // Past weeks (ended, sorted most recent first)
   const pastWeeks = weeks
     .filter((w) => w.endedAt)
@@ -488,10 +521,15 @@ export default function AdminSubmissionsPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.06]">
+          <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between gap-4 flex-wrap">
             <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
               This Week&apos;s Submissions ({currentSubs.length})
             </h2>
+            {showVotes && (
+              <span className="text-[11px] text-white/40 uppercase tracking-widest">
+                {currentWeek.phase === "vote_open" ? "Voting open" : "Voting closed"} — showing votes
+              </span>
+            )}
           </div>
           <div className="divide-y divide-white/[0.04]">
             {currentSubs.map((sub) => (
@@ -501,6 +539,7 @@ export default function AdminSubmissionsPage() {
                 onEdit={() => openEdit(sub)}
                 onRemove={() => handleRemoveSubmission(sub)}
                 removing={removingId === sub.id}
+                voteCount={showVotes ? voteTally[sub.id] : undefined}
               />
             ))}
           </div>
@@ -710,11 +749,13 @@ function SubmissionRow({
   onEdit,
   onRemove,
   removing,
+  voteCount,
 }: {
   sub: { id: string; movieTitle: string; year?: string; posterUrl: string; userName: string; letterboxdUrl: string; createdAt: string };
   onEdit: () => void;
   onRemove: () => void;
   removing?: boolean;
+  voteCount?: number;
 }) {
   return (
     <div className="px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors">
@@ -740,6 +781,15 @@ function SubmissionRow({
           {new Date(sub.createdAt).toLocaleString()}
         </p>
       </div>
+
+      {voteCount !== undefined && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-amber-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.959a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.449a1 1 0 00-.364 1.118l1.287 3.96c.3.92-.755 1.688-1.54 1.118l-3.371-2.449a1 1 0 00-1.175 0l-3.37 2.45c-.785.569-1.84-.198-1.54-1.119l1.287-3.959a1 1 0 00-.364-1.118L2.075 9.386c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.274-3.96z" />
+          </svg>
+          <span className="text-xs font-semibold text-amber-300/90 tabular-nums">{voteCount} vote{voteCount !== 1 ? "s" : ""}</span>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 flex-shrink-0">
         <button

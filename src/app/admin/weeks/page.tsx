@@ -7,6 +7,7 @@ interface WeekData {
   theme: string;
   phase: string;
   startedAt: string;
+  endedAt?: string;
 }
 
 const PHASES = [
@@ -42,6 +43,10 @@ export default function AdminWeeksPage() {
   // Restore week
   const [restoringWeekId, setRestoringWeekId] = useState<string | null>(null);
   const [restoreConfirm, setRestoreConfirm] = useState<{ id: string; theme: string } | null>(null);
+
+  // Delete past week
+  const [deletingWeekId, setDeletingWeekId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; theme: string } | null>(null);
 
   useEffect(() => {
     loadWeeks();
@@ -142,6 +147,25 @@ export default function AdminWeeksPage() {
       }
     } catch { /* ignore */ }
     finally { setRestoringWeekId(null); }
+  }
+
+  async function deleteWeek(weekId: string) {
+    if (!deleteConfirm || deleteConfirm.id !== weekId) return;
+    setDeletingWeekId(weekId);
+    try {
+      const res = await fetch(`/api/weeks/${weekId}`, { method: "DELETE" });
+      if (res.ok) {
+        setDeleteConfirm(null);
+        loadWeeks();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete week");
+      }
+    } catch {
+      alert("Failed to delete week");
+    } finally {
+      setDeletingWeekId(null);
+    }
   }
 
   async function addPastWeek() {
@@ -361,13 +385,22 @@ export default function AdminWeeksPage() {
                         </p>
                       </div>
                       <span className="text-[11px] text-white/20 shrink-0">Week #{week.id}</span>
-                      <button
-                        onClick={() => setRestoreConfirm({ id: week.id, theme: week.theme })}
-                        disabled={saving}
-                        className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400/90 text-xs font-medium hover:bg-amber-500/20 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                      >
-                        Restore week
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => setRestoreConfirm({ id: week.id, theme: week.theme })}
+                          disabled={saving}
+                          className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400/90 text-xs font-medium hover:bg-amber-500/20 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Restore week
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm({ id: week.id, theme: week.theme })}
+                          disabled={saving}
+                          className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400/90 text-xs font-medium hover:bg-red-500/20 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
               </div>
@@ -395,6 +428,33 @@ export default function AdminWeeksPage() {
                     className="flex-1 py-2.5 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {restoringWeekId ? "Restoring..." : "Restore week"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete week confirmation */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !deletingWeekId && setDeleteConfirm(null)}>
+              <div className="rounded-xl border border-white/10 bg-[#1a1a2e] p-6 max-w-md w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <p className="text-white/90 font-medium mb-2">Delete this week permanently?</p>
+                <p className="text-sm text-white/50 mb-4">
+                  Week #{deleteConfirm.id} &quot;{deleteConfirm.theme}&quot; and all its submissions, votes, winner(s), ratings, and comments will be removed. This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => !deletingWeekId && setDeleteConfirm(null)}
+                    className="flex-1 py-2.5 rounded-lg border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteWeek(deleteConfirm.id)}
+                    disabled={deletingWeekId !== null}
+                    className="flex-1 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingWeekId ? "Deleting..." : "Delete week"}
                   </button>
                 </div>
               </div>
