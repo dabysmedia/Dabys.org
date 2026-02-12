@@ -388,5 +388,21 @@
     "reason": "pack_purchase",
     "metadata": {},
     "createdAt": "2026-02-12T04:17:44.221Z"
+  },
+  {
+    "id": "cl-1770878246547-8v7lp5e",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T06:37:26.546Z"
+  },
+  {
+    "id": "cl-1770878256160-mec920c",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T06:37:36.159Z"
   }
 ]

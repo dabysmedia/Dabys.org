@@ -664,6 +664,23 @@ export function removeCard(cardId: string): boolean {
   return true;
 }
 
+/** Update all cards with the given characterId to match pool entry changes (e.g. when admin edits pool image). */
+export function updateCardsByCharacterId(
+  characterId: string,
+  updates: Partial<Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "cardType" | "movieTmdbId">>
+): number {
+  const cards = getCardsRaw();
+  let changed = 0;
+  for (let i = 0; i < cards.length; i++) {
+    if (cards[i].characterId === characterId) {
+      cards[i] = { ...cards[i], ...updates };
+      changed++;
+    }
+  }
+  if (changed > 0) saveCardsRaw(cards);
+  return changed;
+}
+
 // ──── Trivia ────────────────────────────────────────────
 export interface TriviaAttempt {
   id: string;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool, saveCharacterPool, migrateCommonToUncommon } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, migrateCommonToUncommon, updateCardsByCharacterId } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
 import type { CardType } from "@/lib/data";
 
@@ -96,6 +96,11 @@ export async function PATCH(request: Request) {
 
   pool[idx] = { ...pool[idx], ...updates };
   saveCharacterPool(pool);
+  // Propagate pool changes to all existing cards with this characterId (so image/name/etc updates show site-wide)
+  const { popularity: _, ...cardUpdates } = updates;
+  if (Object.keys(cardUpdates).length > 0) {
+    updateCardsByCharacterId(characterId, cardUpdates);
+  }
   return NextResponse.json(pool[idx]);
 }
 
