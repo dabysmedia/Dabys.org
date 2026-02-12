@@ -54,5 +54,20 @@
     "overview": "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family.",
     "trailerUrl": "https://www.youtube.com/embed/GAp2_0JJskk",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/ukfI9QkU1aIhOhKXYWE9n3z1mFR.jpg"
+  },
+  {
+    "id": "5",
+    "weekId": "1",
+    "movieTitle": "Nacho Libre",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/kh7B91bMl2lZ0mH9WhPfaNUIEQH.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/nacho-libre-2006/",
+    "submittedBy": "Marcel",
+    "publishedAt": "2026-02-12T03:46:17.221Z",
+    "tmdbId": 9353,
+    "year": "2006",
+    "overview": "Ignacio, a disrespected cook at a Mexican monastery, can barely afford to feed the orphans who live there. Inspired by a local wrestling hero, he decides to moonlight as the not-so-famous Luchador \"Nacho Libre\" to earn money for the monastery -- not to mention the admiration of beautiful nun Sister Encarnación.",
+    "trailerUrl": "https://www.youtube.com/embed/m2Vh4tfnvKk",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/g2yTT9lB5I1DA1uBWT7m4wrYuVz.jpg",
+    "runtime": 92
   }
 ]

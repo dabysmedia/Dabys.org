@@ -1,0 +1,36 @@
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864586371,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864586408}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":100},"timestamp":1770864586471,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864586471,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864586600}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":210},"timestamp":1770864586681,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864589995,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864590030}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":100},"timestamp":1770864590095,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864590095,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864590212}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":206},"timestamp":1770864590301,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864595864,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":0,"poolCount":218,"runId":"post-fix"},"timestamp":1770864595900}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":98},"timestamp":1770864595962,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864595962,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864596081}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":199},"timestamp":1770864596161,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864625173,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864625183,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864625223}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":97},"timestamp":1770864625270,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":0,"poolCount":218,"runId":"post-fix"},"timestamp":1770864625290}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":174},"timestamp":1770864625357,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864640957,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864640968,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":0,"poolCount":218,"runId":"post-fix"},"timestamp":1770864642716}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":1783},"timestamp":1770864642740,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864642766}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":1836},"timestamp":1770864642804,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864644697,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":0,"poolCount":218,"runId":"post-fix"},"timestamp":1770864644746}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":149},"timestamp":1770864644846,"hypothesisId":"H2"}
+{"location":"cards/page.tsx:loadData","message":"loadData START","data":{"userId":"2"},"timestamp":1770864644846,"hypothesisId":"H2"}
+{"location":"api/cards/character-pool/route.ts:GET","message":"character-pool fast path","data":{"ms":1,"poolCount":218,"runId":"post-fix"},"timestamp":1770864644952}
+{"location":"cards/page.tsx:loadData","message":"loadData END","data":{"totalMs":1756},"timestamp":1770864646602,"hypothesisId":"H2"}

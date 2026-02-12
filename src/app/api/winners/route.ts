@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, addCredits } from "@/lib/data";
+import { addPoolEntriesForWinner } from "@/lib/cards";
 
 export async function GET() {
   const winners = getWinners();
@@ -52,6 +53,10 @@ export async function POST(request: Request) {
 
   winners.push(newWinner);
   saveWinners(winners);
+
+  if (newWinner.tmdbId) {
+    addPoolEntriesForWinner(newWinner).catch((e) => console.error("Pool add error", e));
+  }
 
   if (body.submittedBy) {
     const users = getUsers();

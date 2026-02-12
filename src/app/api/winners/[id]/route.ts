@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
+import { addPoolEntriesForWinner } from "@/lib/cards";
 
 export async function GET(
   _request: Request,
@@ -118,6 +119,7 @@ export async function PATCH(
 
   const body = await request.json().catch(() => ({}));
   const w = winners[idx];
+  const prevTmdbId = w.tmdbId;
 
   if (typeof body.weekId === "string") w.weekId = body.weekId;
   if (typeof body.submittedBy === "string") w.submittedBy = body.submittedBy;
@@ -134,6 +136,10 @@ export async function PATCH(
 
   winners[idx] = w;
   saveWinners(winners);
+
+  if (w.tmdbId != null && prevTmdbId !== w.tmdbId) {
+    addPoolEntriesForWinner(w).catch((e) => console.error("Pool add error", e));
+  }
 
   return NextResponse.json(w);
 }

@@ -87,5 +87,306 @@
       "submissionId": "15"
     },
     "createdAt": "2026-02-12T02:11:57.041Z"
+  },
+  {
+    "id": "cl-1770862834491-71vix32",
+    "userId": "2",
+    "amount": 99971,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 28
+    },
+    "createdAt": "2026-02-12T02:20:34.490Z"
+  },
+  {
+    "id": "cl-1770862854525-kpsstrz",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:20:54.524Z"
+  },
+  {
+    "id": "cl-1770862864905-i8wcsd9",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:21:04.904Z"
+  },
+  {
+    "id": "cl-1770862866119-ai69232",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:21:06.118Z"
+  },
+  {
+    "id": "cl-1770862868265-2hhx3p5",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:21:08.264Z"
+  },
+  {
+    "id": "cl-1770862878261-xwfw636",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:21:18.260Z"
+  },
+  {
+    "id": "cl-1770862886166-wrm6lfr",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:21:26.165Z"
+  },
+  {
+    "id": "cl-1770864341459-q5ehccn",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:45:41.458Z"
+  },
+  {
+    "id": "cl-1770864378796-nksms0g",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:46:18.796Z"
+  },
+  {
+    "id": "cl-1770864565322-huo29lg",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:25.321Z"
+  },
+  {
+    "id": "cl-1770864570560-s8osu1h",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:30.559Z"
+  },
+  {
+    "id": "cl-1770864578198-ltn87f8",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:38.197Z"
+  },
+  {
+    "id": "cl-1770864586365-dy14swc",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:46.364Z"
+  },
+  {
+    "id": "cl-1770864589987-4och9cn",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:49.986Z"
+  },
+  {
+    "id": "cl-1770864595856-ro6ym1a",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:49:55.856Z"
+  },
+  {
+    "id": "cl-1770864644689-27kcmn0",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T02:50:44.688Z"
+  },
+  {
+    "id": "cl-1770865420313-8d5eai5",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:03:40.312Z"
+  },
+  {
+    "id": "cl-1770867977224-ge520ao",
+    "userId": "3",
+    "amount": 50,
+    "reason": "submission_win",
+    "metadata": {
+      "winnerId": "5",
+      "weekId": "1"
+    },
+    "createdAt": "2026-02-12T03:46:17.223Z"
+  },
+  {
+    "id": "cl-1770868318497-8k1sbyh",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:51:58.495Z"
+  },
+  {
+    "id": "cl-1770868320832-3axra2m",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:00.831Z"
+  },
+  {
+    "id": "cl-1770868323610-t47ry5k",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:03.610Z"
+  },
+  {
+    "id": "cl-1770868325661-zpf3dh3",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:05.660Z"
+  },
+  {
+    "id": "cl-1770868326881-wr4iaw7",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:06.881Z"
+  },
+  {
+    "id": "cl-1770868328522-dsjvjec",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:08.522Z"
+  },
+  {
+    "id": "cl-1770868330279-ouudonu",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:10.279Z"
+  },
+  {
+    "id": "cl-1770868332900-ccm4bz9",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:12.899Z"
+  },
+  {
+    "id": "cl-1770868335550-c1f1eht",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:15.550Z"
+  },
+  {
+    "id": "cl-1770868336901-iqc6ryy",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:16.900Z"
+  },
+  {
+    "id": "cl-1770868339891-xhyazbi",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T03:52:19.890Z"
+  },
+  {
+    "id": "cl-1770869849475-90uvqi9",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:29.474Z"
+  },
+  {
+    "id": "cl-1770869850822-q1zfrnp",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:30.821Z"
+  },
+  {
+    "id": "cl-1770869854203-0bss7o4",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:34.202Z"
+  },
+  {
+    "id": "cl-1770869855791-5c3atn4",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:35.790Z"
+  },
+  {
+    "id": "cl-1770869856970-e91uj1u",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:36.969Z"
+  },
+  {
+    "id": "cl-1770869858378-m8aax1x",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:38.378Z"
+  },
+  {
+    "id": "cl-1770869859471-phdjn9k",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:39.470Z"
+  },
+  {
+    "id": "cl-1770869864221-oyo1d2g",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {},
+    "createdAt": "2026-02-12T04:17:44.221Z"
   }
 ]

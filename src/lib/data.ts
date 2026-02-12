@@ -495,24 +495,28 @@ export function setCredits(userId: string, balance: number): void {
   saveCreditLedgerRaw(ledger);
 }
 
+// ──── Card Types (multi-type pool) ───────────────────────
+export type CardType = "actor" | "director" | "character" | "scene";
+
 // ──── Character Pool (TCG: actor as character in movie) ──
 export interface CharacterPortrayal {
   characterId: string;
-  tmdbPersonId: number;
+  tmdbPersonId?: number; // optional for Scene (no person)
   actorName: string;
   characterName: string;
   profilePath: string;
   movieTmdbId: number;
   movieTitle: string;
   popularity: number;
-  rarity: "common" | "rare" | "epic" | "legendary";
+  rarity: "uncommon" | "rare" | "epic" | "legendary";
+  cardType?: CardType; // optional for migration; defaults to "actor"
 }
 
 export interface Card {
   id: string;
   userId: string;
   characterId: string;
-  rarity: "common" | "rare" | "epic" | "legendary";
+  rarity: "uncommon" | "rare" | "epic" | "legendary";
   isFoil: boolean;
   actorName: string;
   characterName: string;
@@ -520,6 +524,7 @@ export interface Card {
   movieTmdbId: number;
   profilePath: string;
   acquiredAt: string;
+  cardType?: CardType; // optional for migration; defaults to "actor"
 }
 
 function getCharacterPoolRaw(): CharacterPortrayal[] {
@@ -534,6 +539,29 @@ function saveCharacterPoolRaw(pool: CharacterPortrayal[]) {
   writeJson("characterPool.json", pool);
 }
 
+/** One-time migration: add cardType to cards missing it, then persist. */
+export function migrateCardsAddCardType(): void {
+  const cards = getCardsRaw();
+  const needsMigration = cards.some((c) => !c.cardType);
+  if (!needsMigration) return;
+  const migrated = cards.map((c) => (c.cardType ? c : { ...c, cardType: "actor" as CardType }));
+  saveCardsRaw(migrated);
+}
+
+/** One-time migration: convert common -> uncommon in cards and character pool. */
+export function migrateCommonToUncommon(): void {
+  const cards = getCardsRaw();
+  const needsCards = cards.some((c) => (c as { rarity: string }).rarity === "common");
+  if (needsCards) {
+    saveCardsRaw(cards.map((c) => ((c as { rarity: string }).rarity === "common" ? { ...c, rarity: "uncommon" as const } : c)));
+  }
+  const pool = getCharacterPoolRaw();
+  const needsPool = pool.some((c) => (c as { rarity: string }).rarity === "common");
+  if (needsPool) {
+    saveCharacterPoolRaw(pool.map((c) => ((c as { rarity: string }).rarity === "common" ? { ...c, rarity: "uncommon" as const } : c)));
+  }
+}
+
 function getCardsRaw(): Card[] {
   try {
     return readJson<Card[]>("cards.json");
@@ -546,17 +574,28 @@ function saveCardsRaw(cards: Card[]) {
   writeJson("cards.json", cards);
 }
 
+function withDefaultCardType<T extends { cardType?: CardType }>(entry: T): T & { cardType: CardType } {
+  return { ...entry, cardType: entry.cardType ?? "actor" };
+}
+
 export function getCharacterPool(): CharacterPortrayal[] {
-  return getCharacterPoolRaw();
+  return getCharacterPoolRaw().map(withDefaultCardType);
 }
 
 export function saveCharacterPool(pool: CharacterPortrayal[]) {
   saveCharacterPoolRaw(pool);
 }
 
+/** CharacterIds of legendary cards already owned by any user. Legendaries are 1-of-1 and can't drop again. */
+export function getOwnedLegendaryCharacterIds(): Set<string> {
+  const cards = getCardsRaw();
+  return new Set(cards.filter((c) => c.rarity === "legendary").map((c) => c.characterId));
+}
+
 export function getCards(userId: string): Card[] {
   return getCardsRaw()
     .filter((c) => c.userId === userId)
+    .map(withDefaultCardType)
     .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
 }
 
@@ -573,7 +612,8 @@ export function addCard(card: Omit<Card, "id" | "acquiredAt">): Card {
 }
 
 export function getCardById(cardId: string): Card | undefined {
-  return getCardsRaw().find((c) => c.id === cardId);
+  const card = getCardsRaw().find((c) => c.id === cardId);
+  return card ? withDefaultCardType(card) : undefined;
 }
 
 export function transferCard(cardId: string, newUserId: string): boolean {
@@ -583,6 +623,20 @@ export function transferCard(cardId: string, newUserId: string): boolean {
   cards[idx] = { ...cards[idx], userId: newUserId };
   saveCardsRaw(cards);
   return true;
+}
+
+export function updateCard(
+  cardId: string,
+  updates: Partial<
+    Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "isFoil" | "cardType" | "movieTmdbId">
+  >
+): Card | undefined {
+  const cards = getCardsRaw();
+  const idx = cards.findIndex((c) => c.id === cardId);
+  if (idx < 0) return undefined;
+  cards[idx] = { ...cards[idx], ...updates };
+  saveCardsRaw(cards);
+  return withDefaultCardType(cards[idx]);
 }
 
 export function removeCard(cardId: string): boolean {

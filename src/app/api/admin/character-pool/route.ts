@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, migrateCommonToUncommon } from "@/lib/data";
+import { cleanupGenericPoolEntries } from "@/lib/cards";
+import type { CardType } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -11,10 +13,107 @@ async function requireAdmin() {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAdmin();
   if (auth) return auth;
 
+  migrateCommonToUncommon();
+
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("cleanup") === "1") {
+    const pool = cleanupGenericPoolEntries();
+    return NextResponse.json({ pool });
+  }
+
   const pool = getCharacterPool();
   return NextResponse.json({ pool });
+}
+
+export async function POST(request: Request) {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
+  const body = await request.json().catch(() => ({}));
+  const actorName = (body.actorName as string)?.trim();
+  const characterName = (body.characterName as string)?.trim() || "Unknown";
+  const movieTitle = (body.movieTitle as string)?.trim();
+  const profilePath = (body.profilePath as string)?.trim();
+  const movieTmdbId = typeof body.movieTmdbId === "number" ? body.movieTmdbId : parseInt(String(body.movieTmdbId || 0), 10);
+  const rarity = ["uncommon", "rare", "epic", "legendary"].includes(body.rarity) ? body.rarity : "uncommon";
+  const cardType: CardType = ["actor", "director", "character", "scene"].includes(body.cardType) ? body.cardType : "actor";
+
+  if (!actorName || !movieTitle || !profilePath) {
+    return NextResponse.json(
+      { error: "actorName, movieTitle, and profilePath are required" },
+      { status: 400 }
+    );
+  }
+
+  const pool = getCharacterPool();
+  const characterId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const newEntry = {
+    characterId,
+    actorName,
+    characterName,
+    profilePath,
+    movieTmdbId: isNaN(movieTmdbId) ? 0 : movieTmdbId,
+    movieTitle,
+    popularity: 0,
+    rarity,
+    cardType,
+  };
+  pool.push(newEntry);
+  saveCharacterPool(pool);
+  return NextResponse.json(newEntry, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
+  const body = await request.json().catch(() => ({}));
+  const characterId = body.characterId as string | undefined;
+  if (!characterId) {
+    return NextResponse.json({ error: "characterId required" }, { status: 400 });
+  }
+
+  const pool = getCharacterPool();
+  const idx = pool.findIndex((c) => c.characterId === characterId);
+  if (idx < 0) {
+    return NextResponse.json({ error: "Pool entry not found" }, { status: 404 });
+  }
+
+  const updates: Partial<typeof pool[0]> = {};
+  if (typeof body.actorName === "string") updates.actorName = body.actorName.trim();
+  if (typeof body.characterName === "string") updates.characterName = body.characterName.trim() || "Unknown";
+  if (typeof body.movieTitle === "string") updates.movieTitle = body.movieTitle.trim();
+  if (typeof body.profilePath === "string") updates.profilePath = body.profilePath.trim();
+  if (typeof body.movieTmdbId === "number") updates.movieTmdbId = body.movieTmdbId;
+  else if (body.movieTmdbId !== undefined) updates.movieTmdbId = parseInt(String(body.movieTmdbId), 10) || 0;
+  if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity;
+  if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType;
+  if (typeof body.popularity === "number") updates.popularity = body.popularity;
+
+  pool[idx] = { ...pool[idx], ...updates };
+  saveCharacterPool(pool);
+  return NextResponse.json(pool[idx]);
+}
+
+export async function DELETE(request: Request) {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
+  const { searchParams } = new URL(request.url);
+  const characterId = searchParams.get("characterId");
+  if (!characterId) {
+    return NextResponse.json({ error: "characterId required" }, { status: 400 });
+  }
+
+  const pool = getCharacterPool();
+  const filtered = pool.filter((c) => c.characterId !== characterId);
+  if (filtered.length === pool.length) {
+    return NextResponse.json({ error: "Pool entry not found" }, { status: 404 });
+  }
+  saveCharacterPool(filtered);
+  return NextResponse.json({ success: true });
 }

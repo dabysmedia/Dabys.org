@@ -10,6 +10,8 @@ interface User {
   name: string;
 }
 
+type CardType = "actor" | "director" | "character" | "scene";
+
 interface Card {
   id: string;
   userId?: string;
@@ -22,6 +24,14 @@ interface Card {
   movieTmdbId?: number;
   profilePath: string;
   acquiredAt?: string;
+  cardType?: CardType;
+}
+
+function cardLabelLines(card: Card): { title: string; subtitle: string } {
+  const ct = card.cardType ?? "actor";
+  if (ct === "director") return { title: card.actorName, subtitle: "Director" };
+  if (ct === "scene") return { title: "Scene", subtitle: `from ${card.movieTitle}` };
+  return { title: card.actorName, subtitle: `as ${card.characterName}` };
 }
 
 interface Listing {
@@ -34,7 +44,7 @@ interface Listing {
 }
 
 const RARITY_COLORS: Record<string, string> = {
-  common: "border-white/30 bg-white/5",
+  uncommon: "border-green-500/50 bg-green-500/10",
   rare: "border-blue-500/50 bg-blue-500/10",
   epic: "border-purple-500/50 bg-purple-500/10",
   legendary: "border-amber-500/50 bg-amber-500/10",
@@ -349,7 +359,7 @@ export default function CardsPage() {
                   className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
                 >
                   <option value="">All rarities</option>
-                  <option value="common">Common</option>
+                  <option value="uncommon">Uncommon</option>
                   <option value="rare">Rare</option>
                   <option value="epic">Epic</option>
                   <option value="legendary">Legendary</option>
@@ -404,7 +414,7 @@ export default function CardsPage() {
                 {listings.map((listing) => (
                   <div
                     key={listing.id}
-                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[listing.card.rarity] || RARITY_COLORS.common} ${listing.card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
+                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[listing.card.rarity] || RARITY_COLORS.uncommon} ${listing.card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
                   >
                     <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {listing.card.profilePath ? (
@@ -427,9 +437,16 @@ export default function CardsPage() {
                       </span>
                     </div>
                     <div className="p-3">
-                      <p className="text-sm font-semibold text-white/90 truncate">{listing.card.actorName}</p>
-                      <p className="text-xs text-white/60 truncate">as {listing.card.characterName}</p>
-                      <p className="text-[10px] text-white/40 truncate mt-0.5">{listing.card.movieTitle}</p>
+                      {(() => {
+                        const { title, subtitle } = cardLabelLines(listing.card);
+                        return (
+                          <>
+                            <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
+                            <p className="text-xs text-white/60 truncate">{subtitle}</p>
+                            <p className="text-[10px] text-white/40 truncate mt-0.5">{listing.card.movieTitle}</p>
+                          </>
+                        );
+                      })()}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.06]">
                         <span className="text-amber-400 font-bold">{listing.askingPrice} cr</span>
                         <span className="text-[10px] text-white/40">by {listing.sellerName}</span>
@@ -473,23 +490,33 @@ export default function CardsPage() {
                         {availableToList.length === 0 ? (
                           <p className="col-span-2 text-white/40 text-sm">No cards available to list. Buy packs in Store to get cards!</p>
                         ) : (
-                          availableToList.map((card) => (
-                            <button
-                              key={card.id}
-                              onClick={() => setSelectedCard(card)}
-                              className="text-left p-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
-                            >
-                              <p className="text-xs font-medium text-white/80 truncate">{card.actorName}</p>
-                              <p className="text-[10px] text-white/50 truncate">as {card.characterName}</p>
-                            </button>
-                          ))
+                          availableToList.map((card) => {
+                            const { title, subtitle } = cardLabelLines(card);
+                            return (
+                              <button
+                                key={card.id}
+                                onClick={() => setSelectedCard(card)}
+                                className="text-left p-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                              >
+                                <p className="text-xs font-medium text-white/80 truncate">{title}</p>
+                                <p className="text-[10px] text-white/50 truncate">{subtitle}</p>
+                              </button>
+                            );
+                          })
                         )}
                       </div>
                     ) : (
                       <div>
                         <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-                          <p className="text-sm font-medium text-white/90">{selectedCard.actorName}</p>
-                          <p className="text-xs text-white/50">as {selectedCard.characterName}</p>
+                          {(() => {
+                            const { title, subtitle } = cardLabelLines(selectedCard);
+                            return (
+                              <>
+                                <p className="text-sm font-medium text-white/90">{title}</p>
+                                <p className="text-xs text-white/50">{subtitle}</p>
+                              </>
+                            );
+                          })()}
                           <button
                             onClick={() => setSelectedCard(null)}
                             className="ml-auto text-xs text-white/40 hover:text-white/70 cursor-pointer"
@@ -591,7 +618,8 @@ export default function CardsPage() {
 }
 
 function CardDisplay({ card }: { card: Card }) {
-  const rarityClass = RARITY_COLORS[card.rarity] || RARITY_COLORS.common;
+  const { title, subtitle } = cardLabelLines(card);
+  const rarityClass = RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon;
   return (
     <div
       className={`rounded-xl border overflow-hidden bg-white/[0.02] transition-transform hover:scale-[1.02] ${rarityClass} ${card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
@@ -600,12 +628,12 @@ function CardDisplay({ card }: { card: Card }) {
         {card.profilePath ? (
           <img
             src={card.profilePath}
-            alt={card.actorName}
+            alt={title}
             className={`w-full h-full object-cover ${card.isFoil ? "foil-shimmer" : ""}`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
-            {card.actorName.charAt(0)}
+            {title.charAt(0)}
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
@@ -619,8 +647,8 @@ function CardDisplay({ card }: { card: Card }) {
         </span>
       </div>
       <div className="p-2">
-        <p className="text-sm font-semibold text-white/90 truncate">{card.actorName}</p>
-        <p className="text-xs text-white/60 truncate">as {card.characterName}</p>
+        <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
+        <p className="text-xs text-white/60 truncate">{subtitle}</p>
         <p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p>
       </div>
     </div>

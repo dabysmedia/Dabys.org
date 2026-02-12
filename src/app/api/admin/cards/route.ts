@@ -4,6 +4,7 @@ import {
   getCards,
   getCharacterPool,
   addCard,
+  updateCard,
   removeCard,
   getUsers,
 } from "@/lib/data";
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const pool = getCharacterPool();
+  const pool = getCharacterPool().filter((c) => c.profilePath?.trim());
   const char = pool.find((c) => c.characterId === characterId);
   if (!char) {
     return NextResponse.json(
@@ -72,9 +73,38 @@ export async function POST(request: Request) {
     movieTitle: char.movieTitle,
     movieTmdbId: char.movieTmdbId,
     profilePath: char.profilePath,
+    cardType: char.cardType ?? "actor",
   });
 
   return NextResponse.json(card, { status: 201 });
+}
+
+export async function PATCH(request: Request) {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
+  const body = await request.json().catch(() => ({}));
+  const cardId = body.cardId as string | undefined;
+  if (!cardId) {
+    return NextResponse.json({ error: "cardId required" }, { status: 400 });
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (typeof body.actorName === "string") updates.actorName = body.actorName.trim();
+  if (typeof body.characterName === "string") updates.characterName = body.characterName.trim();
+  if (typeof body.movieTitle === "string") updates.movieTitle = body.movieTitle.trim();
+  if (typeof body.profilePath === "string") updates.profilePath = body.profilePath.trim();
+  if (typeof body.movieTmdbId === "number") updates.movieTmdbId = body.movieTmdbId;
+  else if (body.movieTmdbId !== undefined) updates.movieTmdbId = parseInt(String(body.movieTmdbId), 10) || 0;
+  if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity;
+  if (typeof body.isFoil === "boolean") updates.isFoil = body.isFoil;
+  if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType;
+
+  const updated = updateCard(cardId, updates);
+  if (!updated) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(request: Request) {
