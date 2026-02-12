@@ -112,3 +112,56 @@ select option {
 .tradeup-result-in {
   animation: tradeup-result-in 0.4s ease-out forwards;
 }
+
+/* Card gradient art bleed — refined vignette with darker outer ring */
+.card-art-bleed {
+  background: radial-gradient(
+    ellipse 85% 75% at 50% 45%,
+    transparent 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.3) 80%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+}
+
+/* Card premium glow — soft metallic edge */
+.card-premium-glow {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 20px rgba(255, 255, 255, 0.03);
+}
+
+/* Card inner highlight — top-edge reflection */
+.card-inner-highlight {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 20%
+  );
+}
+
+/* Card hover lift — elevation on group-hover */
+.card-hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.group:hover .card-hover-lift {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 20px rgba(255, 255, 255, 0.03),
+    0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Click to add pulse — subtle discoverability cue */
+@keyframes cta-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+.cta-pulse {
+  animation: cta-pulse 2s ease-in-out infinite;
+}
+
+/* Card title — Libre Baskerville for premium feel */
+.font-card-title {
+  font-family: "Libre Baskerville", Georgia, serif;
+}

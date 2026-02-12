@@ -3,13 +3,19 @@
     "userId": "2",
     "avatarUrl": "/uploads/1770775722063-8mpxoy.jpg",
     "bannerUrl": "/uploads/1770776789479-lnlll7.jpg",
-    "bio": ""
+    "bio": "",
+    "featuredCardIds": [
+      "card-1770871972207-53u4uns"
+    ],
+    "displayedBadgeWinnerIds": []
   },
   {
     "userId": "1",
     "avatarUrl": "",
     "bannerUrl": "",
     "bio": "",
-    "skipsUsed": 1
+    "skipsUsed": 1,
+    "featuredCardIds": [],
+    "displayedBadgeWinnerIds": []
   }
 ]

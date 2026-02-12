@@ -59,6 +59,8 @@ export interface Profile {
   bannerUrl: string;   // banner/hero background URL
   bio: string;         // short bio text
   skipsUsed: number;   // how many skips this user has spent
+  featuredCardIds?: string[];       // up to 6 card IDs to showcase
+  displayedBadgeWinnerIds?: string[]; // winner IDs whose completion badges to show
 }
 
 export function getProfiles(): Profile[] {
@@ -71,12 +73,22 @@ export function saveProfiles(profiles: Profile[]) {
 
 export function getProfile(userId: string): Profile {
   const profiles = getProfiles();
-  return profiles.find((p) => p.userId === userId) || {
+  const found = profiles.find((p) => p.userId === userId);
+  if (found) {
+    return {
+      ...found,
+      featuredCardIds: found.featuredCardIds ?? [],
+      displayedBadgeWinnerIds: found.displayedBadgeWinnerIds ?? [],
+    };
+  }
+  return {
     userId,
     avatarUrl: "",
     bannerUrl: "",
     bio: "",
     skipsUsed: 0,
+    featuredCardIds: [],
+    displayedBadgeWinnerIds: [],
   };
 }
 

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
 import Header from "@/components/Header";
+import { CardDisplay } from "@/components/CardDisplay";
 
 interface LocalUser {
   id: string;
@@ -15,6 +16,29 @@ interface ProfileData {
   avatarUrl: string;
   bannerUrl: string;
   bio: string;
+  featuredCardIds?: string[];
+  displayedBadgeWinnerIds?: string[];
+}
+
+interface FeaturedCard {
+  id: string;
+  rarity: string;
+  isFoil: boolean;
+  actorName: string;
+  characterName: string;
+  movieTitle: string;
+  profilePath: string;
+  cardType?: string;
+}
+
+interface DisplayedBadge {
+  winnerId: string;
+  movieTitle: string;
+}
+
+interface CompletedBadge {
+  winnerId: string;
+  movieTitle: string;
 }
 
 interface FavoriteMovie {
@@ -111,6 +135,10 @@ interface FullProfile {
   weeksWon: WinEntry[];
   comments: CommentEntry[];
   watchlist: WatchlistEntry[];
+  featuredCards?: FeaturedCard[];
+  displayedBadges?: DisplayedBadge[];
+  completedWinnerIds?: string[];
+  completedBadges?: CompletedBadge[];
 }
 
 export default function ProfilePage() {
@@ -145,6 +173,17 @@ export default function ProfilePage() {
   const [watchlistAdding, setWatchlistAdding] = useState(false);
   const watchlistSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchlistDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Featured collection modal
+  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
+  const [featuredSelecting, setFeaturedSelecting] = useState<string[]>([]);
+  const [featuredSaving, setFeaturedSaving] = useState(false);
+  const [userCardsForFeatured, setUserCardsForFeatured] = useState<FeaturedCard[]>([]);
+
+  // Badges modal
+  const [showBadgesModal, setShowBadgesModal] = useState(false);
+  const [badgesSelecting, setBadgesSelecting] = useState<string[]>([]);
+  const [badgesSaving, setBadgesSaving] = useState(false);
 
   // Credits (for profile user)
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -338,6 +377,38 @@ export default function ProfilePage() {
     }
   }
 
+  async function saveFeaturedCards() {
+    setFeaturedSaving(true);
+    try {
+      await fetch(`/api/users/${profileId}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featuredCardIds: featuredSelecting.slice(0, 6) }),
+      });
+      const res = await fetch(`/api/users/${profileId}/profile`);
+      if (res.ok) setData(await res.json());
+      setShowFeaturedModal(false);
+    } finally {
+      setFeaturedSaving(false);
+    }
+  }
+
+  async function saveBadges() {
+    setBadgesSaving(true);
+    try {
+      await fetch(`/api/users/${profileId}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayedBadgeWinnerIds: badgesSelecting }),
+      });
+      const res = await fetch(`/api/users/${profileId}/profile`);
+      if (res.ok) setData(await res.json());
+      setShowBadgesModal(false);
+    } finally {
+      setBadgesSaving(false);
+    }
+  }
+
   function timeAgo(dateStr: string) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -358,7 +429,20 @@ export default function ProfilePage() {
     );
   }
 
-  const { user, profile, stats, ratings, submissions, weeksWon, comments, watchlist = [] } = data;
+  const {
+    user,
+    profile,
+    stats,
+    ratings,
+    submissions,
+    weeksWon,
+    comments,
+    watchlist = [],
+    featuredCards = [],
+    displayedBadges = [],
+    completedWinnerIds = [],
+    completedBadges = [],
+  } = data;
 
   return (
     <div className="min-h-screen">
@@ -601,6 +685,82 @@ export default function ProfilePage() {
                 <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
               </div>
               <p className="text-xl font-bold text-amber-400">{creditBalance ?? "—"}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Featured Collection */}
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Featured Collection</h3>
+            {isOwnProfile && (
+              <button
+                onClick={() => {
+                  setShowFeaturedModal(true);
+                  setFeaturedSelecting(profile.featuredCardIds ?? []);
+                  fetch(`/api/cards?userId=${profileId}`)
+                    .then((r) => r.json())
+                    .then((cards: FeaturedCard[]) => setUserCardsForFeatured(cards))
+                    .catch(() => setUserCardsForFeatured([]));
+                }}
+                className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+          {featuredCards.length === 0 ? (
+            <p className="text-sm text-white/40">
+              {isOwnProfile ? "No featured cards yet. Click Edit to add up to 6 from your collection." : "No featured cards."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              {featuredCards.map((card) => (
+                <div key={card.id} className="w-full max-w-[120px]">
+                  <CardDisplay card={card} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Badges */}
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Badges</h3>
+            {isOwnProfile && completedWinnerIds.length > 0 && (
+              <button
+                onClick={() => {
+                  setShowBadgesModal(true);
+                  setBadgesSelecting(profile.displayedBadgeWinnerIds ?? []);
+                }}
+                className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
+              >
+                Edit badges
+              </button>
+            )}
+          </div>
+          {displayedBadges.length === 0 ? (
+            <p className="text-sm text-white/40">
+              {isOwnProfile && completedWinnerIds.length === 0
+                ? "Complete all 6 cards from a winning movie to earn a badge."
+                : isOwnProfile
+                  ? "Earn badges, then click Edit to display them."
+                  : "No badges displayed."}
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {displayedBadges.map((b) => (
+                <div
+                  key={b.winnerId}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10"
+                >
+                  <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  <span className="text-sm font-medium text-amber-400/90">{b.movieTitle}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -1042,6 +1202,144 @@ export default function ProfilePage() {
                     ))}
                   </ul>
                 )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Featured Collection modal */}
+      {showFeaturedModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowFeaturedModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-[var(--background)] shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-label="Edit featured collection"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white/90 mb-4">Featured Collection</h3>
+              <p className="text-sm text-white/50 mb-4">Select up to 6 cards to display (click to toggle)</p>
+              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto scrollbar-autocomplete mb-4">
+                {userCardsForFeatured.map((card) => {
+                  const selected = featuredSelecting.includes(card.id!);
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => {
+                        setFeaturedSelecting((prev) =>
+                          selected ? prev.filter((id) => id !== card.id) : prev.length < 6 ? [...prev, card.id!] : prev
+                        );
+                      }}
+                      className={`text-left rounded-lg border overflow-hidden transition-all ${
+                        selected ? "ring-2 ring-amber-500 border-amber-500/50" : "border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="aspect-[2/3] relative">
+                        {card.profilePath ? (
+                          <img src={card.profilePath} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20 text-2xl font-bold">
+                            {card.actorName?.charAt(0) ?? "?"}
+                          </div>
+                        )}
+                        {selected && (
+                          <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-white/60 truncate px-1 py-0.5">{card.actorName}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {userCardsForFeatured.length === 0 && (
+                <p className="text-sm text-white/40 mb-4">No cards in your collection. Buy packs in Cards to get started.</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowFeaturedModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveFeaturedCards}
+                  disabled={featuredSaving}
+                  className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 disabled:opacity-50"
+                >
+                  {featuredSaving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Badges modal */}
+      {showBadgesModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowBadgesModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-[var(--background)] shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-label="Edit displayed badges"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white/90 mb-4">Display Badges</h3>
+              <p className="text-sm text-white/50 mb-4">Choose which completion badges to show on your profile</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-autocomplete mb-4">
+                {completedBadges.map((b) => {
+                  const wid = b.winnerId;
+                  const selected = badgesSelecting.includes(wid);
+                  return (
+                    <label
+                      key={wid}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={(e) => {
+                          setBadgesSelecting((prev) =>
+                            e.target.checked ? [...prev, wid] : prev.filter((id) => id !== wid)
+                          );
+                        }}
+                        className="rounded border-white/30"
+                      />
+                      <span className="text-sm text-white/80">{b.movieTitle}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBadgesModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveBadges}
+                  disabled={badgesSaving}
+                  className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 disabled:opacity-50"
+                >
+                  {badgesSaving ? "Saving..." : "Save"}
+                </button>
               </div>
             </div>
           </div>

@@ -9,7 +9,10 @@ import {
   getComments,
   getWeeks,
   getWatchlist,
+  getCards,
+  getCardById,
 } from "@/lib/data";
+import { getCompletedWinnerIds } from "@/lib/cards";
 
 // GET /api/users/[id]/profile — full profile + stats + submissions + comments
 export async function GET(
@@ -172,13 +175,40 @@ export async function GET(
 
   const watchlist = getWatchlist(id);
 
+  // Featured cards: full card objects for featuredCardIds (filter invalid/transferred)
+  const featuredCardIds = profile.featuredCardIds ?? [];
+  const featuredCards = featuredCardIds
+    .map((cardId) => getCardById(cardId))
+    .filter((c): c is NonNullable<typeof c> => c != null && c.userId === id);
+
+  // Displayed badges: winners user chose to show (must be completed)
+  const completedWinnerIds = getCompletedWinnerIds(id);
+  const displayedBadgeWinnerIds = (profile.displayedBadgeWinnerIds ?? []).filter((wid) =>
+    completedWinnerIds.includes(wid)
+  );
+  const displayedBadges = displayedBadgeWinnerIds.map((wid) => {
+    const w = allWinners.find((x) => x.id === wid);
+    return { winnerId: wid, movieTitle: w?.movieTitle ?? "Unknown" };
+  });
+
+  const completedBadges = completedWinnerIds.map((wid) => {
+    const w = allWinners.find((x) => x.id === wid);
+    return { winnerId: wid, movieTitle: w?.movieTitle ?? "Unknown" };
+  });
+
   return NextResponse.json({
     user: { id: user.id, name: user.name },
     profile: {
       avatarUrl: profile.avatarUrl,
       bannerUrl: profile.bannerUrl,
       bio: profile.bio,
+      featuredCardIds,
+      displayedBadgeWinnerIds,
     },
+    featuredCards,
+    displayedBadges,
+    completedWinnerIds,
+    completedBadges,
     stats: {
       totalSubmissions,
       totalWins,
@@ -218,6 +248,22 @@ export async function PUT(
   if (typeof body.bannerUrl === "string") profile.bannerUrl = body.bannerUrl;
   if (typeof body.bio === "string") profile.bio = body.bio.slice(0, 300);
   if (typeof body.skipsUsed === "number") profile.skipsUsed = Math.max(0, Math.floor(body.skipsUsed));
+
+  if (Array.isArray(body.featuredCardIds)) {
+    const userCards = getCards(id);
+    const validIds = body.featuredCardIds
+      .filter((cid: unknown): cid is string => typeof cid === "string")
+      .filter((cid: string) => userCards.some((c) => c.id === cid))
+      .slice(0, 6);
+    profile.featuredCardIds = validIds;
+  }
+
+  if (Array.isArray(body.displayedBadgeWinnerIds)) {
+    const completed = getCompletedWinnerIds(id);
+    profile.displayedBadgeWinnerIds = body.displayedBadgeWinnerIds.filter(
+      (wid: unknown): wid is string => typeof wid === "string" && completed.includes(wid)
+    );
+  }
 
   saveProfile(profile);
 

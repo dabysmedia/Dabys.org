@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { CardDisplay } from "@/components/CardDisplay";
+import { RARITY_COLORS } from "@/lib/constants";
 
 interface User {
   id: string;
@@ -42,13 +44,6 @@ interface Listing {
   askingPrice: number;
   card: Card;
 }
-
-const RARITY_COLORS: Record<string, string> = {
-  uncommon: "border-green-500/50 bg-green-500/10",
-  rare: "border-blue-500/50 bg-blue-500/10",
-  epic: "border-purple-500/50 bg-purple-500/10",
-  legendary: "border-amber-500/50 bg-amber-500/10",
-};
 
 const PACK_PRICE = 50;
 
@@ -155,6 +150,7 @@ export default function CardsPage() {
   const [tradingUp, setTradingUp] = useState(false);
   const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
+  const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
 
   const myListedCardIds = new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
@@ -235,8 +231,21 @@ export default function CardsPage() {
   }, [tradeUpResult]);
 
   const TRADE_UP_NEXT: Record<string, string> = { uncommon: "rare", rare: "epic", epic: "legendary" };
+  const SLOT_EMPTY_STYLE: Record<string, string> = {
+    uncommon: "border-dashed border-green-500/40 bg-white/[0.04] hover:border-green-500/60 hover:bg-white/[0.06]",
+    rare: "border-dashed border-blue-500/40 bg-white/[0.04] hover:border-blue-500/60 hover:bg-white/[0.06]",
+    epic: "border-dashed border-purple-500/40 bg-white/[0.04] hover:border-purple-500/60 hover:bg-white/[0.06]",
+    legendary: "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]",
+  };
+  const SLOT_OUTPUT_STYLE: Record<string, string> = {
+    uncommon: "border-blue-500/50 bg-white/[0.04]",
+    rare: "border-purple-500/50 bg-white/[0.04]",
+    epic: "border-amber-500/50 bg-white/[0.04]",
+    legendary: "border-amber-500/60 bg-white/[0.04]",
+  };
   const tradeUpCardIds = tradeUpSlots.filter((id): id is string => id != null);
   const tradeUpCards = cards.filter((c) => c.id && tradeUpCardIds.includes(c.id));
+  const currentRarity = tradeUpCards[0]?.rarity;
   const canTradeUp =
     tradeUpCardIds.length === 5 &&
     tradeUpCards.length === 5 &&
@@ -274,6 +283,11 @@ export default function CardsPage() {
     if (myListedCardIds.has(cardId)) return;
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
+    if (card.rarity === "legendary") {
+      setLegendaryBlockShown(true);
+      setTimeout(() => setLegendaryBlockShown(false), 2500);
+      return;
+    }
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.includes(cardId)) return;
     if (filled.length >= 5) return;
@@ -454,7 +468,7 @@ export default function CardsPage() {
                 <button
                   onClick={handleBuyPack}
                   disabled={poolCount < 5 || creditBalance < PACK_PRICE || buying}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-semibold hover:from-amber-500 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all disabled:hover:from-amber-600 disabled:hover:to-amber-700"
+                  className="px-6 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
                   {buying ? (
                     <span className="flex items-center gap-2">
@@ -526,11 +540,19 @@ export default function CardsPage() {
                 </div>
               </div>
             )}
+            {legendaryBlockShown && (
+              <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border-2 border-red-500/60 bg-red-500/15 px-4 py-3 backdrop-blur-sm">
+                <svg className="h-6 w-6 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-sm font-medium text-red-400">Legendary cards cannot be traded up</span>
+              </div>
+            )}
             {/* Trade Up - frosted glass section */}
             <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
-                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity. Uncommon → Rare, Rare → Epic, Epic → Legendary.
+                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity.
               </p>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {/* Input slots - 5 cards */}
@@ -541,7 +563,7 @@ export default function CardsPage() {
                       className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
                         cardId
                           ? "border-amber-400/50 bg-amber-500/10 hover:border-amber-400/70 tradeup-slot-pop"
-                          : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
+                          : currentRarity ? SLOT_EMPTY_STYLE[currentRarity] ?? SLOT_EMPTY_STYLE.uncommon : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
                       }`}
                       onClick={() => cardId && removeFromTradeUpSlot(cardId)}
                     >
@@ -580,8 +602,8 @@ export default function CardsPage() {
                   →
                 </div>
                 {/* Output slot */}
-                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 border-amber-500/40 flex items-center justify-center transition-all ${
-                  canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : "bg-white/[0.04]"
+                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex items-center justify-center transition-all ${
+                  canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : currentRarity ? SLOT_OUTPUT_STYLE[currentRarity] ?? SLOT_OUTPUT_STYLE.uncommon : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canTradeUp ? (
                     <span className="text-xs text-amber-400 font-medium text-center px-1">
@@ -595,8 +617,8 @@ export default function CardsPage() {
                 <button
                   onClick={handleTradeUp}
                   disabled={!canTradeUp || tradingUp}
-                  className={`ml-auto px-5 py-2.5 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.3)]" : ""
+                  className={`ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                    canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.2)]" : ""
                   }`}
                 >
                   {tradingUp ? (
@@ -647,15 +669,21 @@ export default function CardsPage() {
                   .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
                   .map((card) => {
                     const inSlots = tradeUpCardIds.includes(card.id!);
-                    const canAdd = !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                    const canAdd = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
                     const ineligible = tradeUpCardIds.length > 0 && !canAdd && !inSlots;
                     return (
                       <div
                         key={card.id}
-                        onClick={() => canAdd && card.id && addToTradeUpSlot(card.id!)}
-                        className={`relative transition-all ${
+                        onClick={() => {
+                          if (canAdd && card.id) addToTradeUpSlot(card.id!);
+                          else if (card.rarity === "legendary") {
+                            setLegendaryBlockShown(true);
+                            setTimeout(() => setLegendaryBlockShown(false), 2500);
+                          }
+                        }}
+                        className={`relative group/card transition-all duration-200 ${
                           canAdd ? "cursor-pointer hover:ring-2 hover:ring-amber-500/50 rounded-xl" : ""
-                        } ${ineligible ? "opacity-40 grayscale" : ""}`}
+                        } ${card.rarity === "legendary" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                       >
                         {inSlots && (
                           <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
@@ -667,12 +695,9 @@ export default function CardsPage() {
                             Listed
                           </span>
                         )}
-                        {canAdd && (
-                          <span className="absolute bottom-1 left-1 right-1 z-10 text-[10px] text-amber-400/90 font-medium text-center bg-black/60 rounded px-1 py-0.5">
-                            Click to add
-                          </span>
-                        )}
-                        <CardDisplay card={card} />
+                        <div className={canAdd ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
+                          <CardDisplay card={card} />
+                        </div>
                       </div>
                     );
                   })}
@@ -688,7 +713,7 @@ export default function CardsPage() {
               <p className="text-white/50 text-sm">Buy and sell character cards with other collectors.</p>
               <button
                 onClick={() => setShowListModal(true)}
-                className="px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-500 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md text-green-400 font-medium hover:border-green-500/50 hover:bg-green-500/15 transition-colors cursor-pointer"
               >
                 List a Card
               </button>
@@ -767,53 +792,46 @@ export default function CardsPage() {
               <>
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => !listing && setShowListModal(false)} aria-hidden />
                 <div
-                  className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden"
+                  className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden flex flex-col"
                   role="dialog"
                   aria-label="List a card"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="p-6">
-                    <h3 className="text-lg font-bold text-white/90 mb-4">List a Card</h3>
+                  <div className="p-6 flex flex-col flex-1 min-h-0 overflow-auto">
+                    <h3 className="text-lg font-bold text-white/90 mb-4 shrink-0">List a Card</h3>
                     {!selectedCard ? (
-                      <div className="grid grid-cols-2 gap-2 max-h-64 overflow-auto">
+                      <div className="flex-1 min-h-0 overflow-auto pr-1">
                         {availableToList.length === 0 ? (
-                          <p className="col-span-2 text-white/40 text-sm">No cards available to list. Buy packs in Store to get cards!</p>
+                          <p className="text-white/40 text-sm">No cards available to list. Buy packs in Store to get cards!</p>
                         ) : (
-                          availableToList.map((card) => {
-                            const { title, subtitle } = cardLabelLines(card);
-                            return (
+                          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                            {availableToList.map((card) => (
                               <button
                                 key={card.id}
                                 onClick={() => setSelectedCard(card)}
-                                className="text-left p-2 rounded-lg border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                                className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-amber-500/50 focus:ring-amber-500/50 transition-all cursor-pointer text-left"
                               >
-                                <p className="text-xs font-medium text-white/80 truncate">{title}</p>
-                                <p className="text-[10px] text-white/50 truncate">{subtitle}</p>
+                                <CardDisplay card={card} />
                               </button>
-                            );
-                          })
+                            ))}
+                          </div>
                         )}
                       </div>
                     ) : (
-                      <div>
-                        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-white/[0.04] border border-white/[0.08]">
-                          {(() => {
-                            const { title, subtitle } = cardLabelLines(selectedCard);
-                            return (
-                              <>
-                                <p className="text-sm font-medium text-white/90">{title}</p>
-                                <p className="text-xs text-white/50">{subtitle}</p>
-                              </>
-                            );
-                          })()}
+                      <div className="flex flex-col items-center">
+                        <div className="w-full flex justify-between items-center mb-4">
+                          <span className="text-sm text-white/60">Listing this card</span>
                           <button
                             onClick={() => setSelectedCard(null)}
-                            className="ml-auto text-xs text-white/40 hover:text-white/70 cursor-pointer"
+                            className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors cursor-pointer"
                           >
-                            Change
+                            Change card
                           </button>
                         </div>
-                        <label className="block text-sm text-white/60 mb-2">Asking price (credits)</label>
+                        <div className="w-32 mx-auto mb-6">
+                          <CardDisplay card={selectedCard} />
+                        </div>
+                        <label className="block text-sm text-white/60 mb-2 w-full">Asking price (credits)</label>
                         <input
                           type="number"
                           min={1}
@@ -822,7 +840,7 @@ export default function CardsPage() {
                           className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 mb-4"
                           placeholder="e.g. 50"
                         />
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full">
                           <button
                             onClick={() => { setSelectedCard(null); setListPrice(""); setShowListModal(false); }}
                             className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] cursor-pointer"
@@ -906,40 +924,3 @@ export default function CardsPage() {
   );
 }
 
-function CardDisplay({ card }: { card: Card }) {
-  const { title, subtitle } = cardLabelLines(card);
-  const rarityClass = RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon;
-  return (
-    <div
-      className={`rounded-xl border overflow-hidden bg-white/[0.02] transition-transform hover:scale-[1.02] ${rarityClass} ${card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
-    >
-      <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
-        {card.profilePath ? (
-          <img
-            src={card.profilePath}
-            alt={title}
-            className={`w-full h-full object-cover ${card.isFoil ? "foil-shimmer" : ""}`}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
-            {title.charAt(0)}
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-        {card.isFoil && (
-          <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/90 text-black">
-            FOIL
-          </span>
-        )}
-        <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
-          {card.rarity}
-        </span>
-      </div>
-      <div className="p-2">
-        <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
-        <p className="text-xs text-white/60 truncate">{subtitle}</p>
-        <p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p>
-      </div>
-    </div>
-  );
-}

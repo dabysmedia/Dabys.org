@@ -10,50 +10,8 @@
     "movieTmdbId": 809,
     "profilePath": "https://image.tmdb.org/t/p/w500/nQpBf77cStmR35V0XOinm2zZMWG.jpg",
     "cardType": "actor",
-    "id": "card-1770869849476-a2vzlsu",
-    "acquiredAt": "2026-02-12T04:17:29.476Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-8930-809",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "John Cleese",
-    "characterName": "King Harold (voice)",
-    "movieTitle": "Shrek 2",
-    "movieTmdbId": 809,
-    "profilePath": "https://image.tmdb.org/t/p/w500/nQpBf77cStmR35V0XOinm2zZMWG.jpg",
-    "cardType": "actor",
     "id": "card-1770869849477-s2rhoke",
     "acquiredAt": "2026-02-12T04:17:29.477Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-1162-111",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Robert Loggia",
-    "characterName": "Frank Lopez",
-    "movieTitle": "Scarface",
-    "movieTmdbId": 111,
-    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
-    "cardType": "actor",
-    "id": "card-1770869849477-otzm126",
-    "acquiredAt": "2026-02-12T04:17:29.477Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-19536-1858",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Josh Duhamel",
-    "characterName": "Captain Lennox",
-    "movieTitle": "Transformers",
-    "movieTmdbId": 1858,
-    "profilePath": "https://image.tmdb.org/t/p/w500/5Rp9aeWdN2S623KCjwfii9MhDK1.jpg",
-    "cardType": "actor",
-    "id": "card-1770869849478-cy3nm0z",
-    "acquiredAt": "2026-02-12T04:17:29.478Z"
   },
   {
     "userId": "2",
@@ -68,20 +26,6 @@
     "cardType": "actor",
     "id": "card-1770869849479-71txox0",
     "acquiredAt": "2026-02-12T04:17:29.479Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-19590-129",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Takashi Naito",
-    "characterName": "Father (voice)",
-    "movieTitle": "Spirited Away",
-    "movieTmdbId": 129,
-    "profilePath": "https://image.tmdb.org/t/p/w500/xwsm0ygjG79jLIogutwo6r64igy.jpg",
-    "cardType": "actor",
-    "id": "card-1770869850823-2jp0cex",
-    "acquiredAt": "2026-02-12T04:17:30.823Z"
   },
   {
     "userId": "2",
@@ -127,20 +71,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-1162-111",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Robert Loggia",
-    "characterName": "Frank Lopez",
-    "movieTitle": "Scarface",
-    "movieTmdbId": 111,
-    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
-    "cardType": "actor",
-    "id": "card-1770869858380-efnc70j",
-    "acquiredAt": "2026-02-12T04:17:38.380Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-70851-9353",
     "rarity": "legendary",
     "isFoil": false,
@@ -166,5 +96,19 @@
     "cardType": "actor",
     "id": "card-1770871972207-53u4uns",
     "acquiredAt": "2026-02-12T04:52:52.207Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1770875926206-i16osov",
+    "acquiredAt": "2026-02-12T05:58:46.206Z"
   }
 ]

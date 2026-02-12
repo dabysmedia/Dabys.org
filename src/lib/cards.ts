@@ -347,4 +347,37 @@ export function tradeUp(
   return { success: true, card: newCard };
 }
 
+/** Character pool entries for a movie (tmdbId). Up to 6. */
+export function getPoolEntriesForMovie(tmdbId: number): CharacterPortrayal[] {
+  return getCharacterPool()
+    .filter((c) => c.movieTmdbId === tmdbId && c.profilePath?.trim())
+    .slice(0, 6);
+}
+
+/** Distinct characterIds the user owns for a given movie. */
+export function getUserCollectedCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
+  const cards = getCards(userId).filter((c) => c.movieTmdbId === tmdbId);
+  return new Set(cards.map((c) => c.characterId));
+}
+
+/** True if user owns all 6 pool characterIds for the winner's movie. */
+export function hasCompletedMovie(userId: string, winnerId: string): boolean {
+  const winner = getWinners().find((w) => w.id === winnerId);
+  if (!winner?.tmdbId) return false;
+  const pool = getPoolEntriesForMovie(winner.tmdbId);
+  if (pool.length < 6) return false;
+  const owned = getUserCollectedCharacterIdsForMovie(userId, winner.tmdbId);
+  const required = new Set(pool.map((c) => c.characterId));
+  for (const id of required) {
+    if (!owned.has(id)) return false;
+  }
+  return true;
+}
+
+/** Winner IDs for which the user has collected all 6 cards. */
+export function getCompletedWinnerIds(userId: string): string[] {
+  const winners = getWinners().filter((w) => w.tmdbId);
+  return winners.filter((w) => hasCompletedMovie(userId, w.id)).map((w) => w.id);
+}
+
 export { PACK_PRICE, CARDS_PER_PACK };

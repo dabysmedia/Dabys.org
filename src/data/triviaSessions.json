@@ -1,64 +1,126 @@
 [
   {
-    "userId": "4",
-    "winnerId": "1",
+    "userId": "2",
+    "winnerId": "5",
     "questions": [
       {
-        "id": "c-1770861666486-11ks",
-        "question": "Robert Loggia played which character in Scarface?",
+        "id": "a-1770876069083-6dl4",
+        "question": "Who played Nacho in Nacho Libre?",
         "options": [
-          "Woman at Babylon Club",
-          "Cuban Refugee",
-          "Cuban Man",
-          "Frank Lopez"
+          "Lauro David Chartrand-DelValle",
+          "Jack Black",
+          "Rosenda Hernandez",
+          "Armando Tapia"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "id": "d-1770876069083-1g33",
+        "question": "Who directed Nacho Libre?",
+        "options": [
+          "Hayao Miyazaki",
+          "Brian De Palma",
+          "Jared Hess",
+          "Conrad Vernon"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "id": "c-1770876069084-tkv7",
+        "question": "Héctor Jiménez played which character in Nacho Libre?",
+        "options": [
+          "Motivational Coach",
+          "Esqueleto",
+          "Monk #1",
+          "Pro (Coliseo) Referee"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "id": "a-1770876069084-j6h2",
+        "question": "Who played Chancho in Nacho Libre?",
+        "options": [
+          "Rosenda Hernandez",
+          "Agustin Rey",
+          "Darius Rose",
+          "Armando Gaytan"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "id": "a-1770876069084-cytp",
+        "question": "Who played Juan Pablo in Nacho Libre?",
+        "options": [
+          "María González",
+          "Luis Garcia Rendon",
+          "René Campero",
+          "Moisés Arias"
+        ],
+        "correctIndex": 3
+      }
+    ],
+    "createdAt": "2026-02-12T06:01:09.084Z"
+  },
+  {
+    "userId": "2",
+    "winnerId": "5",
+    "questions": [
+      {
+        "id": "c-1770876072537-stnr",
+        "question": "Héctor Jiménez played which character in Nacho Libre?",
+        "options": [
+          "El Pony",
+          "Elderly Monk",
+          "Muñeco",
+          "Esqueleto"
         ],
         "correctIndex": 3
       },
       {
-        "id": "c-1770861666486-k26q",
-        "question": "Michelle Pfeiffer played which character in Scarface?",
+        "id": "a-1770876072536-fmrl",
+        "question": "Who played Juan Pablo in Nacho Libre?",
         "options": [
-          "Vic Phillips",
-          "Ambassador's Daughter (uncredited)",
-          "Elvira",
-          "Extra (uncredited)"
+          "Darius Rose",
+          "Brett Chan",
+          "Albert M. Madrid",
+          "Moisés Arias"
         ],
-        "correctIndex": 2
+        "correctIndex": 3
       },
       {
-        "id": "a-1770861666485-d5ph",
-        "question": "Who played Gina in Scarface?",
+        "id": "y-1770876072536-vety",
+        "question": "What year was Nacho Libre released?",
         "options": [
-          "Catharine Richardson",
-          "Mary Elizabeth Mastrantonio",
-          "Ángel Salazar",
-          "Santos Morales"
+          "2007",
+          "2006",
+          "1983",
+          "2001"
         ],
         "correctIndex": 1
       },
       {
-        "id": "d-1770861666485-ac0u",
-        "question": "Who directed Scarface?",
+        "id": "a-1770876072536-1vye",
+        "question": "Who played Chancho in Nacho Libre?",
         "options": [
-          "Michael Bay",
-          "Conrad Vernon",
-          "Brian De Palma",
-          "Hayao Miyazaki"
+          "Armando Tapia",
+          "Rodolfo Garcia Merino",
+          "Moisés Arias",
+          "Darius Rose"
         ],
-        "correctIndex": 2
+        "correctIndex": 3
       },
       {
-        "id": "c-1770861666485-qu8d",
-        "question": "Al Pacino played which character in Scarface?",
+        "id": "c-1770876072537-7nfe",
+        "question": "Darius Rose played which character in Nacho Libre?",
         "options": [
-          "Taco Stand Customer",
-          "Tony Montana",
-          "Woman at Babylon Club",
-          "Gina"
+          "Peasant Woman",
+          "Usher",
+          "Chancho",
+          "Emperor"
         ],
-        "correctIndex": 1
+        "correctIndex": 2
       }
     ],
-    "createdAt": "2026-02-12T02:01:06.486Z"
+    "createdAt": "2026-02-12T06:01:12.537Z"
   }
 ]

@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
 import Header from "@/components/Header";
+import { CardDisplay } from "@/components/CardDisplay";
+import { RARITY_COLORS } from "@/lib/constants";
 
 interface User {
   id: string;
@@ -138,6 +140,14 @@ export default function WinnerDetailPage() {
   const [triviaSubmitting, setTriviaSubmitting] = useState(false);
   const [triviaResult, setTriviaResult] = useState<{ correctCount: number; totalCount: number; creditsEarned: number } | null>(null);
 
+  // Collectible cards for this movie
+  const [winnerCollection, setWinnerCollection] = useState<{
+    poolEntries: { characterId: string; profilePath: string; actorName: string; characterName: string; movieTitle: string; rarity: string; movieTmdbId: number }[];
+    ownedCharacterIds: string[];
+    ownedCards: { id: string; characterId: string; profilePath: string; actorName: string; characterName: string; movieTitle: string; rarity: string; isFoil: boolean; cardType?: string }[];
+    completed: boolean;
+  } | null>(null);
+
   const loadWinner = useCallback(async () => {
     try {
       const cached = localStorage.getItem("dabys_user");
@@ -176,6 +186,21 @@ export default function WinnerDetailPage() {
       setLoading(false);
     }
   }, [winnerId, router]);
+
+  // Fetch collectible cards when winner has tmdbId
+  useEffect(() => {
+    if (!winner?.tmdbId) {
+      setWinnerCollection(null);
+      return;
+    }
+    const cached = localStorage.getItem("dabys_user");
+    const u = cached ? JSON.parse(cached) as User : null;
+    const url = `/api/cards/winner-collection?winnerId=${encodeURIComponent(winnerId)}${u?.id ? `&userId=${encodeURIComponent(u.id)}` : ""}`;
+    fetch(url)
+      .then((r) => r.json())
+      .then(setWinnerCollection)
+      .catch(() => setWinnerCollection(null));
+  }, [winner?.tmdbId, winnerId]);
 
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
@@ -737,6 +762,71 @@ export default function WinnerDetailPage() {
             )}
           </div>
         </div>
+
+        {/* ─── Collectible Cards ─── */}
+        {winner.tmdbId && winnerCollection && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
+              Collectible Cards
+            </h3>
+            {winnerCollection.poolEntries.length === 0 ? (
+              <p className="text-sm text-white/40">No cards for this movie yet. Build the character pool to unlock.</p>
+            ) : (
+              <>
+                <p className="text-sm text-white/50 mb-4">
+                  {winnerCollection.completed ? (
+                    <span className="text-amber-400 font-medium">Complete! All 6 collected.</span>
+                  ) : (
+                    <>Collect {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length}</>
+                  )}
+                  {" · "}
+                  <Link href="/cards" className="text-amber-400/80 hover:text-amber-400 transition-colors">
+                    Buy packs to collect
+                  </Link>
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                  {winnerCollection.poolEntries.map((entry) => {
+                    const owned = winnerCollection.ownedCharacterIds.includes(entry.characterId);
+                    const card = winnerCollection.ownedCards.find((c) => c.characterId === entry.characterId);
+                    return (
+                      <div key={entry.characterId} className="relative">
+                        {owned && card ? (
+                          <div className="w-full max-w-[100px] mx-auto">
+                            <CardDisplay card={card} />
+                          </div>
+                        ) : (
+                          <Link href="/cards" className="block w-full max-w-[100px] mx-auto group/placeholder">
+                            <div className="card-premium-glow rounded-xl overflow-hidden aspect-[2/3] border border-white/[0.08] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-200 group-hover/placeholder:shadow-[0_12px_40px_rgba(0,0,0,0.4)] group-hover/placeholder:-translate-y-0.5"
+                              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)" }}
+                            >
+                              <div className="relative w-full h-full">
+                                <img
+                                  src={entry.profilePath}
+                                  alt=""
+                                  className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center blur-md scale-110 grayscale opacity-50"
+                                />
+                                <div className="absolute inset-0 card-art-bleed" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/[0.06] backdrop-blur-xl">
+                                  <svg className="w-8 h-8 text-white/30 group-hover/placeholder:text-amber-400/50 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                  </svg>
+                                  <span className="text-[10px] font-medium text-amber-400/80 group-hover/placeholder:text-amber-400 transition-colors">
+                                    Collect to reveal
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* ─── Comments Section (tweet-style) ─── */}
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden">
