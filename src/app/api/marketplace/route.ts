@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getListings, getCardById, getUsers } from "@/lib/data";
+import { getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET() {
   const listings = getListings();
@@ -10,10 +11,12 @@ export async function GET() {
       const card = getCardById(l.cardId);
       if (!card) return null;
       const seller = users.find((u) => u.id === l.sellerUserId);
+      const sellerDisplayedBadge = getDisplayedBadgeForUser(l.sellerUserId);
       return {
         ...l,
         card,
         sellerName: seller?.name || "Unknown",
+        sellerDisplayedBadge,
       };
     })
     .filter(Boolean);

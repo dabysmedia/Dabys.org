@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, addCredits } from "@/lib/data";
-import { addPoolEntriesForWinner } from "@/lib/cards";
+import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits } from "@/lib/data";
+import { addPoolEntriesForWinner, getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 export async function GET() {
   const winners = getWinners();
@@ -9,10 +9,30 @@ export async function GET() {
   const enriched = winners.map((w) => {
     const week = weeks.find((wk) => wk.id === w.weekId);
     const submitterUser = users.find((u) => u.name === w.submittedBy);
+    const submittedByUserId = submitterUser?.id || "";
+    let submitterAvatarUrl: string | undefined;
+    let submitterDisplayedBadge: { winnerId: string; movieTitle: string; isHolo: boolean } | null = null;
+    if (submittedByUserId) {
+      const profile = getProfile(submittedByUserId);
+      submitterAvatarUrl = profile.avatarUrl || undefined;
+      const completedWinnerIds = getCompletedWinnerIds(submittedByUserId);
+      const completedHoloWinnerIds = getCompletedHoloWinnerIds(submittedByUserId);
+      const displayedWinnerId = profile.displayedBadgeWinnerId ?? null;
+      if (displayedWinnerId && completedWinnerIds.includes(displayedWinnerId)) {
+        const winnerEntry = winners.find((x) => x.id === displayedWinnerId);
+        submitterDisplayedBadge = {
+          winnerId: displayedWinnerId,
+          movieTitle: winnerEntry?.movieTitle ?? "Unknown",
+          isHolo: completedHoloWinnerIds.includes(displayedWinnerId),
+        };
+      }
+    }
     return {
       ...w,
       weekTheme: week?.theme || "",
-      submittedByUserId: submitterUser?.id || "",
+      submittedByUserId,
+      submitterAvatarUrl,
+      submitterDisplayedBadge,
     };
   });
   return NextResponse.json(enriched);

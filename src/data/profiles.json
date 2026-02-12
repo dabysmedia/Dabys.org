@@ -6,10 +6,6 @@
     "bio": "",
     "featuredCardIds": [
       "card-1770871972207-53u4uns"
-    ],
-    "displayedBadgeWinnerIds": [
-      "1",
-      "2"
     ]
   },
   {
@@ -19,6 +15,6 @@
     "bio": "",
     "skipsUsed": 1,
     "featuredCardIds": [],
-    "displayedBadgeWinnerIds": []
+    "displayedBadgeWinnerId": null
   }
 ]

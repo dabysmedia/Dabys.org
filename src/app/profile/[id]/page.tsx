@@ -6,6 +6,7 @@ import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
+import { BadgePill } from "@/components/BadgePill";
 
 interface LocalUser {
   id: string;
@@ -17,7 +18,7 @@ interface ProfileData {
   bannerUrl: string;
   bio: string;
   featuredCardIds?: string[];
-  displayedBadgeWinnerIds?: string[];
+  displayedBadgeWinnerId?: string | null;
 }
 
 interface FeaturedCard {
@@ -34,11 +35,13 @@ interface FeaturedCard {
 interface DisplayedBadge {
   winnerId: string;
   movieTitle: string;
+  isHolo?: boolean;
 }
 
 interface CompletedBadge {
   winnerId: string;
   movieTitle: string;
+  isHolo?: boolean;
 }
 
 interface FavoriteMovie {
@@ -136,6 +139,7 @@ interface FullProfile {
   comments: CommentEntry[];
   watchlist: WatchlistEntry[];
   featuredCards?: FeaturedCard[];
+  displayedBadge?: DisplayedBadge | null;
   displayedBadges?: DisplayedBadge[];
   completedWinnerIds?: string[];
   completedBadges?: CompletedBadge[];
@@ -181,9 +185,7 @@ export default function ProfilePage() {
   const [userCardsForFeatured, setUserCardsForFeatured] = useState<FeaturedCard[]>([]);
 
   // Badges modal
-  const [showBadgesModal, setShowBadgesModal] = useState(false);
-  const [badgesSelecting, setBadgesSelecting] = useState<string[]>([]);
-  const [badgesSaving, setBadgesSaving] = useState(false);
+  const [badgesSelecting, setBadgesSelecting] = useState<string | null>(null);
 
   // Credits (for profile user)
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -366,6 +368,7 @@ export default function ProfilePage() {
           bio: editBio,
           avatarUrl: editAvatarUrl,
           bannerUrl: editBannerUrl,
+          displayedBadgeWinnerId: badgesSelecting,
         }),
       });
       // Reload profile
@@ -390,22 +393,6 @@ export default function ProfilePage() {
       setShowFeaturedModal(false);
     } finally {
       setFeaturedSaving(false);
-    }
-  }
-
-  async function saveBadges() {
-    setBadgesSaving(true);
-    try {
-      await fetch(`/api/users/${profileId}/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayedBadgeWinnerIds: badgesSelecting }),
-      });
-      const res = await fetch(`/api/users/${profileId}/profile`);
-      if (res.ok) setData(await res.json());
-      setShowBadgesModal(false);
-    } finally {
-      setBadgesSaving(false);
     }
   }
 
@@ -439,6 +426,7 @@ export default function ProfilePage() {
     comments,
     watchlist = [],
     featuredCards = [],
+    displayedBadge = null,
     displayedBadges = [],
     completedWinnerIds = [],
     completedBadges = [],
@@ -507,20 +495,50 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex-1 min-w-0 pb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white/95">{user.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 gap-y-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white/95">{user.name}</h1>
+              {displayedBadge && <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} />}
+            </div>
             {!editing ? (
               <p className="text-white/40 text-sm mt-1 max-w-md">
                 {profile.bio || (isOwnProfile ? "No bio yet. Click edit to add one." : "No bio yet.")}
               </p>
             ) : (
-              <textarea
-                value={editBio}
-                onChange={(e) => setEditBio(e.target.value)}
-                maxLength={300}
-                rows={2}
-                placeholder="Write something about yourself..."
-                className="mt-2 w-full max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-purple-500/40 resize-none"
-              />
+              <>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  maxLength={300}
+                  rows={2}
+                  placeholder="Write something about yourself..."
+                  className="mt-2 w-full max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-purple-500/40 resize-none"
+                />
+                {completedBadges.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-[11px] uppercase tracking-widest text-white/40 mb-2">Display badge</p>
+                    <p className="text-xs text-white/50 mb-2">Choose one badge to show next to your name.</p>
+                    <div className="space-y-1.5">
+                      <label className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${badgesSelecting === null ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"}`}>
+                        <input type="radio" name="displayedBadge" checked={badgesSelecting === null} onChange={() => setBadgesSelecting(null)} className="border-white/30" />
+                        <span className="text-sm text-white/60">None</span>
+                      </label>
+                      {completedBadges.map((b) => {
+                        const wid = b.winnerId;
+                        const selected = badgesSelecting === wid;
+                        return (
+                          <label
+                            key={wid}
+                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"}`}
+                          >
+                            <input type="radio" name="displayedBadge" checked={selected} onChange={() => setBadgesSelecting(wid)} className="border-white/30" />
+                            <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -528,7 +546,7 @@ export default function ProfilePage() {
             <div className="shrink-0">
               {!editing ? (
                 <button
-                  onClick={() => setEditing(true)}
+                  onClick={() => { setEditing(true); setBadgesSelecting(profile.displayedBadgeWinnerId ?? null); }}
                   className="px-4 py-2 text-xs font-medium text-white/60 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/80 transition-all cursor-pointer"
                 >
                   Edit Profile
@@ -536,7 +554,7 @@ export default function ProfilePage() {
               ) : (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setEditing(false); setEditBio(profile.bio); setEditAvatarUrl(profile.avatarUrl); setEditBannerUrl(profile.bannerUrl); }}
+                    onClick={() => { setEditing(false); setEditBio(profile.bio); setEditAvatarUrl(profile.avatarUrl); setEditBannerUrl(profile.bannerUrl); setBadgesSelecting(profile.displayedBadgeWinnerId ?? null); }}
                     className="px-3 py-2 text-xs font-medium text-white/40 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/60 transition-all cursor-pointer"
                   >
                     Cancel
@@ -718,47 +736,6 @@ export default function ProfilePage() {
               {featuredCards.map((card) => (
                 <div key={card.id} className="w-full max-w-[120px]">
                   <CardDisplay card={card} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Badges */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Badges</h3>
-            {isOwnProfile && completedWinnerIds.length > 0 && (
-              <button
-                onClick={() => {
-                  setShowBadgesModal(true);
-                  setBadgesSelecting(profile.displayedBadgeWinnerIds ?? []);
-                }}
-                className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
-              >
-                Edit badges
-              </button>
-            )}
-          </div>
-          {displayedBadges.length === 0 ? (
-            <p className="text-sm text-white/40">
-              {isOwnProfile && completedWinnerIds.length === 0
-                ? "Complete all 6 cards from a winning movie to earn a badge."
-                : isOwnProfile
-                  ? "Earn badges, then click Edit to display them."
-                  : "No badges displayed."}
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {displayedBadges.map((b) => (
-                <div
-                  key={b.winnerId}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10"
-                >
-                  <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-sm font-medium text-amber-400/90">{b.movieTitle}</span>
                 </div>
               ))}
             </div>
@@ -1284,68 +1261,6 @@ export default function ProfilePage() {
       )}
 
       {/* Badges modal */}
-      {showBadgesModal && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowBadgesModal(false)}
-            aria-hidden
-          />
-          <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-[var(--background)] shadow-2xl overflow-hidden"
-            role="dialog"
-            aria-label="Edit displayed badges"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-white/90 mb-4">Display Badges</h3>
-              <p className="text-sm text-white/50 mb-4">Choose which completion badges to show on your profile</p>
-              <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-autocomplete mb-4">
-                {completedBadges.map((b) => {
-                  const wid = b.winnerId;
-                  const selected = badgesSelecting.includes(wid);
-                  return (
-                    <label
-                      key={wid}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={(e) => {
-                          setBadgesSelecting((prev) =>
-                            e.target.checked ? [...prev, wid] : prev.filter((id) => id !== wid)
-                          );
-                        }}
-                        className="rounded border-white/30"
-                      />
-                      <span className="text-sm text-white/80">{b.movieTitle}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowBadgesModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveBadges}
-                  disabled={badgesSaving}
-                  className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 disabled:opacity-50"
-                >
-                  {badgesSaving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Crop modals */}
       <ImageCropModal
         open={cropTarget === "avatar"}

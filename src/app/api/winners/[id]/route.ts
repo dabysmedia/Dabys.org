@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
-import { addPoolEntriesForWinner } from "@/lib/cards";
+import { addPoolEntriesForWinner, getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(
   _request: Request,
@@ -30,6 +30,7 @@ export async function GET(
       avatarUrl: profiles.find((p) => p.userId === c.userId)?.avatarUrl || "",
       likeCount: commentLikesForThis.length,
       likedByMe: currentUserId ? commentLikesForThis.some((l) => l.userId === currentUserId) : false,
+      displayedBadge: getDisplayedBadgeForUser(c.userId),
       ...(parent && { parentUserName: parent.userName }),
     };
   });
@@ -67,10 +68,12 @@ export async function GET(
     if (week) weekTheme = week.theme;
   }
 
-  // Resolve submitter userId from users list
+  // Resolve submitter userId, avatar, and displayed badge
   const allUsers = getUsers();
   const submitterUser = allUsers.find((u) => u.name === winner.submittedBy);
   const submittedByUserId = submitterUser?.id || "";
+  const submitterAvatarUrl = submittedByUserId ? (profiles.find((p) => p.userId === submittedByUserId)?.avatarUrl || undefined) : undefined;
+  const submitterDisplayedBadge = submittedByUserId ? getDisplayedBadgeForUser(submittedByUserId) : null;
 
   // Get runner-up submissions from the same week (excluding the winning movie)
   let runnerUps: { movieTitle: string; posterUrl: string; letterboxdUrl: string; year?: string; userName: string; userId: string }[] = [];
@@ -91,6 +94,8 @@ export async function GET(
   return NextResponse.json({
     ...winner,
     submittedByUserId,
+    submitterAvatarUrl,
+    submitterDisplayedBadge,
     weekTheme,
     runnerUps,
     ratings,

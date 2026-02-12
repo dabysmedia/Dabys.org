@@ -6,6 +6,7 @@ import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
+import { BadgePill } from "@/components/BadgePill";
 import { RARITY_COLORS } from "@/lib/constants";
 
 interface User {
@@ -37,6 +38,7 @@ interface Comment {
   parentUserName?: string;
   likeCount?: number;
   likedByMe?: boolean;
+  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 interface RunnerUp {
@@ -61,6 +63,8 @@ interface WinnerDetail {
   backdropUrl?: string;
   tmdbId?: number;
   submittedByUserId?: string;
+  submitterAvatarUrl?: string;
+  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
   weekTheme?: string;
   runnerUps?: RunnerUp[];
   ratings: Rating[];
@@ -492,16 +496,74 @@ export default function WinnerDetailPage() {
             )}
 
             {winner.submittedBy && (
-              <p className="text-white/40 text-sm mb-4">
-                Picked by{" "}
-                {winner.submittedByUserId ? (
-                  <Link href={`/profile/${winner.submittedByUserId}`} className="text-white/60 hover:text-purple-400 transition-colors">
-                    {winner.submittedBy}
+              winner.submitterDisplayedBadge ? (
+                winner.submittedByUserId ? (
+                  <Link
+                    href={`/profile/${winner.submittedByUserId}`}
+                    className="flex items-center gap-4 p-5 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-6 group/card block"
+                  >
+                    <div className="shrink-0">
+                      {winner.submitterAvatarUrl ? (
+                        <img src={winner.submitterAvatarUrl} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-white/20 group-hover/card:border-amber-500/40 transition-colors" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-white/20 group-hover/card:border-amber-500/40 transition-colors">
+                          {winner.submittedBy.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked this winner</p>
+                      <p className="text-xl font-bold text-white/95 truncate">{winner.submittedBy}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm"
+                          style={{
+                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 0 8px rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          Badge holder
+                        </span>
+                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
+                      </div>
+                    </div>
+                    <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </span>
                   </Link>
                 ) : (
-                  <span className="text-white/60">{winner.submittedBy}</span>
-                )}
-              </p>
+                  <div className="flex items-center gap-4 p-5 rounded-2xl border border-white/15 bg-white/[0.06] mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-white/20" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked this winner</p>
+                      <p className="text-xl font-bold text-white/95 truncate">{winner.submittedBy}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm"
+                          style={{
+                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 0 8px rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          Badge holder
+                        </span>
+                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <p className="text-white/40 text-sm mb-4">
+                  Picked by{" "}
+                  {winner.submittedByUserId ? (
+                    <Link href={`/profile/${winner.submittedByUserId}`} className="text-white/60 hover:text-purple-400 transition-colors">
+                      {winner.submittedBy}
+                    </Link>
+                  ) : (
+                    <span className="text-white/60">{winner.submittedBy}</span>
+                  )}
+                </p>
+              )
             )}
 
             {winner.overview && (
@@ -975,6 +1037,9 @@ export default function WinnerDetailPage() {
                         <Link href={`/profile/${comment.userId}`} className="text-sm font-semibold text-white/80 hover:text-purple-400 transition-colors">
                           {comment.userName}
                         </Link>
+                        {comment.displayedBadge && (
+                          <BadgePill movieTitle={comment.displayedBadge.movieTitle} isHolo={comment.displayedBadge.isHolo} />
+                        )}
                         <span className="text-xs text-white/20">
                           {timeAgo(comment.createdAt)}
                         </span>

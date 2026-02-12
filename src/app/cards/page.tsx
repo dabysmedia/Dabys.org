@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
+import { BadgePill } from "@/components/BadgePill";
 import { RARITY_COLORS } from "@/lib/constants";
 
 interface User {
@@ -43,6 +44,7 @@ interface Listing {
   sellerName: string;
   askingPrice: number;
   card: Card;
+  sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 const PACK_PRICE = 50;
@@ -63,6 +65,8 @@ interface TradeOfferEnriched {
   requestedCards: Card[];
   status: "pending" | "accepted" | "denied";
   createdAt: string;
+  initiatorDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  counterpartyDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 interface UserWithAvatar {
@@ -285,6 +289,9 @@ export default function CardsPage() {
   const [tradeError, setTradeError] = useState("");
   const [tradeActionId, setTradeActionId] = useState<string | null>(null);
   const [tradeFeedback, setTradeFeedback] = useState<"accepted" | "denied" | "created" | null>(null);
+  const [badgeLossWarnings, setBadgeLossWarnings] = useState<{ movieTitle: string; isHolo: boolean }[] | null>(null);
+  const [badgeLossOnConfirm, setBadgeLossOnConfirm] = useState<(() => void | Promise<void>) | null>(null);
+  const [badgeLossIsListing, setBadgeLossIsListing] = useState(false);
 
   const myListedCardIds = new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
@@ -474,6 +481,35 @@ export default function CardsPage() {
 
   function removeFromTradeUpSlot(cardId: string) {
     setTradeUpSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  async function checkBadgeLossThen(
+    cardIds: string[],
+    action: () => void | Promise<void>,
+    options?: { isListing?: boolean }
+  ) {
+    if (!user || cardIds.length === 0) {
+      await action();
+      return;
+    }
+    const res = await fetch("/api/cards/would-lose-badges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, cardIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const badges: { movieTitle: string; isHolo: boolean }[] = data.badges || [];
+    if (badges.length > 0) {
+      setBadgeLossWarnings(badges);
+      setBadgeLossIsListing(!!options?.isListing);
+      setBadgeLossOnConfirm(() => async () => {
+        await action();
+        setBadgeLossWarnings(null);
+        setBadgeLossOnConfirm(null);
+      });
+    } else {
+      await action();
+    }
   }
 
   async function handleBuyPack(pack: Pack) {
@@ -1074,7 +1110,7 @@ export default function CardsPage() {
                 </div>
                 {/* Submit button */}
                 <button
-                  onClick={handleTradeUp}
+                  onClick={() => checkBadgeLossThen(tradeUpCardIds, handleTradeUp)}
                   disabled={!canTradeUp || tradingUp}
                   className={`ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                     canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.2)]" : ""
@@ -1252,7 +1288,7 @@ export default function CardsPage() {
                       })()}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.06]">
                         <span className="text-amber-400 font-bold">{listing.askingPrice} cr</span>
-                        <span className="text-[10px] text-white/40">by {listing.sellerName}</span>
+                        <span className="text-[10px] text-white/40 flex items-center gap-1.5 flex-wrap">by {listing.sellerName}{listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}</span>
                       </div>
                       {listing.sellerUserId === user.id ? (
                         <button
@@ -1337,7 +1373,7 @@ export default function CardsPage() {
                             Cancel
                           </button>
                           <button
-                            onClick={handleListCard}
+                            onClick={() => selectedCard && checkBadgeLossThen([selectedCard.id], handleListCard, { isListing: true })}
                             disabled={listing || !listPrice || parseInt(listPrice, 10) < 1}
                             className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
                           >
@@ -1457,12 +1493,15 @@ export default function CardsPage() {
                       <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
                         <div className="flex items-center gap-2 shrink-0">
                           {t.counterpartyUserId && (
-                            <Link href={`/profile/${t.counterpartyUserId}`} className="flex items-center gap-2 hover:opacity-80">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                {t.counterpartyName?.charAt(0) || "?"}
-                              </div>
-                              <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
-                            </Link>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link href={`/profile/${t.counterpartyUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                  {t.counterpartyName?.charAt(0) || "?"}
+                                </div>
+                                <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
+                              </Link>
+                              {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} />}
+                            </div>
                           )}
                         </div>
                         <div className="flex gap-2 items-center flex-wrap">
@@ -1537,12 +1576,15 @@ export default function CardsPage() {
                       <div className="flex-1 flex flex-wrap gap-4 items-center min-w-0">
                         <div className="flex items-center gap-2 shrink-0">
                           {t.initiatorUserId && (
-                            <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-                                {t.initiatorName?.charAt(0) || "?"}
-                              </div>
-                              <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
-                            </Link>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                  {t.initiatorName?.charAt(0) || "?"}
+                                </div>
+                                <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
+                              </Link>
+                              {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                            </div>
                           )}
                         </div>
                         <div className="flex gap-2 items-center flex-wrap">
@@ -1593,7 +1635,7 @@ export default function CardsPage() {
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button
-                          onClick={() => handleAcceptTrade(t.id)}
+                          onClick={() => checkBadgeLossThen(t.requestedCardIds, () => handleAcceptTrade(t.id))}
                           disabled={tradeActionId === t.id}
                           className="px-3 py-1.5 rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md text-green-400 text-sm hover:border-green-500/50 hover:bg-green-500/15 disabled:opacity-40 cursor-pointer"
                         >
@@ -1788,7 +1830,7 @@ export default function CardsPage() {
                         Back
                       </button>
                       <button
-                        onClick={handleSendTrade}
+                        onClick={() => checkBadgeLossThen(Array.from(tradeOfferedIds), handleSendTrade)}
                         disabled={tradeLoading || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
                         className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
                       >
@@ -1807,6 +1849,54 @@ export default function CardsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Badge loss confirmation modal */}
+        {badgeLossWarnings != null && badgeLossWarnings.length > 0 && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-500/30 bg-[var(--background)] shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-label="Badge loss warning"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-amber-400/95 mb-2">Lose badge(s)?</h3>
+                <p className="text-sm text-white/60 mb-4">
+                  {badgeLossIsListing
+                    ? "If this card sells, you will lose the following badge(s):"
+                    : "This action will cause you to lose the following badge(s):"}
+                </p>
+                <ul className="space-y-1.5 mb-6">
+                  {badgeLossWarnings.map((b, i) => (
+                    <li key={i} className="text-sm text-white/80 flex items-center gap-2">
+                      {b.isHolo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Holo</span>}
+                      {b.movieTitle}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
+                    className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => { await badgeLossOnConfirm?.(); }}
+                    className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 cursor-pointer"
+                  >
+                    Continue anyway
+                  </button>
+                </div>
               </div>
             </div>
           </>

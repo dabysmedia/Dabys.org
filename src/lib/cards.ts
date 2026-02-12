@@ -13,6 +13,7 @@ import {
   removeCard,
   getListings,
   getPacks,
+  getProfile,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -445,6 +446,12 @@ export function getUserCollectedCharacterIdsForMovie(userId: string, tmdbId: num
   return new Set(cards.map((c) => c.characterId));
 }
 
+/** Distinct characterIds the user owns as foil for a given movie (at least one foil card per character). */
+export function getUserCollectedFoilCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
+  const cards = getCards(userId).filter((c) => c.movieTmdbId === tmdbId && c.isFoil);
+  return new Set(cards.map((c) => c.characterId));
+}
+
 /** True if user owns all 6 pool characterIds for the winner's movie. */
 export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
@@ -459,10 +466,110 @@ export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   return true;
 }
 
+/** True if user owns all 6 pool characterIds for the winner's movie, each as foil. */
+export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean {
+  const winner = getWinners().find((w) => w.id === winnerId);
+  if (!winner?.tmdbId) return false;
+  const pool = getPoolEntriesForMovie(winner.tmdbId);
+  if (pool.length < 6) return false;
+  const ownedFoil = getUserCollectedFoilCharacterIdsForMovie(userId, winner.tmdbId);
+  const required = new Set(pool.map((c) => c.characterId));
+  for (const id of required) {
+    if (!ownedFoil.has(id)) return false;
+  }
+  return true;
+}
+
 /** Winner IDs for which the user has collected all 6 cards. */
 export function getCompletedWinnerIds(userId: string): string[] {
   const winners = getWinners().filter((w) => w.tmdbId);
   return winners.filter((w) => hasCompletedMovie(userId, w.id)).map((w) => w.id);
+}
+
+/** Winner IDs for which the user has collected all 6 cards in foil (Holo set). */
+export function getCompletedHoloWinnerIds(userId: string): string[] {
+  const winners = getWinners().filter((w) => w.tmdbId);
+  return winners.filter((w) => hasCompletedMovieHolo(userId, w.id)).map((w) => w.id);
+}
+
+export interface BadgeLossEntry {
+  winnerId: string;
+  movieTitle: string;
+  isHolo: boolean;
+}
+
+/** Returns badges (normal and/or Holo) the user would lose if the given card IDs were removed. */
+export function getBadgesLostIfCardsRemoved(
+  userId: string,
+  cardIds: string[]
+): BadgeLossEntry[] {
+  const cards = getCards(userId);
+  const cardIdSet = new Set(cardIds);
+  const toRemove = cardIds
+    .map((id) => getCardById(id))
+    .filter((c): c is NonNullable<typeof c> => c != null && c.userId === userId);
+  if (toRemove.length === 0) return [];
+
+  const winners = getWinners().filter((w) => w.tmdbId);
+  const result: BadgeLossEntry[] = [];
+  const seenWinner = new Set<string>();
+
+  for (const card of toRemove) {
+    const winner = winners.find((w) => w.tmdbId === card.movieTmdbId);
+    if (!winner || winner.tmdbId == null || seenWinner.has(winner.id)) continue;
+    seenWinner.add(winner.id);
+
+    const pool = getPoolEntriesForMovie(winner.tmdbId);
+    if (pool.length < 6) continue;
+
+    const required = new Set(pool.map((c) => c.characterId));
+    const remainingCards = cards.filter((c) => c.movieTmdbId === winner.tmdbId && !cardIdSet.has(c.id));
+    const remainingChars = new Set(remainingCards.map((c) => c.characterId));
+    const remainingFoilChars = new Set(
+      remainingCards.filter((c) => c.isFoil).map((c) => c.characterId)
+    );
+
+    let wouldLoseNormal = false;
+    for (const id of required) {
+      if (!remainingChars.has(id)) {
+        wouldLoseNormal = true;
+        break;
+      }
+    }
+    let wouldLoseHolo = false;
+    for (const id of required) {
+      if (!remainingFoilChars.has(id)) {
+        wouldLoseHolo = true;
+        break;
+      }
+    }
+
+    if (wouldLoseNormal) result.push({ winnerId: winner.id, movieTitle: winner.movieTitle, isHolo: false });
+    if (wouldLoseHolo) result.push({ winnerId: winner.id, movieTitle: winner.movieTitle, isHolo: true });
+  }
+
+  return result;
+}
+
+/** Displayed badge for a user (single badge they chose to show). Used by APIs to attach to user payloads. */
+export function getDisplayedBadgeForUser(userId: string): {
+  winnerId: string;
+  movieTitle: string;
+  isHolo: boolean;
+} | null {
+  const profile = getProfile(userId);
+  const displayedWinnerId = profile.displayedBadgeWinnerId ?? null;
+  if (!displayedWinnerId) return null;
+  const completed = getCompletedWinnerIds(userId);
+  const completedHolo = getCompletedHoloWinnerIds(userId);
+  if (!completed.includes(displayedWinnerId)) return null;
+  const winners = getWinners();
+  const w = winners.find((x) => x.id === displayedWinnerId);
+  return {
+    winnerId: displayedWinnerId,
+    movieTitle: w?.movieTitle ?? "Unknown",
+    isHolo: completedHolo.includes(displayedWinnerId),
+  };
 }
 
 export { PACK_PRICE, CARDS_PER_PACK };

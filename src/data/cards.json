@@ -1,1 +1,86 @@
-[]
+[
+  {
+    "userId": "2",
+    "characterId": "actor-1158-111",
+    "rarity": "uncommon",
+    "isFoil": true,
+    "actorName": "Al Pacino",
+    "characterName": "Tony Montana",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/m8HAAjq1T75JypKk0v1FFQn4ysZ.jpg",
+    "cardType": "actor",
+    "id": "card-1770920717447-0cjx7xw",
+    "acquiredAt": "2026-02-12T18:25:17.447Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1159-111",
+    "rarity": "epic",
+    "isFoil": true,
+    "actorName": "Steven Bauer",
+    "characterName": "Manny Ray",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
+    "cardType": "actor",
+    "id": "card-1770920721152-kyujxtj",
+    "acquiredAt": "2026-02-12T18:25:21.152Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1160-111",
+    "rarity": "uncommon",
+    "isFoil": true,
+    "actorName": "Michelle Pfeiffer",
+    "characterName": "Elvira",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/oGUmQBU87QXAsnaGleYaAjAXSlj.jpg",
+    "cardType": "actor",
+    "id": "card-1770920723418-m69zo8o",
+    "acquiredAt": "2026-02-12T18:25:23.418Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1161-111",
+    "rarity": "rare",
+    "isFoil": true,
+    "actorName": "Mary Elizabeth Mastrantonio",
+    "characterName": "Gina",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/vbZ1E557K5oj34xLHR5ErO8wPCi.jpg",
+    "cardType": "actor",
+    "id": "card-1770920725711-p35gwps",
+    "acquiredAt": "2026-02-12T18:25:25.711Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": true,
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1770920734222-lndg6am",
+    "acquiredAt": "2026-02-12T18:25:34.222Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1163-111",
+    "rarity": "uncommon",
+    "isFoil": true,
+    "actorName": "Miriam Colon",
+    "characterName": "Mama Montana",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/9jnz7htVMCTDNRDmoi2mdOKv6Pj.jpg",
+    "cardType": "actor",
+    "id": "card-1770920833617-g3utbfl",
+    "acquiredAt": "2026-02-12T18:27:13.617Z"
+  }
+]

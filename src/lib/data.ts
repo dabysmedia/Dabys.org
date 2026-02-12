@@ -60,7 +60,10 @@ export interface Profile {
   bio: string;         // short bio text
   skipsUsed: number;   // how many skips this user has spent
   featuredCardIds?: string[];       // up to 6 card IDs to showcase
-  displayedBadgeWinnerIds?: string[]; // winner IDs whose completion badges to show
+  /** Single winner ID to show as badge next to name (replaces displayedBadgeWinnerIds). */
+  displayedBadgeWinnerId?: string | null;
+  /** @deprecated Use displayedBadgeWinnerId. Kept for migration when reading JSON. */
+  displayedBadgeWinnerIds?: string[];
 }
 
 export function getProfiles(): Profile[] {
@@ -75,10 +78,15 @@ export function getProfile(userId: string): Profile {
   const profiles = getProfiles();
   const found = profiles.find((p) => p.userId === userId);
   if (found) {
+    const displayedBadgeWinnerId =
+      found.displayedBadgeWinnerId ??
+      (Array.isArray(found.displayedBadgeWinnerIds) && found.displayedBadgeWinnerIds.length > 0
+        ? found.displayedBadgeWinnerIds[0]
+        : null);
     return {
       ...found,
       featuredCardIds: found.featuredCardIds ?? [],
-      displayedBadgeWinnerIds: found.displayedBadgeWinnerIds ?? [],
+      displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
     };
   }
   return {
@@ -88,15 +96,17 @@ export function getProfile(userId: string): Profile {
     bio: "",
     skipsUsed: 0,
     featuredCardIds: [],
-    displayedBadgeWinnerIds: [],
+    displayedBadgeWinnerId: undefined,
   };
 }
 
 export function saveProfile(profile: Profile) {
   const profiles = getProfiles();
   const idx = profiles.findIndex((p) => p.userId === profile.userId);
-  if (idx >= 0) profiles[idx] = profile;
-  else profiles.push(profile);
+  const toSave = { ...profile };
+  delete (toSave as Record<string, unknown>).displayedBadgeWinnerIds;
+  if (idx >= 0) profiles[idx] = toSave;
+  else profiles.push(toSave);
   saveProfiles(profiles);
 }
 

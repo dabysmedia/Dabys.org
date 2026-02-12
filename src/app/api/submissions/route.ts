@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSubmissions, saveSubmissions, getCurrentWeek, getProfiles, addCredits, hasReceivedCreditsForWeek } from "@/lib/data";
+import { getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
     const key = s.tmdbId != null ? `tmdb:${s.tmdbId}` : `title:${s.movieTitle.trim().toLowerCase()}`;
     const submissionCount = countByMovie.get(key) ?? 1;
     const profile = profiles.find((p) => p.userId === s.userId);
-    return { ...s, submissionCount, avatarUrl: profile?.avatarUrl || "" };
+    const displayedBadge = getDisplayedBadgeForUser(s.userId);
+    return { ...s, submissionCount, avatarUrl: profile?.avatarUrl || "", displayedBadge };
   });
 
   return NextResponse.json(enriched);

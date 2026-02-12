@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTradesForUser, getCardById } from "@/lib/data";
 import { createTrade } from "@/lib/trades";
+import { getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
     requestedCards: t.requestedCardIds
       .map((id) => getCardById(id))
       .filter(Boolean),
+    initiatorDisplayedBadge: getDisplayedBadgeForUser(t.initiatorUserId),
+    counterpartyDisplayedBadge: getDisplayedBadgeForUser(t.counterpartyUserId),
   }));
 
   return NextResponse.json(enriched);

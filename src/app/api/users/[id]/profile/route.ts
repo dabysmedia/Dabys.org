@@ -12,7 +12,7 @@ import {
   getCards,
   getCardById,
 } from "@/lib/data";
-import { getCompletedWinnerIds } from "@/lib/cards";
+import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 // GET /api/users/[id]/profile — full profile + stats + submissions + comments
 export async function GET(
@@ -181,20 +181,34 @@ export async function GET(
     .map((cardId) => getCardById(cardId))
     .filter((c): c is NonNullable<typeof c> => c != null && c.userId === id);
 
-  // Displayed badges: winners user chose to show (must be completed)
+  // Completed badges (normal + Holo style)
   const completedWinnerIds = getCompletedWinnerIds(id);
-  const displayedBadgeWinnerIds = (profile.displayedBadgeWinnerIds ?? []).filter((wid) =>
-    completedWinnerIds.includes(wid)
-  );
-  const displayedBadges = displayedBadgeWinnerIds.map((wid) => {
-    const w = allWinners.find((x) => x.id === wid);
-    return { winnerId: wid, movieTitle: w?.movieTitle ?? "Unknown" };
-  });
-
+  const completedHoloWinnerIds = getCompletedHoloWinnerIds(id);
   const completedBadges = completedWinnerIds.map((wid) => {
     const w = allWinners.find((x) => x.id === wid);
-    return { winnerId: wid, movieTitle: w?.movieTitle ?? "Unknown" };
+    return {
+      winnerId: wid,
+      movieTitle: w?.movieTitle ?? "Unknown",
+      isHolo: completedHoloWinnerIds.includes(wid),
+    };
   });
+
+  // Single displayed badge (must be completed)
+  const displayedBadgeWinnerId =
+    profile.displayedBadgeWinnerId && completedWinnerIds.includes(profile.displayedBadgeWinnerId)
+      ? profile.displayedBadgeWinnerId
+      : null;
+  const displayedBadge =
+    displayedBadgeWinnerId
+      ? (() => {
+          const w = allWinners.find((x) => x.id === displayedBadgeWinnerId);
+          return {
+            winnerId: displayedBadgeWinnerId,
+            movieTitle: w?.movieTitle ?? "Unknown",
+            isHolo: completedHoloWinnerIds.includes(displayedBadgeWinnerId),
+          };
+        })()
+      : null;
 
   return NextResponse.json({
     user: { id: user.id, name: user.name },
@@ -203,10 +217,11 @@ export async function GET(
       bannerUrl: profile.bannerUrl,
       bio: profile.bio,
       featuredCardIds,
-      displayedBadgeWinnerIds,
+      displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
     },
     featuredCards,
-    displayedBadges,
+    displayedBadge,
+    displayedBadges: displayedBadge ? [displayedBadge] : [],
     completedWinnerIds,
     completedBadges,
     stats: {
@@ -258,11 +273,14 @@ export async function PUT(
     profile.featuredCardIds = validIds;
   }
 
-  if (Array.isArray(body.displayedBadgeWinnerIds)) {
+  if (body.displayedBadgeWinnerId !== undefined) {
     const completed = getCompletedWinnerIds(id);
-    profile.displayedBadgeWinnerIds = body.displayedBadgeWinnerIds.filter(
-      (wid: unknown): wid is string => typeof wid === "string" && completed.includes(wid)
-    );
+    const value = body.displayedBadgeWinnerId;
+    if (value === null || value === "") {
+      profile.displayedBadgeWinnerId = undefined;
+    } else if (typeof value === "string" && completed.includes(value)) {
+      profile.displayedBadgeWinnerId = value;
+    }
   }
 
   saveProfile(profile);
