@@ -65,5 +65,27 @@
     "reason": "pack_purchase",
     "metadata": {},
     "createdAt": "2026-02-12T01:36:34.953Z"
+  },
+  {
+    "id": "cl-1770862303043-4jvhfrz",
+    "userId": "2",
+    "amount": 10,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "8",
+      "submissionId": "15"
+    },
+    "createdAt": "2026-02-12T02:11:43.042Z"
+  },
+  {
+    "id": "cl-1770862317042-qkoeec4",
+    "userId": "2",
+    "amount": 10,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "8",
+      "submissionId": "15"
+    },
+    "createdAt": "2026-02-12T02:11:57.041Z"
   }
 ]

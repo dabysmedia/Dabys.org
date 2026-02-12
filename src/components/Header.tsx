@@ -113,12 +113,15 @@ export default function Header() {
             href="/cards"
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
               isCards
-                ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
-                : "bg-amber-500/10 border-amber-500/20 text-amber-400/90 hover:bg-amber-500/15"
+                ? "bg-sky-400/15 border-sky-400/30 text-sky-300"
+                : "bg-sky-400/10 border-sky-400/20 text-sky-300 hover:bg-sky-400/15"
             }`}
           >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             <span>{creditBalance}</span>
-            <span className="text-amber-400/60 text-xs">credits</span>
+            <span className="text-sky-300/60 text-xs">credits</span>
           </Link>
           <Link
             href={`/profile/${user.id}`}

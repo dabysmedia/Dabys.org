@@ -401,6 +401,20 @@ export function getCredits(userId: string): number {
   return entry?.balance ?? 0;
 }
 
+/** Returns true if user has already received credits for this reason and week (e.g. vote or submission). */
+export function hasReceivedCreditsForWeek(userId: string, reason: string, weekId: string): boolean {
+  const ledger = getCreditLedgerRaw();
+  return ledger.some(
+    (e) =>
+      e.userId === userId &&
+      e.reason === reason &&
+      e.amount > 0 &&
+      e.metadata &&
+      typeof e.metadata.weekId === "string" &&
+      e.metadata.weekId === weekId
+  );
+}
+
 export function addCredits(
   userId: string,
   amount: number,
