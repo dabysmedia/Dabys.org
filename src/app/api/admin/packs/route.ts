@@ -48,10 +48,10 @@ export async function POST(request: Request) {
   const cardsPerPack =
     typeof rawCardsPerPack === "number" ? rawCardsPerPack : parseInt(String(rawCardsPerPack ?? 0), 10);
 
-  const allowedRarities = rawAllowedRarities.filter((r) =>
+  const allowedRarities = rawAllowedRarities.filter((r: string) =>
     ["uncommon", "rare", "epic", "legendary"].includes(r)
   );
-  const allowedCardTypes = rawAllowedCardTypes.filter((t) =>
+  const allowedCardTypes = rawAllowedCardTypes.filter((t: string) =>
     ["actor", "director", "character", "scene"].includes(t)
   );
 
