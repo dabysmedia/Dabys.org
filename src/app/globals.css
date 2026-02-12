@@ -132,14 +132,26 @@ select option {
   animation: tradeup-result-in 0.4s ease-out forwards;
 }
 
-/* Card gradient art bleed — refined vignette with darker outer ring */
+/* Card gradient art bleed — soft vignette, no hard bar on right */
 .card-art-bleed {
   background: radial-gradient(
-    ellipse 85% 75% at 50% 45%,
+    ellipse 100% 100% at 50% 50%,
     transparent 0%,
-    transparent 40%,
-    rgba(0, 0, 0, 0.3) 80%,
-    rgba(0, 0, 0, 0.6) 100%
+    transparent 45%,
+    rgba(0, 0, 0, 0.25) 85%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+}
+
+/* Card nameplate — hero-style overlay; art bleeds through at top, dark at bottom for text */
+.card-nameplate {
+  padding: 3.75rem 0.625rem 0.625rem;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.75) 30%,
+    rgba(0, 0, 0, 0.35) 65%,
+    transparent 100%
   );
 }
 

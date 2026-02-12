@@ -22,7 +22,8 @@ function cardLabelLines(card: CardDisplayCard): { title: string; subtitle: strin
   const ct = (card.cardType ?? "actor") as string;
   if (ct === "director") return { title: card.actorName, subtitle: "Director" };
   if (ct === "scene") return { title: "Scene", subtitle: `from ${card.movieTitle}` };
-  return { title: card.actorName, subtitle: `as ${card.characterName}` };
+  // Character name is the main title (big); actor name is subtitle
+  return { title: card.characterName, subtitle: card.actorName };
 }
 
 export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?: boolean }) {
@@ -73,34 +74,34 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
           boxShadow,
         }}
       >
-        {/* Art area with gradient bleed — image scaled to bleed, gradient fades edges */}
-        <div className="aspect-[2/3] relative overflow-hidden">
-          {/* Inner highlight — top-edge reflection */}
-          <div className="absolute inset-0 card-inner-highlight pointer-events-none z-[1]" />
-          {card.profilePath ? (
-            <img
-              src={card.profilePath}
-              alt={title}
-              className={`absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center ${card.isFoil ? "holo-sheen" : ""}`}
+        {/* Hero-style layout: art fills entire card and bleeds under nameplate */}
+        <div className="relative overflow-hidden w-full" style={{ aspectRatio: "2 / 3.35" }}>
+          {/* Full-bleed art — extends under nameplate */}
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 card-inner-highlight pointer-events-none z-[1]" />
+            {card.profilePath ? (
+              <img
+                src={card.profilePath}
+                alt={title}
+                className={`absolute inset-0 w-full h-full object-cover object-center ${card.isFoil ? "holo-sheen" : ""}`}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-white/20 text-4xl font-bold bg-gradient-to-br from-purple-900/20 to-indigo-900/20">
+                {title.charAt(0)}
+              </div>
+            )}
+            <div className="absolute inset-0 card-art-bleed pointer-events-none" />
+            {card.isFoil && (
+              <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
+            )}
+            {/* Rarity tint + dark gradient so art fades into nameplate */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `linear-gradient(to top, ${rarityTint} 0%, transparent 35%), linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.15) 55%, transparent 100%)`,
+              }}
             />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-white/20 text-4xl font-bold bg-gradient-to-br from-purple-900/20 to-indigo-900/20">
-              {title.charAt(0)}
-            </div>
-          )}
-          {/* Gradient art bleed — soft vignette fade from edges */}
-          <div className="absolute inset-0 card-art-bleed pointer-events-none" />
-          {/* Holo mouseover — rainbow sheen on hover (holo cards only) */}
-          {card.isFoil && (
-            <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
-          )}
-          {/* Rarity-tinted bottom gradient */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: `linear-gradient(to top, ${rarityTint} 0%, transparent 40%), linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)`,
-            }}
-          />
+          </div>
           {card.isFoil && (
             <span
               className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm z-10"
@@ -112,28 +113,29 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
               HOLO
             </span>
           )}
-          {/* Premium rarity badge */}
-          <span className={`absolute bottom-2 left-2 right-2 flex items-center gap-1 z-10 ${rarityBadgeClass}`}>
-            <svg className="w-2.5 h-2.5 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <span
-              className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-black/50 backdrop-blur-sm"
-              style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
-            >
-              {card.rarity}
-            </span>
-          </span>
+          {/* Nameplate overlay — art bleeds underneath, gradient for readability */}
+          {!compact && (
+            <div className="absolute inset-x-0 bottom-0 z-10 card-nameplate">
+              {/* Rarity badge — sits just above character name */}
+              <span className={`inline-flex items-center gap-1 mb-1 ${rarityBadgeClass}`}>
+                <svg className="w-2.5 h-2.5 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                <span
+                  className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-black/50 backdrop-blur-sm"
+                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+                >
+                  {card.rarity}
+                </span>
+              </span>
+              <p className="text-sm font-semibold font-card-title text-white/95 truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                {title}
+              </p>
+              <p className="text-xs text-white/70 truncate">{subtitle}</p>
+              <p className="text-[10px] text-white/50 truncate mt-0.5">{card.movieTitle}</p>
+            </div>
+          )}
         </div>
-        {!compact && (
-          <div className="p-2.5 backdrop-blur-xl bg-white/[0.05] border-t border-white/[0.06]">
-            <p className="text-sm font-semibold font-card-title text-white/95 truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-              {title}
-            </p>
-            <p className="text-xs text-white/60 truncate">{subtitle}</p>
-            <p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p>
-          </div>
-        )}
       </div>
     </div>
   );

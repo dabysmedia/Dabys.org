@@ -34,7 +34,7 @@ function cardLabelLines(card: Card): { title: string; subtitle: string } {
   const ct = card.cardType ?? "actor";
   if (ct === "director") return { title: card.actorName, subtitle: "Director" };
   if (ct === "scene") return { title: "Scene", subtitle: `from ${card.movieTitle}` };
-  return { title: card.actorName, subtitle: `as ${card.characterName}` };
+  return { title: card.characterName, subtitle: card.actorName };
 }
 
 interface Listing {
@@ -1854,22 +1854,22 @@ export default function CardsPage() {
           </>
         )}
 
-        {/* Badge loss confirmation modal */}
+        {/* Badge loss confirmation modal — frosted glass, red accents */}
         {badgeLossWarnings != null && badgeLossWarnings.length > 0 && (
           <>
             <div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md"
               onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-amber-500/30 bg-[var(--background)] shadow-2xl overflow-hidden"
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-500/40 bg-white/[0.06] backdrop-blur-xl shadow-2xl shadow-red-950/30 overflow-hidden"
               role="dialog"
               aria-label="Badge loss warning"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
-                <h3 className="text-lg font-bold text-amber-400/95 mb-2">Lose badge(s)?</h3>
+                <h3 className="text-lg font-bold text-red-400 mb-2">Lose badge(s)?</h3>
                 <p className="text-sm text-white/60 mb-4">
                   {badgeLossIsListing
                     ? "If this card sells, you will lose the following badge(s):"
@@ -1886,13 +1886,13 @@ export default function CardsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
-                    className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/[0.04] cursor-pointer"
+                    className="flex-1 px-4 py-2 rounded-lg border border-white/20 bg-white/[0.06] text-white/80 hover:bg-white/[0.08] cursor-pointer backdrop-blur-sm"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={async () => { await badgeLossOnConfirm?.(); }}
-                    className="flex-1 px-4 py-2 rounded-lg bg-amber-600 text-white font-medium hover:bg-amber-500 cursor-pointer"
+                    className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-500 border border-red-500/30 cursor-pointer shadow-lg shadow-red-950/40"
                   >
                     Continue anyway
                   </button>

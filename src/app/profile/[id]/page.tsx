@@ -504,41 +504,14 @@ export default function ProfilePage() {
                 {profile.bio || (isOwnProfile ? "No bio yet. Click edit to add one." : "No bio yet.")}
               </p>
             ) : (
-              <>
-                <textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  maxLength={300}
-                  rows={2}
-                  placeholder="Write something about yourself..."
-                  className="mt-2 w-full max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-purple-500/40 resize-none"
-                />
-                {completedBadges.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-[11px] uppercase tracking-widest text-white/40 mb-2">Display badge</p>
-                    <p className="text-xs text-white/50 mb-2">Choose one badge to show next to your name.</p>
-                    <div className="space-y-1.5">
-                      <label className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${badgesSelecting === null ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"}`}>
-                        <input type="radio" name="displayedBadge" checked={badgesSelecting === null} onChange={() => setBadgesSelecting(null)} className="border-white/30" />
-                        <span className="text-sm text-white/60">None</span>
-                      </label>
-                      {completedBadges.map((b) => {
-                        const wid = b.winnerId;
-                        const selected = badgesSelecting === wid;
-                        return (
-                          <label
-                            key={wid}
-                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 hover:bg-white/[0.04]"}`}
-                          >
-                            <input type="radio" name="displayedBadge" checked={selected} onChange={() => setBadgesSelecting(wid)} className="border-white/30" />
-                            <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
+              <textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={300}
+                rows={2}
+                placeholder="Write something about yourself..."
+                className="mt-2 w-full max-w-md rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-purple-500/40 resize-none"
+              />
             )}
           </div>
 
@@ -571,6 +544,33 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Display badge (edit only) — own row so it doesn't push the header down */}
+        {isOwnProfile && editing && completedBadges.length > 0 && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 mb-6 max-w-md">
+            <p className="text-[11px] uppercase tracking-widest text-white/40 mb-1.5">Display badge</p>
+            <p className="text-xs text-white/50 mb-3">Choose one badge to show next to your name.</p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              <label className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${badgesSelecting === null ? "border-amber-500/50 bg-amber-500/10" : "border-white/[0.08] hover:bg-white/[0.04]"}`}>
+                <input type="radio" name="displayedBadge" checked={badgesSelecting === null} onChange={() => setBadgesSelecting(null)} className="border-white/30" />
+                <span className="text-sm text-white/60">None</span>
+              </label>
+              {completedBadges.map((b) => {
+                const wid = b.winnerId;
+                const selected = badgesSelecting === wid;
+                return (
+                  <label
+                    key={wid}
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/[0.08] hover:bg-white/[0.04]"}`}
+                  >
+                    <input type="radio" name="displayedBadge" checked={selected} onChange={() => setBadgesSelecting(wid)} className="border-white/30" />
+                    <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Favorite Movie hero */}
         {stats.favoriteMovie && (
