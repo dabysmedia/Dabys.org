@@ -64,13 +64,32 @@ select option {
   animation: winners-scroll var(--scroll-duration, 120s) linear infinite;
 }
 
-/* Foil card shimmer effect */
-@keyframes foil-shimmer {
-  0%, 100% { filter: brightness(1) saturate(1); }
-  50% { filter: brightness(1.15) saturate(1.1); }
+/* Holo card rainbow sheen effect — subtle hue shift + brightness pulse */
+@keyframes holo-sheen {
+  0%, 100% { filter: brightness(1) saturate(1.15) hue-rotate(0deg); }
+  25% { filter: brightness(1.1) saturate(1.2) hue-rotate(15deg); }
+  50% { filter: brightness(1.08) saturate(1.25) hue-rotate(-10deg); }
+  75% { filter: brightness(1.12) saturate(1.2) hue-rotate(8deg); }
 }
-.foil-shimmer {
-  animation: foil-shimmer 3s ease-in-out infinite;
+.holo-sheen {
+  animation: holo-sheen 3s ease-in-out infinite;
+}
+
+/* Holo mouseover — rainbow sheen overlay on card hover */
+.card-holo-hover {
+  background: linear-gradient(
+    135deg,
+    rgba(236, 72, 153, 0.15) 0%,
+    rgba(245, 158, 11, 0.1) 25%,
+    rgba(16, 185, 129, 0.15) 50%,
+    rgba(59, 130, 246, 0.1) 75%,
+    rgba(139, 92, 246, 0.15) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.group:hover .card-holo-hover {
+  opacity: 1;
 }
 
 /* Pack card reveal animation */

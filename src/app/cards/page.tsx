@@ -424,7 +424,7 @@ export default function CardsPage() {
     <div className="min-h-screen">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-amber-600/10 blur-[140px]" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
 
       <Header />
@@ -462,7 +462,7 @@ export default function CardsPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-white/90 mb-1">Buy a Pack</h2>
                   <p className="text-white/50 text-sm">
-                    {PACK_PRICE} credits · 5 random character cards · Chance for foil variants
+                    {PACK_PRICE} credits · 5 random character cards · Chance for holo variants
                   </p>
                 </div>
                 <button
@@ -653,7 +653,7 @@ export default function CardsPage() {
                   className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
                 >
                   <option value="all">All</option>
-                  <option value="foil">Foil only</option>
+                  <option value="foil">Holo only</option>
                   <option value="normal">Normal only</option>
                 </select>
               </div>
@@ -682,7 +682,7 @@ export default function CardsPage() {
                           }
                         }}
                         className={`relative group/card transition-all duration-200 ${
-                          canAdd ? "cursor-pointer hover:ring-2 hover:ring-amber-500/50 rounded-xl" : ""
+                          canAdd ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
                         } ${card.rarity === "legendary" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                       >
                         {inSlots && (
@@ -728,14 +728,14 @@ export default function CardsPage() {
                 {listings.map((listing) => (
                   <div
                     key={listing.id}
-                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[listing.card.rarity] || RARITY_COLORS.uncommon} ${listing.card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
+                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[listing.card.rarity] || RARITY_COLORS.uncommon} ${listing.card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}
                   >
                     <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {listing.card.profilePath ? (
                         <img
                           src={listing.card.profilePath}
                           alt={listing.card.actorName}
-                          className={`w-full h-full object-cover ${listing.card.isFoil ? "foil-shimmer" : ""}`}
+                          className={`w-full h-full object-cover ${listing.card.isFoil ? "holo-sheen" : ""}`}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
@@ -744,7 +744,13 @@ export default function CardsPage() {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
                       {listing.card.isFoil && (
-                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/90 text-black">FOIL</span>
+                        <span
+                          className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                          style={{
+                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 0 8px rgba(255,255,255,0.5)",
+                          }}
+                        >HOLO</span>
                       )}
                       <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
                         {listing.card.rarity}
@@ -809,7 +815,7 @@ export default function CardsPage() {
                               <button
                                 key={card.id}
                                 onClick={() => setSelectedCard(card)}
-                                className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-amber-500/50 focus:ring-amber-500/50 transition-all cursor-pointer text-left"
+                                className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-white/60 focus:ring-white/60 transition-all cursor-pointer text-left"
                               >
                                 <CardDisplay card={card} />
                               </button>

@@ -20,3 +20,11 @@ export const RARITY_BADGE: Record<string, string> = {
   epic: "text-purple-400/95",
   legendary: "text-amber-400/95",
 };
+
+/** Rarity glow colors for hover borders / outer glow (subtle) */
+export const RARITY_GLOW: Record<string, string> = {
+  uncommon: "rgba(34, 197, 94, 0.45)",
+  rare: "rgba(59, 130, 246, 0.45)",
+  epic: "rgba(168, 85, 247, 0.45)",
+  legendary: "rgba(245, 158, 11, 0.5)",
+};

@@ -1,6 +1,7 @@
 "use client";
 
-import { RARITY_COLORS, RARITY_TINTS, RARITY_BADGE } from "@/lib/constants";
+import { useRef, useState, useCallback } from "react";
+import { RARITY_TINTS, RARITY_BADGE, RARITY_GLOW } from "@/lib/constants";
 
 type CardType = "actor" | "director" | "character" | "scene";
 
@@ -15,6 +16,8 @@ export interface CardDisplayCard {
   cardType?: CardType | string;
 }
 
+const TILT_MAX = 8;
+
 function cardLabelLines(card: CardDisplayCard): { title: string; subtitle: string } {
   const ct = (card.cardType ?? "actor") as string;
   if (ct === "director") return { title: card.actorName, subtitle: "Director" };
@@ -24,15 +27,50 @@ function cardLabelLines(card: CardDisplayCard): { title: string; subtitle: strin
 
 export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?: boolean }) {
   const { title, subtitle } = cardLabelLines(card);
-  const rarityClass = RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon;
   const rarityTint = RARITY_TINTS[card.rarity] || RARITY_TINTS.uncommon;
   const rarityBadgeClass = RARITY_BADGE[card.rarity] || RARITY_BADGE.uncommon;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [hovered, setHovered] = useState(false);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = cardRef.current;
+    if (!el) return;
+    setHovered(true);
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotateY = (x - 0.5) * 2 * TILT_MAX;
+    const rotateX = (y - 0.5) * -2 * TILT_MAX;
+    setTilt({ x: rotateX, y: rotateY });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTilt({ x: 0, y: 0 });
+    setHovered(false);
+  }, []);
+
+  const rarityGlow = RARITY_GLOW[card.rarity] || RARITY_GLOW.uncommon;
+  const boxShadow = hovered
+    ? `0 0 0 1px rgba(255,255,255,0.08), 0 0 12px ${rarityGlow}, 0 12px 40px rgba(0,0,0,0.7)`
+    : "0 0 0 1px rgba(255,255,255,0.08), 0 0 20px rgba(0,0,0,0.3)";
+
   return (
-    <div className="group">
+    <div
+      className="group"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       <div
-        className={`card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${rarityClass} ${card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
+        ref={cardRef}
+        className={`card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 ${
+          card.isFoil ? "ring-2 ring-indigo-400/50" : ""
+        }`}
         style={{
           background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.02) 100%)",
+          transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(${tilt.x !== 0 || tilt.y !== 0 ? "-2px" : "0"})`,
+          transition: "transform 0.15s ease-out, box-shadow 0.2s ease-out",
+          boxShadow,
         }}
       >
         {/* Art area with gradient bleed — image scaled to bleed, gradient fades edges */}
@@ -43,7 +81,7 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
             <img
               src={card.profilePath}
               alt={title}
-              className={`absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center ${card.isFoil ? "foil-shimmer" : ""}`}
+              className={`absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center ${card.isFoil ? "holo-sheen" : ""}`}
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white/20 text-4xl font-bold bg-gradient-to-br from-purple-900/20 to-indigo-900/20">
@@ -52,6 +90,10 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
           )}
           {/* Gradient art bleed — soft vignette fade from edges */}
           <div className="absolute inset-0 card-art-bleed pointer-events-none" />
+          {/* Holo mouseover — rainbow sheen on hover (holo cards only) */}
+          {card.isFoil && (
+            <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
+          )}
           {/* Rarity-tinted bottom gradient */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -60,8 +102,14 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
             }}
           />
           {card.isFoil && (
-            <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/90 text-black backdrop-blur-sm z-10">
-              FOIL
+            <span
+              className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm z-10"
+              style={{
+                background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                boxShadow: "0 0 8px rgba(255,255,255,0.5)",
+              }}
+            >
+              HOLO
             </span>
           )}
           {/* Premium rarity badge */}

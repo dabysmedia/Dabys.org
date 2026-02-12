@@ -123,7 +123,7 @@ export default function AdminCardsCreditsPage() {
   const [addingCard, setAddingCard] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addCharacterId, setAddCharacterId] = useState("");
-  const [addFoil, setAddFoil] = useState(false);
+  const [addHolo, setAddHolo] = useState(false);
   const [error, setError] = useState("");
   const [poolLoading, setPoolLoading] = useState(false);
   const [addingToPool, setAddingToPool] = useState(false);
@@ -292,7 +292,7 @@ export default function AdminCardsCreditsPage() {
         body: JSON.stringify({
           userId: selectedUserId,
           characterId: addCharacterId,
-          isFoil: addFoil,
+          isFoil: addHolo,
         }),
       });
       const data = await res.json();
@@ -859,11 +859,11 @@ export default function AdminCardsCreditsPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={addFoil}
-                  onChange={(e) => setAddFoil(e.target.checked)}
+                  checked={addHolo}
+                  onChange={(e) => setAddHolo(e.target.checked)}
                   className="rounded border-white/30 bg-white/5"
                 />
-                <span className="text-sm text-white/60">Foil</span>
+                <span className="text-sm text-white/60">Holo</span>
               </label>
               <button
                 type="submit"
@@ -882,14 +882,14 @@ export default function AdminCardsCreditsPage() {
                 {cards.map((card) => (
                   <div
                     key={card.id}
-                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${card.isFoil ? "ring-2 ring-amber-400/50" : ""}`}
+                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}
                   >
                     <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {card.profilePath ? (
                         <img
                           src={card.profilePath}
                           alt={card.actorName}
-                          className={`w-full h-full object-cover ${card.isFoil ? "foil-shimmer" : ""}`}
+                          className={`w-full h-full object-cover ${card.isFoil ? "holo-sheen" : ""}`}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
@@ -898,8 +898,14 @@ export default function AdminCardsCreditsPage() {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
                       {card.isFoil && (
-                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400/90 text-black">
-                          FOIL
+                        <span
+                          className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                          style={{
+                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 0 8px rgba(255,255,255,0.5)",
+                          }}
+                        >
+                          HOLO
                         </span>
                       )}
                       <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
@@ -1040,7 +1046,7 @@ export default function AdminCardsCreditsPage() {
                       onChange={(e) => setEditForm((f) => ({ ...f, isFoil: e.target.checked }))}
                       className="rounded border-white/30 bg-white/5"
                     />
-                    <span className="text-sm text-white/60">Foil</span>
+                    <span className="text-sm text-white/60">Holo</span>
                   </label>
                 </div>
                 <div className="flex gap-2 pt-2">
