@@ -36,6 +36,17 @@ interface CharacterPortrayal {
   movieTmdbId?: number;
 }
 
+interface Pack {
+  id: string;
+  name: string;
+  imageUrl: string;
+  price: number;
+  cardsPerPack: number;
+  allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
+  allowedCardTypes: CardType[];
+  isActive: boolean;
+}
+
 function poolOptionLabel(c: CharacterPortrayal): string {
   const ct = c.cardType ?? "actor";
   if (ct === "director") return `${c.actorName} (Director) (${c.movieTitle}) — ${c.rarity}`;
@@ -118,6 +129,7 @@ export default function AdminCardsCreditsPage() {
   const [creditInput, setCreditInput] = useState("");
   const [cards, setCards] = useState<Card[]>([]);
   const [pool, setPool] = useState<CharacterPortrayal[]>([]);
+  const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCredits, setSavingCredits] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
@@ -149,12 +161,34 @@ export default function AdminCardsCreditsPage() {
   const [showImagePickerForAdd, setShowImagePickerForAdd] = useState(false);
   const [showImagePickerForEdit, setShowImagePickerForEdit] = useState(false);
   const [pastingImage, setPastingImage] = useState(false);
+  const [showImagePickerForPack, setShowImagePickerForPack] = useState(false);
+  const [packsLoading, setPacksLoading] = useState(false);
+  const [savingPack, setSavingPack] = useState(false);
+  const [deletingPackId, setDeletingPackId] = useState<string | null>(null);
+  const [editingPackId, setEditingPackId] = useState<string | null>(null);
+  const [packForm, setPackForm] = useState<{
+    name: string;
+    imageUrl: string;
+    price: string;
+    cardsPerPack: string;
+    allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
+    allowedCardTypes: CardType[];
+    isActive: boolean;
+  }>({
+    name: "",
+    imageUrl: "",
+    price: "50",
+    cardsPerPack: "5",
+    allowedRarities: ["uncommon", "rare", "epic", "legendary"],
+    allowedCardTypes: ["actor", "director", "character", "scene"],
+    isActive: true,
+  });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
 
   // Paste image directly in form (when modal is closed)
   useEffect(() => {
-    if (showImagePickerForAdd || showImagePickerForEdit) return;
+    if (showImagePickerForAdd || showImagePickerForEdit || showImagePickerForPack) return;
     function handlePaste(e: ClipboardEvent) {
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -181,7 +215,7 @@ export default function AdminCardsCreditsPage() {
     }
     document.addEventListener("paste", handlePaste);
     return () => document.removeEventListener("paste", handlePaste);
-  }, [showImagePickerForAdd, showImagePickerForEdit, editingPoolEntry]);
+  }, [showImagePickerForAdd, showImagePickerForEdit, showImagePickerForPack, editingPoolEntry]);
 
   const loadPool = useCallback(async () => {
     setPoolLoading(true);
@@ -195,6 +229,21 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to load pool");
     } finally {
       setPoolLoading(false);
+    }
+  }, []);
+
+  const loadPacks = useCallback(async () => {
+    setPacksLoading(true);
+    try {
+      const res = await fetch("/api/admin/packs");
+      if (res.ok) {
+        const d = await res.json();
+        setPacks(d.packs || []);
+      }
+    } catch {
+      setError("Failed to load packs");
+    } finally {
+      setPacksLoading(false);
     }
   }, []);
 
@@ -244,11 +293,113 @@ export default function AdminCardsCreditsPage() {
   useEffect(() => {
     loadUsers();
     loadPool();
-  }, [loadUsers, loadPool]);
+    loadPacks();
+  }, [loadUsers, loadPool, loadPacks]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  function resetPackForm() {
+    setEditingPackId(null);
+    setPackForm({
+      name: "",
+      imageUrl: "",
+      price: "50",
+      cardsPerPack: "5",
+      allowedRarities: ["uncommon", "rare", "epic", "legendary"],
+      allowedCardTypes: ["actor", "director", "character", "scene"],
+      isActive: true,
+    });
+  }
+
+  function startEditPack(pack: Pack) {
+    setEditingPackId(pack.id);
+    setPackForm({
+      name: pack.name,
+      imageUrl: pack.imageUrl,
+      price: String(pack.price),
+      cardsPerPack: String(pack.cardsPerPack),
+      allowedRarities: pack.allowedRarities,
+      allowedCardTypes: pack.allowedCardTypes,
+      isActive: pack.isActive,
+    });
+  }
+
+  async function handleSavePack(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingPack) return;
+    if (!packForm.name.trim() || !packForm.imageUrl.trim()) {
+      setError("Pack name and image are required");
+      return;
+    }
+    const price = parseInt(packForm.price, 10);
+    const cardsPerPack = parseInt(packForm.cardsPerPack, 10);
+    if (!Number.isFinite(price) || price < 1) {
+      setError("Pack price must be at least 1");
+      return;
+    }
+    if (!Number.isFinite(cardsPerPack) || cardsPerPack < 1) {
+      setError("Cards per pack must be at least 1");
+      return;
+    }
+
+    setSavingPack(true);
+    setError("");
+    try {
+      const method = editingPackId ? "PATCH" : "POST";
+      const body: any = {
+        name: packForm.name.trim(),
+        imageUrl: packForm.imageUrl.trim(),
+        price,
+        cardsPerPack,
+        allowedRarities: packForm.allowedRarities,
+        allowedCardTypes: packForm.allowedCardTypes,
+        isActive: packForm.isActive,
+      };
+      if (editingPackId) body.id = editingPackId;
+
+      const res = await fetch("/api/admin/packs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await loadPacks();
+        resetPackForm();
+      } else {
+        setError(data.error || "Failed to save pack");
+      }
+    } catch {
+      setError("Failed to save pack");
+    } finally {
+      setSavingPack(false);
+    }
+  }
+
+  async function handleDeletePack(id: string) {
+    setDeletingPackId(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/packs?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPacks((prev) => prev.filter((p) => p.id !== id));
+        if (editingPackId === id) {
+          resetPackForm();
+        }
+      } else {
+        setError(data.error || "Failed to delete pack");
+      }
+    } catch {
+      setError("Failed to delete pack");
+    } finally {
+      setDeletingPackId(null);
+    }
+  }
 
   async function handleSetCredits(e: React.FormEvent) {
     e.preventDefault();
@@ -525,6 +676,255 @@ export default function AdminCardsCreditsPage() {
           {error}
         </div>
       )}
+
+      {/* Manage Card Pool */}
+      {/* Manage Packs */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+            Manage Packs ({packs.length})
+          </h2>
+          {packsLoading && (
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              Loading packs...
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Pack form */}
+          <div>
+            <h3 className="text-sm font-medium text-white/80 mb-3">
+              {editingPackId ? "Edit Pack" : "Create Pack"}
+            </h3>
+            <form onSubmit={handleSavePack} className="space-y-3">
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={packForm.name}
+                  onChange={(e) => setPackForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                  placeholder="Starter Pack"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Image *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={packForm.imageUrl}
+                    onChange={(e) => setPackForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                    className="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                    placeholder="URL, or use upload & crop"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowImagePickerForPack(true)}
+                    className="px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors cursor-pointer"
+                  >
+                    Upload / crop
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Price (credits)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={packForm.price}
+                    onChange={(e) => setPackForm((f) => ({ ...f, price: e.target.value }))}
+                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Cards per pack</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={packForm.cardsPerPack}
+                    onChange={(e) => setPackForm((f) => ({ ...f, cardsPerPack: e.target.value }))}
+                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Rarities this pack can drop</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["uncommon", "rare", "epic", "legendary"].map((r) => {
+                      const selected = packForm.allowedRarities.includes(r as any);
+                      return (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() =>
+                            setPackForm((f) => {
+                              const current = f.allowedRarities;
+                              const has = current.includes(r as any);
+                              if (has) {
+                                const next = current.filter((x) => x !== r);
+                                return { ...f, allowedRarities: next.length ? next : ["uncommon", "rare", "epic", "legendary"] };
+                              }
+                              return { ...f, allowedRarities: [...current, r as any] };
+                            })
+                          }
+                          className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${
+                            selected
+                              ? "border-amber-400/70 bg-amber-500/20 text-amber-200"
+                              : "border-white/15 bg-white/[0.04] text-white/60 hover:border-amber-400/40 hover:text-amber-200"
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Card types this pack can drop</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(["actor", "director", "character", "scene"] as CardType[]).map((t) => {
+                      const selected = packForm.allowedCardTypes.includes(t);
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() =>
+                            setPackForm((f) => {
+                              const current = f.allowedCardTypes;
+                              const has = current.includes(t);
+                              if (has) {
+                                const next = current.filter((x) => x !== t);
+                                return { ...f, allowedCardTypes: next.length ? next : ["actor", "director", "character", "scene"] };
+                              }
+                              return { ...f, allowedCardTypes: [...current, t] };
+                            })
+                          }
+                          className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${
+                            selected
+                              ? "border-purple-400/70 bg-purple-500/20 text-purple-100"
+                              : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-white/70">
+                <input
+                  type="checkbox"
+                  checked={packForm.isActive}
+                  onChange={(e) => setPackForm((f) => ({ ...f, isActive: e.target.checked }))}
+                  className="rounded border-white/30 bg-white/5"
+                />
+                Active in store
+              </label>
+              <div className="flex gap-2 pt-2">
+                {editingPackId && (
+                  <button
+                    type="button"
+                    onClick={resetPackForm}
+                    disabled={savingPack}
+                    className="px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
+                  >
+                    Cancel edit
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={savingPack}
+                  className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
+                >
+                  {savingPack ? "Saving..." : editingPackId ? "Save Pack" : "Create Pack"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Packs list */}
+          <div>
+            <h3 className="text-sm font-medium text-white/80 mb-3">Existing Packs</h3>
+            {packs.length === 0 ? (
+              <p className="text-white/40 text-sm">No packs configured yet.</p>
+            ) : (
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+                {packs.map((pack) => (
+                  <div
+                    key={pack.id}
+                    className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
+                  >
+                    <div className="w-16 h-16 rounded-md overflow-hidden bg-black/40 flex-shrink-0">
+                      {pack.imageUrl ? (
+                        <img
+                          src={pack.imageUrl}
+                          alt={pack.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-semibold text-white/90 truncate">
+                          {pack.name}
+                        </p>
+                        {!pack.isActive && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.06] text-white/60">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/60">
+                        <span className="text-amber-300 font-semibold">{pack.price}</span> credits ·{" "}
+                        {pack.cardsPerPack} cards
+                      </p>
+                      <p className="text-[11px] text-white/40 mt-0.5 truncate">
+                        Drops{" "}
+                        {pack.allowedRarities
+                          .slice()
+                          .sort((a, b) =>
+                            ["legendary", "epic", "rare", "uncommon"].indexOf(a) -
+                            ["legendary", "epic", "rare", "uncommon"].indexOf(b)
+                          )
+                          .join(", ")}{" "}
+                        ({pack.allowedCardTypes.join(", ")})
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEditPack(pack)}
+                        className="px-3 py-1.5 rounded-lg border border-purple-500/40 text-purple-300 text-xs font-medium hover:bg-purple-500/10 cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePack(pack.id)}
+                        disabled={deletingPackId === pack.id}
+                        className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40 cursor-pointer"
+                      >
+                        {deletingPackId === pack.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Manage Card Pool */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
@@ -1217,6 +1617,17 @@ export default function AdminCardsCreditsPage() {
         }}
         aspect={2 / 3}
         title="Card art"
+        cropShape="rect"
+      />
+      <ImageCropModal
+        open={showImagePickerForPack}
+        onClose={() => setShowImagePickerForPack(false)}
+        onComplete={(url) => {
+          setPackForm((f) => ({ ...f, imageUrl: url }));
+          setShowImagePickerForPack(false);
+        }}
+        aspect={2 / 3}
+        title="Pack art"
         cropShape="rect"
       />
     </div>

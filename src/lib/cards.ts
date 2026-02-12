@@ -11,8 +11,9 @@ import {
   getCardById,
   removeCard,
   getListings,
+  getPacks,
 } from "@/lib/data";
-import type { CharacterPortrayal, Winner } from "@/lib/data";
+import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -228,14 +229,41 @@ function tierPick(
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export function buyPack(userId: string): { success: boolean; cards?: ReturnType<typeof addCard>[]; error?: string } {
+export function buyPack(
+  userId: string,
+  packId?: string
+): { success: boolean; cards?: ReturnType<typeof addCard>[]; error?: string } {
   migrateCommonToUncommon();
+  const allPacks = getPacks();
+  const selectedPack: Pack | undefined = packId
+    ? allPacks.find((p) => p.id === packId && p.isActive)
+    : undefined;
+
+  if (packId && !selectedPack) {
+    return { success: false, error: "Pack not found" };
+  }
+
+  const price = selectedPack?.price ?? PACK_PRICE;
+  const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
+
   const balance = getCredits(userId);
-  if (balance < PACK_PRICE) {
+  if (balance < price) {
     return { success: false, error: "Not enough credits" };
   }
 
-  const fullPool = getCharacterPool().filter((c) => c.profilePath?.trim());
+  const allowedRarities = selectedPack?.allowedRarities;
+  const allowedCardTypes = selectedPack?.allowedCardTypes;
+
+  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
+
+  const fullPool = getCharacterPool()
+    .filter((c) => c.profilePath?.trim())
+    .filter((c) => {
+      const rarityOk = !allowedRarities || allowedRarities.includes(norm(c.rarity) as any);
+      const type = (c.cardType ?? "actor") as NonNullable<typeof c.cardType>;
+      const typeOk = !allowedCardTypes || allowedCardTypes.includes(type as any);
+      return rarityOk && typeOk;
+    });
   const ownedLegendaryIds = getOwnedLegendaryCharacterIds();
 
   function availablePool(): CharacterPortrayal[] {
@@ -245,15 +273,17 @@ export function buyPack(userId: string): { success: boolean; cards?: ReturnType<
   }
 
   let pool = availablePool();
-  if (pool.length < CARDS_PER_PACK) {
+  if (pool.length < cardsPerPack) {
     return { success: false, error: "Character pool too small. Add more winning movies." };
   }
 
-  const deducted = deductCredits(userId, PACK_PRICE, "pack_purchase", {});
+  const deducted = deductCredits(userId, price, "pack_purchase", {
+    packId: selectedPack?.id ?? "default",
+  });
   if (!deducted) return { success: false, error: "Failed to deduct credits" };
 
   const cards: ReturnType<typeof addCard>[] = [];
-  for (let i = 0; i < CARDS_PER_PACK; i++) {
+  for (let i = 0; i < cardsPerPack; i++) {
     pool = availablePool(); // refresh after each add (legendaries pulled this pack are now owned)
     if (pool.length === 0) break;
     const char = tierPick(pool, ownedLegendaryIds);

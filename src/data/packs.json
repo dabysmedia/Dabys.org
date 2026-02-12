@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pack-1770883960789-vqg92vi",
+    "name": "Character Pack",
+    "imageUrl": "/api/uploads/1770883940118-rizxgm.jpg",
+    "price": 50,
+    "cardsPerPack": 5,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "actor",
+      "character"
+    ],
+    "isActive": true
+  }
+]

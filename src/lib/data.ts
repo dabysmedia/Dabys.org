@@ -816,3 +816,103 @@ export function removeListing(listingId: string): boolean {
 export function getListing(listingId: string): Listing | undefined {
   return getListingsRaw().find((l) => l.id === listingId);
 }
+
+// ──── Store Packs (configurable card packs) ──────────────
+export interface Pack {
+  id: string;
+  name: string;
+  imageUrl: string;
+  price: number;
+  cardsPerPack: number;
+  /** Allowed rarities for cards in this pack. Empty = all rarities. */
+  allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
+  /** Allowed card types for this pack. Empty = all card types. */
+  allowedCardTypes: CardType[];
+  isActive: boolean;
+}
+
+function getPacksRaw(): Pack[] {
+  try {
+    return readJson<Pack[]>("packs.json");
+  } catch {
+    return [];
+  }
+}
+
+function savePacksRaw(packs: Pack[]) {
+  writeJson("packs.json", packs);
+}
+
+export function getPacks(): Pack[] {
+  const packs = getPacksRaw();
+  const ALL_RARITIES: ("uncommon" | "rare" | "epic" | "legendary")[] = [
+    "uncommon",
+    "rare",
+    "epic",
+    "legendary",
+  ];
+  const ALL_CARD_TYPES: CardType[] = ["actor", "director", "character", "scene"];
+
+  return packs.map((p) => ({
+    ...p,
+    cardsPerPack: typeof p.cardsPerPack === "number" && p.cardsPerPack > 0 ? p.cardsPerPack : 5,
+    allowedRarities:
+      Array.isArray(p.allowedRarities) && p.allowedRarities.length > 0
+        ? (p.allowedRarities.filter((r) => ALL_RARITIES.includes(r)) as Pack["allowedRarities"])
+        : ALL_RARITIES,
+    allowedCardTypes:
+      Array.isArray(p.allowedCardTypes) && p.allowedCardTypes.length > 0
+        ? (p.allowedCardTypes.filter((t) => ALL_CARD_TYPES.includes(t)) as Pack["allowedCardTypes"])
+        : ALL_CARD_TYPES,
+    isActive: typeof p.isActive === "boolean" ? p.isActive : true,
+  }));
+}
+
+export function savePacks(packs: Pack[]): void {
+  savePacksRaw(packs);
+}
+
+export function upsertPack(
+  input: Omit<Pack, "id"> & { id?: string }
+): Pack {
+  const packs = getPacks();
+  if (input.id) {
+    const idx = packs.findIndex((p) => p.id === input.id);
+    if (idx >= 0) {
+      packs[idx] = { ...packs[idx], ...input, id: input.id };
+      savePacks(packs);
+      return packs[idx];
+    }
+  }
+
+  const id = input.id || `pack-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const ALL_RARITIES: Pack["allowedRarities"] = ["uncommon", "rare", "epic", "legendary"];
+  const ALL_CARD_TYPES: Pack["allowedCardTypes"] = ["actor", "director", "character", "scene"];
+  const newPack: Pack = {
+    id,
+    name: input.name,
+    imageUrl: input.imageUrl,
+    price: input.price,
+    cardsPerPack: input.cardsPerPack > 0 ? input.cardsPerPack : 5,
+    allowedRarities:
+      Array.isArray(input.allowedRarities) && input.allowedRarities.length > 0
+        ? (input.allowedRarities as Pack["allowedRarities"])
+        : ALL_RARITIES,
+    allowedCardTypes:
+      Array.isArray(input.allowedCardTypes) && input.allowedCardTypes.length > 0
+        ? (input.allowedCardTypes as Pack["allowedCardTypes"])
+        : ALL_CARD_TYPES,
+    isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+  };
+  packs.push(newPack);
+  savePacks(packs);
+  return newPack;
+}
+
+export function deletePack(id: string): boolean {
+  const packs = getPacks();
+  const filtered = packs.filter((p) => p.id !== id);
+  if (filtered.length === packs.length) return false;
+  savePacks(filtered);
+  return true;
+}
