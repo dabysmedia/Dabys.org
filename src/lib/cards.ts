@@ -204,24 +204,58 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-/** Drop chances: legendary 1%, epic 5%, rare 20%, uncommon 74%. Pick uniformly within tier. */
-const DROP_TIERS = ["legendary", "epic", "rare", "uncommon"] as const;
-const DROP_CUMULATIVE = [0.01, 0.06, 0.26, 1] as const;
+/** Pack-based drop chances: 1% legendary, 10% epic, 25% rare, 64% all uncommon. */
+const PACK_TIER_CUMULATIVE = [0.01, 0.11, 0.36, 1] as const;
+const PACK_TIERS = ["legendary", "epic", "rare", "uncommon"] as const;
+type PackTier = (typeof PACK_TIERS)[number];
 
-function tierPick(
+const CASCADE_ORDER: Rarity[] = ["legendary", "epic", "rare", "uncommon"];
+
+function normRarity(r: string | undefined): Rarity {
+  return (r === "common" ? "uncommon" : r) || "uncommon";
+}
+
+/** One roll per pack: returns which tier this pack is (determines best card in pack). */
+function rollPackTier(): PackTier {
+  const r = Math.random();
+  const idx = PACK_TIER_CUMULATIVE.findIndex((c) => r < c);
+  return PACK_TIERS[idx >= 0 ? idx : PACK_TIERS.length - 1];
+}
+
+/** Returns 5 rarity slots for this pack. Fill slots (non-feature) are rare/uncommon; 20% rare, 80% uncommon. */
+function getRaritySlotsForPack(tier: PackTier): Rarity[] {
+  const fillRarity = (): Rarity => (Math.random() < 0.2 ? "rare" : "uncommon");
+  switch (tier) {
+    case "legendary":
+      return ["legendary", fillRarity(), fillRarity(), fillRarity(), fillRarity()];
+    case "epic":
+      return ["epic", fillRarity(), fillRarity(), fillRarity(), fillRarity()];
+    case "rare":
+      return ["rare", "uncommon", "uncommon", "uncommon", "uncommon"];
+    case "uncommon":
+      return ["uncommon", "uncommon", "uncommon", "uncommon", "uncommon"];
+  }
+}
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** Pick one card from pool with the requested rarity; cascade to lower tier if none available. */
+function pickCardOfRarity(
   pool: CharacterPortrayal[],
+  wantedRarity: Rarity,
   ownedLegendaryIds: Set<string>
 ): CharacterPortrayal {
-  const r = Math.random();
-  const tierIdx = DROP_CUMULATIVE.findIndex((c) => r < c);
-  const startTier = DROP_TIERS[tierIdx >= 0 ? tierIdx : DROP_TIERS.length - 1];
-
-  const CASCADE_ORDER = ["legendary", "epic", "rare", "uncommon"] as const;
-  const startIdx = CASCADE_ORDER.indexOf(startTier);
-  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
+  const startIdx = CASCADE_ORDER.indexOf(wantedRarity);
   for (let i = startIdx; i < CASCADE_ORDER.length; i++) {
     const t = CASCADE_ORDER[i];
-    let subset = pool.filter((c) => norm(c.rarity) === t);
+    let subset = pool.filter((c) => normRarity(c.rarity) === t);
     if (t === "legendary") subset = subset.filter((c) => !ownedLegendaryIds.has(c.characterId));
     if (subset.length > 0) {
       return subset[Math.floor(Math.random() * subset.length)];
@@ -283,11 +317,20 @@ export function buyPack(
   });
   if (!deducted) return { success: false, error: "Failed to deduct credits" };
 
+  // Pack-based rarity: one roll per pack, then 5 slots with those rarities
+  const packTier = rollPackTier();
+  let raritySlots = getRaritySlotsForPack(packTier);
+  raritySlots = shuffleArray(raritySlots);
+
   const cards: ReturnType<typeof addCard>[] = [];
+  const pickedCharacterIds = new Set<string>();
+
   for (let i = 0; i < cardsPerPack; i++) {
-    pool = availablePool(); // refresh after each add (legendaries pulled this pack are now owned)
+    pool = availablePool().filter((c) => !pickedCharacterIds.has(c.characterId));
     if (pool.length === 0) break;
-    const char = tierPick(pool, ownedLegendaryIds);
+
+    const wantedRarity = raritySlots[i];
+    const char = pickCardOfRarity(pool, wantedRarity, ownedLegendaryIds);
     const isFoil = Math.random() < FOIL_CHANCE;
     const card = addCard({
       userId,
@@ -302,6 +345,7 @@ export function buyPack(
       cardType: char.cardType ?? "actor",
     });
     cards.push(card);
+    pickedCharacterIds.add(char.characterId);
     if (char.rarity === "legendary") {
       ownedLegendaryIds.add(char.characterId);
     }

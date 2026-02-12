@@ -1,17 +1,1 @@
-[
-  {
-    "userId": "2",
-    "balance": 97599,
-    "updatedAt": "2026-02-12T17:38:07.598Z"
-  },
-  {
-    "userId": "3",
-    "balance": 50,
-    "updatedAt": "2026-02-12T03:46:17.223Z"
-  },
-  {
-    "userId": "4",
-    "balance": 43,
-    "updatedAt": "2026-02-12T17:33:13.178Z"
-  }
-]
+[]

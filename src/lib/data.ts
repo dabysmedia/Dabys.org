@@ -1006,3 +1006,74 @@ export function deletePack(id: string): boolean {
   savePacks(filtered);
   return true;
 }
+
+// ──── Admin wipe (inventory / full server) ────────────────────────────────
+
+const WIPE_CONFIRM_WORD = "WIPE";
+
+/** Per-user inventory wipe: cards, credits, ledger, trivia, listings, trades. Returns counts. */
+export function wipeUserInventory(userId: string): {
+  cardsRemoved: number;
+  listingsRemoved: number;
+  tradesRemoved: number;
+  triviaAttemptsRemoved: number;
+} {
+  const cardsRaw = getCardsRaw();
+  const userCards = cardsRaw.filter((c) => c.userId === userId);
+  const userCardIds = new Set(userCards.map((c) => c.id));
+
+  const listings = getListingsRaw();
+  let listingsRemoved = 0;
+  for (const l of listings) {
+    if (l.sellerUserId === userId || userCardIds.has(l.cardId)) {
+      removeListing(l.id);
+      listingsRemoved++;
+    }
+  }
+
+  saveCardsRaw(cardsRaw.filter((c) => c.userId !== userId));
+  saveCreditsRaw(getCreditsRaw().filter((c) => c.userId !== userId));
+  saveCreditLedgerRaw(getCreditLedgerRaw().filter((e) => e.userId !== userId));
+
+  const attempts = getTriviaAttemptsRaw();
+  const attemptsFiltered = attempts.filter((a) => a.userId !== userId);
+  const triviaAttemptsRemoved = attempts.length - attemptsFiltered.length;
+  saveTriviaAttemptsRaw(attemptsFiltered);
+
+  saveTriviaSessionsRaw(getTriviaSessionsRaw().filter((s) => s.userId !== userId));
+
+  const trades = getTradesRaw();
+  const tradesFiltered = trades.filter(
+    (t) => t.initiatorUserId !== userId && t.counterpartyUserId !== userId
+  );
+  const tradesRemoved = trades.length - tradesFiltered.length;
+  saveTradesRaw(tradesFiltered);
+
+  return {
+    cardsRemoved: userCards.length,
+    listingsRemoved,
+    tradesRemoved,
+    triviaAttemptsRemoved,
+  };
+}
+
+/** Full server inventory reset: only cards, credits, ledger, trivia, marketplace (listings), trades. Users, weeks, winners, etc. are unchanged. */
+export function wipeServer(confirmWord: string): { success: boolean; error?: string } {
+  if (confirmWord !== WIPE_CONFIRM_WORD) {
+    return { success: false, error: "Confirmation word does not match" };
+  }
+
+  writeJson("credits.json", []);
+  writeJson("creditLedger.json", []);
+  writeJson("cards.json", []);
+  writeJson("triviaAttempts.json", []);
+  writeJson("triviaSessions.json", []);
+  writeJson("listings.json", []);
+  writeJson("trades.json", []);
+
+  return { success: true };
+}
+
+export function getWipeConfirmWord(): string {
+  return WIPE_CONFIRM_WORD;
+}

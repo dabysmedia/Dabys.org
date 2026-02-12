@@ -170,6 +170,10 @@ export default function AdminCardsCreditsPage() {
   const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string }[]>([]);
   const [reopeningWinnerId, setReopeningWinnerId] = useState<string | null>(null);
   const [reopeningAll, setReopeningAll] = useState(false);
+  const [wipeConfirmUser, setWipeConfirmUser] = useState("");
+  const [wipeConfirmServer, setWipeConfirmServer] = useState("");
+  const [wipingUser, setWipingUser] = useState(false);
+  const [wipingServer, setWipingServer] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -454,6 +458,70 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to reopen trivia");
     } finally {
       setReopeningWinnerId(null);
+    }
+  }
+
+  async function handleWipeUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedUserId || wipingUser) return;
+    if (wipeConfirmUser.trim().toUpperCase() !== "WIPE") {
+      setError("Type WIPE to confirm");
+      return;
+    }
+    setWipingUser(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/wipe/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, confirm: wipeConfirmUser.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWipeConfirmUser("");
+        setCreditBalance(0);
+        setCards([]);
+        setTriviaAttempts([]);
+        setError("");
+        alert(`Wiped: ${data.cardsRemoved} cards, ${data.listingsRemoved} listings, ${data.tradesRemoved} trades, ${data.triviaAttemptsRemoved} trivia attempts.`);
+      } else {
+        setError(data.error || "Failed to wipe user inventory");
+      }
+    } catch {
+      setError("Failed to wipe user inventory");
+    } finally {
+      setWipingUser(false);
+    }
+  }
+
+  async function handleWipeServer(e: React.FormEvent) {
+    e.preventDefault();
+    if (wipingServer) return;
+    if (wipeConfirmServer.trim().toUpperCase() !== "WIPE") {
+      setError("Type WIPE to confirm");
+      return;
+    }
+    setWipingServer(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/wipe/server", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: wipeConfirmServer.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWipeConfirmServer("");
+        setError("");
+        alert("Server reset complete. Reload the page.");
+        window.location.reload();
+      } else {
+        setError(data.error || "Failed to reset server");
+      }
+    } catch {
+      setError("Failed to reset server");
+    } finally {
+      setWipingServer(false);
     }
   }
 
@@ -1701,6 +1769,71 @@ export default function AdminCardsCreditsPage() {
           </div>
         </>
       )}
+
+      {/* Danger zone: wipe inventory */}
+      <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6 mb-8">
+        <h2 className="text-sm font-semibold text-red-400/90 uppercase tracking-widest mb-2">
+          Danger zone
+        </h2>
+        <p className="text-white/50 text-sm mb-6">
+          Wipe one user&apos;s inventory or reset all cards, credits, marketplace, and trades (server-wide). Users, weeks, winners, and other content are not affected. Type <strong className="text-white/80">WIPE</strong> to confirm.
+        </p>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Wipe one user&apos;s inventory</h3>
+            <form onSubmit={handleWipeUser} className="flex flex-wrap gap-3 items-end">
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-red-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"
+              >
+                <option value="">-- Select user --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.id})
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={wipeConfirmUser}
+                onChange={(e) => setWipeConfirmUser(e.target.value)}
+                placeholder="Type WIPE to confirm"
+                className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48"
+              />
+              <button
+                type="submit"
+                disabled={!selectedUserId || wipingUser || wipeConfirmUser.trim().toUpperCase() !== "WIPE"}
+                className="px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {wipingUser ? "Wiping..." : "Wipe user inventory"}
+              </button>
+            </form>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Reset all inventory (server-wide)</h3>
+            <p className="text-white/40 text-sm mb-2">Clears all cards, credits, credit history, trivia attempts, marketplace listings, and trades. Users, weeks, winners, submissions, ratings, comments, and packs are not touched.</p>
+            <form onSubmit={handleWipeServer} className="flex flex-wrap gap-3 items-end">
+              <input
+                type="text"
+                value={wipeConfirmServer}
+                onChange={(e) => setWipeConfirmServer(e.target.value)}
+                placeholder="Type WIPE to confirm"
+                className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48"
+              />
+              <button
+                type="submit"
+                disabled={wipingServer || wipeConfirmServer.trim().toUpperCase() !== "WIPE"}
+                className="px-4 py-2.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {wipingServer ? "Resetting..." : "Reset all inventory"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <ImageCropModal
         open={showImagePickerForAdd}
