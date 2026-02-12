@@ -1,1 +1,100 @@
-[]
+[
+  {
+    "id": "cl-1770921747739-j0lhghv",
+    "userId": "1",
+    "amount": 10000,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 0
+    },
+    "createdAt": "2026-02-12T18:42:27.738Z"
+  },
+  {
+    "id": "cl-1770921828471-hyv5hef",
+    "userId": "1",
+    "amount": -21,
+    "reason": "marketplace_buy",
+    "metadata": {
+      "listingId": "lst-1770921803148-qvz4c87",
+      "cardId": "card-1770920723418-m69zo8o",
+      "sellerUserId": "2"
+    },
+    "createdAt": "2026-02-12T18:43:48.470Z"
+  },
+  {
+    "id": "cl-1770921828472-kivk5pb",
+    "userId": "2",
+    "amount": 21,
+    "reason": "marketplace_sale",
+    "metadata": {
+      "listingId": "lst-1770921803148-qvz4c87",
+      "cardId": "card-1770920723418-m69zo8o",
+      "buyerUserId": "1"
+    },
+    "createdAt": "2026-02-12T18:43:48.471Z"
+  },
+  {
+    "id": "cl-1770921996707-0qzd9xp",
+    "userId": "2",
+    "amount": -1,
+    "reason": "marketplace_buy",
+    "metadata": {
+      "listingId": "lst-1770921989539-6bxwj6y",
+      "cardId": "card-1770920723418-m69zo8o",
+      "sellerUserId": "1"
+    },
+    "createdAt": "2026-02-12T18:46:36.707Z"
+  },
+  {
+    "id": "cl-1770921996709-smxjiqa",
+    "userId": "1",
+    "amount": 1,
+    "reason": "marketplace_sale",
+    "metadata": {
+      "listingId": "lst-1770921989539-6bxwj6y",
+      "cardId": "card-1770920723418-m69zo8o",
+      "buyerUserId": "2"
+    },
+    "createdAt": "2026-02-12T18:46:36.708Z"
+  },
+  {
+    "id": "cl-1770922027433-ha2v92u",
+    "userId": "2",
+    "amount": 980,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 20
+    },
+    "createdAt": "2026-02-12T18:47:07.432Z"
+  },
+  {
+    "id": "cl-1770922034853-aqmn56z",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T18:47:14.853Z"
+  },
+  {
+    "id": "cl-1770922037041-6fm2nrk",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T18:47:17.040Z"
+  },
+  {
+    "id": "cl-1770922039003-zea09gk",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T18:47:19.002Z"
+  }
+]

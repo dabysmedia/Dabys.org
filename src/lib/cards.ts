@@ -504,6 +504,8 @@ export function getBadgesLostIfCardsRemoved(
   cardIds: string[]
 ): BadgeLossEntry[] {
   const cards = getCards(userId);
+  const completed = new Set(getCompletedWinnerIds(userId));
+  const completedHolo = new Set(getCompletedHoloWinnerIds(userId));
   const cardIdSet = new Set(cardIds);
   const toRemove = cardIds
     .map((id) => getCardById(id))
@@ -517,6 +519,10 @@ export function getBadgesLostIfCardsRemoved(
   for (const card of toRemove) {
     const winner = winners.find((w) => w.tmdbId === card.movieTmdbId);
     if (!winner || winner.tmdbId == null || seenWinner.has(winner.id)) continue;
+    // Only consider winners where the user currently has the badge unlocked
+    const hadNormal = completed.has(winner.id);
+    const hadHolo = completedHolo.has(winner.id);
+    if (!hadNormal && !hadHolo) continue;
     seenWinner.add(winner.id);
 
     const pool = getPoolEntriesForMovie(winner.tmdbId);
@@ -530,17 +536,21 @@ export function getBadgesLostIfCardsRemoved(
     );
 
     let wouldLoseNormal = false;
-    for (const id of required) {
-      if (!remainingChars.has(id)) {
-        wouldLoseNormal = true;
-        break;
+    if (hadNormal) {
+      for (const id of required) {
+        if (!remainingChars.has(id)) {
+          wouldLoseNormal = true;
+          break;
+        }
       }
     }
     let wouldLoseHolo = false;
-    for (const id of required) {
-      if (!remainingFoilChars.has(id)) {
-        wouldLoseHolo = true;
-        break;
+    if (hadHolo) {
+      for (const id of required) {
+        if (!remainingFoilChars.has(id)) {
+          wouldLoseHolo = true;
+          break;
+        }
       }
     }
 
