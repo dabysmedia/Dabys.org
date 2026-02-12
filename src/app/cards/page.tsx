@@ -292,6 +292,7 @@ export default function CardsPage() {
   const [badgeLossWarnings, setBadgeLossWarnings] = useState<{ movieTitle: string; isHolo: boolean }[] | null>(null);
   const [badgeLossOnConfirm, setBadgeLossOnConfirm] = useState<(() => void | Promise<void>) | null>(null);
   const [badgeLossIsListing, setBadgeLossIsListing] = useState(false);
+  const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
 
   const myListedCardIds = new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
@@ -412,6 +413,12 @@ export default function CardsPage() {
     rare: "border-purple-500/50 bg-white/[0.04]",
     epic: "border-amber-500/50 bg-white/[0.04]",
     legendary: "border-amber-500/60 bg-white/[0.04]",
+  };
+  const SLOT_FILLED_STYLE: Record<string, string> = {
+    uncommon: "border-green-500/50 bg-green-500/10 hover:border-green-500/70",
+    rare: "border-blue-500/50 bg-blue-500/10 hover:border-blue-500/70",
+    epic: "border-purple-500/50 bg-purple-500/10 hover:border-purple-500/70",
+    legendary: "border-amber-500/50 bg-amber-500/10 hover:border-amber-500/70",
   };
   const tradeUpCardIds = tradeUpSlots.filter((id): id is string => id != null);
   const tradeUpCards = cards.filter((c) => c.id && tradeUpCardIds.includes(c.id));
@@ -807,11 +814,54 @@ export default function CardsPage() {
       <Header />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white/90 mb-2">Cards</h1>
-          <p className="text-white/50 text-sm">
-            Buy packs, manage your collection, trade on the marketplace, and play trivia to earn credits.
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white/90 mb-2">Cards</h1>
+            <p className="text-white/50 text-sm">
+              Buy packs, manage your collection, trade on the marketplace, and play trivia to earn credits.
+            </p>
+          </div>
+          <div className="relative flex-shrink-0 group self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setTcgInfoExpanded((prev) => !prev)}
+              className="flex items-center justify-center w-8 h-8 rounded-full border border-amber-400/50 bg-amber-500/20 text-amber-300 shadow-sm hover:border-amber-300 hover:bg-amber-500/30 hover:text-amber-200 hover:scale-110 transition-all duration-200 cursor-pointer"
+              aria-label="How the TCG works"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+              </svg>
+            </button>
+            <div
+              className={`absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-white/20 bg-white/[0.08] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-4 text-left transition-all duration-200 pointer-events-none group-hover:pointer-events-auto ${
+                tcgInfoExpanded ? "visible opacity-100 pointer-events-auto" : "invisible opacity-0 group-hover:visible group-hover:opacity-100"
+              }`}
+              role="tooltip"
+            >
+              <p className="text-sm font-semibold text-amber-300 mb-2">How the TCG works</p>
+              <p className="text-xs text-white/70 leading-relaxed mb-2">
+                Collect character cards from winning movies. Buy packs with credits, trade up duplicates for rarer cards, and buy or sell on the marketplace.
+              </p>
+              <p className="text-xs text-white/70 leading-relaxed mb-2">
+                This is a <strong className="text-amber-300/95">user-driven economy</strong>—prices and value are set by the community.
+              </p>
+              <p className="text-xs text-white/70 leading-relaxed mb-2">
+                Chase a <strong className="text-amber-300/95">badge</strong> (show off a winning movie on your profile) or build your <strong className="text-amber-300/95">collection</strong>.
+              </p>
+              <p className="text-xs text-white/50 leading-relaxed">
+                New cards are added weekly from winning movies.
+              </p>
+              {tcgInfoExpanded && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setTcgInfoExpanded(false); }}
+                  className="mt-3 text-[10px] text-amber-300/80 hover:text-amber-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* In-page tabs */}
@@ -1045,45 +1095,43 @@ export default function CardsPage() {
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {/* Input slots - 5 cards */}
                 <div className="flex gap-2">
-                  {tradeUpSlots.map((cardId, i) => (
-                    <div
-                      key={`${cardId ?? "empty"}-${i}`}
-                      className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                        cardId
-                          ? "border-amber-400/50 bg-amber-500/10 hover:border-amber-400/70 tradeup-slot-pop"
-                          : currentRarity ? SLOT_EMPTY_STYLE[currentRarity] ?? SLOT_EMPTY_STYLE.uncommon : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
-                      }`}
-                      onClick={() => cardId && removeFromTradeUpSlot(cardId)}
-                    >
-                      {cardId ? (
-                        <div className="w-full h-full relative group bg-black/20">
-                          {(() => {
-                            const c = cards.find((x) => x.id === cardId);
-                            if (!c) return null;
-                            return (
-                              <>
-                                {c.profilePath ? (
-                                  <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
-                                    {(c.actorName || "?")[0]}
-                                  </div>
-                                )}
-                                <span className="absolute bottom-0 left-0 right-0 text-[8px] font-medium uppercase py-0.5 text-center bg-black/70 text-amber-400/90">
-                                  {c.rarity}
-                                </span>
-                                <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-400 text-[10px] font-medium transition-opacity text-center px-1">
-                                  Click to remove
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-white/40 text-center px-1">Empty</span>
-                      )}
-                    </div>
-                  ))}
+                  {tradeUpSlots.map((cardId, i) => {
+                    const slotCard = cardId ? cards.find((x) => x.id === cardId) : null;
+                    const filledStyle = slotCard?.rarity ? (SLOT_FILLED_STYLE[slotCard.rarity] ?? SLOT_FILLED_STYLE.uncommon) : "";
+                    return (
+                      <div
+                        key={`${cardId ?? "empty"}-${i}`}
+                        className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                          cardId
+                            ? `group ${filledStyle} tradeup-slot-pop`
+                            : currentRarity ? SLOT_EMPTY_STYLE[currentRarity] ?? SLOT_EMPTY_STYLE.uncommon : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
+                        }`}
+                        onClick={() => cardId && removeFromTradeUpSlot(cardId)}
+                      >
+                        {cardId ? (
+                          <div className="w-full h-full relative bg-black/20 transition-all duration-200 group-hover:opacity-60 group-hover:grayscale">
+                            {(() => {
+                              const c = slotCard;
+                              if (!c) return null;
+                              return (
+                                <>
+                                  {c.profilePath ? (
+                                    <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                                      {(c.actorName || "?")[0]}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-white/40 text-center px-1">Empty</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 {/* Arrow */}
                 <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">

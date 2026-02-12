@@ -117,12 +117,12 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
           {!compact && (
             <div className="absolute inset-x-0 bottom-0 z-10 card-nameplate">
               {/* Rarity badge — sits just above character name */}
-              <span className={`inline-flex items-center gap-1 mb-1 ${rarityBadgeClass}`}>
-                <svg className="w-2.5 h-2.5 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24">
+              <span className={`inline-flex items-center gap-0.5 mb-1 ${rarityBadgeClass}`}>
+                <svg className="w-2 h-2 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
                 <span
-                  className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase bg-black/50 backdrop-blur-sm"
+                  className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium uppercase bg-black/50 backdrop-blur-sm leading-none"
                   style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
                 >
                   {card.rarity}
