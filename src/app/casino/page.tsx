@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 
@@ -18,6 +18,8 @@ function CasinoContent() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [blackjackLastResult, setBlackjackLastResult] = useState<{ result: string; payout: number; netChange: number } | null>(null);
+  const [blackjackResultFading, setBlackjackResultFading] = useState(false);
 
   const gameParam = searchParams.get("game") as GameTab | null;
   const activeTab: GameTab =
@@ -26,6 +28,27 @@ function CasinoContent() {
   const setTab = (tab: GameTab) => {
     router.replace(`/casino?game=${tab}`, { scroll: false });
   };
+
+  useEffect(() => {
+    if (!blackjackLastResult) {
+      setBlackjackResultFading(false);
+      return;
+    }
+    setBlackjackResultFading(false);
+    const fadeAt = setTimeout(() => setBlackjackResultFading(true), 2500);
+    const clearAt = setTimeout(() => {
+      setBlackjackLastResult(null);
+      setBlackjackResultFading(false);
+    }, 3000);
+    return () => {
+      clearTimeout(fadeAt);
+      clearTimeout(clearAt);
+    };
+  }, [blackjackLastResult]);
+
+  useEffect(() => {
+    if (activeTab !== "blackjack") setBlackjackLastResult(null);
+  }, [activeTab]);
 
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
@@ -108,14 +131,6 @@ function CasinoContent() {
                 </button>
               ))}
             </div>
-            {/* Credit balance */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl text-sky-200 shrink-0">
-              <svg className="w-4 h-4 text-sky-300/70 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="tabular-nums font-semibold text-sm">{creditBalance}</span>
-              <span className="text-sky-300/50 text-[11px]">credits</span>
-            </div>
           </div>
         </div>
 
@@ -125,7 +140,12 @@ function CasinoContent() {
             <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
           )}
           {activeTab === "blackjack" && (
-            <BlackjackGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+            <BlackjackGame
+              userId={user.id}
+              balance={creditBalance}
+              onCreditsChange={refreshCredits}
+              onResult={setBlackjackLastResult}
+            />
           )}
           {activeTab === "roulette" && (
             <RouletteGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
@@ -134,6 +154,27 @@ function CasinoContent() {
             <DabysBetsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
           )}
         </div>
+
+        {/* Blackjack result — outside container, same visual position, fades after 3s */}
+        {activeTab === "blackjack" && blackjackLastResult && (
+          <div
+            className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl transition-opacity duration-500 ${
+              blackjackResultFading ? "opacity-0" : "opacity-100"
+            } ${
+              blackjackLastResult.result === "win"
+                ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-200"
+                : blackjackLastResult.result === "push"
+                  ? "bg-white/[0.06] border-white/[0.12] text-white/70"
+                  : "bg-red-500/15 border-red-400/30 text-red-200"
+            }`}
+          >
+            {blackjackLastResult.result === "win" && (
+              <p className="font-medium text-sm">You won {blackjackLastResult.payout} credits!</p>
+            )}
+            {blackjackLastResult.result === "push" && <p className="text-sm">Push — bet returned</p>}
+            {blackjackLastResult.result === "loss" && <p className="text-sm">Dealer wins</p>}
+          </div>
+        )}
       </main>
     </div>
   );
@@ -141,6 +182,26 @@ function CasinoContent() {
 
 const SLOT_BETS = [5, 10, 25, 50, 100];
 const SLOT_SYMBOLS = ["7", "BAR", "cherry", "star", "bell"];
+
+const SLOT_ICONS: Record<string, string> = {
+  "7": "7️⃣",
+  BAR: "BAR",
+  cherry: "🍒",
+  star: "⭐",
+  bell: "🔔",
+};
+
+function slotIcon(symbol: string): string {
+  if (!symbol || symbol === "—") return "—";
+  return SLOT_ICONS[symbol] ?? symbol;
+}
+
+const SPIN_TICK_MS = 80;
+const REEL_STOP_DELAY_MS = 400;
+
+function pickRandomSymbol() {
+  return SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)];
+}
 
 function SlotsGame({
   userId,
@@ -154,13 +215,26 @@ function SlotsGame({
   const [bet, setBet] = useState(10);
   const [spinning, setSpinning] = useState(false);
   const [symbols, setSymbols] = useState<string[] | null>(null);
+  const [finalSymbols, setFinalSymbols] = useState<string[] | null>(null);
+  const [reelsStopped, setReelsStopped] = useState(0);
+  const [spinDisplaySymbols, setSpinDisplaySymbols] = useState<string[]>(["—", "—", "—"]);
   const [lastResult, setLastResult] = useState<{ win: boolean; payout: number; netChange: number } | null>(null);
+  const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const reelsStoppedRef = useRef(0);
 
   async function handleSpin() {
     if (spinning || balance < bet) return;
     setSpinning(true);
     setLastResult(null);
     setSymbols(null);
+    setFinalSymbols(null);
+    setReelsStopped(0);
+    reelsStoppedRef.current = 0;
+    setSpinDisplaySymbols([pickRandomSymbol(), pickRandomSymbol(), pickRandomSymbol()]);
+
+    const finalResultRef = { symbols: [] as string[], win: false, payout: 0, netChange: 0 };
+
     try {
       const res = await fetch("/api/casino/slots", {
         method: "POST",
@@ -173,19 +247,57 @@ function SlotsGame({
         setSpinning(false);
         return;
       }
-      setSymbols(data.symbols);
-      setLastResult({
-        win: data.win,
-        payout: data.payout,
-        netChange: data.netChange,
-      });
-      onCreditsChange(data.netChange);
+      finalResultRef.symbols = data.symbols;
+      finalResultRef.win = data.win;
+      finalResultRef.payout = data.payout;
+      finalResultRef.netChange = data.netChange;
+      setFinalSymbols(data.symbols);
     } catch {
       alert("Something went wrong");
-    } finally {
       setSpinning(false);
+      return;
+    }
+
+    spinIntervalRef.current = setInterval(() => {
+      const stopped = reelsStoppedRef.current;
+      setSpinDisplaySymbols([
+        stopped > 0 ? finalResultRef.symbols[0] : pickRandomSymbol(),
+        stopped > 1 ? finalResultRef.symbols[1] : pickRandomSymbol(),
+        stopped > 2 ? finalResultRef.symbols[2] : pickRandomSymbol(),
+      ]);
+    }, SPIN_TICK_MS);
+
+    stopTimeoutsRef.current = [];
+    for (let i = 0; i < 3; i++) {
+      const t = setTimeout(() => {
+        reelsStoppedRef.current = i + 1;
+        setReelsStopped(i + 1);
+        if (i >= 2) {
+          if (spinIntervalRef.current) {
+            clearInterval(spinIntervalRef.current);
+            spinIntervalRef.current = null;
+          }
+          setSymbols(finalResultRef.symbols);
+          setSpinDisplaySymbols(finalResultRef.symbols);
+          setLastResult({
+            win: finalResultRef.win,
+            payout: finalResultRef.payout,
+            netChange: finalResultRef.netChange,
+          });
+          onCreditsChange(finalResultRef.netChange);
+          setSpinning(false);
+        }
+      }, REEL_STOP_DELAY_MS * (i + 1));
+      stopTimeoutsRef.current.push(t);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (spinIntervalRef.current) clearInterval(spinIntervalRef.current);
+      stopTimeoutsRef.current.forEach((t) => clearTimeout(t));
+    };
+  }, []);
 
   return (
     <div>
@@ -198,13 +310,9 @@ function SlotsGame({
             key={i}
             className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden"
           >
-            {spinning ? (
-              <span className="animate-pulse text-white/50">?</span>
-            ) : symbols ? (
-              <span className="capitalize">{symbols[i]}</span>
-            ) : (
-              <span className="text-white/25">—</span>
-            )}
+            <span className={`capitalize ${spinning ? "opacity-90" : ""}`}>
+              {slotIcon((spinning ? spinDisplaySymbols : symbols)?.[i] ?? "—")}
+            </span>
           </div>
         ))}
       </div>
@@ -262,13 +370,16 @@ function SlotsGame({
   );
 }
 
-function renderCard(c: { suit: string; rank: string }, idx: number) {
+const CARD_FLIP_DELAY_MS = 120;
+
+function renderCard(c: { suit: string; rank: string }, idx: number, cardKey?: string) {
   const isHidden = c.suit === "?" && c.rank === "?";
   const color = c.suit === "♥" || c.suit === "♦" ? "text-red-400" : "text-white/90";
   return (
     <div
-      key={idx}
-      className={`w-11 h-14 sm:w-12 sm:h-16 rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-xs sm:text-sm font-bold ${color}`}
+      key={cardKey ?? idx}
+      className={`card-reveal w-14 h-20 sm:w-20 sm:h-28 rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-base sm:text-lg font-bold [transform-style:preserve-3d] ${color}`}
+      style={{ animationDelay: `${idx * CARD_FLIP_DELAY_MS}ms` }}
     >
       {isHidden ? "?" : `${c.rank}${c.suit}`}
     </div>
@@ -279,10 +390,12 @@ function BlackjackGame({
   userId,
   balance,
   onCreditsChange,
+  onResult,
 }: {
   userId: string;
   balance: number;
   onCreditsChange: (delta?: number) => void;
+  onResult: (r: { result: string; payout: number; netChange: number } | null) => void;
 }) {
   const [bet, setBet] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -291,7 +404,7 @@ function BlackjackGame({
   const [dealerHand, setDealerHand] = useState<{ suit: string; rank: string }[]>([]);
   const [playerValue, setPlayerValue] = useState(0);
   const [dealerValue, setDealerValue] = useState(0);
-  const [lastResult, setLastResult] = useState<{ result: string; payout: number; netChange: number } | null>(null);
+  const [dealKey, setDealKey] = useState(0);
 
   async function loadSession() {
     try {
@@ -307,7 +420,7 @@ function BlackjackGame({
         setSession(null);
         setPlayerHand([]);
         setDealerHand([]);
-        setLastResult(null);
+        onResult(null);
       }
     } catch {
       setSession(null);
@@ -321,7 +434,7 @@ function BlackjackGame({
   async function handleAction(action: "deal" | "hit" | "stand") {
     if (loading) return;
     setLoading(true);
-    setLastResult(null);
+    if (action === "deal") onResult(null);
     try {
       const body: Record<string, unknown> = { userId, action };
       if (action === "deal") body.bet = bet;
@@ -341,8 +454,9 @@ function BlackjackGame({
       setDealerHand(data.dealerHand || []);
       setPlayerValue(data.playerValue ?? 0);
       setDealerValue(data.dealerValue ?? 0);
+      if (action === "deal") setDealKey((k) => k + 1);
       if (data.result !== null && data.result !== undefined) {
-        setLastResult({
+        onResult({
           result: data.result,
           payout: data.payout ?? 0,
           netChange: data.netChange ?? 0,
@@ -362,50 +476,49 @@ function BlackjackGame({
 
       {/* Dealer hand */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-5">
-        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Dealer</p>
-        <div className="flex gap-2 flex-wrap min-h-[4rem]">
-          {dealerHand.map((c, i) => renderCard(c, i))}
+        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3 text-center">Dealer</p>
+        <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
+          {dealerHand.map((c, i) => renderCard(c, i, `d-${dealKey}-${i}`))}
         </div>
         {dealerValue > 0 && (
-          <p className="text-white/50 text-xs mt-2 tabular-nums">Value: {dealerValue}</p>
+          <p className="text-white/50 text-xs mt-2 tabular-nums text-center">Value: {dealerValue}</p>
         )}
       </div>
 
       {/* Player hand */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-6">
-        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3">Your hand</p>
-        <div className="flex gap-2 flex-wrap min-h-[4rem]">
-          {playerHand.map((c, i) => renderCard(c, i))}
+        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3 text-center">Your hand</p>
+        <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
+          {playerHand.map((c, i) => renderCard(c, i, `p-${dealKey}-${i}`))}
         </div>
         {playerValue > 0 && (
-          <p className="text-white/50 text-xs mt-2 tabular-nums">Value: {playerValue}</p>
+          <p className="text-white/50 text-xs mt-2 tabular-nums text-center">Value: {playerValue}</p>
         )}
       </div>
 
-      {/* Controls */}
+      {/* Controls — single row to prevent container resize */}
+      <div className="flex justify-center items-center gap-3 min-h-[44px]">
       {!session ? (
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-full max-w-[120px]">
-            <label className="block text-[11px] uppercase tracking-wider text-white/40 mb-1.5">Bet</label>
-            <input
-              type="number"
-              min={5}
-              max={500}
-              value={bet}
-              onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
-              className="w-full bg-white/[0.06] border border-white/[0.1] rounded-lg px-4 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
-            />
-          </div>
+        <>
+          <input
+            type="number"
+            min={5}
+            max={500}
+            value={bet}
+            onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
+            className="w-16 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+            title="Bet"
+          />
           <button
             onClick={() => handleAction("deal")}
             disabled={loading || balance < bet}
-            className="min-w-[120px] px-8 py-3 rounded-xl text-sm font-semibold bg-white/12 border border-white/20 text-white hover:bg-white/18 backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/12 border border-white/20 text-white hover:bg-white/18 backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? "…" : "Deal"}
           </button>
-        </div>
+        </>
       ) : (
-        <div className="flex justify-center gap-3">
+        <>
           <button
             onClick={() => handleAction("hit")}
             disabled={loading || playerValue >= 21}
@@ -420,27 +533,9 @@ function BlackjackGame({
           >
             Stand
           </button>
-        </div>
+        </>
       )}
-
-      {/* Result */}
-      {lastResult && (
-        <div
-          className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
-            lastResult.result === "win"
-              ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-200"
-              : lastResult.result === "push"
-                ? "bg-white/[0.06] border-white/[0.12] text-white/70"
-                : "bg-red-500/15 border-red-400/30 text-red-200"
-          }`}
-        >
-          {lastResult.result === "win" && (
-            <p className="font-medium text-sm">You won {lastResult.payout} credits!</p>
-          )}
-          {lastResult.result === "push" && <p className="text-sm">Push — bet returned</p>}
-          {lastResult.result === "loss" && <p className="text-sm">Dealer wins</p>}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

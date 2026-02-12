@@ -724,5 +724,473 @@
       "bet": 10
     },
     "createdAt": "2026-02-12T20:15:36.550Z"
+  },
+  {
+    "id": "cl-1770927581226-6kc6wvg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_dabys_bets",
+    "metadata": {
+      "eventId": "evt-1770927572988-l8nzeb3",
+      "side": "A",
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:19:41.225Z"
+  },
+  {
+    "id": "cl-1770927581227-78kmbxh",
+    "userId": "2",
+    "amount": 19,
+    "reason": "casino_dabys_bets_win",
+    "metadata": {
+      "eventId": "evt-1770927572988-l8nzeb3",
+      "side": "A",
+      "bet": 10,
+      "winner": "A",
+      "payout": 19
+    },
+    "createdAt": "2026-02-12T20:19:41.226Z"
+  },
+  {
+    "id": "cl-1770927585883-ygzx6fw",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_dabys_bets",
+    "metadata": {
+      "eventId": "evt-1770927572988-l8nzeb3",
+      "side": "B",
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:19:45.882Z"
+  },
+  {
+    "id": "cl-1770927585884-hcrviuk",
+    "userId": "2",
+    "amount": 19,
+    "reason": "casino_dabys_bets_win",
+    "metadata": {
+      "eventId": "evt-1770927572988-l8nzeb3",
+      "side": "B",
+      "bet": 10,
+      "winner": "B",
+      "payout": 19
+    },
+    "createdAt": "2026-02-12T20:19:45.884Z"
+  },
+  {
+    "id": "cl-1770927586718-pe193bx",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_dabys_bets",
+    "metadata": {
+      "eventId": "evt-1770927572988-l8nzeb3",
+      "side": "A",
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:19:46.717Z"
+  },
+  {
+    "id": "cl-1770927677497-19o26b7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:21:17.497Z"
+  },
+  {
+    "id": "cl-1770927682039-j832dpr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:21:22.037Z"
+  },
+  {
+    "id": "cl-1770927698202-spgzwbb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:21:38.201Z"
+  },
+  {
+    "id": "cl-1770927706220-fd8k020",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:21:46.219Z"
+  },
+  {
+    "id": "cl-1770927743943-zj60kgh",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:22:23.942Z"
+  },
+  {
+    "id": "cl-1770927768353-krnefs8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:22:48.352Z"
+  },
+  {
+    "id": "cl-1770927768354-avwpqan",
+    "userId": "2",
+    "amount": 150,
+    "reason": "casino_slots_win",
+    "metadata": {
+      "bet": 10,
+      "symbols": [
+        "star",
+        "star",
+        "star"
+      ],
+      "payout": 150
+    },
+    "createdAt": "2026-02-12T20:22:48.354Z"
+  },
+  {
+    "id": "cl-1770927890548-h1pg6aq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:24:50.547Z"
+  },
+  {
+    "id": "cl-1770927895037-g9c3nt7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:24:55.036Z"
+  },
+  {
+    "id": "cl-1770927982054-963jww0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:26:22.053Z"
+  },
+  {
+    "id": "cl-1770928172122-7omeusw",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:29:32.122Z"
+  },
+  {
+    "id": "cl-1770928273442-3q1whw2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:31:13.441Z"
+  },
+  {
+    "id": "cl-1770928304606-hvw8wk6",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:31:44.605Z"
+  },
+  {
+    "id": "cl-1770928306456-ybxktcl",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:31:46.455Z"
+  },
+  {
+    "id": "cl-1770928376071-ey0x1di",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:32:56.070Z"
+  },
+  {
+    "id": "cl-1770928379179-sd7ibd7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:32:59.178Z"
+  },
+  {
+    "id": "cl-1770928381779-ihkf7ds",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:33:01.779Z"
+  },
+  {
+    "id": "cl-1770928384934-d1oi460",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:33:04.934Z"
+  },
+  {
+    "id": "cl-1770928386641-6erguau",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:33:06.641Z"
+  },
+  {
+    "id": "cl-1770928388602-4vgkl89",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:33:08.601Z"
+  },
+  {
+    "id": "cl-1770928390571-gyjpkm2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:33:10.570Z"
+  },
+  {
+    "id": "cl-1770928521367-0vymgko",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:35:21.366Z"
+  },
+  {
+    "id": "cl-1770928602763-klecq1p",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:36:42.763Z"
+  },
+  {
+    "id": "cl-1770928605306-mas4q80",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T20:36:45.305Z"
+  },
+  {
+    "id": "cl-1770928678013-muyamme",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:37:58.012Z"
+  },
+  {
+    "id": "cl-1770928680943-8u2m018",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:38:00.942Z"
+  },
+  {
+    "id": "cl-1770928684056-wfm88a3",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T20:38:04.055Z"
+  },
+  {
+    "id": "cl-1770928737466-uyvjofl",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:38:57.465Z"
+  },
+  {
+    "id": "cl-1770928739045-vjdbb6r",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T20:38:59.044Z"
+  },
+  {
+    "id": "cl-1770928740786-h2738dt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:39:00.785Z"
+  },
+  {
+    "id": "cl-1770928794009-d39f8ky",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:39:54.008Z"
+  },
+  {
+    "id": "cl-1770928890399-m4mf5m5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:41:30.398Z"
+  },
+  {
+    "id": "cl-1770928892291-prmfkxi",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:41:32.290Z"
+  },
+  {
+    "id": "cl-1770928894122-hlyvza8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:41:34.122Z"
+  },
+  {
+    "id": "cl-1770928895244-gt56tcj",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:41:35.243Z"
+  },
+  {
+    "id": "cl-1770929026258-vmijbeu",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-12T20:43:46.258Z"
+  },
+  {
+    "id": "cl-1770929027702-ah94vpp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:43:47.702Z"
+  },
+  {
+    "id": "cl-1770929150593-i2urzl4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:45:50.592Z"
+  },
+  {
+    "id": "cl-1770929153871-uco811z",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-12T20:45:53.870Z"
   }
 ]
