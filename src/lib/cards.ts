@@ -204,9 +204,9 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-/** Drop chances: legendary 1%, epic 10%, rare 25%, uncommon 64%. Pick uniformly within tier. */
+/** Drop chances: legendary 1%, epic 5%, rare 20%, uncommon 74%. Pick uniformly within tier. */
 const DROP_TIERS = ["legendary", "epic", "rare", "uncommon"] as const;
-const DROP_CUMULATIVE = [0.01, 0.11, 0.36, 1] as const;
+const DROP_CUMULATIVE = [0.01, 0.06, 0.26, 1] as const;
 
 function tierPick(
   pool: CharacterPortrayal[],
