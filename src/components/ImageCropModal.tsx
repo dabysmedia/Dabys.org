@@ -76,10 +76,9 @@ export default function ImageCropModal({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [tab, setTab] = useState<"upload" | "url" | "paste">("upload");
+  const [tab, setTab] = useState<"paste" | "url">("paste");
   const [urlInput, setUrlInput] = useState("");
   const [urlError, setUrlError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const pasteAreaRef = useRef<HTMLDivElement>(null);
 
   // Reset state when modal opens/closes
@@ -90,11 +89,18 @@ export default function ImageCropModal({
       setZoom(1);
       setCroppedAreaPixels(null);
       setUploading(false);
-      setTab("upload");
+      setTab("paste");
       setUrlInput("");
       setUrlError("");
     }
   }, [open]);
+
+  // Focus paste area when Paste tab is selected so Ctrl+V works
+  useEffect(() => {
+    if (open && tab === "paste" && pasteAreaRef.current) {
+      pasteAreaRef.current.focus();
+    }
+  }, [open, tab]);
 
   // Listen for paste events when modal is open
   useEffect(() => {
@@ -124,14 +130,6 @@ export default function ImageCropModal({
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setImageSrc(reader.result as string);
-    reader.readAsDataURL(file);
-  }
 
   function handleLoadUrl() {
     const url = urlInput.trim();
@@ -248,9 +246,8 @@ export default function ImageCropModal({
             {/* Tabs */}
             <div className="flex gap-1 mb-4 p-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
               {([
-                { key: "upload" as const, label: "Upload File" },
-                { key: "url" as const, label: "Paste URL" },
                 { key: "paste" as const, label: "Paste Image" },
+                { key: "url" as const, label: "Paste URL" },
               ]).map((t) => (
                 <button
                   key={t.key}
@@ -266,24 +263,18 @@ export default function ImageCropModal({
               ))}
             </div>
 
-            {/* Upload tab */}
-            {tab === "upload" && (
+            {/* Paste tab */}
+            {tab === "paste" && (
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-3 py-12 rounded-xl border-2 border-dashed border-white/10 hover:border-purple-500/30 bg-white/[0.01] hover:bg-purple-500/[0.02] transition-all cursor-pointer"
+                ref={pasteAreaRef}
+                tabIndex={0}
+                className="flex flex-col items-center justify-center gap-3 py-12 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.01] focus:border-purple-500/30 focus:bg-purple-500/[0.02] transition-all outline-none"
               >
                 <svg className="w-10 h-10 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
                 </svg>
-                <p className="text-sm text-white/30">Click to choose a file</p>
-                <p className="text-[11px] text-white/15">JPG, PNG, WebP &middot; Max 10MB</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
+                <p className="text-sm text-white/30">Press <kbd className="px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.04] text-[11px] font-mono text-white/50">Ctrl+V</kbd> to paste an image</p>
+                <p className="text-[11px] text-white/15">Copy an image to your clipboard first</p>
               </div>
             )}
 
@@ -309,21 +300,6 @@ export default function ImageCropModal({
                 </div>
                 {urlError && <p className="text-xs text-red-400/70">{urlError}</p>}
                 <p className="text-[11px] text-white/20">Paste a direct image URL and click Load</p>
-              </div>
-            )}
-
-            {/* Paste tab */}
-            {tab === "paste" && (
-              <div
-                ref={pasteAreaRef}
-                tabIndex={0}
-                className="flex flex-col items-center justify-center gap-3 py-12 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.01] focus:border-purple-500/30 focus:bg-purple-500/[0.02] transition-all outline-none"
-              >
-                <svg className="w-10 h-10 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                </svg>
-                <p className="text-sm text-white/30">Press <kbd className="px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.04] text-[11px] font-mono text-white/50">Ctrl+V</kbd> to paste an image</p>
-                <p className="text-[11px] text-white/15">Copy an image to your clipboard first</p>
               </div>
             )}
           </div>

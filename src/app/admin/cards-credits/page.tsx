@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ImageCropModal from "@/components/ImageCropModal";
+import { CardDisplay } from "@/components/CardDisplay";
 
 interface User {
   id: string;
@@ -62,34 +64,19 @@ function PoolEntryCard({
   onRemove: () => void;
   removingFromPoolId: string | null;
 }) {
-  const { title, subtitle } = poolEntryLabelLines(c);
-  const imgUrl = c.profilePath?.trim();
+  const card = {
+    profilePath: c.profilePath ?? "",
+    actorName: c.actorName,
+    characterName: c.characterName,
+    movieTitle: c.movieTitle,
+    rarity: c.rarity,
+    isFoil: false,
+    cardType: c.cardType,
+  };
   return (
-    <div
-      className={`group relative rounded-lg border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[c.rarity] || RARITY_COLORS.uncommon} ${c.characterId.startsWith("custom-") ? "ring-1 ring-green-500/30" : ""}`}
-    >
-      <div className="aspect-[2/3] relative">
-        {imgUrl ? (
-          <img src={imgUrl} alt={title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white/20 text-lg font-bold bg-white/5">
-            {title.charAt(0)}
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-        <span className="absolute bottom-0.5 left-0.5 right-0.5 text-[8px] font-medium uppercase text-amber-400/90 truncate">
-          {c.rarity}
-        </span>
-      </div>
-      <div className="p-1">
-        <p className="text-[10px] font-medium text-white/90 truncate" title={title}>
-          {title}
-        </p>
-        <p className="text-[9px] text-white/50 truncate" title={subtitle}>
-          {subtitle}
-        </p>
-      </div>
-      <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className={`relative group ${c.characterId.startsWith("custom-") ? "ring-1 ring-green-500/30 rounded-xl" : ""}`}>
+      <CardDisplay card={card} compact={true} />
+      <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <button
           onClick={onEdit}
           className="w-5 h-5 rounded bg-purple-500/80 text-white text-xs hover:bg-purple-500 flex items-center justify-center"
@@ -159,8 +146,42 @@ export default function AdminCardsCreditsPage() {
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [rebuildConfirmInput, setRebuildConfirmInput] = useState("");
   const [poolSort, setPoolSort] = useState<"rarity" | "movie">("rarity");
+  const [showImagePickerForAdd, setShowImagePickerForAdd] = useState(false);
+  const [showImagePickerForEdit, setShowImagePickerForEdit] = useState(false);
+  const [pastingImage, setPastingImage] = useState(false);
 
   const REBUILD_CONFIRM_WORD = "rebuild";
+
+  // Paste image directly in form (when modal is closed)
+  useEffect(() => {
+    if (showImagePickerForAdd || showImagePickerForEdit) return;
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+          setPastingImage(true);
+          const formData = new FormData();
+          formData.append("file", file);
+          fetch("/api/upload", { method: "POST", body: formData })
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.url) {
+                if (editingPoolEntry) setPoolEditForm((f) => ({ ...f, profilePath: data.url }));
+                else setCustomProfilePath(data.url);
+              }
+            })
+            .finally(() => setPastingImage(false));
+          return;
+        }
+      }
+    }
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [showImagePickerForAdd, showImagePickerForEdit, editingPoolEntry]);
 
   const loadPool = useCallback(async () => {
     setPoolLoading(true);
@@ -607,15 +628,24 @@ export default function AdminCardsCreditsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-white/40 mb-1">Image URL *</label>
-                <input
-                  type="url"
-                  value={customProfilePath}
-                  onChange={(e) => setCustomProfilePath(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
-                  placeholder="https://image.tmdb.org/t/p/w500/..."
-                  required
-                />
+                <label className="block text-xs text-white/40 mb-1">Image *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customProfilePath}
+                    onChange={(e) => setCustomProfilePath(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                    placeholder="URL, or paste image (Ctrl+V) / click button"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowImagePickerForAdd(true)}
+                    disabled={pastingImage}
+                    className="px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {pastingImage ? "Uploading..." : "Upload or paste"}
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-3">
                 <div>
@@ -1082,13 +1112,24 @@ export default function AdminCardsCreditsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">Image URL</label>
-                  <input
-                    type="url"
-                    value={poolEditForm.profilePath ?? ""}
-                    onChange={(e) => setPoolEditForm((f) => ({ ...f, profilePath: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
-                  />
+                  <label className="block text-xs text-white/40 mb-1">Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={poolEditForm.profilePath ?? ""}
+                      onChange={(e) => setPoolEditForm((f) => ({ ...f, profilePath: e.target.value }))}
+                      className="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                      placeholder="URL, or paste image (Ctrl+V) / click button"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowImagePickerForEdit(true)}
+                      disabled={pastingImage}
+                      className="px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {pastingImage ? "Uploading..." : "Upload or paste"}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <div>
@@ -1149,6 +1190,29 @@ export default function AdminCardsCreditsPage() {
           </div>
         </>
       )}
+
+      <ImageCropModal
+        open={showImagePickerForAdd}
+        onClose={() => setShowImagePickerForAdd(false)}
+        onComplete={(url) => {
+          setCustomProfilePath(url);
+          setShowImagePickerForAdd(false);
+        }}
+        aspect={2 / 3}
+        title="Card art"
+        cropShape="rect"
+      />
+      <ImageCropModal
+        open={showImagePickerForEdit}
+        onClose={() => setShowImagePickerForEdit(false)}
+        onComplete={(url) => {
+          setPoolEditForm((f) => ({ ...f, profilePath: url }));
+          setShowImagePickerForEdit(false);
+        }}
+        aspect={2 / 3}
+        title="Card art"
+        cropShape="rect"
+      />
     </div>
   );
 }
