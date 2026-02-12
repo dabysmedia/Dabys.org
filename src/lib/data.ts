@@ -260,6 +260,9 @@ export interface WheelData {
   winnerIndex: number | null;   // which segment won
   fullSpins: number | null;     // number of full rotations (for consistent animation)
   duration: number | null;      // animation duration in ms
+  // After confirm: keep result/position visible for all until next spin
+  lastConfirmedResult?: string | null;
+  lastConfirmedAt?: string | null;
 }
 
 export function getWheel(): WheelData {
@@ -286,4 +289,68 @@ export function getWheelHistory(): WheelHistoryEntry[] {
 
 export function saveWheelHistory(history: WheelHistoryEntry[]) {
   writeJson("wheelHistory.json", history);
+}
+
+// ──── Watchlist (per-user: movies to suggest in the future) ────
+export interface WatchlistItem {
+  id: string;
+  userId: string;
+  tmdbId: number;
+  movieTitle: string;
+  posterUrl: string;
+  letterboxdUrl: string;
+  year?: string;
+  addedAt: string; // ISO
+}
+
+function getWatchlistRaw(): WatchlistItem[] {
+  try {
+    return readJson<WatchlistItem[]>("watchlist.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveWatchlistRaw(items: WatchlistItem[]) {
+  writeJson("watchlist.json", items);
+}
+
+export function getWatchlist(userId: string): WatchlistItem[] {
+  return getWatchlistRaw()
+    .filter((w) => w.userId === userId)
+    .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+}
+
+export function addWatchlistItem(
+  userId: string,
+  item: Omit<WatchlistItem, "id" | "userId" | "addedAt">
+): WatchlistItem {
+  const raw = getWatchlistRaw();
+  const existing = raw.find(
+    (w) => w.userId === userId && w.tmdbId === item.tmdbId
+  );
+  if (existing) return existing;
+
+  const newItem: WatchlistItem = {
+    id: `wl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    tmdbId: item.tmdbId,
+    movieTitle: item.movieTitle,
+    posterUrl: item.posterUrl,
+    letterboxdUrl: item.letterboxdUrl,
+    year: item.year,
+    addedAt: new Date().toISOString(),
+  };
+  raw.push(newItem);
+  saveWatchlistRaw(raw);
+  return newItem;
+}
+
+export function removeWatchlistItem(userId: string, tmdbId: number): boolean {
+  const raw = getWatchlistRaw();
+  const idx = raw.findIndex((w) => w.userId === userId && w.tmdbId === tmdbId);
+  if (idx < 0) return false;
+  raw.splice(idx, 1);
+  saveWatchlistRaw(raw);
+  return true;
 }

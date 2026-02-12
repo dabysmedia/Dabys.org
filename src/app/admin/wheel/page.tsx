@@ -7,6 +7,8 @@ interface WheelData {
   entries: string[];
   lastResult: string | null;
   lastSpunAt: string | null;
+  lastConfirmedResult?: string | null;
+  lastConfirmedAt?: string | null;
 }
 
 interface WheelHistoryEntry {
@@ -162,17 +164,21 @@ export default function AdminWheelPage() {
         )}
       </div>
 
-      {/* Last result (when showing current wheel) */}
-      {showView === "current" && wheel?.lastResult && (
+      {/* Last result / confirmed theme (when showing current wheel) */}
+      {showView === "current" && (wheel?.lastResult || wheel?.lastConfirmedResult) && (
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-5 mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-widest text-purple-400/50 mb-1">Current Result</p>
-              <p className="text-xl font-bold text-purple-300">{wheel.lastResult}</p>
+              <p className="text-xs uppercase tracking-widest text-purple-400/50 mb-1">
+                {wheel?.lastConfirmedResult ? "Confirmed theme" : "Current Result"}
+              </p>
+              <p className="text-xl font-bold text-purple-300">
+                {wheel?.lastResult || wheel?.lastConfirmedResult}
+              </p>
             </div>
-            {wheel.lastSpunAt && (
+            {(wheel?.lastSpunAt || wheel?.lastConfirmedAt) && (
               <p className="text-xs text-white/20">
-                {new Date(wheel.lastSpunAt).toLocaleString()}
+                {new Date(wheel?.lastSpunAt || wheel?.lastConfirmedAt || "").toLocaleString()}
               </p>
             )}
           </div>

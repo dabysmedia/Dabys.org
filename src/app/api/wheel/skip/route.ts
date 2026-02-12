@@ -45,6 +45,8 @@ export async function POST(request: Request) {
   wheel.spinStartedAt = null;
   wheel.fullSpins = null;
   wheel.duration = null;
+  wheel.lastConfirmedResult = null;
+  wheel.lastConfirmedAt = null;
   saveWheel(wheel);
 
   return NextResponse.json({ success: true, wheel });

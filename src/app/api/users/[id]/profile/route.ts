@@ -8,6 +8,7 @@ import {
   getRatings,
   getComments,
   getWeeks,
+  getWatchlist,
 } from "@/lib/data";
 
 // GET /api/users/[id]/profile — full profile + stats + submissions + comments
@@ -169,6 +170,8 @@ export async function GET(
   const skipsUsed = profile.skipsUsed || 0;
   const skipsAvailable = Math.max(0, skipsEarned - skipsUsed);
 
+  const watchlist = getWatchlist(id);
+
   return NextResponse.json({
     user: { id: user.id, name: user.name },
     profile: {
@@ -193,6 +196,7 @@ export async function GET(
     submissions: userSubs,
     weeksWon,
     comments: userComments,
+    watchlist,
   });
 }
 

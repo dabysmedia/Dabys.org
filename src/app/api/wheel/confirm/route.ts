@@ -34,14 +34,15 @@ export async function POST(request: Request) {
   saveWeeks(weeks);
 
   const wheel = getWheel();
-  wheel.entries = wheel.entries.filter((e) => e !== theme);
-  wheel.lastResult = null;
-  wheel.lastSpunAt = null;
-  wheel.winnerIndex = null;
+  // Keep lastResult/winnerIndex/lastSpunAt so the landed position and result stay visible for all
+  wheel.lastConfirmedResult = theme;
+  wheel.lastConfirmedAt = new Date().toISOString();
   wheel.spinning = false;
   wheel.spinStartedAt = null;
   wheel.fullSpins = null;
   wheel.duration = null;
+  // Do not remove theme from entries or clear lastResult/winnerIndex here;
+  // theme is removed when the next spin starts (in spin route)
   saveWheel(wheel);
 
   const history = getWheelHistory();

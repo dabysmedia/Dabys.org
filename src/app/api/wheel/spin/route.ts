@@ -15,6 +15,17 @@ export async function POST(request: Request) {
 
   const wheel = getWheel();
 
+  // Remove the previously confirmed theme from entries when starting a new spin
+  if (wheel.lastConfirmedResult) {
+    wheel.entries = wheel.entries.filter((e) => e !== wheel.lastConfirmedResult);
+    wheel.lastResult = null;
+    wheel.lastSpunAt = null;
+    wheel.winnerIndex = null;
+    wheel.lastConfirmedResult = null;
+    wheel.lastConfirmedAt = null;
+    saveWheel(wheel);
+  }
+
   if (wheel.entries.length < 2) {
     return NextResponse.json(
       { error: "Need at least 2 entries to spin" },

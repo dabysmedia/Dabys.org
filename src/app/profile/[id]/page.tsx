@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
@@ -82,6 +82,25 @@ interface CommentEntry {
   createdAt: string;
 }
 
+interface WatchlistEntry {
+  id: string;
+  userId: string;
+  tmdbId: number;
+  movieTitle: string;
+  posterUrl: string;
+  letterboxdUrl: string;
+  year?: string;
+  addedAt: string;
+}
+
+interface TmdbSearchResult {
+  id: number;
+  title: string;
+  year: string;
+  posterUrl: string;
+  overview: string;
+}
+
 interface FullProfile {
   user: { id: string; name: string };
   profile: ProfileData;
@@ -90,6 +109,7 @@ interface FullProfile {
   submissions: SubEntry[];
   weeksWon: WinEntry[];
   comments: CommentEntry[];
+  watchlist: WatchlistEntry[];
 }
 
 export default function ProfilePage() {
@@ -101,7 +121,7 @@ export default function ProfilePage() {
   const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string>("");
   const [data, setData] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"submissions" | "wins" | "comments">("submissions");
+  const [activeTab, setActiveTab] = useState<"submissions" | "wins" | "comments" | "watchlist">("submissions");
 
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -115,6 +135,15 @@ export default function ProfilePage() {
 
   // Ratings modal
   const [showRatingsModal, setShowRatingsModal] = useState(false);
+
+  // Watchlist add — TMDB search
+  const [watchlistSearchQuery, setWatchlistSearchQuery] = useState("");
+  const [watchlistSearchResults, setWatchlistSearchResults] = useState<TmdbSearchResult[]>([]);
+  const [watchlistSearchLoading, setWatchlistSearchLoading] = useState(false);
+  const [watchlistShowDropdown, setWatchlistShowDropdown] = useState(false);
+  const [watchlistAdding, setWatchlistAdding] = useState(false);
+  const watchlistSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchlistDropdownRef = useRef<HTMLDivElement>(null);
 
   const isOwnProfile = currentUser?.id === profileId;
 
@@ -148,28 +177,103 @@ export default function ProfilePage() {
     return () => { cancelled = true; };
   }, [currentUser?.id]);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/users/${profileId}/profile`);
-        if (!res.ok) {
-          router.replace("/");
-          return;
-        }
-        const json: FullProfile = await res.json();
-        setData(json);
-        setEditBio(json.profile.bio);
-        setEditAvatarUrl(json.profile.avatarUrl);
-        setEditBannerUrl(json.profile.bannerUrl);
-      } catch {
+  const loadProfile = useCallback(async () => {
+    if (!profileId) return;
+    try {
+      const res = await fetch(`/api/users/${profileId}/profile`);
+      if (!res.ok) {
         router.replace("/");
+        return;
+      }
+      const json: FullProfile = await res.json();
+      setData(json);
+      setEditBio(json.profile.bio);
+      setEditAvatarUrl(json.profile.avatarUrl);
+      setEditBannerUrl(json.profile.bannerUrl);
+    } catch {
+      router.replace("/");
+    }
+  }, [profileId, router]);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    loadProfile().finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, [loadProfile]);
+
+  // Watchlist: TMDB search debounce
+  useEffect(() => {
+    if (!watchlistSearchQuery.trim() || watchlistSearchQuery.trim().length < 2) {
+      setWatchlistSearchResults([]);
+      setWatchlistShowDropdown(false);
+      return;
+    }
+    if (watchlistSearchTimeoutRef.current) clearTimeout(watchlistSearchTimeoutRef.current);
+    watchlistSearchTimeoutRef.current = setTimeout(async () => {
+      setWatchlistSearchLoading(true);
+      try {
+        const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(watchlistSearchQuery.trim())}`);
+        const result = await res.json();
+        setWatchlistSearchResults(result.results || []);
+        setWatchlistShowDropdown(true);
+      } catch {
+        setWatchlistSearchResults([]);
       } finally {
-        setLoading(false);
+        setWatchlistSearchLoading(false);
+      }
+    }, 300);
+    return () => {
+      if (watchlistSearchTimeoutRef.current) clearTimeout(watchlistSearchTimeoutRef.current);
+    };
+  }, [watchlistSearchQuery]);
+
+  // Watchlist: close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (watchlistDropdownRef.current && !watchlistDropdownRef.current.contains(e.target as Node)) {
+        setWatchlistShowDropdown(false);
       }
     }
-    if (profileId) load();
-  }, [profileId, router]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function addToWatchlist(tmdbId: number) {
+    if (!currentUser || currentUser.id !== profileId) return;
+    setWatchlistAdding(true);
+    try {
+      const res = await fetch(`/api/tmdb/movie/${tmdbId}`);
+      if (!res.ok) return;
+      const movie = await res.json();
+      await fetch("/api/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          tmdbId: movie.tmdbId,
+          movieTitle: movie.title,
+          posterUrl: movie.posterUrl,
+          letterboxdUrl: movie.letterboxdUrl || "",
+          year: movie.year,
+        }),
+      });
+      setWatchlistSearchQuery("");
+      setWatchlistSearchResults([]);
+      setWatchlistShowDropdown(false);
+      await loadProfile();
+    } finally {
+      setWatchlistAdding(false);
+    }
+  }
+
+  async function removeFromWatchlist(tmdbId: number) {
+    if (!currentUser || currentUser.id !== profileId) return;
+    await fetch(`/api/watchlist?userId=${currentUser.id}&tmdbId=${tmdbId}`, { method: "DELETE" });
+    await loadProfile();
+  }
 
   function handleCropComplete(url: string) {
     if (cropTarget === "avatar") setEditAvatarUrl(url);
@@ -218,7 +322,7 @@ export default function ProfilePage() {
     );
   }
 
-  const { user, profile, stats, ratings, submissions, weeksWon, comments } = data;
+  const { user, profile, stats, ratings, submissions, weeksWon, comments, watchlist = [] } = data;
 
   return (
     <div className="min-h-screen">
@@ -490,6 +594,7 @@ export default function ProfilePage() {
             { key: "submissions" as const, label: "Submissions", count: submissions.length },
             { key: "wins" as const, label: "Wins", count: weeksWon.length },
             { key: "comments" as const, label: "Comments", count: comments.length },
+            ...(isOwnProfile ? [{ key: "watchlist" as const, label: "Watchlist", count: watchlist.length }] : []),
           ]).map((tab) => (
             <button
               key={tab.key}
@@ -644,6 +749,131 @@ export default function ProfilePage() {
                 ))}
               </div>
             )
+          )}
+
+          {/* Watchlist — own profile only */}
+          {activeTab === "watchlist" && isOwnProfile && (
+            <div className="space-y-6">
+              <p className="text-white/40 text-sm">
+                Save movies you want to suggest in a future week. When submissions open, pick one from here or search as usual.
+              </p>
+
+              {/* Add movie — TMDB search */}
+              <div ref={watchlistDropdownRef} className="relative max-w-md">
+                <label className="block text-[11px] uppercase tracking-widest text-white/30 font-medium mb-2">Add movie</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={watchlistSearchQuery}
+                    onChange={(e) => setWatchlistSearchQuery(e.target.value)}
+                    onFocus={() => { if (watchlistSearchResults.length > 0) setWatchlistShowDropdown(true); }}
+                    placeholder="Search for a movie..."
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white/80 placeholder-white/20 outline-none focus:border-purple-500/40 transition-colors pr-10"
+                    autoComplete="off"
+                  />
+                  {watchlistSearchLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-5 h-5 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {!watchlistSearchLoading && watchlistSearchQuery.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setWatchlistSearchQuery(""); setWatchlistSearchResults([]); setWatchlistShowDropdown(false); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/50 transition-colors cursor-pointer"
+                      aria-label="Clear"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {watchlistShowDropdown && watchlistSearchResults.length > 0 && (
+                  <div className="absolute z-30 mt-1 w-full max-h-72 overflow-auto rounded-xl border border-white/[0.1] bg-[#1a1a2e]/95 backdrop-blur-xl shadow-2xl">
+                    {watchlistSearchResults.map((r) => {
+                      const inList = watchlist.some((w) => w.tmdbId === r.id);
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => !inList && addToWatchlist(r.id)}
+                          disabled={inList || watchlistAdding}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.06] transition-colors text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {r.posterUrl ? (
+                            <img src={r.posterUrl} alt={r.title} className="w-10 h-14 rounded object-cover flex-shrink-0 bg-white/5" />
+                          ) : (
+                            <div className="w-10 h-14 rounded bg-white/5 flex items-center justify-center flex-shrink-0 text-white/10 text-lg font-bold">{r.title.charAt(0)}</div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white/80 truncate">{r.title}</p>
+                            <p className="text-xs text-white/30">{r.year || "Unknown year"}</p>
+                          </div>
+                          {inList && (
+                            <span className="text-[10px] text-green-400/70 font-medium shrink-0">In list</span>
+                          )}
+                          {!inList && watchlistAdding && (
+                            <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {watchlistShowDropdown && watchlistSearchResults.length === 0 && !watchlistSearchLoading && watchlistSearchQuery.trim().length >= 2 && (
+                  <div className="absolute z-30 mt-1 w-full rounded-xl border border-white/[0.1] bg-[#1a1a2e]/95 backdrop-blur-xl shadow-2xl px-4 py-6 text-center">
+                    <p className="text-white/30 text-sm">No movies found. Try a different search.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Watchlist grid */}
+              {watchlist.length === 0 ? (
+                <EmptyState icon="bookmark" text="No movies in your watchlist yet" />
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {watchlist.map((w) => (
+                    <div
+                      key={w.id}
+                      className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] hover:border-white/10 transition-all"
+                    >
+                      <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+                        {w.posterUrl ? (
+                          <img src={w.posterUrl} alt={w.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/10 text-3xl font-bold">{w.movieTitle.charAt(0)}</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFromWatchlist(w.tmdbId); }}
+                          className="absolute top-2 right-2 z-20 p-1.5 rounded-lg bg-black/50 border border-white/10 text-white/50 hover:text-red-400 hover:border-red-500/30 transition-colors cursor-pointer"
+                          aria-label={`Remove ${w.movieTitle} from watchlist`}
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                      {w.letterboxdUrl && (
+                        <a
+                          href={w.letterboxdUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0 z-10 cursor-pointer"
+                          aria-label={`View ${w.movieTitle} on Letterboxd`}
+                        />
+                      )}
+                      <div className="p-3 relative z-0">
+                        <h4 className="text-sm font-semibold text-white/90 truncate">{w.movieTitle}</h4>
+                        <p className="text-[11px] text-white/30 mt-0.5">{w.year || ""}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </main>
@@ -907,6 +1137,9 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
       )}
       {icon === "chat" && (
         <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+      )}
+      {icon === "bookmark" && (
+        <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
       )}
       <p className="text-sm">{text}</p>
     </div>

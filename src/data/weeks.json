@@ -3,7 +3,8 @@
     "id": "1",
     "theme": "2000's",
     "phase": "subs_open",
-    "startedAt": "2026-02-11T00:44:43.818Z"
+    "startedAt": "2026-02-11T00:44:43.818Z",
+    "endedAt": "2026-02-12T00:08:58.555Z"
   },
   {
     "id": "0",
@@ -39,5 +40,25 @@
     "phase": "subs_open",
     "startedAt": "2026-02-11T23:41:10.692Z",
     "endedAt": "2026-02-11T23:45:55.914Z"
+  },
+  {
+    "id": "6",
+    "theme": "Drama",
+    "phase": "subs_open",
+    "startedAt": "2026-02-12T00:08:58.555Z",
+    "endedAt": "2026-02-12T00:14:05.714Z"
+  },
+  {
+    "id": "7",
+    "theme": "Animation",
+    "phase": "subs_open",
+    "startedAt": "2026-02-12T00:14:05.714Z",
+    "endedAt": "2026-02-12T00:16:24.756Z"
+  },
+  {
+    "id": "8",
+    "theme": "Thriller",
+    "phase": "subs_open",
+    "startedAt": "2026-02-12T00:16:24.756Z"
   }
 ]

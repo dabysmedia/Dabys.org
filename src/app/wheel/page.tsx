@@ -13,6 +13,8 @@ interface WheelData {
   winnerIndex: number | null;
   fullSpins: number | null;
   duration: number | null;
+  lastConfirmedResult?: string | null;
+  lastConfirmedAt?: string | null;
 }
 
 const JERRY_ID = "1";
@@ -336,6 +338,7 @@ export default function WheelPage() {
         }
         // Detect a manual set (lastSpunAt changed but not spinning). Do not run scrollToWinner
         // if we already animated this spin (e.g. Jerry just finished spinning), or we get a double reveal sound.
+        // After confirm we keep lastResult/winnerIndex but clear spinStartedAt — don't re-animate the strip.
         else if (
           !data.spinning &&
           !spinning &&
@@ -347,7 +350,8 @@ export default function WheelPage() {
           if (data.spinStartedAt !== lastAnimatedSpinRef.current) {
             lastAnimatedSpinRef.current = data.spinStartedAt;
             setWheel(data);
-            scrollToWinner(data.entries, data.winnerIndex);
+            const isAfterConfirm = data.lastConfirmedResult && !data.spinStartedAt;
+            if (!isAfterConfirm) scrollToWinner(data.entries, data.winnerIndex);
           } else {
             setWheel(data);
           }
@@ -422,6 +426,8 @@ export default function WheelPage() {
       if (res.ok) {
         const data = await res.json();
         setWheel(data.wheel);
+        // So the next poll won't treat unchanged lastSpunAt as a "manual set" and re-run scrollToWinner
+        if (data.wheel?.lastSpunAt) lastKnownSpunAtRef.current = data.wheel.lastSpunAt;
         setShowResult(false);
         setResult(null);
         setConfirmDialogOpen(false);
@@ -679,14 +685,20 @@ export default function WheelPage() {
             </div>
           )}
 
-          {/* Last result (when no fresh spin and not spinning) */}
-          {!showResult && !spinning && wheel.lastResult && (
+          {/* Last result / confirmed theme (when no fresh spin and not spinning) — saved and visible for all */}
+          {!showResult && !spinning && (wheel.lastResult || wheel.lastConfirmedResult) && (
             <div className="w-full max-w-md mx-auto">
               <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-6 text-center">
-                <p className="text-xs uppercase tracking-widest text-white/25 mb-2">Last Result</p>
-                <h2 className="text-2xl font-bold text-white/80">{wheel.lastResult}</h2>
-                {wheel.lastSpunAt && (
-                  <p className="text-[11px] text-white/20 mt-2">{timeAgo(wheel.lastSpunAt)}</p>
+                <p className="text-xs uppercase tracking-widest text-white/25 mb-2">
+                  {wheel.lastConfirmedResult ? "Confirmed theme" : "Last Result"}
+                </p>
+                <h2 className="text-2xl font-bold text-white/80">
+                  {wheel.lastResult || wheel.lastConfirmedResult}
+                </h2>
+                {(wheel.lastSpunAt || wheel.lastConfirmedAt) && (
+                  <p className="text-[11px] text-white/20 mt-2">
+                    {timeAgo(wheel.lastSpunAt || wheel.lastConfirmedAt || "")}
+                  </p>
                 )}
               </div>
             </div>
