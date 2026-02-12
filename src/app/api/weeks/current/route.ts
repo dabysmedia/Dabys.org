@@ -7,6 +7,7 @@ import {
   getVotes,
   getWinners,
   saveWinners,
+  addCredits,
 } from "@/lib/data";
 
 export async function GET() {
@@ -84,6 +85,7 @@ export async function PATCH(request: Request) {
             });
 
             saveWinners(existingWinners);
+            addCredits(winnerSub.userId, 50, "submission_win", { winnerId: newId, weekId });
           }
         }
       }

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
+import Header from "@/components/Header";
 
 interface User {
   id: string;
@@ -56,6 +57,7 @@ interface WinnerDetail {
   overview?: string;
   trailerUrl?: string;
   backdropUrl?: string;
+  tmdbId?: number;
   submittedByUserId?: string;
   weekTheme?: string;
   runnerUps?: RunnerUp[];
@@ -99,7 +101,6 @@ export default function WinnerDetailPage() {
   const winnerId = params.id as string;
 
   const [user, setUser] = useState<User | null>(null);
-  const [userAvatarUrl, setUserAvatarUrl] = useState("");
   const [winner, setWinner] = useState<WinnerDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -124,7 +125,18 @@ export default function WinnerDetailPage() {
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState("");
   const giphySearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Trivia
+  const [triviaCompleted, setTriviaCompleted] = useState(false);
+  const [showTrivia, setShowTrivia] = useState(false);
+  const [triviaQuestions, setTriviaQuestions] = useState<{ id: string; question: string; options: string[]; correctIndex: number }[]>([]);
+  const [triviaLoading, setTriviaLoading] = useState(false);
+  const [triviaIndex, setTriviaIndex] = useState(0);
+  const [triviaAnswers, setTriviaAnswers] = useState<{ questionId: string; selectedIndex: number }[]>([]);
+  const [triviaSubmitting, setTriviaSubmitting] = useState(false);
+  const [triviaResult, setTriviaResult] = useState<{ correctCount: number; totalCount: number; creditsEarned: number } | null>(null);
 
   const loadWinner = useCallback(async () => {
     try {
@@ -146,6 +158,16 @@ export default function WinnerDetailPage() {
           setMyThumb(existingRating.thumbsUp);
           setMyStars(existingRating.stars);
           setRatingSubmitted(true);
+        }
+        // Check if trivia already completed for this winner
+        if (data.tmdbId) {
+          try {
+            const attRes = await fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}&winnerId=${winnerId}`);
+            if (attRes.ok) {
+              const attData = await attRes.json();
+              if (attData.attempts?.length > 0) setTriviaCompleted(true);
+            }
+          } catch { /* ignore */ }
         }
       }
     } catch {
@@ -170,7 +192,6 @@ export default function WinnerDetailPage() {
       return;
     }
     loadWinner();
-    // Fetch avatar
     fetch(`/api/users/${u.id}/profile`).then((r) => r.ok ? r.json() : null).then((d) => {
       if (d?.profile?.avatarUrl) setUserAvatarUrl(d.profile.avatarUrl);
     }).catch(() => {});
@@ -227,6 +248,7 @@ export default function WinnerDetailPage() {
       });
       setRatingSubmitted(true);
       loadWinner();
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
     } catch {
       console.error("Failed to submit rating");
     }
@@ -283,6 +305,7 @@ export default function WinnerDetailPage() {
       setGiphyPasteUrl("");
       setReplyingTo(null);
       loadWinner();
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
     } catch {
       console.error("Failed to post comment");
     } finally {
@@ -313,6 +336,7 @@ export default function WinnerDetailPage() {
         body: JSON.stringify({ userId: user.id }),
       });
       loadWinner();
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
     } catch {
       console.error("Failed to toggle like");
     } finally {
@@ -390,36 +414,7 @@ export default function WinnerDetailPage() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-              Dabys.org
-            </Link>
-
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/wheel" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Theme Wheel</Link>
-            <Link href="/stats" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Stats</Link>
-            {user ? (
-              <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                {userAvatarUrl ? (
-                  <img src={userAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-white/70 text-sm font-medium">{user.name}</span>
-              </Link>
-            ) : (
-              <div className="w-16" />
-            )}
-            <button onClick={() => { localStorage.removeItem("dabys_user"); router.replace("/login"); }} className="text-white/20 hover:text-white/50 transition-colors cursor-pointer" title="Log out"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="relative z-10 max-w-4xl mx-auto px-6 py-10">
         {/* ─── Movie Hero ─── */}
@@ -489,6 +484,48 @@ export default function WinnerDetailPage() {
             )}
 
             <div className="flex flex-wrap items-center gap-3">
+              {winner.tmdbId && (
+                triviaCompleted ? (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Trivia completed
+                  </span>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      setShowTrivia(true);
+                      setTriviaLoading(true);
+                      setTriviaQuestions([]);
+                      setTriviaIndex(0);
+                      setTriviaAnswers([]);
+                      setTriviaResult(null);
+                      try {
+                        const res = await fetch(`/api/trivia/${winnerId}?userId=${encodeURIComponent(user.id)}`);
+                        const data = await res.json();
+                        if (res.ok && data.questions?.length) {
+                          setTriviaQuestions(data.questions);
+                        } else {
+                          setShowTrivia(false);
+                          alert(data.error || "No trivia available");
+                        }
+                      } catch {
+                        setShowTrivia(false);
+                        alert("Failed to load trivia");
+                      } finally {
+                        setTriviaLoading(false);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/20 transition-colors cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    Play Trivia
+                  </button>
+                )
+              )}
               {winner.letterboxdUrl && (
                 <a
                   href={winner.letterboxdUrl}
@@ -920,6 +957,106 @@ export default function WinnerDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ─── Trivia modal ─── */}
+        {showTrivia && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => !triviaSubmitting && !triviaLoading && setShowTrivia(false)}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden"
+              role="dialog"
+              aria-label="Trivia"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                {triviaLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin mb-4" />
+                    <p className="text-white/50 text-sm">Loading trivia...</p>
+                  </div>
+                ) : triviaResult ? (
+                  <div>
+                    <h3 className="text-xl font-bold text-white/90 mb-2">Results</h3>
+                    <p className="text-white/70 mb-4">
+                      You got {triviaResult.correctCount} out of {triviaResult.totalCount} correct!
+                    </p>
+                    <p className="text-amber-400 font-semibold mb-6">+{triviaResult.creditsEarned} credits</p>
+                    <button
+                      onClick={() => {
+                        setShowTrivia(false);
+                        setTriviaResult(null);
+                        setTriviaCompleted(true);
+                        window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+                      }}
+                      className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-colors cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                ) : triviaQuestions.length > 0 ? (
+                  (() => {
+                    const q = triviaQuestions[triviaIndex];
+                    const isLast = triviaIndex >= triviaQuestions.length - 1;
+                    return (
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-bold text-white/90">Trivia</h3>
+                          <span className="text-xs text-white/40">
+                            {triviaIndex + 1} / {triviaQuestions.length}
+                          </span>
+                        </div>
+                        <p className="text-white/90 mb-6">{q.question}</p>
+                        <div className="flex flex-col gap-2">
+                          {q.options.map((opt, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                const next = [...triviaAnswers, { questionId: q.id, selectedIndex: i }];
+                                setTriviaAnswers(next);
+                                if (isLast) {
+                                  setTriviaSubmitting(true);
+                                  fetch(`/api/trivia/${winnerId}/submit`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ userId: user.id, answers: next }),
+                                  })
+                                    .then((r) => r.json())
+                                    .then((data) => {
+                                      if (data.creditsEarned != null) {
+                                        setTriviaResult({
+                                          correctCount: data.correctCount ?? 0,
+                                          totalCount: data.totalCount ?? 0,
+                                          creditsEarned: data.creditsEarned,
+                                        });
+                                      } else {
+                                        alert(data.error || "Failed to submit");
+                                      }
+                                    })
+                                    .catch(() => alert("Failed to submit"))
+                                    .finally(() => setTriviaSubmitting(false));
+                                } else {
+                                  setTriviaIndex(triviaIndex + 1);
+                                }
+                              }}
+                              disabled={triviaSubmitting}
+                              className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white/90 hover:bg-white/[0.1] hover:border-purple-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : null}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ─── Expandable GIPHY browser modal (centered overlay) ─── */}
         {showGiphyBrowser && (

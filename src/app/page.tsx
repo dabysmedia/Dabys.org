@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 interface User { id: string; name: string; }
 interface Week { id: string; theme: string; phase: string; startedAt: string; }
@@ -31,7 +32,6 @@ export default function HomePage() {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [thisWeekWinner, setThisWeekWinner] = useState<Winner | null>(null);
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string>("");
 
   // Submission form — TMDB autocomplete
   const [searchQuery, setSearchQuery] = useState("");
@@ -90,10 +90,6 @@ export default function HomePage() {
     try { u = JSON.parse(cached); setUser(u); } catch { localStorage.removeItem("dabys_user"); router.replace("/login"); return; }
     setChecking(false);
     loadData();
-    // Fetch avatar
-    fetch(`/api/users/${u.id}/profile`).then((r) => r.ok ? r.json() : null).then((d) => {
-      if (d?.profile?.avatarUrl) setUserAvatarUrl(d.profile.avatarUrl);
-    }).catch(() => {});
   }, [router, loadData]);
 
   // ── TMDB search debounce ──────────────────────────────
@@ -242,32 +238,7 @@ export default function HomePage() {
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-              Dabys.org
-            </Link>
-
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/wheel" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Theme Wheel</Link>
-            <Link href="/stats" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Stats</Link>
-            <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="text-white/70 text-sm font-medium">{user.name}</span>
-            </Link>
-            <button onClick={logout} className="text-white/20 hover:text-white/50 transition-colors cursor-pointer" title="Log out"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
 
@@ -841,6 +812,7 @@ export default function HomePage() {
             </h2>
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C0C0C0]/20 to-transparent" />
           </div>
+          <p className="text-center text-white/40 text-xs mb-6 -mt-2">Click any winner to rate, comment, and play trivia</p>
 
           {winners.length === 0 ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">

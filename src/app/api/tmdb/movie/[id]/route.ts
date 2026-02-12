@@ -40,7 +40,7 @@ export async function GET(
     // Fetch movie details + videos in one request
     const url = new URL(`https://api.themoviedb.org/3/movie/${id}`);
     url.searchParams.set("api_key", TMDB_API_KEY);
-    url.searchParams.set("append_to_response", "videos");
+    url.searchParams.set("append_to_response", "videos,credits");
     url.searchParams.set("language", "en-US");
 
     const res = await fetch(url.toString());

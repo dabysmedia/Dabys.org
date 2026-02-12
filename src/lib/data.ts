@@ -354,3 +354,368 @@ export function removeWatchlistItem(userId: string, tmdbId: number): boolean {
   saveWatchlistRaw(raw);
   return true;
 }
+
+// ──── Credits (user balances for TCG) ───────────────────
+export interface UserCredit {
+  userId: string;
+  balance: number;
+  updatedAt: string;
+}
+
+export interface CreditLedgerEntry {
+  id: string;
+  userId: string;
+  amount: number;
+  reason: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+function getCreditsRaw(): UserCredit[] {
+  try {
+    return readJson<UserCredit[]>("credits.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCreditsRaw(credits: UserCredit[]) {
+  writeJson("credits.json", credits);
+}
+
+function getCreditLedgerRaw(): CreditLedgerEntry[] {
+  try {
+    return readJson<CreditLedgerEntry[]>("creditLedger.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCreditLedgerRaw(entries: CreditLedgerEntry[]) {
+  writeJson("creditLedger.json", entries);
+}
+
+export function getCredits(userId: string): number {
+  const credits = getCreditsRaw();
+  const entry = credits.find((c) => c.userId === userId);
+  return entry?.balance ?? 0;
+}
+
+export function addCredits(
+  userId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, unknown>
+) {
+  const credits = getCreditsRaw();
+  const idx = credits.findIndex((c) => c.userId === userId);
+  const now = new Date().toISOString();
+  const current = idx >= 0 ? credits[idx].balance : 0;
+  const newBalance = current + amount;
+  const entry: UserCredit = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) credits[idx] = entry;
+  else credits.push(entry);
+  saveCreditsRaw(credits);
+
+  const ledger = getCreditLedgerRaw();
+  ledger.push({
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    amount,
+    reason,
+    metadata,
+    createdAt: now,
+  });
+  saveCreditLedgerRaw(ledger);
+}
+
+export function deductCredits(
+  userId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, unknown>
+): boolean {
+  const current = getCredits(userId);
+  if (current < amount) return false;
+  const credits = getCreditsRaw();
+  const idx = credits.findIndex((c) => c.userId === userId);
+  const now = new Date().toISOString();
+  const newBalance = current - amount;
+  const entry: UserCredit = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) credits[idx] = entry;
+  else credits.push(entry);
+  saveCreditsRaw(credits);
+
+  const ledger = getCreditLedgerRaw();
+  ledger.push({
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    amount: -amount,
+    reason,
+    metadata,
+    createdAt: now,
+  });
+  saveCreditLedgerRaw(ledger);
+  return true;
+}
+
+export function setCredits(userId: string, balance: number): void {
+  const credits = getCreditsRaw();
+  const idx = credits.findIndex((c) => c.userId === userId);
+  const now = new Date().toISOString();
+  const prevBalance = idx >= 0 ? credits[idx].balance : 0;
+  const entry: UserCredit = { userId, balance, updatedAt: now };
+  if (idx >= 0) credits[idx] = entry;
+  else credits.push(entry);
+  saveCreditsRaw(credits);
+
+  const ledger = getCreditLedgerRaw();
+  ledger.push({
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    amount: balance - prevBalance,
+    reason: "admin_set",
+    metadata: { prevBalance },
+    createdAt: now,
+  });
+  saveCreditLedgerRaw(ledger);
+}
+
+// ──── Character Pool (TCG: actor as character in movie) ──
+export interface CharacterPortrayal {
+  characterId: string;
+  tmdbPersonId: number;
+  actorName: string;
+  characterName: string;
+  profilePath: string;
+  movieTmdbId: number;
+  movieTitle: string;
+  popularity: number;
+  rarity: "common" | "rare" | "epic" | "legendary";
+}
+
+export interface Card {
+  id: string;
+  userId: string;
+  characterId: string;
+  rarity: "common" | "rare" | "epic" | "legendary";
+  isFoil: boolean;
+  actorName: string;
+  characterName: string;
+  movieTitle: string;
+  movieTmdbId: number;
+  profilePath: string;
+  acquiredAt: string;
+}
+
+function getCharacterPoolRaw(): CharacterPortrayal[] {
+  try {
+    return readJson<CharacterPortrayal[]>("characterPool.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCharacterPoolRaw(pool: CharacterPortrayal[]) {
+  writeJson("characterPool.json", pool);
+}
+
+function getCardsRaw(): Card[] {
+  try {
+    return readJson<Card[]>("cards.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCardsRaw(cards: Card[]) {
+  writeJson("cards.json", cards);
+}
+
+export function getCharacterPool(): CharacterPortrayal[] {
+  return getCharacterPoolRaw();
+}
+
+export function saveCharacterPool(pool: CharacterPortrayal[]) {
+  saveCharacterPoolRaw(pool);
+}
+
+export function getCards(userId: string): Card[] {
+  return getCardsRaw()
+    .filter((c) => c.userId === userId)
+    .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
+}
+
+export function addCard(card: Omit<Card, "id" | "acquiredAt">): Card {
+  const cards = getCardsRaw();
+  const newCard: Card = {
+    ...card,
+    id: `card-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    acquiredAt: new Date().toISOString(),
+  };
+  cards.push(newCard);
+  saveCardsRaw(cards);
+  return newCard;
+}
+
+export function getCardById(cardId: string): Card | undefined {
+  return getCardsRaw().find((c) => c.id === cardId);
+}
+
+export function transferCard(cardId: string, newUserId: string): boolean {
+  const cards = getCardsRaw();
+  const idx = cards.findIndex((c) => c.id === cardId);
+  if (idx < 0) return false;
+  cards[idx] = { ...cards[idx], userId: newUserId };
+  saveCardsRaw(cards);
+  return true;
+}
+
+export function removeCard(cardId: string): boolean {
+  const cards = getCardsRaw();
+  const filtered = cards.filter((c) => c.id !== cardId);
+  if (filtered.length === cards.length) return false;
+  saveCardsRaw(filtered);
+
+  // Remove any marketplace listing for this card
+  const listings = getListings();
+  const listing = listings.find((l) => l.cardId === cardId);
+  if (listing) removeListing(listing.id);
+  return true;
+}
+
+// ──── Trivia ────────────────────────────────────────────
+export interface TriviaAttempt {
+  id: string;
+  userId: string;
+  winnerId: string;
+  score: number;
+  correctCount: number;
+  totalCount: number;
+  creditsEarned: number;
+  completedAt: string;
+}
+
+function getTriviaAttemptsRaw(): TriviaAttempt[] {
+  try {
+    return readJson<TriviaAttempt[]>("triviaAttempts.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveTriviaAttemptsRaw(attempts: TriviaAttempt[]) {
+  writeJson("triviaAttempts.json", attempts);
+}
+
+export function getTriviaAttempts(userId: string): TriviaAttempt[] {
+  return getTriviaAttemptsRaw()
+    .filter((a) => a.userId === userId)
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+}
+
+export function getTriviaAttemptsForWinner(userId: string, winnerId: string): TriviaAttempt[] {
+  return getTriviaAttemptsRaw().filter(
+    (a) => a.userId === userId && a.winnerId === winnerId
+  );
+}
+
+export function saveTriviaAttempt(attempt: TriviaAttempt) {
+  const attempts = getTriviaAttemptsRaw();
+  attempts.push(attempt);
+  saveTriviaAttemptsRaw(attempts);
+}
+
+export interface TriviaSession {
+  userId: string;
+  winnerId: string;
+  questions: { id: string; question: string; options: string[]; correctIndex: number }[];
+  createdAt: string;
+}
+
+function getTriviaSessionsRaw(): TriviaSession[] {
+  try {
+    return readJson<TriviaSession[]>("triviaSessions.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveTriviaSessionsRaw(sessions: TriviaSession[]) {
+  writeJson("triviaSessions.json", sessions);
+}
+
+const TRIVIA_SESSION_TTL_MS = 10 * 60 * 1000; // 10 min
+
+export function saveTriviaSession(session: TriviaSession) {
+  const sessions = getTriviaSessionsRaw().filter((s) => {
+    const age = Date.now() - new Date(s.createdAt).getTime();
+    return age < TRIVIA_SESSION_TTL_MS;
+  });
+  sessions.push(session);
+  saveTriviaSessionsRaw(sessions);
+}
+
+export function getAndConsumeTriviaSession(userId: string, winnerId: string): TriviaSession | null {
+  const sessions = getTriviaSessionsRaw();
+  const idx = sessions.findIndex(
+    (s) => s.userId === userId && s.winnerId === winnerId
+  );
+  if (idx < 0) return null;
+  const session = sessions[idx];
+  const age = Date.now() - new Date(session.createdAt).getTime();
+  if (age >= TRIVIA_SESSION_TTL_MS) return null;
+  sessions.splice(idx, 1);
+  saveTriviaSessionsRaw(sessions);
+  return session;
+}
+
+// ──── Marketplace (listings) ─────────────────────────────
+export interface Listing {
+  id: string;
+  cardId: string;
+  sellerUserId: string;
+  askingPrice: number;
+  createdAt: string;
+}
+
+function getListingsRaw(): Listing[] {
+  try {
+    return readJson<Listing[]>("listings.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveListingsRaw(listings: Listing[]) {
+  writeJson("listings.json", listings);
+}
+
+export function getListings(): Listing[] {
+  return getListingsRaw();
+}
+
+export function addListing(listing: Omit<Listing, "id" | "createdAt">): Listing {
+  const listings = getListingsRaw();
+  const newListing: Listing = {
+    ...listing,
+    id: `lst-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  listings.push(newListing);
+  saveListingsRaw(listings);
+  return newListing;
+}
+
+export function removeListing(listingId: string): boolean {
+  const listings = getListingsRaw();
+  const idx = listings.findIndex((l) => l.id === listingId);
+  if (idx < 0) return false;
+  listings.splice(idx, 1);
+  saveListingsRaw(listings);
+  return true;
+}
+
+export function getListing(listingId: string): Listing | undefined {
+  return getListingsRaw().find((l) => l.id === listingId);
+}

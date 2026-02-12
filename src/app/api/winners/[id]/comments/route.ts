@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments, getCommentLikes, saveCommentLikes } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -40,6 +40,8 @@ export async function POST(
 
   comments.push(newComment);
   saveComments(comments);
+
+  addCredits(body.userId, 5, "comment", { commentId: newId, winnerId });
 
   return NextResponse.json(newComment, { status: 201 });
 }

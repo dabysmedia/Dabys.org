@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ta-1770860074541-iz41ndr",
+    "userId": "2",
+    "winnerId": "2",
+    "score": 60,
+    "correctCount": 3,
+    "totalCount": 5,
+    "creditsEarned": 15,
+    "completedAt": "2026-02-12T01:34:34.541Z"
+  },
+  {
+    "id": "ta-1770860120929-kui0oyf",
+    "userId": "2",
+    "winnerId": "3",
+    "score": 40,
+    "correctCount": 2,
+    "totalCount": 5,
+    "creditsEarned": 10,
+    "completedAt": "2026-02-12T01:35:20.929Z"
+  },
+  {
+    "id": "ta-1770860165574-iiutrty",
+    "userId": "2",
+    "winnerId": "1",
+    "score": 40,
+    "correctCount": 2,
+    "totalCount": 5,
+    "creditsEarned": 10,
+    "completedAt": "2026-02-12T01:36:05.574Z"
+  },
+  {
+    "id": "ta-1770860190740-s4v2xpq",
+    "userId": "2",
+    "winnerId": "4",
+    "score": 80,
+    "correctCount": 4,
+    "totalCount": 5,
+    "creditsEarned": 20,
+    "completedAt": "2026-02-12T01:36:30.740Z"
+  }
+]

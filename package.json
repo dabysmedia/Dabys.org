@@ -11,6 +11,7 @@
     "tunnel:cloudflare": "cloudflared tunnel --url http://localhost:3000"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "next": "^16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",

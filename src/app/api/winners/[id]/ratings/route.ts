@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRatings, saveRatings } from "@/lib/data";
+import { getRatings, saveRatings, addCredits } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -44,6 +44,7 @@ export async function POST(
     ratings[existingIdx] = rating;
   } else {
     ratings.push(rating);
+    addCredits(body.userId, 2, "rating", { winnerId });
   }
 
   saveRatings(ratings);

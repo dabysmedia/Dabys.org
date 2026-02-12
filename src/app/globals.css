@@ -16,6 +16,12 @@ body {
   min-height: 100vh;
 }
 
+/* Dark dropdown options for readability in dark theme */
+select option {
+  background: #1a1a24;
+  color: #e5e5e5;
+}
+
 /* Styled scrollbar for autocomplete dropdowns */
 .scrollbar-autocomplete {
   scrollbar-width: thin;
@@ -56,4 +62,28 @@ body {
 }
 .winners-scroll-track {
   animation: winners-scroll var(--scroll-duration, 120s) linear infinite;
+}
+
+/* Foil card shimmer effect */
+@keyframes foil-shimmer {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.15) saturate(1.1); }
+}
+.foil-shimmer {
+  animation: foil-shimmer 3s ease-in-out infinite;
+}
+
+/* Pack card reveal animation */
+@keyframes card-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotateY(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateY(0);
+  }
+}
+.card-reveal {
+  animation: card-reveal 0.5s ease-out forwards;
 }

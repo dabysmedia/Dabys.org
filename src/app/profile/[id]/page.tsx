@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
+import Header from "@/components/Header";
 
 interface LocalUser {
   id: string;
@@ -145,6 +146,9 @@ export default function ProfilePage() {
   const watchlistSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchlistDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Credits (for profile user)
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
   const isOwnProfile = currentUser?.id === profileId;
 
   useEffect(() => {
@@ -241,6 +245,38 @@ export default function ProfilePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch credits for the profile user
+  useEffect(() => {
+    if (!data?.user?.id) {
+      setCreditBalance(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/credits?userId=${encodeURIComponent(data.user.id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && typeof d?.balance === "number") setCreditBalance(d.balance);
+        else if (!cancelled) setCreditBalance(0);
+      })
+      .catch(() => {
+        if (!cancelled) setCreditBalance(null);
+      });
+    return () => { cancelled = true; };
+  }, [data?.user?.id]);
+
+  // Refresh profile credits when global credits change (e.g. after buying pack)
+  useEffect(() => {
+    if (!isOwnProfile || !data?.user?.id) return;
+    const handler = () => {
+      fetch(`/api/credits?userId=${encodeURIComponent(data.user.id)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (typeof d?.balance === "number") setCreditBalance(d.balance); })
+        .catch(() => {});
+    };
+    window.addEventListener("dabys-credits-refresh", handler);
+    return () => window.removeEventListener("dabys-credits-refresh", handler);
+  }, [isOwnProfile, data?.user?.id]);
+
   async function addToWatchlist(tmdbId: number) {
     if (!currentUser || currentUser.id !== profileId) return;
     setWatchlistAdding(true);
@@ -332,34 +368,7 @@ export default function ProfilePage() {
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-              Dabys.org
-            </Link>
-
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/wheel" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Theme Wheel</Link>
-            <Link href="/stats" className="text-xs text-white/30 hover:text-purple-400 transition-colors font-medium">Stats</Link>
-            {currentUser && (
-              <Link href={`/profile/${currentUser.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                {currentUserAvatarUrl ? (
-                  <img src={currentUserAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
-                    {currentUser.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="text-white/70 text-sm font-medium">{currentUser.name}</span>
-              </Link>
-            )}
-            <button onClick={() => { localStorage.removeItem("dabys_user"); router.replace("/login"); }} className="text-white/20 hover:text-white/50 transition-colors cursor-pointer" title="Log out"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Banner */}
       <div className="relative z-10 h-48 sm:h-64 overflow-hidden bg-gradient-to-br from-purple-900/60 via-indigo-900/60 to-violet-900/60 group/banner">
@@ -548,7 +557,7 @@ export default function ProfilePage() {
         )}
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <StatCard label="Weeks Won" value={stats.totalWins} icon="trophy" />
           <StatCard
             label="Avg Rating"
@@ -570,6 +579,30 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+          {isOwnProfile ? (
+            <Link
+              href="/cards"
+              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-amber-500/40 hover:bg-white/[0.04] transition-colors block"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <svg className="w-4 h-4 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
+              </div>
+              <p className="text-xl font-bold text-amber-400">{creditBalance ?? "—"}</p>
+            </Link>
+          ) : (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <svg className="w-4 h-4 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
+              </div>
+              <p className="text-xl font-bold text-amber-400">{creditBalance ?? "—"}</p>
+            </div>
+          )}
         </div>
 
         {/* Thumbs summary */}

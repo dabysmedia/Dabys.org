@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers } from "@/lib/data";
+import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, addCredits } from "@/lib/data";
 
 export async function GET() {
   const winners = getWinners();
@@ -52,6 +52,14 @@ export async function POST(request: Request) {
 
   winners.push(newWinner);
   saveWinners(winners);
+
+  if (body.submittedBy) {
+    const users = getUsers();
+    const submitter = users.find((u) => u.name === body.submittedBy);
+    if (submitter) {
+      addCredits(submitter.id, 50, "submission_win", { winnerId: newWinner.id, weekId: newWinner.weekId });
+    }
+  }
 
   // When adding manually, also create a submission so it counts in past weeks & profiles
   if (body.manual && body.weekId && body.submittedBy) {

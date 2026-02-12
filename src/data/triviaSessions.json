@@ -1,0 +1,64 @@
+[
+  {
+    "userId": "4",
+    "winnerId": "1",
+    "questions": [
+      {
+        "id": "c-1770861666486-11ks",
+        "question": "Robert Loggia played which character in Scarface?",
+        "options": [
+          "Woman at Babylon Club",
+          "Cuban Refugee",
+          "Cuban Man",
+          "Frank Lopez"
+        ],
+        "correctIndex": 3
+      },
+      {
+        "id": "c-1770861666486-k26q",
+        "question": "Michelle Pfeiffer played which character in Scarface?",
+        "options": [
+          "Vic Phillips",
+          "Ambassador's Daughter (uncredited)",
+          "Elvira",
+          "Extra (uncredited)"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "id": "a-1770861666485-d5ph",
+        "question": "Who played Gina in Scarface?",
+        "options": [
+          "Catharine Richardson",
+          "Mary Elizabeth Mastrantonio",
+          "Ángel Salazar",
+          "Santos Morales"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "id": "d-1770861666485-ac0u",
+        "question": "Who directed Scarface?",
+        "options": [
+          "Michael Bay",
+          "Conrad Vernon",
+          "Brian De Palma",
+          "Hayao Miyazaki"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "id": "c-1770861666485-qu8d",
+        "question": "Al Pacino played which character in Scarface?",
+        "options": [
+          "Taco Stand Customer",
+          "Tony Montana",
+          "Woman at Babylon Club",
+          "Gina"
+        ],
+        "correctIndex": 1
+      }
+    ],
+    "createdAt": "2026-02-12T02:01:06.486Z"
+  }
+]

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getVotes, saveVotes, getCurrentWeek, getSubmissions } from "@/lib/data";
+import { getVotes, saveVotes, getCurrentWeek, getSubmissions, addCredits } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
     votes[existing] = vote;
   } else {
     votes.push(vote);
+    addCredits(body.userId, 10, "vote", { weekId: currentWeek.id, submissionId: body.submissionId });
   }
 
   saveVotes(votes);

@@ -1,0 +1,67 @@
+[
+  {
+    "userId": "2",
+    "characterId": "chr-1216866-111",
+    "rarity": "common",
+    "isFoil": false,
+    "actorName": "Michael Alldredge",
+    "characterName": "Sheffield",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/cmWkrUrcApkshaSgsUHt7A71BaX.jpg",
+    "id": "card-1770860194956-4c0us74",
+    "acquiredAt": "2026-02-12T01:36:34.956Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "chr-1897-1858",
+    "rarity": "common",
+    "isFoil": false,
+    "actorName": "Bernie Mac",
+    "characterName": "Bobby Bolivia",
+    "movieTitle": "Transformers",
+    "movieTmdbId": 1858,
+    "profilePath": "https://image.tmdb.org/t/p/w500/o1LQ83S4ZYvj84HYeWAzEV7Cg95.jpg",
+    "id": "card-1770860194957-z6kqw4b",
+    "acquiredAt": "2026-02-12T01:36:34.957Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "chr-1159-111",
+    "rarity": "common",
+    "isFoil": false,
+    "actorName": "Steven Bauer",
+    "characterName": "Manny Ray",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
+    "id": "card-1770860194958-csg9emi",
+    "acquiredAt": "2026-02-12T01:36:34.958Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "chr-60196-111",
+    "rarity": "common",
+    "isFoil": false,
+    "actorName": "John Carter",
+    "characterName": "Vic Phillips",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/iv47IhfbAmGtXNqbE0ulBLBAOec.jpg",
+    "id": "card-1770860194959-ri1q6u0",
+    "acquiredAt": "2026-02-12T01:36:34.959Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "chr-4823710-111",
+    "rarity": "common",
+    "isFoil": false,
+    "actorName": "Rhonda Sandberg",
+    "characterName": "Woman at Babylon Club",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "",
+    "id": "card-1770860194960-kh4t0w2",
+    "acquiredAt": "2026-02-12T01:36:34.960Z"
+  }
+]
