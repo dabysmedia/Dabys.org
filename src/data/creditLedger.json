@@ -2680,5 +2680,25 @@
       "weekId": "8"
     },
     "createdAt": "2026-02-13T02:32:22.519Z"
+  },
+  {
+    "id": "cl-1770988302388-yklg8gy",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T13:11:42.387Z"
+  },
+  {
+    "id": "cl-1770989146439-xtl784k",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T13:25:46.437Z"
   }
 ]

@@ -34,6 +34,7 @@ interface CharacterPortrayal {
   cardType?: CardType;
   profilePath?: string;
   movieTmdbId?: number;
+  altArtOfCharacterId?: string;
 }
 
 interface Pack {
@@ -45,13 +46,20 @@ interface Pack {
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
   allowedCardTypes: CardType[];
   isActive: boolean;
+  maxPurchasesPerDay?: number;
+  isFree?: boolean;
+}
+
+function cardTypeDisplayLabel(t: CardType): string {
+  if (t === "character") return "Boys";
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 function poolOptionLabel(c: CharacterPortrayal): string {
   const ct = c.cardType ?? "actor";
   if (ct === "director") return `${c.actorName} (Director) (${c.movieTitle}) — ${c.rarity}`;
   if (ct === "scene") return `Scene from ${c.movieTitle} — ${c.rarity}`;
-  if (ct === "character") return `${c.actorName} (Character) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
+  if (ct === "character") return `${c.actorName} (Boys) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
   return `${c.actorName} (Actor) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
 }
 
@@ -145,18 +153,17 @@ export default function AdminCardsCreditsPage() {
   const [removingFromPoolId, setRemovingFromPoolId] = useState<string | null>(null);
   const [customActorName, setCustomActorName] = useState("");
   const [customCharacterName, setCustomCharacterName] = useState("");
-  const [customMovieTitle, setCustomMovieTitle] = useState("");
+  const [customWinnerId, setCustomWinnerId] = useState("");
   const [customProfilePath, setCustomProfilePath] = useState("");
-  const [customMovieTmdbId, setCustomMovieTmdbId] = useState("");
   const [customRarity, setCustomRarity] = useState<"uncommon" | "rare" | "epic" | "legendary">("uncommon");
   const [customCardType, setCustomCardType] = useState<CardType>("actor");
+  const [customAltArtOfCharacterId, setCustomAltArtOfCharacterId] = useState("");
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editForm, setEditForm] = useState<Partial<Card>>({});
   const [savingEdit, setSavingEdit] = useState(false);
   const [editingPoolEntry, setEditingPoolEntry] = useState<CharacterPortrayal | null>(null);
   const [poolEditForm, setPoolEditForm] = useState<Partial<CharacterPortrayal>>({});
   const [savingPoolEdit, setSavingPoolEdit] = useState(false);
-  const [cleaningPool, setCleaningPool] = useState(false);
   const [rebuildingPool, setRebuildingPool] = useState(false);
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [rebuildConfirmInput, setRebuildConfirmInput] = useState("");
@@ -169,8 +176,10 @@ export default function AdminCardsCreditsPage() {
   const [savingPack, setSavingPack] = useState(false);
   const [deletingPackId, setDeletingPackId] = useState<string | null>(null);
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
+  const [showCreatePackForm, setShowCreatePackForm] = useState(false);
+  const [showCreateCustomCardForm, setShowCreateCustomCardForm] = useState(false);
   const [triviaAttempts, setTriviaAttempts] = useState<{ id: string; userId: string; winnerId: string; correctCount: number; totalCount: number; creditsEarned: number; completedAt: string }[]>([]);
-  const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string }[]>([]);
+  const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string; tmdbId?: number }[]>([]);
   const [reopeningWinnerId, setReopeningWinnerId] = useState<string | null>(null);
   const [reopeningAll, setReopeningAll] = useState(false);
   const [wipeConfirmUser, setWipeConfirmUser] = useState("");
@@ -201,6 +210,8 @@ export default function AdminCardsCreditsPage() {
     allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
     allowedCardTypes: CardType[];
     isActive: boolean;
+    maxPurchasesPerDay: string;
+    isFree: boolean;
   }>({
     name: "",
     imageUrl: "",
@@ -209,6 +220,8 @@ export default function AdminCardsCreditsPage() {
     allowedRarities: ["uncommon", "rare", "epic", "legendary"],
     allowedCardTypes: ["actor", "director", "character", "scene"],
     isActive: true,
+    maxPurchasesPerDay: "",
+    isFree: false,
   });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
@@ -250,7 +263,7 @@ export default function AdminCardsCreditsPage() {
       const res = await fetch("/api/admin/character-pool");
       if (res.ok) {
         const d = await res.json();
-        setPool(d.pool || []);
+        setPool(Array.isArray(d) ? d : (d?.pool ?? []));
       }
     } catch {
       setError("Failed to load pool");
@@ -302,7 +315,6 @@ export default function AdminCardsCreditsPage() {
       if (res.ok) {
         const data: User[] = await res.json();
         setUsers(data);
-        if (data.length > 0 && !selectedUserId) setSelectedUserId(data[0].id);
       }
     } catch {
       setError("Failed to load users");
@@ -339,7 +351,7 @@ export default function AdminCardsCreditsPage() {
       else setCards([]);
       if (poolRes.ok) {
         const p = await poolRes.json();
-        setPool(p.pool || []);
+        setPool(Array.isArray(p) ? p : (p?.pool ?? []));
       }
       if (attemptsRes.ok) {
         const a = await attemptsRes.json();
@@ -369,6 +381,7 @@ export default function AdminCardsCreditsPage() {
 
   function resetPackForm() {
     setEditingPackId(null);
+    setShowCreatePackForm(false);
     setPackForm({
       name: "",
       imageUrl: "",
@@ -377,11 +390,14 @@ export default function AdminCardsCreditsPage() {
       allowedRarities: ["uncommon", "rare", "epic", "legendary"],
       allowedCardTypes: ["actor", "director", "character", "scene"],
       isActive: true,
+      maxPurchasesPerDay: "",
+      isFree: false,
     });
   }
 
   function startEditPack(pack: Pack) {
     setEditingPackId(pack.id);
+    setShowCreatePackForm(true);
     setPackForm({
       name: pack.name,
       imageUrl: pack.imageUrl,
@@ -390,6 +406,8 @@ export default function AdminCardsCreditsPage() {
       allowedRarities: pack.allowedRarities,
       allowedCardTypes: pack.allowedCardTypes,
       isActive: pack.isActive,
+      maxPurchasesPerDay: pack.maxPurchasesPerDay != null ? String(pack.maxPurchasesPerDay) : "",
+      isFree: !!pack.isFree,
     });
   }
 
@@ -402,8 +420,13 @@ export default function AdminCardsCreditsPage() {
     }
     const price = parseInt(packForm.price, 10);
     const cardsPerPack = parseInt(packForm.cardsPerPack, 10);
-    if (!Number.isFinite(price) || price < 1) {
-      setError("Pack price must be at least 1");
+    const maxPurchasesPerDay = packForm.maxPurchasesPerDay.trim() === "" ? undefined : parseInt(packForm.maxPurchasesPerDay, 10);
+    if (!packForm.isFree && (!Number.isFinite(price) || price < 1)) {
+      setError("Pack price must be at least 1 when not free");
+      return;
+    }
+    if (packForm.isFree && !Number.isFinite(price)) {
+      setError("Price must be a number");
       return;
     }
     if (!Number.isFinite(cardsPerPack) || cardsPerPack < 1) {
@@ -415,14 +438,16 @@ export default function AdminCardsCreditsPage() {
     setError("");
     try {
       const method = editingPackId ? "PATCH" : "POST";
-      const body: any = {
+      const body: Record<string, unknown> = {
         name: packForm.name.trim(),
         imageUrl: packForm.imageUrl.trim(),
-        price,
+        price: packForm.isFree ? 0 : price,
         cardsPerPack,
         allowedRarities: packForm.allowedRarities,
         allowedCardTypes: packForm.allowedCardTypes,
         isActive: packForm.isActive,
+        isFree: packForm.isFree,
+        maxPurchasesPerDay: maxPurchasesPerDay === undefined ? "" : maxPurchasesPerDay,
       };
       if (editingPackId) body.id = editingPackId;
 
@@ -696,7 +721,7 @@ export default function AdminCardsCreditsPage() {
 
   async function handleAddToPool(e: React.FormEvent) {
     e.preventDefault();
-    if (!customActorName.trim() || !customMovieTitle.trim() || !customProfilePath.trim() || addingToPool) return;
+    if (!customActorName.trim() || !customProfilePath.trim() || !customWinnerId || addingToPool) return;
     setAddingToPool(true);
     setError("");
     try {
@@ -706,11 +731,11 @@ export default function AdminCardsCreditsPage() {
         body: JSON.stringify({
           actorName: customActorName.trim(),
           characterName: customCharacterName.trim() || "Unknown",
-          movieTitle: customMovieTitle.trim(),
           profilePath: customProfilePath.trim(),
-          movieTmdbId: parseInt(customMovieTmdbId, 10) || 0,
+          winnerId: customWinnerId,
           rarity: customRarity,
           cardType: customCardType,
+          ...(customAltArtOfCharacterId.trim() && { altArtOfCharacterId: customAltArtOfCharacterId.trim() }),
         }),
       });
       const data = await res.json();
@@ -718,9 +743,9 @@ export default function AdminCardsCreditsPage() {
         await loadPool();
         setCustomActorName("");
         setCustomCharacterName("");
-        setCustomMovieTitle("");
         setCustomProfilePath("");
-        setCustomMovieTmdbId("");
+        setCustomWinnerId("");
+        setCustomAltArtOfCharacterId("");
       } else {
         setError(data.error || "Failed to add to pool");
       }
@@ -741,6 +766,7 @@ export default function AdminCardsCreditsPage() {
       movieTmdbId: entry.movieTmdbId ?? 0,
       rarity: entry.rarity,
       cardType: (entry.cardType ?? "actor") as CardType,
+      altArtOfCharacterId: entry.altArtOfCharacterId ?? "",
     });
     setError("");
   }
@@ -791,25 +817,6 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to rebuild pool");
     } finally {
       setRebuildingPool(false);
-    }
-  }
-
-  async function handleCleanupPool() {
-    setCleaningPool(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/character-pool?cleanup=1");
-      if (res.ok) {
-        const d = await res.json();
-        setPool(d.pool || []);
-      } else {
-        const data = await res.json();
-        setError(data.error || "Failed to cleanup pool");
-      }
-    } catch {
-      setError("Failed to cleanup pool");
-    } finally {
-      setCleaningPool(false);
     }
   }
 
@@ -1010,12 +1017,35 @@ export default function AdminCardsCreditsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pack form */}
+          {/* Pack form (collapsed behind button when not editing) */}
           <div>
-            <h3 className="text-sm font-medium text-white/80 mb-3">
-              {editingPackId ? "Edit Pack" : "Create Pack"}
-            </h3>
-            <form onSubmit={handleSavePack} className="space-y-3">
+            {!(showCreatePackForm || editingPackId) ? (
+              <button
+                type="button"
+                onClick={() => setShowCreatePackForm(true)}
+                className="px-4 py-2.5 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 cursor-pointer"
+              >
+                Create Pack
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-white/80">
+                    {editingPackId ? "Edit Pack" : "Create Pack"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingPackId) resetPackForm();
+                      else setShowCreatePackForm(false);
+                    }}
+                    disabled={savingPack}
+                    className="text-xs text-white/50 hover:text-white/70 disabled:opacity-40"
+                  >
+                    Close
+                  </button>
+                </div>
+                <form onSubmit={handleSavePack} className="space-y-3">
               <div>
                 <label className="block text-xs text-white/40 mb-1">Name *</label>
                 <input
@@ -1047,15 +1077,31 @@ export default function AdminCardsCreditsPage() {
                   </button>
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm text-white/70">
+                <input
+                  type="checkbox"
+                  checked={packForm.isFree}
+                  onChange={(e) =>
+                    setPackForm((f) => ({
+                      ...f,
+                      isFree: e.target.checked,
+                      ...(e.target.checked ? { price: "0" } : {}),
+                    }))
+                  }
+                  className="rounded border-white/30 bg-white/5"
+                />
+                Free pack (0 credits)
+              </label>
               <div className="flex flex-wrap gap-3">
                 <div>
                   <label className="block text-xs text-white/40 mb-1">Price (credits)</label>
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     value={packForm.price}
                     onChange={(e) => setPackForm((f) => ({ ...f, price: e.target.value }))}
-                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                    disabled={packForm.isFree}
+                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -1067,6 +1113,18 @@ export default function AdminCardsCreditsPage() {
                     onChange={(e) => setPackForm((f) => ({ ...f, cardsPerPack: e.target.value }))}
                     className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Max purchases per day</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="No limit"
+                    value={packForm.maxPurchasesPerDay}
+                    onChange={(e) => setPackForm((f) => ({ ...f, maxPurchasesPerDay: e.target.value }))}
+                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30"
+                  />
+                  <p className="text-[10px] text-white/40 mt-0.5">Leave empty for no limit. UTC day.</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -1128,7 +1186,7 @@ export default function AdminCardsCreditsPage() {
                               : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"
                           }`}
                         >
-                          {t}
+                          {cardTypeDisplayLabel(t)}
                         </button>
                       );
                     })}
@@ -1164,6 +1222,8 @@ export default function AdminCardsCreditsPage() {
                 </button>
               </div>
             </form>
+              </>
+            )}
           </div>
 
           {/* Packs list */}
@@ -1203,8 +1263,16 @@ export default function AdminCardsCreditsPage() {
                         )}
                       </div>
                       <p className="text-xs text-white/60">
-                        <span className="text-amber-300 font-semibold">{pack.price}</span> credits ·{" "}
+                        {pack.isFree ? (
+                          <span className="text-green-400 font-semibold">Free</span>
+                        ) : (
+                          <span className="text-amber-300 font-semibold">{pack.price}</span>
+                        )}{" "}
+                        {pack.isFree ? "" : "credits · "}
                         {pack.cardsPerPack} cards
+                        {pack.maxPurchasesPerDay != null && pack.maxPurchasesPerDay > 0 && (
+                          <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/day limit</span></>
+                        )}
                       </p>
                       <p className="text-[11px] text-white/40 mt-0.5 truncate">
                         Drops{" "}
@@ -1249,52 +1317,6 @@ export default function AdminCardsCreditsPage() {
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
             Manage Card Pool ({pool.length} cards)
           </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            {showRebuildConfirm ? (
-              <>
-                <input
-                  type="text"
-                  value={rebuildConfirmInput}
-                  onChange={(e) => setRebuildConfirmInput(e.target.value)}
-                  placeholder={`Type "${REBUILD_CONFIRM_WORD}" to confirm`}
-                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs w-48 outline-none focus:border-purple-500/40"
-                  autoFocus
-                />
-                <button
-                  onClick={handleRebuildPool}
-                  disabled={rebuildingPool || rebuildConfirmInput.toLowerCase().trim() !== REBUILD_CONFIRM_WORD}
-                  className="px-3 py-1.5 rounded-lg border border-purple-500/40 text-purple-400/90 text-xs font-medium hover:bg-purple-500/10 disabled:opacity-40"
-                >
-                  {rebuildingPool ? "Rebuilding..." : "Confirm rebuild"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowRebuildConfirm(false);
-                    setRebuildConfirmInput("");
-                  }}
-                  disabled={rebuildingPool}
-                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/60 text-xs font-medium hover:bg-white/5 disabled:opacity-40"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowRebuildConfirm(true)}
-                disabled={rebuildingPool}
-                className="px-3 py-1.5 rounded-lg border border-purple-500/40 text-purple-400/90 text-xs font-medium hover:bg-purple-500/10 disabled:opacity-40"
-              >
-                {rebuildingPool ? "Rebuilding..." : "Rebuild pool (6/movie)"}
-              </button>
-            )}
-            <button
-              onClick={handleCleanupPool}
-              disabled={cleaningPool}
-              className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-40"
-            >
-              {cleaningPool ? "Cleaning..." : "Remove generic roles"}
-            </button>
-          </div>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2">
@@ -1305,11 +1327,36 @@ export default function AdminCardsCreditsPage() {
           <span className="text-sm text-white/80"><span className="capitalize text-white/60">Uncommon</span> <span className="font-medium">64%</span></span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Create custom card */}
-          <div>
-            <h3 className="text-sm font-medium text-white/80 mb-3">Create Custom Card</h3>
-            <form onSubmit={handleAddToPool} className="space-y-3">
+        <div
+          className={
+            showCreateCustomCardForm
+              ? "grid grid-cols-1 lg:grid-cols-2 gap-8"
+              : "grid grid-cols-1 gap-8"
+          }
+        >
+          {/* Create custom card (collapsed behind button) */}
+          <div className={showCreateCustomCardForm ? "" : "w-full"}>
+            {!showCreateCustomCardForm ? (
+              <button
+                type="button"
+                onClick={() => setShowCreateCustomCardForm(true)}
+                className="px-4 py-2.5 rounded-lg border border-green-500/40 bg-green-500/10 text-green-300 text-sm font-medium hover:bg-green-500/20 cursor-pointer"
+              >
+                Create custom card
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-white/80">Create Custom Card</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCustomCardForm(false)}
+                    className="text-xs text-white/50 hover:text-white/70"
+                  >
+                    Close
+                  </button>
+                </div>
+                <form onSubmit={handleAddToPool} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-white/40 mb-1">Actor / Name *</label>
@@ -1334,16 +1381,50 @@ export default function AdminCardsCreditsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-white/40 mb-1">Movie Title *</label>
-                <input
-                  type="text"
-                  value={customMovieTitle}
-                  onChange={(e) => setCustomMovieTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
-                  placeholder="Scarface"
+                <label className="block text-xs text-white/40 mb-1">Winner / Movie *</label>
+                <select
+                  value={customWinnerId}
+                  onChange={(e) => {
+                    setCustomWinnerId(e.target.value);
+                    setCustomAltArtOfCharacterId("");
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"
                   required
-                />
+                >
+                  <option value="">-- Select winner (movie) --</option>
+                  {winners.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.movieTitle}
+                    </option>
+                  ))}
+                </select>
               </div>
+              {customWinnerId && (() => {
+                const winner = winners.find((w) => w.id === customWinnerId);
+                const sameMoviePool = pool.filter(
+                  (c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (winner?.tmdbId ?? 0)
+                );
+                return (
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label>
+                    <select
+                      value={customAltArtOfCharacterId}
+                      onChange={(e) => setCustomAltArtOfCharacterId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                    >
+                      <option value="">— None (normal pool entry) —</option>
+                      {sameMoviePool.map((c) => (
+                        <option key={c.characterId} value={c.characterId}>
+                          {poolOptionLabel(c)}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-white/40 mt-1">
+                      If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.
+                    </p>
+                  </div>
+                );
+              })()}
               <div>
                 <label className="block text-xs text-white/40 mb-1">Image *</label>
                 <div className="flex gap-2">
@@ -1366,16 +1447,6 @@ export default function AdminCardsCreditsPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">TMDB Movie ID</label>
-                  <input
-                    type="number"
-                    value={customMovieTmdbId}
-                    onChange={(e) => setCustomMovieTmdbId(e.target.value)}
-                    className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs text-white/40 mb-1">Rarity</label>
                   <select
                     value={customRarity}
@@ -1397,23 +1468,25 @@ export default function AdminCardsCreditsPage() {
                   >
                     <option value="actor">Actor</option>
                     <option value="director">Director</option>
-                    <option value="character">Character</option>
+                    <option value="character">Boys</option>
                     <option value="scene">Scene</option>
                   </select>
                 </div>
               </div>
               <button
                 type="submit"
-                disabled={!customActorName.trim() || !customMovieTitle.trim() || !customProfilePath.trim() || addingToPool}
+                disabled={!customActorName.trim() || !customWinnerId || !customProfilePath.trim() || addingToPool}
                 className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
               >
                 {addingToPool ? "Adding..." : "Add to Pool"}
               </button>
             </form>
+              </>
+            )}
           </div>
 
-          {/* Pool view */}
-          <div>
+          {/* Pool view (full width when create form is collapsed) */}
+          <div className="w-full min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h3 className="text-sm font-medium text-white/80">Pool</h3>
               <select
@@ -1519,12 +1592,14 @@ export default function AdminCardsCreditsPage() {
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
       ) : selectedUserId && selectedUser ? (
-        <>
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-6">
+            User: {selectedUser.name}
+          </h2>
+
           {/* Credits */}
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
-              Credits
-            </h2>
+          <section className="mb-8">
+            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Credits</h3>
             <p className="text-white/40 text-sm mb-4">
               Current balance: <span className="text-amber-400 font-bold">{creditBalance}</span>
             </p>
@@ -1548,13 +1623,11 @@ export default function AdminCardsCreditsPage() {
                 {savingCredits ? "Saving..." : "Save Credits"}
               </button>
             </form>
-          </div>
+          </section>
 
           {/* Stardust */}
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
-              Stardust
-            </h2>
+          <section className="mb-8">
+            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Stardust</h3>
             <p className="text-white/40 text-sm mb-4">
               Current balance: <span className="text-amber-200 font-bold">{stardustBalance}</span>
             </p>
@@ -1579,14 +1652,14 @@ export default function AdminCardsCreditsPage() {
               </button>
             </form>
             <p className="text-white/30 text-xs mt-2">Saves to /data (stardust.json).</p>
-          </div>
+          </section>
 
           {/* Trivia */}
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+          <section className="mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
                 Trivia (completed)
-              </h2>
+              </h3>
               <button
                 onClick={handleReopenAllTrivia}
                 disabled={reopeningAll}
@@ -1628,13 +1701,13 @@ export default function AdminCardsCreditsPage() {
                 })}
               </div>
             )}
-          </div>
+          </section>
 
           {/* Cards / Collection */}
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
+          <section>
+            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">
               Collection ({cards.length} cards)
-            </h2>
+            </h3>
 
             {/* Add card */}
             <form onSubmit={handleAddCard} className="flex flex-wrap gap-3 items-end mb-6">
@@ -1705,6 +1778,19 @@ export default function AdminCardsCreditsPage() {
                           HOLO
                         </span>
                       )}
+                      {(() => {
+                        const entry = pool.find((p) => p.characterId === card.characterId);
+                        const altOfId = entry?.altArtOfCharacterId;
+                        const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null;
+                        return altOfId ? (
+                          <span
+                            className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90"
+                            title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}
+                          >
+                            Alt
+                          </span>
+                        ) : null;
+                      })()}
                       <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
                         {card.rarity}
                       </span>
@@ -1740,8 +1826,8 @@ export default function AdminCardsCreditsPage() {
                 ))}
               </div>
             )}
-          </div>
-        </>
+          </section>
+        </div>
       ) : (
         <p className="text-white/40 text-sm">Select a user to manage their credits and cards.</p>
       )}
@@ -1832,7 +1918,7 @@ export default function AdminCardsCreditsPage() {
                     >
                       <option value="actor">Actor</option>
                       <option value="director">Director</option>
-                      <option value="character">Character</option>
+                      <option value="character">Boys</option>
                       <option value="scene">Scene</option>
                     </select>
                   </div>
@@ -1966,11 +2052,37 @@ export default function AdminCardsCreditsPage() {
                     >
                       <option value="actor">Actor</option>
                       <option value="director">Director</option>
-                      <option value="character">Character</option>
+                      <option value="character">Boys</option>
                       <option value="scene">Scene</option>
                     </select>
                   </div>
                 </div>
+                {editingPoolEntry && (
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label>
+                    <select
+                      value={poolEditForm.altArtOfCharacterId ?? ""}
+                      onChange={(e) => setPoolEditForm((f) => ({ ...f, altArtOfCharacterId: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                    >
+                      <option value="">— None (normal pool entry) —</option>
+                      {pool
+                        .filter(
+                          (c) =>
+                            c.profilePath?.trim() &&
+                            (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)
+                        )
+                        .map((c) => (
+                          <option key={c.characterId} value={c.characterId}>
+                            {poolOptionLabel(c)}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-white/40 mt-1">
+                      If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.
+                    </p>
+                  </div>
+                )}
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
@@ -2034,6 +2146,48 @@ export default function AdminCardsCreditsPage() {
                 {wipingUser ? "Wiping..." : "Wipe user inventory"}
               </button>
             </form>
+          </div>
+
+          <div>
+            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Rebuild pool (6 per movie)</h3>
+            <p className="text-white/40 text-sm mb-2">Re-fetches cast from TMDB and rebuilds the character pool. Custom pool entries are preserved. This can change which 6 characters appear per movie.</p>
+            {showRebuildConfirm ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={rebuildConfirmInput}
+                  onChange={(e) => setRebuildConfirmInput(e.target.value)}
+                  placeholder={`Type "${REBUILD_CONFIRM_WORD}" to confirm`}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs w-48 outline-none focus:border-red-500/40"
+                  autoFocus
+                />
+                <button
+                  onClick={handleRebuildPool}
+                  disabled={rebuildingPool || rebuildConfirmInput.toLowerCase().trim() !== REBUILD_CONFIRM_WORD}
+                  className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400/90 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40"
+                >
+                  {rebuildingPool ? "Rebuilding..." : "Confirm rebuild"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRebuildConfirm(false);
+                    setRebuildConfirmInput("");
+                  }}
+                  disabled={rebuildingPool}
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/60 text-xs font-medium hover:bg-white/5 disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowRebuildConfirm(true)}
+                disabled={rebuildingPool}
+                className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400/90 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40"
+              >
+                {rebuildingPool ? "Rebuilding..." : "Rebuild pool (6/movie)"}
+              </button>
+            )}
           </div>
 
           <div>

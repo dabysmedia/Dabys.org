@@ -944,7 +944,7 @@ function CardsContent() {
   }
 
   async function handleBuyPack(pack: Pack) {
-    if (!user || creditBalance < pack.price || buyingPackId) return;
+    if (!user || (pack.price > 0 && creditBalance < pack.price) || buyingPackId) return;
     setBuyingPackId(pack.id);
     try {
       const res = await fetch("/api/cards/buy-pack", {
@@ -956,7 +956,7 @@ function CardsContent() {
       if (res.ok && data.cards) {
         setNewCards(data.cards);
         await loadData();
-        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -pack.price } }));
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: pack.price > 0 ? -pack.price : 0 } }));
       } else {
         alert(data.error || "Failed to buy pack");
       }
@@ -1277,7 +1277,7 @@ function CardsContent() {
               </svg>
               Quest log
             </h2>
-            <p className="text-[10px] text-white/40 mt-1">Track badge progress. Add from a winner&apos;s Collectible Cards.</p>
+            <p className="text-[10px] text-white/40 mt-1">Track badge progress. Add from a winner&apos;s Card set.</p>
           </div>
           <div className="p-3 overflow-y-auto" style={{ maxHeight: "min(22rem, calc(100vh - 8rem))" }}>
             {pinnedProgress.length === 0 ? (
@@ -1424,8 +1424,10 @@ function CardsContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {packs.map((pack) => {
                 const disabled =
-                  poolCount < pack.cardsPerPack || creditBalance < pack.price || buyingPackId === pack.id;
-                const needCredits = creditBalance < pack.price ? pack.price - creditBalance : 0;
+                  poolCount < pack.cardsPerPack ||
+                  (pack.price > 0 && creditBalance < pack.price) ||
+                  buyingPackId === pack.id;
+                const needCredits = pack.price > 0 && creditBalance < pack.price ? pack.price - creditBalance : 0;
                 const rarityText =
                   pack.allowedRarities && pack.allowedRarities.length < 4
                     ? pack.allowedRarities.join(", ")
@@ -1462,7 +1464,7 @@ function CardsContent() {
                           </p>
                         </div>
                         <div className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
-                          {pack.price} cr
+                          {pack.price === 0 ? "Free" : `${pack.price} cr`}
                         </div>
                       </div>
                     </div>

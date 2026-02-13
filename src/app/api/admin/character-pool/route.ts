@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool, saveCharacterPool, migrateCommonToUncommon, updateCardsByCharacterId } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
 import type { CardType } from "@/lib/data";
 
@@ -36,18 +36,35 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const actorName = (body.actorName as string)?.trim();
   const characterName = (body.characterName as string)?.trim() || "Unknown";
-  const movieTitle = (body.movieTitle as string)?.trim();
   const profilePath = (body.profilePath as string)?.trim();
-  const movieTmdbId = typeof body.movieTmdbId === "number" ? body.movieTmdbId : parseInt(String(body.movieTmdbId || 0), 10);
+  const winnerId = (body.winnerId as string)?.trim();
   const rarity = ["uncommon", "rare", "epic", "legendary"].includes(body.rarity) ? body.rarity : "uncommon";
   const cardType: CardType = ["actor", "director", "character", "scene"].includes(body.cardType) ? body.cardType : "actor";
+  const altArtOfCharacterId =
+    typeof body.altArtOfCharacterId === "string" && body.altArtOfCharacterId.trim() !== ""
+      ? body.altArtOfCharacterId.trim()
+      : undefined;
 
-  if (!actorName || !movieTitle || !profilePath) {
+  if (!actorName || !profilePath) {
     return NextResponse.json(
-      { error: "actorName, movieTitle, and profilePath are required" },
+      { error: "actorName and profilePath are required" },
       { status: 400 }
     );
   }
+  if (!winnerId) {
+    return NextResponse.json(
+      { error: "winnerId is required (select a winner/movie)" },
+      { status: 400 }
+    );
+  }
+
+  const winners = getWinners();
+  const winner = winners.find((w) => w.id === winnerId);
+  if (!winner) {
+    return NextResponse.json({ error: "Winner not found" }, { status: 404 });
+  }
+  const movieTmdbId = winner.tmdbId ?? 0;
+  const movieTitle = winner.movieTitle?.trim() || "Unknown";
 
   const pool = getCharacterPool();
   const characterId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -56,11 +73,12 @@ export async function POST(request: Request) {
     actorName,
     characterName,
     profilePath,
-    movieTmdbId: isNaN(movieTmdbId) ? 0 : movieTmdbId,
+    movieTmdbId,
     movieTitle,
     popularity: 0,
     rarity,
     cardType,
+    ...(altArtOfCharacterId != null && { altArtOfCharacterId }),
   };
   pool.push(newEntry);
   saveCharacterPool(pool);
@@ -93,11 +111,17 @@ export async function PATCH(request: Request) {
   if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity;
   if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType;
   if (typeof body.popularity === "number") updates.popularity = body.popularity;
+  if (body.altArtOfCharacterId !== undefined) {
+    updates.altArtOfCharacterId =
+      typeof body.altArtOfCharacterId === "string" && body.altArtOfCharacterId.trim() !== ""
+        ? body.altArtOfCharacterId.trim()
+        : undefined;
+  }
 
   pool[idx] = { ...pool[idx], ...updates };
   saveCharacterPool(pool);
-  // Propagate pool changes to all existing cards with this characterId (so image/name/etc updates show site-wide)
-  const { popularity: _, ...cardUpdates } = updates;
+  // Propagate pool changes to all existing cards with this characterId (so image/name/etc updates show site-wide; alt-art is pool-only)
+  const { popularity: _p, altArtOfCharacterId: _a, ...cardUpdates } = updates;
   if (Object.keys(cardUpdates).length > 0) {
     updateCardsByCharacterId(characterId, cardUpdates);
   }

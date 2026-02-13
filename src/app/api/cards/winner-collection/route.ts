@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, getCards } from "@/lib/data";
+import { getWinners, getCards, getCharacterPool } from "@/lib/data";
 import {
   getPoolEntriesForMovie,
   getUserCollectedCharacterIdsForMovie,
@@ -27,12 +27,15 @@ export async function GET(request: Request) {
   const ownedCharacterIds: string[] = userId ? Array.from(getUserCollectedCharacterIdsForMovie(userId, winner.tmdbId)) : [];
   const completed = userId ? hasCompletedMovie(userId, winnerId) : false;
 
-  // Build ownedCards: for each owned characterId, get one card the user owns
+  // Build ownedCards: for each owned characterId, get one card the user owns (main or pool alt-art)
+  const pool = getCharacterPool();
   const ownedCards: ReturnType<typeof getCards>[number][] = [];
   if (userId) {
-    const userCards = getCards(userId);
+    const userCards = getCards(userId).filter((c) => c.movieTmdbId === winner.tmdbId);
     for (const charId of ownedCharacterIds) {
-      const card = userCards.find((c) => c.characterId === charId);
+      const card = userCards.find(
+        (c) => c.characterId === charId || pool.find((p) => p.characterId === c.characterId)?.altArtOfCharacterId === charId
+      );
       if (card) ownedCards.push(card);
     }
   }

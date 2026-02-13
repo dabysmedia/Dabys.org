@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-// Default data directory baked into the image
+// All JSON (packs, characterPool, cards, credits, etc.) is read/written under this directory.
+// Default: src/data. Set DATA_DIR=/data (or any path) to save elsewhere (e.g. mounted volume).
 const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
-// Allow overriding via env (e.g. Railway volume mounted at /data)
 const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
 
 function ensureDataFile(filename: string) {
@@ -535,6 +535,52 @@ export function deductCredits(
   return true;
 }
 
+/** Append a ledger entry without changing balance (e.g. free pack purchase for daily limit counting). */
+function addLedgerEntryOnly(
+  userId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, unknown>
+) {
+  const ledger = getCreditLedgerRaw();
+  ledger.push({
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    amount,
+    reason,
+    metadata,
+    createdAt: new Date().toISOString(),
+  });
+  saveCreditLedgerRaw(ledger);
+}
+
+/** Number of times the user has purchased this pack today (UTC). */
+export function getPackPurchasesCountToday(userId: string, packId: string): number {
+  const ledger = getCreditLedgerRaw();
+  const today = new Date().toISOString().slice(0, 10);
+  return ledger.filter(
+    (e) =>
+      e.userId === userId &&
+      e.reason === "pack_purchase" &&
+      e.metadata &&
+      (e.metadata as { packId?: string }).packId === packId &&
+      e.createdAt.startsWith(today)
+  ).length;
+}
+
+/** Record a pack purchase: deduct credits if amount > 0, else only add ledger entry (for free packs). */
+export function recordPackPurchase(
+  userId: string,
+  packId: string,
+  amount: number
+): boolean {
+  if (amount > 0) {
+    return deductCredits(userId, amount, "pack_purchase", { packId });
+  }
+  addLedgerEntryOnly(userId, 0, "pack_purchase", { packId });
+  return true;
+}
+
 export function setCredits(userId: string, balance: number): void {
   const credits = getCreditsRaw();
   const idx = credits.findIndex((c) => c.userId === userId);
@@ -634,6 +680,8 @@ export interface CharacterPortrayal {
   popularity: number;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
   cardType?: CardType; // optional for migration; defaults to "actor"
+  /** When set, this pool entry is an alt-art; owning a card with this characterId counts as owning this character for set completion. */
+  altArtOfCharacterId?: string;
 }
 
 export interface Card {
@@ -1155,6 +1203,10 @@ export interface Pack {
   /** Allowed card types for this pack. Empty = all card types. */
   allowedCardTypes: CardType[];
   isActive: boolean;
+  /** Max purchases per user per day (UTC). Omit or 0 = no limit. */
+  maxPurchasesPerDay?: number;
+  /** If true, pack costs 0 credits. */
+  isFree?: boolean;
 }
 
 function getPacksRaw(): Pack[] {
@@ -1191,6 +1243,11 @@ export function getPacks(): Pack[] {
         ? (p.allowedCardTypes.filter((t) => ALL_CARD_TYPES.includes(t)) as Pack["allowedCardTypes"])
         : ALL_CARD_TYPES,
     isActive: typeof p.isActive === "boolean" ? p.isActive : true,
+    maxPurchasesPerDay:
+      typeof (p as Pack).maxPurchasesPerDay === "number" && (p as Pack).maxPurchasesPerDay! > 0
+        ? (p as Pack).maxPurchasesPerDay
+        : undefined,
+    isFree: !!((p as Pack).isFree),
   }));
 }
 
@@ -1229,6 +1286,11 @@ export function upsertPack(
         ? (input.allowedCardTypes as Pack["allowedCardTypes"])
         : ALL_CARD_TYPES,
     isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+    maxPurchasesPerDay:
+      typeof (input as Pack).maxPurchasesPerDay === "number" && (input as Pack).maxPurchasesPerDay! > 0
+        ? (input as Pack).maxPurchasesPerDay
+        : undefined,
+    isFree: !!((input as Pack).isFree),
   };
   packs.push(newPack);
   savePacks(packs);

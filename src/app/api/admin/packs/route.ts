@@ -40,10 +40,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "imageUrl is required" }, { status: 400 });
   }
 
+  const isFree = !!body.isFree;
   const price = typeof rawPrice === "number" ? rawPrice : parseInt(String(rawPrice ?? 0), 10);
-  if (!Number.isFinite(price) || price < 1) {
-    return NextResponse.json({ error: "price must be at least 1" }, { status: 400 });
+  if (!Number.isFinite(price) || price < 0) {
+    return NextResponse.json({ error: "price must be 0 or more" }, { status: 400 });
   }
+  if (!isFree && price < 1) {
+    return NextResponse.json({ error: "price must be at least 1 when pack is not free" }, { status: 400 });
+  }
+  const rawMaxPerDay = body.maxPurchasesPerDay;
+  const maxPurchasesPerDay =
+    rawMaxPerDay === undefined || rawMaxPerDay === null || rawMaxPerDay === ""
+      ? undefined
+      : Math.max(0, parseInt(String(rawMaxPerDay), 10) || 0);
+  const maxPerDay = maxPurchasesPerDay === 0 ? undefined : maxPurchasesPerDay;
 
   const cardsPerPack =
     typeof rawCardsPerPack === "number" ? rawCardsPerPack : parseInt(String(rawCardsPerPack ?? 0), 10);
@@ -58,11 +68,13 @@ export async function POST(request: Request) {
   const pack = upsertPack({
     name,
     imageUrl,
-    price,
+    price: isFree ? 0 : price,
     cardsPerPack: cardsPerPack > 0 ? cardsPerPack : 5,
     allowedRarities,
     allowedCardTypes,
     isActive,
+    maxPurchasesPerDay: maxPerDay,
+    isFree,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -124,15 +136,25 @@ export async function PATCH(request: Request) {
   const isActive =
     typeof body.isActive === "boolean" ? body.isActive : existing.isActive;
 
+  const isFree = body.isFree !== undefined ? !!body.isFree : (existing as { isFree?: boolean }).isFree;
+  const effectivePrice = isFree ? 0 : (price >= 0 ? price : existing.price);
+  const maxPurchasesPerDay =
+    body.maxPurchasesPerDay === undefined || body.maxPurchasesPerDay === null || body.maxPurchasesPerDay === ""
+      ? (existing as { maxPurchasesPerDay?: number }).maxPurchasesPerDay
+      : Math.max(0, parseInt(String(body.maxPurchasesPerDay), 10) || 0);
+  const maxPerDay = maxPurchasesPerDay === 0 ? undefined : maxPurchasesPerDay;
+
   const updated = upsertPack({
     id,
     name,
     imageUrl,
-    price,
+    price: effectivePrice,
     cardsPerPack: cardsPerPack > 0 ? cardsPerPack : existing.cardsPerPack,
     allowedRarities,
     allowedCardTypes,
     isActive,
+    maxPurchasesPerDay: maxPerDay,
+    isFree,
   });
 
   return NextResponse.json(updated);

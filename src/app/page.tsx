@@ -295,35 +295,35 @@ export default function HomePage() {
               {phaseMeta && <p className="mt-3 text-white/40 text-sm">{phaseMeta.desc}</p>}
             </div>
 
-            {/* Winner hero — make it a big deal */}
+            {/* Winner hero — translucent glass over winner image bg */}
             {phase === "winner_published" && thisWeekWinner && (
               <Link
                 href={`/winners/${thisWeekWinner.id}`}
-                className="relative block mb-10 rounded-3xl overflow-hidden border border-white/[0.16] bg-black/40 backdrop-blur-2xl shadow-[0_40px_120px_rgba(0,0,0,0.9)] group hover:border-[#F0F4F8]/80 hover:shadow-[0_0_40px_rgba(240,244,248,0.55)] transition-all duration-300"
+                className="relative block mb-10 rounded-3xl overflow-hidden border border-white/[0.12] shadow-xl group hover:border-white/[0.2] transition-all duration-300"
               >
-                {/* Backdrop art */}
-                <div className="absolute inset-0">
+                {/* Winner image as container background — low opacity + dark overlay */}
+                <div className="absolute inset-0 rounded-3xl overflow-hidden">
                   {(thisWeekWinner.backdropUrl || thisWeekWinner.posterUrl) ? (
                     <img
                       src={thisWeekWinner.backdropUrl || thisWeekWinner.posterUrl!}
                       alt={thisWeekWinner.movieTitle}
-                      className="w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity duration-500"
+                      className="w-full h-full object-cover opacity-45 group-hover:opacity-50 transition-opacity duration-500"
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-r from-amber-700/40 via-purple-800/40 to-indigo-900/40" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-black/45 group-hover:bg-black/40 transition-colors duration-300" />
                 </div>
 
-                <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col md:flex-row items-center gap-8">
+                {/* Glass overlay full-bleed so border aligns with bg art */}
+                <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col md:flex-row items-center gap-8 bg-white/[0.08] backdrop-blur-lg min-h-[200px]">
                   {/* Trophy + copy on small screens */}
                   <div className="md:hidden w-full flex items-center justify-between mb-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/25">
-                      <svg className="w-4 h-4 text-[#F0F4F8]" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30">
+                      <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
                       </svg>
-                      <span className="text-[11px] font-semibold tracking-widest text-[#F0F4F8] uppercase">
+                      <span className="text-[11px] font-semibold tracking-widest text-amber-400 uppercase">
                         This Week&apos;s Winner
                       </span>
                     </div>
@@ -346,11 +346,11 @@ export default function HomePage() {
 
                   {/* Copy */}
                   <div className="flex-1 min-w-0">
-                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/25 mb-3">
-                      <svg className="w-4 h-4 text-[#F0F4F8]" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mb-3">
+                      <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
                       </svg>
-                      <span className="text-[11px] font-semibold tracking-widest text-[#F0F4F8] uppercase">
+                      <span className="text-[11px] font-semibold tracking-widest text-amber-400 uppercase">
                         This Week&apos;s Winner
                       </span>
                     </div>
@@ -367,20 +367,20 @@ export default function HomePage() {
                         thisWeekWinner.submittedByUserId ? (
                           <Link
                             href={`/profile/${thisWeekWinner.submittedByUserId}`}
-                            className="flex items-center gap-4 p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card"
+                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0"
                           >
                           <div className="shrink-0">
                             {thisWeekWinner.submitterAvatarUrl ? (
-                              <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-white/20 group-hover/card:border-amber-500/40 transition-colors" />
+                              <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-white/20 group-hover/card:border-amber-500/40 transition-colors" />
                             ) : (
-                              <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold border-2 border-white/20">
+                              <span className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-base sm:text-lg md:text-xl font-bold border-2 border-white/20">
                                 {thisWeekWinner.submittedBy.charAt(0)}
                               </span>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 overflow-hidden">
                             <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked by</p>
-                            <p className="text-lg sm:text-xl font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
+                            <p className="text-sm sm:text-base md:text-lg font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
                             <div className="flex flex-wrap items-center gap-2 mt-2">
                               <span
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm"
@@ -395,23 +395,23 @@ export default function HomePage() {
                             </div>
                           </div>
                           <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                           </span>
                         </Link>
                         ) : (
-                          <div className="flex items-center gap-4 p-4 rounded-2xl border border-white/15 bg-white/[0.06] mb-4">
+                          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] mb-4 min-w-0">
                             <div className="shrink-0">
                               {thisWeekWinner.submitterAvatarUrl ? (
-                                <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-white/20" />
+                                <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-white/20" />
                               ) : (
-                                <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl font-bold border-2 border-white/20">
+                                <span className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-base sm:text-lg md:text-xl font-bold border-2 border-white/20">
                                   {thisWeekWinner.submittedBy.charAt(0)}
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 overflow-hidden">
                               <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked by</p>
-                              <p className="text-lg sm:text-xl font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
+                              <p className="text-sm sm:text-base md:text-lg font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
                               <div className="flex flex-wrap items-center gap-2 mt-2">
                                 <span
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm"
@@ -428,23 +428,41 @@ export default function HomePage() {
                           </div>
                         )
                       ) : (
-                        <p className="text-sm sm:text-base text-white/70 mb-3">
-                          Picked by{" "}
-                          {thisWeekWinner.submittedByUserId ? (
-                            <Link href={`/profile/${thisWeekWinner.submittedByUserId}`} className="inline-flex items-center gap-2 text-white font-semibold hover:text-purple-300 transition-colors">
+                        thisWeekWinner.submittedByUserId ? (
+                          <Link
+                            href={`/profile/${thisWeekWinner.submittedByUserId}`}
+                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0"
+                          >
+                            <div className="shrink-0">
                               {thisWeekWinner.submitterAvatarUrl ? (
-                                <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/20" />
+                                <img src={thisWeekWinner.submitterAvatarUrl} alt="" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-white/20 group-hover/card:border-amber-500/40 transition-colors" />
                               ) : (
-                                <span className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                                <span className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-base sm:text-lg md:text-xl font-bold border-2 border-white/20">
                                   {thisWeekWinner.submittedBy.charAt(0)}
                                 </span>
                               )}
-                              <span>{thisWeekWinner.submittedBy}</span>
-                            </Link>
-                          ) : (
-                            <span className="text-white/90 font-semibold">{thisWeekWinner.submittedBy}</span>
-                          )}
-                        </p>
+                            </div>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked by</p>
+                              <p className="text-sm sm:text-base md:text-lg font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
+                            </div>
+                            <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
+                              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            </span>
+                          </Link>
+                        ) : (
+                          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] mb-4 min-w-0">
+                            <div className="shrink-0">
+                              <span className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-base sm:text-lg md:text-xl font-bold border-2 border-white/20">
+                                {thisWeekWinner.submittedBy.charAt(0)}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <p className="text-[10px] uppercase tracking-widest text-white/40 mb-0.5">Picked by</p>
+                              <p className="text-sm sm:text-base md:text-lg font-bold text-white/95 truncate">{thisWeekWinner.submittedBy}</p>
+                            </div>
+                          </div>
+                        )
                       )
                     )}
 
@@ -453,7 +471,7 @@ export default function HomePage() {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#B8B8C0] via-[#F0F4F8] to-[#9098A0] text-black text-sm font-semibold shadow-lg shadow-[rgba(240,244,248,0.6)] group-hover:shadow-[0_0_32px_rgba(240,244,248,0.8)] transition-shadow">
+                      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sky-500/15 backdrop-blur-xl border border-sky-400/30 text-sky-200 text-sm font-semibold shadow-lg shadow-sky-500/10 hover:bg-sky-500/20 hover:border-sky-400/40 transition-all">
                         Rate &amp; discuss
                         <span aria-hidden="true">↗</span>
                       </span>

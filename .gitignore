@@ -35,3 +35,6 @@ src/data/winners.json
 src/data/weeks.json
 src/data/winners.json
 src/data/weeks.json
+src/data/cards.json
+src/data/creditLedger.json
+src/data/credits.json
