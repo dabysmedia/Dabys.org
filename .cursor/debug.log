@@ -1,0 +1,5 @@
+{"location":"cards/page.tsx:handleAcceptTrade:entry","message":"handleAcceptTrade called","data":{"tradeId":"trd-1770925675039-wznwwm3","hasUser":true,"userId":"1"},"timestamp":1771025022318,"hypothesisId":"H1"}
+{"location":"cards/page.tsx:handleAcceptTrade:afterFetch","message":"accept response","data":{"resOk":true,"status":200},"timestamp":1771025022381,"hypothesisId":"H2"}
+{"location":"lib/trades.ts:acceptTrade","message":"getTradeById result","data":{"tradeId":"trd-1770925675039-wznwwm3","userId":"1","tradeFound":true,"status":"pending","counterpartyUserId":"1","match":true},"timestamp":1771025022372,"hypothesisId":"H3"}
+{"location":"api/trades/[id]/accept/route.ts:POST:result","message":"acceptTrade result","data":{"success":true},"timestamp":1771025022378,"hypothesisId":"H4"}
+{"location":"api/trades/[id]/accept/route.ts:POST:entry","message":"accept API called","data":{"tradeId":"trd-1770925675039-wznwwm3","bodyUserId":"1"},"timestamp":1771025022369,"hypothesisId":"H3"}

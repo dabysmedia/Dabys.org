@@ -312,6 +312,29 @@ async function playAlchemyDisenchantSuccess() {
     osc.stop(t + 0.28);
   } catch { /* ignore */ }
 }
+async function playIncomingTradeSound() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.setValueAtTime(1108.73, t + 0.08);
+    osc.frequency.setValueAtTime(1318.51, t + 0.16);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+    gain.gain.setValueAtTime(0.12, t + 0.14);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t);
+    osc.stop(t + 0.35);
+  } catch { /* ignore */ }
+}
+
 async function playAlchemyPackAPunchSuccess() {
   const ctx = getTradeUpAudioContext();
   if (!ctx) return;
@@ -445,6 +468,32 @@ function CardsContent() {
   const stardustPrevRef = useRef<number>(0);
   const stardustInitializedRef = useRef(false);
   const stardustAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const incomingTradeIdsRef = useRef<Set<string>>(new Set());
+  const tradesPollInitializedRef = useRef(false);
+  const acceptedSentTradeIdsRef = useRef<Set<string>>(new Set());
+  const acceptedSentPollInitializedRef = useRef(false);
+
+  const SEEN_CARDS_KEY = "dabys-seen-cards";
+  const NEW_CARD_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+  const [seenCardIds, setSeenCardIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(SEEN_CARDS_KEY) : null;
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const markCardSeen = useCallback((cardId: string) => {
+    setSeenCardIds((prev) => {
+      if (prev.has(cardId)) return prev;
+      const next = new Set(prev);
+      next.add(cardId);
+      try {
+        localStorage.setItem(SEEN_CARDS_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const hasSoldOutPack = packs.some(
     (p) =>
@@ -492,7 +541,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes, stardustRes, shopItemsRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -501,6 +550,7 @@ function CardsContent() {
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=accepted`),
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/shop/items"),
@@ -529,6 +579,21 @@ function CardsContent() {
       setPacks(d.packs || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
+    if (acceptedTradesRes.ok) {
+      const acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
+      const sentAcceptedIds = new Set(
+        (acceptedList || []).filter((t) => t.initiatorUserId === u.id).map((t) => t.id)
+      );
+      if (!acceptedSentPollInitializedRef.current) {
+        acceptedSentPollInitializedRef.current = true;
+        acceptedSentTradeIdsRef.current = sentAcceptedIds;
+      } else {
+        const prev = acceptedSentTradeIdsRef.current;
+        const hasNewAccepted = [...sentAcceptedIds].some((id) => !prev.has(id));
+        if (hasNewAccepted) playTradeAcceptSound();
+        acceptedSentTradeIdsRef.current = sentAcceptedIds;
+      }
+    }
     if (usersRes.ok) {
       const usersWithProfile = await usersRes.json() as { id: string; name: string; avatarUrl?: string }[];
       setUserAvatarMap(usersWithProfile.reduce((acc, x) => ({ ...acc, [x.id]: x.avatarUrl || "" }), {}));
@@ -593,6 +658,52 @@ function CardsContent() {
     window.addEventListener("dabys-credits-refresh", handler);
     return () => window.removeEventListener("dabys-credits-refresh", handler);
   }, [loadData]);
+
+  // Keep incoming-trade refs in sync and notify header (red dot); sound only on accept
+  useEffect(() => {
+    if (!user) return;
+    const incoming = trades.filter((t) => t.counterpartyUserId === user.id);
+    const ids = new Set(incoming.map((t) => t.id));
+    if (!tradesPollInitializedRef.current) {
+      tradesPollInitializedRef.current = true;
+      incomingTradeIdsRef.current = ids;
+      window.dispatchEvent(new CustomEvent("dabys-incoming-trades", { detail: { hasIncoming: incoming.length > 0 } }));
+      return;
+    }
+    incomingTradeIdsRef.current = ids;
+    window.dispatchEvent(new CustomEvent("dabys-incoming-trades", { detail: { hasIncoming: incoming.length > 0 } }));
+  }, [trades, user]);
+
+  // Live-update trades (poll every 20s); also check if a sent offer was accepted
+  useEffect(() => {
+    const cached = localStorage.getItem("dabys_user");
+    if (!cached) return;
+    const u = JSON.parse(cached) as { id: string };
+    const fetchTrades = () => {
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => setTrades(Array.isArray(data) ? data : []))
+        .catch(() => {});
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=accepted`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data: TradeOfferEnriched[]) => {
+          const list = Array.isArray(data) ? data : [];
+          const sentAcceptedIds = new Set(list.filter((t) => t.initiatorUserId === u.id).map((t) => t.id));
+          if (!acceptedSentPollInitializedRef.current) {
+            acceptedSentPollInitializedRef.current = true;
+            acceptedSentTradeIdsRef.current = sentAcceptedIds;
+          } else {
+            const prev = acceptedSentTradeIdsRef.current;
+            const hasNewAccepted = [...sentAcceptedIds].some((id) => !prev.has(id));
+            if (hasNewAccepted) playTradeAcceptSound();
+            acceptedSentTradeIdsRef.current = sentAcceptedIds;
+          }
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(fetchTrades, 20000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -1518,6 +1629,9 @@ function CardsContent() {
               }`}
             >
               {t.label}
+              {t.key === "trade" && receivedTrades.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+              )}
             </button>
           ))}
         </div>
@@ -2217,6 +2331,8 @@ function CardsContent() {
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && collectionSubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && collectionSubTab === "quicksell";
                 const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
+                const isNewCard = card.acquiredAt && (Date.now() - new Date(card.acquiredAt).getTime() < NEW_CARD_DAYS_MS);
+                const showNewDot = isNewCard && card.id && !seenCardIds.has(card.id);
                 const handleClick = () => {
                   if (collectionSubTab === "alchemy") {
                     if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
@@ -2236,10 +2352,14 @@ function CardsContent() {
                   <div
                     key={card.id}
                     onClick={handleClick}
+                    onMouseEnter={() => showNewDot && card.id && markCardSeen(card.id)}
                     className={`relative group/card transition-all duration-200 ${
                       (canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") || (canAddQuicksell && collectionSubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
                     } ${card.rarity === "legendary" && collectionSubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
+                    {showNewDot && (
+                      <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]" aria-label="New card" />
+                    )}
                     {inSlots && collectionSubTab === "tradeup" && (
                       <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
                         ✓

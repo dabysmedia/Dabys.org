@@ -1,17 +1,17 @@
 [
   {
     "userId": "1",
-    "balance": 10030,
-    "updatedAt": "2026-02-13T02:31:33.566Z"
+    "balance": 9784,
+    "updatedAt": "2026-02-13T23:24:18.730Z"
   },
   {
     "userId": "2",
-    "balance": 9989800,
-    "updatedAt": "2026-02-13T22:34:03.259Z"
+    "balance": 9989908,
+    "updatedAt": "2026-02-13T23:33:08.298Z"
   },
   {
     "userId": "3",
-    "balance": 50,
-    "updatedAt": "2026-02-13T02:31:59.205Z"
+    "balance": 38,
+    "updatedAt": "2026-02-13T23:17:58.725Z"
   }
 ]

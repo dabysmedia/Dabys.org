@@ -76,11 +76,14 @@ export function acceptTrade(tradeId: string, userId: string): { success: boolean
 
   const listedCardIds = new Set(getListings().map((l) => l.cardId));
 
+  // Offered cards: skip any that no longer exist (e.g. data reset); only transfer those that exist and pass checks
+  const transferableOfferedIds: string[] = [];
   for (const cardId of trade.offeredCardIds) {
     const card = getCardById(cardId);
-    if (!card) return { success: false, error: "Offered card no longer exists" };
+    if (!card) continue; // card no longer exists, skip
     if (card.userId !== trade.initiatorUserId) return { success: false, error: "Offered card ownership changed" };
     if (listedCardIds.has(cardId)) return { success: false, error: "One of the offered cards is now listed" };
+    transferableOfferedIds.push(cardId);
   }
 
   for (const cardId of trade.requestedCardIds) {
@@ -92,6 +95,9 @@ export function acceptTrade(tradeId: string, userId: string): { success: boolean
 
   const offCr = Math.max(0, Math.floor(trade.offeredCredits ?? 0));
   const reqCr = Math.max(0, Math.floor(trade.requestedCredits ?? 0));
+  const hasOfferSide = transferableOfferedIds.length > 0 || offCr > 0;
+  const hasRequestSide = trade.requestedCardIds.length > 0 || reqCr > 0;
+  if (!hasOfferSide && !hasRequestSide) return { success: false, error: "Nothing left to receive from this offer" };
 
   if (offCr > 0) {
     const initBalance = getCredits(trade.initiatorUserId);
@@ -102,7 +108,7 @@ export function acceptTrade(tradeId: string, userId: string): { success: boolean
     if (cpBalance < reqCr) return { success: false, error: "Not enough credits for this trade" };
   }
 
-  for (const cardId of trade.offeredCardIds) {
+  for (const cardId of transferableOfferedIds) {
     transferCard(cardId, trade.counterpartyUserId);
   }
   for (const cardId of trade.requestedCardIds) {

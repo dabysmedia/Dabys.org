@@ -47,16 +47,21 @@ function NavLink({
   href,
   label,
   active,
+  dot,
 }: {
   href: string;
   label: string;
   active?: boolean;
+  dot?: boolean;
 }) {
-  const base = "text-xs font-medium transition-colors";
+  const base = "text-xs font-medium transition-colors relative inline-block";
   const activeClass = active ? "text-purple-400" : "text-white/30 hover:text-purple-400";
   return (
     <Link href={href} className={`${base} ${activeClass}`}>
       {label}
+      {dot && (
+        <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+      )}
     </Link>
   );
 }
@@ -76,6 +81,7 @@ export default function Header() {
   const [creditAnimClass, setCreditAnimClass] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
+  const [hasIncomingTrade, setHasIncomingTrade] = useState(false);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshCredits = (delta?: number) => {
@@ -156,6 +162,34 @@ export default function Header() {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
+
+  // Poll for incoming trades and listen for live updates from cards page (must be before any early return)
+  useEffect(() => {
+    if (!user?.id) {
+      setHasIncomingTrade(false);
+      return;
+    }
+    const check = () => {
+      fetch(`/api/trades?userId=${encodeURIComponent(user.id)}&status=pending`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data: { counterpartyUserId?: string }[]) => {
+          const incoming = Array.isArray(data) && data.some((t) => t.counterpartyUserId === user.id);
+          setHasIncomingTrade(!!incoming);
+        })
+        .catch(() => setHasIncomingTrade(false));
+    };
+    const onIncomingTrades = (e: Event) => {
+      const detail = (e as CustomEvent<{ hasIncoming: boolean }>).detail;
+      if (detail && typeof detail.hasIncoming === "boolean") setHasIncomingTrade(detail.hasIncoming);
+    };
+    check();
+    const id = setInterval(check, 20000);
+    window.addEventListener("dabys-incoming-trades", onIncomingTrades);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("dabys-incoming-trades", onIncomingTrades);
+    };
+  }, [user?.id]);
 
   const logout = () => {
     localStorage.removeItem("dabys_user");
@@ -262,7 +296,7 @@ export default function Header() {
               <NavLink href="/wheel" label="Wheel" active={isWheel} />
               <NavLink href="/stats" label="Stats" active={isStats} />
               <NavLink href="/casino" label="Casino" active={isCasino} />
-              <NavLink href="/cards" label="TCG" active={isCards} />
+              <NavLink href="/cards" label="TCG" active={isCards} dot={hasIncomingTrade} />
               {creditsBlock}
               {profileBlock}
               <button
@@ -339,9 +373,12 @@ export default function Header() {
               <Link
                 href="/cards"
                 onClick={closeMenu}
-                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors ${isCards ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors relative ${isCards ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 TCG
+                {hasIncomingTrade && (
+                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+                )}
               </Link>
             </nav>
             <div className="mt-auto p-4 border-t border-white/[0.06] bg-white/[0.02] flex flex-col gap-3">

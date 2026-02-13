@@ -10,8 +10,55 @@
     "requestedCardIds": [],
     "offeredCredits": 0,
     "requestedCredits": 123,
-    "status": "pending",
+    "status": "accepted",
     "id": "trd-1770925675039-wznwwm3",
     "createdAt": "2026-02-12T19:47:55.039Z"
+  },
+  {
+    "initiatorUserId": "2",
+    "initiatorName": "Carlos",
+    "counterpartyUserId": "3",
+    "counterpartyName": "Marcel",
+    "offeredCardIds": [
+      "card-1771022043261-ozl7m1u"
+    ],
+    "requestedCardIds": [],
+    "offeredCredits": 0,
+    "requestedCredits": 12,
+    "status": "accepted",
+    "id": "trd-1771024665381-fme4wp5",
+    "createdAt": "2026-02-13T23:17:45.381Z"
+  },
+  {
+    "initiatorUserId": "1",
+    "initiatorName": "Jerry",
+    "counterpartyUserId": "2",
+    "counterpartyName": "Carlos",
+    "offeredCardIds": [],
+    "requestedCardIds": [
+      "card-1771022040786-cgdgz9o"
+    ],
+    "offeredCredits": 123,
+    "requestedCredits": 0,
+    "status": "accepted",
+    "id": "trd-1771025048390-ygvxdc7",
+    "createdAt": "2026-02-13T23:24:08.390Z"
+  },
+  {
+    "initiatorUserId": "1",
+    "initiatorName": "Jerry",
+    "counterpartyUserId": "3",
+    "counterpartyName": "Marcel",
+    "offeredCardIds": [
+      "card-1771022040786-cgdgz9o"
+    ],
+    "requestedCardIds": [
+      "card-1771022043261-ozl7m1u"
+    ],
+    "offeredCredits": 0,
+    "requestedCredits": 0,
+    "status": "pending",
+    "id": "trd-1771025282118-k70mnfi",
+    "createdAt": "2026-02-13T23:28:02.118Z"
   }
 ]
