@@ -50,6 +50,26 @@ interface Listing {
 
 const PACK_PRICE = 50;
 
+function getTimeUntilMidnightUTC(): string {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+  const ms = next.getTime() - now.getTime();
+  const s = Math.floor(ms / 1000) % 60;
+  const m = Math.floor(ms / 60000) % 60;
+  const h = Math.floor(ms / 3600000);
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function useMidnightUTCCountdown(active: boolean): string {
+  const [countdown, setCountdown] = useState(() => getTimeUntilMidnightUTC());
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setCountdown(getTimeUntilMidnightUTC()), 1000);
+    return () => clearInterval(t);
+  }, [active]);
+  return countdown;
+}
+
 type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
 type CollectionSubTab = "tradeup" | "alchemy" | "quicksell";
 
@@ -332,6 +352,8 @@ interface Pack {
   cardsPerPack: number;
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
   allowedCardTypes: CardType[];
+  maxPurchasesPerDay?: number;
+  purchasesToday?: number;
 }
 
 function CardsContent() {
@@ -409,6 +431,14 @@ function CardsContent() {
   const stardustInitializedRef = useRef(false);
   const stardustAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const hasSoldOutPack = packs.some(
+    (p) =>
+      p.maxPurchasesPerDay != null &&
+      p.maxPurchasesPerDay > 0 &&
+      (p.purchasesToday ?? 0) >= p.maxPurchasesPerDay
+  );
+  const midnightCountdown = useMidnightUTCCountdown(tab === "store" && hasSoldOutPack);
+
   function setPAPFailureErrorAndFade(message: string) {
     if (alchemyErrorClearTimeoutRef.current) {
       clearTimeout(alchemyErrorClearTimeoutRef.current);
@@ -454,7 +484,7 @@ function CardsContent() {
       fetch("/api/marketplace"),
       fetch("/api/winners"),
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
-      fetch("/api/cards/packs"),
+      fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
@@ -1300,7 +1330,7 @@ function CardsContent() {
   }
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "store", label: "Store" },
+    { key: "store", label: "Shop" },
     { key: "collection", label: "Collection" },
     { key: "marketplace", label: "Marketplace" },
     { key: "trivia", label: "Trivia" },
@@ -1450,13 +1480,13 @@ function CardsContent() {
           ))}
         </div>
 
-        {/* Store */}
+        {/* Shop */}
         {tab === "store" && (
           <>
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-white/90 mb-1">Storefront</h2>
+                  <h2 className="text-lg font-semibold text-white/90 mb-1">Shop</h2>
                   <p className="text-white/50 text-sm">
                     Choose a pack, enjoy the art, and unlock new character cards.
                   </p>
@@ -1475,9 +1505,16 @@ function CardsContent() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {packs.map((pack) => {
+                const atDailyLimit =
+                  typeof pack.maxPurchasesPerDay === "number" &&
+                  pack.maxPurchasesPerDay > 0 &&
+                  (pack.purchasesToday ?? 0) >= pack.maxPurchasesPerDay;
                 const disabled =
-                  poolCount < pack.cardsPerPack || creditBalance < pack.price || buyingPackId === pack.id;
-                const needCredits = creditBalance < pack.price ? pack.price - creditBalance : 0;
+                  atDailyLimit ||
+                  poolCount < pack.cardsPerPack ||
+                  (pack.price > 0 && creditBalance < pack.price) ||
+                  buyingPackId === pack.id;
+                const needCredits = pack.price > 0 && creditBalance < pack.price ? pack.price - creditBalance : 0;
                 const rarityText =
                   pack.allowedRarities && pack.allowedRarities.length < 4
                     ? pack.allowedRarities.join(", ")
@@ -1489,14 +1526,25 @@ function CardsContent() {
                 return (
                   <div
                     key={pack.id}
-                    className="relative rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] backdrop-blur-2xl shadow-[0_18px_45px_rgba(0,0,0,0.45)] group transform transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
+                    className={`relative rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] backdrop-blur-2xl shadow-[0_18px_45px_rgba(0,0,0,0.45)] group transform transition-all duration-300 ${
+                      atDailyLimit
+                        ? "hover:translate-y-0"
+                        : "hover:-translate-y-1.5 hover:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
+                    }`}
                   >
                     <div className="relative w-full">
+                      {atDailyLimit && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                          <span className="w-full py-3 text-center bg-red-800/70 backdrop-blur-md text-white text-sm font-bold border-y border-red-700/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+                            Sold out
+                          </span>
+                        </div>
+                      )}
                       {pack.imageUrl ? (
                         <img
                           src={pack.imageUrl}
                           alt={pack.name}
-                          className="w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02]"
+                          className={`w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02] ${atDailyLimit ? "grayscale opacity-70" : ""}`}
                         />
                       ) : (
                         <div className="w-full h-40 flex items-center justify-center text-white/20 text-lg">
@@ -1518,7 +1566,7 @@ function CardsContent() {
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 space-y-3">
+                    <div className={`p-4 space-y-3 ${atDailyLimit ? "opacity-70" : ""}`}>
                       <div className="flex flex-wrap gap-2 text-[11px]">
                         <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
                           {rarityText}
@@ -1528,15 +1576,21 @@ function CardsContent() {
                         </span>
                       </div>
                       <button
-                        onClick={() => handleBuyPack(pack)}
+                        onClick={() => !atDailyLimit && handleBuyPack(pack)}
                         disabled={disabled}
-                        className="w-full px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-200 text-sm font-semibold hover:border-amber-400 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                        className={`w-full px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                          atDailyLimit
+                            ? "border-white/20 bg-white/[0.06] text-white/50 cursor-not-allowed"
+                            : "border-amber-500/40 bg-amber-500/15 text-amber-200 hover:border-amber-400 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                        }`}
                       >
                         {buyingPackId === pack.id ? (
                           <>
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Opening...
                           </>
+                        ) : atDailyLimit ? (
+                          <span className="text-white/50">Resets in {midnightCountdown}</span>
                         ) : poolCount < pack.cardsPerPack ? (
                           "Need more cards in pool"
                         ) : needCredits > 0 ? (
@@ -1551,7 +1605,7 @@ function CardsContent() {
               })}
               {packs.length === 0 && (
                 <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50">
-                  No packs are available in the store right now. Check back later!
+                  No packs are available in the shop right now. Check back later!
                 </div>
               )}
             </div>
@@ -2019,7 +2073,7 @@ function CardsContent() {
             </div>
             {cards.length === 0 ? (
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No cards yet. Buy a pack in Store to get started!</p>
+                <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
               </div>
             ) : (() => {
               const filtered = cards
@@ -2206,7 +2260,7 @@ function CardsContent() {
                     {!selectedCard ? (
                       <div className="flex-1 min-h-0 overflow-auto pr-1">
                         {availableToList.length === 0 ? (
-                          <p className="text-white/40 text-sm">No cards available to list. Buy packs in Store to get cards!</p>
+                          <p className="text-white/40 text-sm">No cards available to list. Buy packs in Shop to get cards!</p>
                         ) : (
                           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
                             {availableToList.map((card) => (
