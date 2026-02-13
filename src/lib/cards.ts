@@ -3,6 +3,7 @@ import {
   getCharacterPool,
   saveCharacterPool,
   addCard,
+  deductCredits,
   getCredits,
   addCredits,
   getOwnedLegendaryCharacterIds,
@@ -13,8 +14,6 @@ import {
   getListings,
   getPacks,
   getProfile,
-  getPackPurchasesCountToday,
-  recordPackPurchase,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -282,27 +281,13 @@ export function buyPack(
     return { success: false, error: "Pack not found" };
   }
 
-  const isFree = !!selectedPack?.isFree;
-  const effectivePrice = isFree ? 0 : (selectedPack?.price ?? PACK_PRICE);
+  const price = selectedPack?.price ?? PACK_PRICE;
   const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
 
-  if (selectedPack && typeof selectedPack.maxPurchasesPerDay === "number" && selectedPack.maxPurchasesPerDay > 0) {
-    const todayCount = getPackPurchasesCountToday(userId, selectedPack.id);
-    if (todayCount >= selectedPack.maxPurchasesPerDay) {
-      return {
-        success: false,
-        error: `Daily limit reached (${selectedPack.maxPurchasesPerDay} per day). Resets at midnight UTC.`,
-      };
-    }
-  }
-
   const balance = getCredits(userId);
-  if (effectivePrice > 0 && balance < effectivePrice) {
+  if (balance < price) {
     return { success: false, error: "Not enough credits" };
   }
-
-  const recorded = recordPackPurchase(userId, selectedPack?.id ?? "default", effectivePrice);
-  if (!recorded) return { success: false, error: "Failed to record purchase" };
 
   const allowedRarities = selectedPack?.allowedRarities;
   const allowedCardTypes = selectedPack?.allowedCardTypes;
@@ -329,6 +314,11 @@ export function buyPack(
   if (pool.length < cardsPerPack) {
     return { success: false, error: "Character pool too small. Add more winning movies." };
   }
+
+  const deducted = deductCredits(userId, price, "pack_purchase", {
+    packId: selectedPack?.id ?? "default",
+  });
+  if (!deducted) return { success: false, error: "Failed to deduct credits" };
 
   // Pack-based rarity: one roll per pack, then 5 slots with those rarities
   const packTier = rollPackTier();
@@ -367,16 +357,16 @@ export function buyPack(
   return { success: true, cards };
 }
 
-/** Trade up: consume 5 cards of same rarity for 1 of next rarity. Epic→legendary: 33% legendary card, 67% 100 credits. */
+/** Trade up: consume 4 cards of same rarity for 1 of next rarity. Epic→legendary: 33% legendary card, 67% 100 credits. */
 export function tradeUp(
   userId: string,
   cardIds: string[]
 ): { success: boolean; card?: ReturnType<typeof addCard>; credits?: number; error?: string } {
-  if (!Array.isArray(cardIds) || cardIds.length !== 5) {
-    return { success: false, error: "Select exactly 5 cards" };
+  if (!Array.isArray(cardIds) || cardIds.length !== 4) {
+    return { success: false, error: "Select exactly 4 cards" };
   }
   const uniqueIds = [...new Set(cardIds)];
-  if (uniqueIds.length !== 5) return { success: false, error: "Select 5 different cards" };
+  if (uniqueIds.length !== 4) return { success: false, error: "Select 4 different cards" };
 
   const listedCardIds = new Set(getListings().map((l) => l.cardId));
 
@@ -390,7 +380,7 @@ export function tradeUp(
 
   const rarities = selected.map((c) => c.rarity);
   const first = rarities[0];
-  if (rarities.some((r) => r !== first)) return { success: false, error: "All 5 cards must be the same rarity" };
+  if (rarities.some((r) => r !== first)) return { success: false, error: "All 4 cards must be the same rarity" };
 
   const TRADE_UP_MAP: Record<string, "rare" | "epic" | "legendary"> = {
     uncommon: "rare",
@@ -450,33 +440,19 @@ export function getPoolEntriesForMovie(tmdbId: number): CharacterPortrayal[] {
     .slice(0, 6);
 }
 
-/** Distinct characterIds the user owns for a given movie (includes characters satisfied by pool alt-arts). */
+/** Distinct characterIds the user owns for a given movie. */
 export function getUserCollectedCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
-  const pool = getCharacterPool();
   const cards = getCards(userId).filter((c) => c.movieTmdbId === tmdbId);
-  const set = new Set<string>();
-  for (const c of cards) {
-    set.add(c.characterId);
-    const entry = pool.find((p) => p.characterId === c.characterId);
-    if (entry?.altArtOfCharacterId) set.add(entry.altArtOfCharacterId);
-  }
-  return set;
+  return new Set(cards.map((c) => c.characterId));
 }
 
-/** Distinct characterIds the user owns as foil for a given movie (includes characters satisfied by pool alt-art foils). */
+/** Distinct characterIds the user owns as foil for a given movie (at least one foil card per character). */
 export function getUserCollectedFoilCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
-  const pool = getCharacterPool();
   const cards = getCards(userId).filter((c) => c.movieTmdbId === tmdbId && c.isFoil);
-  const set = new Set<string>();
-  for (const c of cards) {
-    set.add(c.characterId);
-    const entry = pool.find((p) => p.characterId === c.characterId);
-    if (entry?.altArtOfCharacterId) set.add(entry.altArtOfCharacterId);
-  }
-  return set;
+  return new Set(cards.map((c) => c.characterId));
 }
 
-/** True if user owns all 6 pool characterIds for the winner's movie. Counts alt-arts: owning a pool entry with altArtOfCharacterId satisfies that character for badges. */
+/** True if user owns all 6 pool characterIds for the winner's movie. */
 export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
@@ -490,7 +466,7 @@ export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   return true;
 }
 
-/** True if user owns all 6 pool characterIds for the winner's movie, each as foil. Counts alt-arts (foil alt-art satisfies that character for Holo badge). */
+/** True if user owns all 6 pool characterIds for the winner's movie, each as foil. */
 export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
@@ -552,20 +528,12 @@ export function getBadgesLostIfCardsRemoved(
     const pool = getPoolEntriesForMovie(winner.tmdbId);
     if (pool.length < 6) continue;
 
-    const poolEntries = getCharacterPool();
     const required = new Set(pool.map((c) => c.characterId));
     const remainingCards = cards.filter((c) => c.movieTmdbId === winner.tmdbId && !cardIdSet.has(c.id));
-    const remainingChars = new Set<string>();
-    const remainingFoilChars = new Set<string>();
-    for (const c of remainingCards) {
-      remainingChars.add(c.characterId);
-      const entry = poolEntries.find((p) => p.characterId === c.characterId);
-      if (entry?.altArtOfCharacterId) remainingChars.add(entry.altArtOfCharacterId);
-      if (c.isFoil) {
-        remainingFoilChars.add(c.characterId);
-        if (entry?.altArtOfCharacterId) remainingFoilChars.add(entry.altArtOfCharacterId);
-      }
-    }
+    const remainingChars = new Set(remainingCards.map((c) => c.characterId));
+    const remainingFoilChars = new Set(
+      remainingCards.filter((c) => c.isFoil).map((c) => c.characterId)
+    );
 
     let wouldLoseNormal = false;
     if (hadNormal) {

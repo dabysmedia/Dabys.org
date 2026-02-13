@@ -17,3 +17,15 @@ export const PACK_A_PUNCH_COST: Record<string, number> = {
 export function getPackAPunchCost(rarity: string): number {
   return PACK_A_PUNCH_COST[rarity] ?? PACK_A_PUNCH_COST.uncommon;
 }
+
+/** Credits received when vendoring (quicksell) a card by rarity. Legendary cannot be quicksold. */
+export const QUICKSELL_CREDITS: Record<string, number> = {
+  uncommon: 5,
+  rare: 20,
+  epic: 80,
+  legendary: 0,
+};
+
+export function getQuicksellCredits(rarity: string): number {
+  return QUICKSELL_CREDITS[rarity] ?? (rarity === "legendary" ? 0 : QUICKSELL_CREDITS.uncommon);
+}

@@ -50,26 +50,6 @@ interface Listing {
 
 const PACK_PRICE = 50;
 
-function getTimeUntilMidnightUTC(): string {
-  const now = new Date();
-  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-  const ms = next.getTime() - now.getTime();
-  const s = Math.floor(ms / 1000) % 60;
-  const m = Math.floor(ms / 60000) % 60;
-  const h = Math.floor(ms / 3600000);
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-}
-
-function useMidnightUTCCountdown(active: boolean): string {
-  const [countdown, setCountdown] = useState(() => getTimeUntilMidnightUTC());
-  useEffect(() => {
-    if (!active) return;
-    const t = setInterval(() => setCountdown(getTimeUntilMidnightUTC()), 1000);
-    return () => clearInterval(t);
-  }, [active]);
-  return countdown;
-}
-
 type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
 type CollectionSubTab = "tradeup" | "alchemy";
 
@@ -352,21 +332,6 @@ interface Pack {
   cardsPerPack: number;
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
   allowedCardTypes: CardType[];
-  maxPurchasesPerDay?: number;
-  purchasesToday?: number;
-}
-
-type ShopItemType = "badge" | "skip";
-interface ShopItem {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  price: number;
-  type: ShopItemType;
-  skipAmount?: number;
-  isActive: boolean;
-  order: number;
 }
 
 function CardsContent() {
@@ -394,16 +359,13 @@ function CardsContent() {
   const [delistingId, setDelistingId] = useState<string | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [triviaCompletedIds, setTriviaCompletedIds] = useState<Set<string>>(new Set());
-  const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null]);
   const [tradingUp, setTradingUp] = useState(false);
   const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
   const [tradeUpResultCredits, setTradeUpResultCredits] = useState<number | null>(null);
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
-  const [shopSubTab, setShopSubTab] = useState<"packs" | "others">("packs");
-  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
-  const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [tradeStep, setTradeStep] = useState<1 | 2 | 3>(1);
@@ -444,14 +406,6 @@ function CardsContent() {
   const stardustInitializedRef = useRef(false);
   const stardustAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasSoldOutPack = packs.some(
-    (p) =>
-      p.maxPurchasesPerDay != null &&
-      p.maxPurchasesPerDay > 0 &&
-      (p.purchasesToday ?? 0) >= p.maxPurchasesPerDay
-  );
-  const midnightCountdown = useMidnightUTCCountdown(tab === "store" && hasSoldOutPack);
-
   function setPAPFailureErrorAndFade(message: string) {
     if (alchemyErrorClearTimeoutRef.current) {
       clearTimeout(alchemyErrorClearTimeoutRef.current);
@@ -490,15 +444,14 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, shopItemsRes, tradesRes, usersRes, stardustRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes, stardustRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
       fetch("/api/marketplace"),
       fetch("/api/winners"),
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
-      fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
-      fetch("/api/shop/items"),
+      fetch("/api/cards/packs"),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
@@ -525,10 +478,6 @@ function CardsContent() {
     if (packsRes.ok) {
       const d = await packsRes.json();
       setPacks(d.packs || []);
-    }
-    if (shopItemsRes.ok) {
-      const d = await shopItemsRes.json();
-      setShopItems(d.items || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
     if (usersRes.ok) {
@@ -719,8 +668,8 @@ function CardsContent() {
   const tradeUpCards = cards.filter((c) => c.id && tradeUpCardIds.includes(c.id));
   const currentRarity = tradeUpCards[0]?.rarity;
   const canTradeUp =
-    tradeUpCardIds.length === 5 &&
-    tradeUpCards.length === 5 &&
+    tradeUpCardIds.length === 4 &&
+    tradeUpCards.length === 4 &&
     tradeUpCards.every((c) => c.rarity === tradeUpCards[0]?.rarity) &&
     TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""];
 
@@ -738,7 +687,7 @@ function CardsContent() {
       const data = await res.json();
       if (res.ok) {
         playTradeUpReveal();
-        setTradeUpSlots([null, null, null, null, null]);
+        setTradeUpSlots([null, null, null, null]);
         if (data.card) {
           setTradeUpResult(data.card);
           setTradeUpResultCredits(null);
@@ -769,7 +718,7 @@ function CardsContent() {
     }
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.includes(cardId)) return;
-    if (filled.length >= 5) return;
+    if (filled.length >= 4) return;
     const firstCard = filled[0] ? cards.find((c) => c.id === filled[0]) : null;
     if (firstCard && card.rarity !== firstCard.rarity) return;
     playTradeUpAdd();
@@ -995,7 +944,7 @@ function CardsContent() {
   }
 
   async function handleBuyPack(pack: Pack) {
-    if (!user || (pack.price > 0 && creditBalance < pack.price) || buyingPackId) return;
+    if (!user || creditBalance < pack.price || buyingPackId) return;
     setBuyingPackId(pack.id);
     try {
       const res = await fetch("/api/cards/buy-pack", {
@@ -1007,7 +956,7 @@ function CardsContent() {
       if (res.ok && data.cards) {
         setNewCards(data.cards);
         await loadData();
-        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: pack.price > 0 ? -pack.price : 0 } }));
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -pack.price } }));
       } else {
         alert(data.error || "Failed to buy pack");
       }
@@ -1015,28 +964,6 @@ function CardsContent() {
       alert("Failed to buy pack");
     } finally {
       setBuyingPackId(null);
-    }
-  }
-
-  async function handlePurchaseShopItem(item: ShopItem) {
-    if (!user || creditBalance < item.price || buyingItemId) return;
-    setBuyingItemId(item.id);
-    try {
-      const res = await fetch("/api/shop/purchase-item", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, itemId: item.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (typeof data.balance === "number") setCreditBalance(data.balance);
-        alert(`Purchased: ${item.name}`);
-        await loadData();
-      } else {
-        alert(data.error || "Failed to purchase");
-      }
-    } finally {
-      setBuyingItemId(null);
     }
   }
 
@@ -1321,7 +1248,7 @@ function CardsContent() {
   }
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "store", label: "Shop" },
+    { key: "store", label: "Store" },
     { key: "collection", label: "Collection" },
     { key: "marketplace", label: "Marketplace" },
     { key: "trivia", label: "Trivia" },
@@ -1350,7 +1277,7 @@ function CardsContent() {
               </svg>
               Quest log
             </h2>
-            <p className="text-[10px] text-white/40 mt-1">Track badge progress. Add from a winner&apos;s Card set.</p>
+            <p className="text-[10px] text-white/40 mt-1">Track badge progress. Add from a winner&apos;s Collectible Cards.</p>
           </div>
           <div className="p-3 overflow-y-auto" style={{ maxHeight: "min(22rem, calc(100vh - 8rem))" }}>
             {pinnedProgress.length === 0 ? (
@@ -1471,59 +1398,34 @@ function CardsContent() {
           ))}
         </div>
 
-        {/* Shop */}
+        {/* Store */}
         {tab === "store" && (
           <>
-            <h2 className="text-lg font-semibold text-white/90 mb-1">Shop</h2>
-            <p className="text-white/50 text-sm mb-4">
-              {shopSubTab === "packs"
-                ? "Choose a pack, enjoy the art, and unlock new character cards."
-                : "Special items like badges and skips."}
-            </p>
-            <div className="flex gap-1 mb-8 border-b border-white/[0.08]">
-              <button
-                type="button"
-                onClick={() => setShopSubTab("packs")}
-                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
-                  shopSubTab === "packs"
-                    ? "text-amber-400 border-amber-400"
-                    : "text-white/40 border-transparent hover:text-white/70"
-                }`}
-              >
-                Packs
-              </button>
-              <button
-                type="button"
-                onClick={() => setShopSubTab("others")}
-                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
-                  shopSubTab === "others"
-                    ? "text-amber-400 border-amber-400"
-                    : "text-white/40 border-transparent hover:text-white/70"
-                }`}
-              >
-                Others
-              </button>
-            </div>
-
-            {shopSubTab === "packs" && (
-            <>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white/90 mb-1">Storefront</h2>
+                  <p className="text-white/50 text-sm">
+                    Choose a pack, enjoy the art, and unlock new character cards.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-white/50 mb-1">Your balance</p>
+                  <p className="text-sm font-semibold text-amber-300">{creditBalance} credits</p>
+                </div>
+              </div>
               {poolCount < 5 && (
-                <p className="text-amber-400/70 text-xs mb-4">
+                <p className="text-amber-400/70 text-xs mt-3">
                   No winning movies with TMDB data yet. Win some movies to unlock cards!
                 </p>
               )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 justify-items-center">
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {packs.map((pack) => {
-                const soldOut =
-                  pack.maxPurchasesPerDay != null &&
-                  pack.maxPurchasesPerDay > 0 &&
-                  (pack.purchasesToday ?? 0) >= pack.maxPurchasesPerDay;
                 const disabled =
-                  soldOut ||
-                  poolCount < pack.cardsPerPack ||
-                  (pack.price > 0 && creditBalance < pack.price) ||
-                  buyingPackId === pack.id;
-                const needCredits = pack.price > 0 && creditBalance < pack.price ? pack.price - creditBalance : 0;
+                  poolCount < pack.cardsPerPack || creditBalance < pack.price || buyingPackId === pack.id;
+                const needCredits = creditBalance < pack.price ? pack.price - creditBalance : 0;
                 const rarityText =
                   pack.allowedRarities && pack.allowedRarities.length < 4
                     ? pack.allowedRarities.join(", ")
@@ -1535,73 +1437,54 @@ function CardsContent() {
                 return (
                   <div
                     key={pack.id}
-                    className={`flex flex-col w-fit max-w-full rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden ${soldOut ? "opacity-90" : ""}`}
+                    className="relative rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] backdrop-blur-2xl shadow-[0_18px_45px_rgba(0,0,0,0.45)] group transform transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
                   >
-                    <div className="relative w-max max-w-full bg-white/[0.03]">
-                      {soldOut && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                          <span className="w-full py-3 text-center bg-red-800/70 backdrop-blur-md text-white text-sm font-bold border-y border-red-700/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-                            Sold out
-                          </span>
-                        </div>
-                      )}
+                    <div className="relative w-full">
                       {pack.imageUrl ? (
                         <img
                           src={pack.imageUrl}
                           alt={pack.name}
-                          className={`block max-w-full h-auto object-contain ${soldOut ? "grayscale opacity-70" : ""}`}
+                          className="w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02]"
                         />
                       ) : (
-                        <div className="flex items-center justify-center text-white/20 text-lg w-40 h-40">
+                        <div className="w-full h-40 flex items-center justify-center text-white/20 text-lg">
                           No artwork
                         </div>
                       )}
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    </div>
-                    <div className={`border-t border-white/10 bg-white/[0.02] p-3 ${soldOut ? "opacity-90" : ""}`}>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white/90 truncate">{pack.name}</p>
-                          <p className="text-[10px] text-white/40">{pack.cardsPerPack} cards per pack</p>
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent group-hover:from-black/70 group-hover:via-black/10" />
+                      <div className="pointer-events-none absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-white/90 truncate">
+                            {pack.name}
+                          </p>
+                          <p className="text-xs text-white/60">
+                            {pack.cardsPerPack} cards per pack
+                          </p>
                         </div>
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shadow-[0_2px_8px_rgba(0,0,0,0.15)] shrink-0">
-                          {pack.price === 0 ? (
-                            <span className="text-sky-300 font-bold text-sm">Free</span>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span className="text-sky-300 font-bold text-sm tabular-nums">{pack.price}</span>
-                              <span className="text-sky-300/70 text-xs font-semibold">cr</span>
-                            </>
-                          )}
-                        </span>
+                        <div className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
+                          {pack.price} cr
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mb-2 text-[10px]">
-                        <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-white/50 border border-white/[0.1]">
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="flex flex-wrap gap-2 text-[11px]">
+                        <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
                           {rarityText}
                         </span>
-                        <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-white/50 border border-white/[0.1]">
+                        <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
                           {typeText}
                         </span>
                       </div>
                       <button
-                        onClick={() => !soldOut && handleBuyPack(pack)}
+                        onClick={() => handleBuyPack(pack)}
                         disabled={disabled}
-                        className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                          soldOut
-                            ? "border border-white/10 bg-white/[0.04] text-white/50 cursor-not-allowed"
-                            : "bg-green-600/80 backdrop-blur-md border border-green-500/40 text-white hover:bg-green-500/90 hover:border-green-400/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-                        }`}
+                        className="w-full px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-200 text-sm font-semibold hover:border-amber-400 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                       >
                         {buyingPackId === pack.id ? (
                           <>
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Opening...
                           </>
-                        ) : soldOut ? (
-                          <span className="text-white/50">Resets in {midnightCountdown}</span>
                         ) : poolCount < pack.cardsPerPack ? (
                           "Need more cards in pool"
                         ) : needCredits > 0 ? (
@@ -1616,87 +1499,10 @@ function CardsContent() {
               })}
               {packs.length === 0 && (
                 <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50">
-                  No packs are available in the shop right now. Check back later!
+                  No packs are available in the store right now. Check back later!
                 </div>
               )}
             </div>
-            </>
-            )}
-
-            {shopSubTab === "others" && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-              {shopItems.map((item) => {
-                const disabled = creditBalance < item.price || buyingItemId === item.id;
-                const needCredits = item.price > 0 && creditBalance < item.price ? item.price - creditBalance : 0;
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col w-full min-w-0 rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden"
-                  >
-                    <div className="relative w-full aspect-[4/3] min-h-[140px] bg-white/[0.03] flex items-center justify-center overflow-hidden">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center text-white/20 text-2xl w-full h-full min-h-[140px] bg-white/[0.03]">
-                          {item.type === "badge" ? "🏅" : "⏭"}
-                        </div>
-                      )}
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    </div>
-                    <div className="border-t border-white/10 bg-white/[0.02] p-3">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white/90 truncate">{item.name}</p>
-                          <p className="text-[10px] text-white/40 capitalize">{item.type}</p>
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shrink-0">
-                          {item.price === 0 ? (
-                            <span className="text-sky-300 font-bold text-sm">Free</span>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span className="text-sky-300 font-bold text-sm tabular-nums">{item.price}</span>
-                              <span className="text-sky-300/70 text-xs font-semibold">cr</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      {item.description && (
-                        <p className="text-[11px] text-white/50 mb-2 line-clamp-2">{item.description}</p>
-                      )}
-                      <button
-                        onClick={() => handlePurchaseShopItem(item)}
-                        disabled={disabled}
-                        className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-green-600/80 backdrop-blur-md border border-green-500/40 text-white hover:bg-green-500/90 hover:border-green-400/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-                      >
-                        {buyingItemId === item.id ? (
-                          <>
-                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Purchasing...
-                          </>
-                        ) : needCredits > 0 ? (
-                          `Need ${needCredits} more credits`
-                        ) : (
-                          "Purchase"
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-              {shopItems.length === 0 && (
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50 col-span-full">
-                  No other items in the shop right now. Check back later!
-                </div>
-              )}
-            </div>
-            )}
 
             {newCards && newCards.length > 0 && (
               <>
@@ -1835,10 +1641,10 @@ function CardsContent() {
             <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
-                Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
+                Add 4 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
               </p>
               <div className="flex flex-wrap items-center gap-4 mb-4">
-                {/* Input slots - 5 cards */}
+                {/* Input slots - 4 cards */}
                 <div className="flex gap-2">
                   {tradeUpSlots.map((cardId, i) => {
                     const slotCard = cardId ? cards.find((x) => x.id === cardId) : null;
@@ -2071,7 +1877,7 @@ function CardsContent() {
             </div>
             {cards.length === 0 ? (
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
+                <p className="text-white/40 text-sm">No cards yet. Buy a pack in Store to get started!</p>
               </div>
             ) : (() => {
               const filtered = cards
@@ -2095,7 +1901,7 @@ function CardsContent() {
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
-                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
                 const canAddAlchemy = collectionSubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
                 const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && collectionSubTab === "tradeup";
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && collectionSubTab === "alchemy";
@@ -2246,7 +2052,7 @@ function CardsContent() {
                     {!selectedCard ? (
                       <div className="flex-1 min-h-0 overflow-auto pr-1">
                         {availableToList.length === 0 ? (
-                          <p className="text-white/40 text-sm">No cards available to list. Buy packs in Shop to get cards!</p>
+                          <p className="text-white/40 text-sm">No cards available to list. Buy packs in Store to get cards!</p>
                         ) : (
                           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
                             {availableToList.map((card) => (
