@@ -1265,9 +1265,9 @@ function CardsContent() {
       <Header />
 
       <div className="relative z-10">
-        {/* Floating quest log — left side */}
+        {/* Floating quest log — left side; hidden on small viewports to reduce clutter */}
         <aside
-          className="fixed left-4 top-20 z-20 w-56 rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)] overflow-hidden"
+          className="fixed left-4 top-20 z-20 w-56 rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)] overflow-hidden hidden md:block"
           style={{ maxHeight: "min(28rem, calc(100vh - 6rem))" }}
         >
           <div className="p-3 border-b border-white/[0.06] bg-white/[0.02]">
