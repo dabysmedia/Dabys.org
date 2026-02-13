@@ -1131,6 +1131,55 @@ export function deleteDabysBetsEvent(id: string): boolean {
   return true;
 }
 
+// ──── User feedback (for Feedback button → admin panel) ───
+export interface FeedbackEntry {
+  id: string;
+  message: string;
+  createdAt: string;
+  userId?: string;
+  userName?: string;
+}
+
+function getFeedbackRaw(): FeedbackEntry[] {
+  try {
+    return readJson<FeedbackEntry[]>("feedback.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveFeedbackRaw(entries: FeedbackEntry[]) {
+  writeJson("feedback.json", entries);
+}
+
+export function getFeedback(): FeedbackEntry[] {
+  return [...getFeedbackRaw()].reverse();
+}
+
+export function addFeedback(input: { message: string; userId?: string; userName?: string }): FeedbackEntry {
+  const entries = getFeedbackRaw();
+  const trimmed = input.message.trim();
+  if (!trimmed) throw new Error("Message is required");
+  const now = new Date().toISOString();
+  const entry: FeedbackEntry = {
+    id: `fb-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    message: trimmed,
+    createdAt: now,
+    userId: input.userId,
+    userName: input.userName,
+  };
+  entries.push(entry);
+  saveFeedbackRaw(entries);
+  return entry;
+}
+
+export function deleteFeedback(id: string): boolean {
+  const entries = getFeedbackRaw().filter((e) => e.id !== id);
+  if (entries.length === getFeedbackRaw().length) return false;
+  saveFeedbackRaw(entries);
+  return true;
+}
+
 // ──── Marketplace (listings) ─────────────────────────────
 export interface Listing {
   id: string;
