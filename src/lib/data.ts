@@ -581,6 +581,23 @@ export function recordPackPurchase(
   return true;
 }
 
+/** Remove today's pack_purchase ledger entries for this user so they can buy packs again today. Returns number of entries removed. */
+export function resetUserPackPurchasesToday(userId: string): number {
+  const ledger = getCreditLedgerRaw();
+  const today = new Date().toISOString().slice(0, 10);
+  const filtered = ledger.filter(
+    (e) =>
+      !(
+        e.userId === userId &&
+        e.reason === "pack_purchase" &&
+        e.createdAt.startsWith(today)
+      )
+  );
+  const removed = ledger.length - filtered.length;
+  if (removed > 0) saveCreditLedgerRaw(filtered);
+  return removed;
+}
+
 export function setCredits(userId: string, balance: number): void {
   const credits = getCreditsRaw();
   const idx = credits.findIndex((c) => c.userId === userId);

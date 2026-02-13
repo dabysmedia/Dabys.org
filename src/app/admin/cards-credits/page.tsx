@@ -143,6 +143,7 @@ export default function AdminCardsCreditsPage() {
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCredits, setSavingCredits] = useState(false);
+  const [restockingPack, setRestockingPack] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addCharacterId, setAddCharacterId] = useState("");
@@ -1652,6 +1653,40 @@ export default function AdminCardsCreditsPage() {
               </button>
             </form>
             <p className="text-white/30 text-xs mt-2">Saves to /data (stardust.json).</p>
+          </section>
+
+          {/* Restock pack purchases (today) */}
+          <section className="mb-8">
+            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Shop</h3>
+            <p className="text-white/40 text-sm mb-3">
+              Reset this user&apos;s daily pack purchase count so they can buy packs again today.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!selectedUserId || restockingPack) return;
+                setRestockingPack(true);
+                try {
+                  const res = await fetch("/api/admin/restock-pack-purchases", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: selectedUserId }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok) {
+                    alert(data.removed > 0 ? `Restocked: ${data.removed} purchase(s) cleared for today.` : "No pack purchases today for this user.");
+                  } else {
+                    alert(data.error || "Failed to restock");
+                  }
+                } finally {
+                  setRestockingPack(false);
+                }
+              }}
+              disabled={restockingPack}
+              className="px-5 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer"
+            >
+              {restockingPack ? "Restocking..." : "Restock pack purchases (today)"}
+            </button>
           </section>
 
           {/* Trivia */}
