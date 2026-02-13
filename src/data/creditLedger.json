@@ -2658,5 +2658,27 @@
       "submissionId": "16"
     },
     "createdAt": "2026-02-13T02:31:33.566Z"
+  },
+  {
+    "id": "cl-1770949919206-10hc2jj",
+    "userId": "3",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "8",
+      "submissionId": "16"
+    },
+    "createdAt": "2026-02-13T02:31:59.205Z"
+  },
+  {
+    "id": "cl-1770949942520-fvygbdl",
+    "userId": "2",
+    "amount": 250,
+    "reason": "submission_win",
+    "metadata": {
+      "winnerId": "6",
+      "weekId": "8"
+    },
+    "createdAt": "2026-02-13T02:32:22.519Z"
   }
 ]

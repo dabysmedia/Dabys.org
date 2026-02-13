@@ -369,5 +369,77 @@
     "popularity": 0,
     "rarity": "epic",
     "cardType": "actor"
+  },
+  {
+    "characterId": "actor-73421-152601",
+    "tmdbPersonId": 73421,
+    "actorName": "Joaquin Phoenix",
+    "characterName": "Theodore",
+    "profilePath": "https://image.tmdb.org/t/p/w500/u38k3hQBDwNX0VA22aQceDp9Iyv.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 5.3851,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-1245-152601",
+    "tmdbPersonId": 1245,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Samantha (voice)",
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 16.042,
+    "rarity": "rare",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-549831-152601",
+    "tmdbPersonId": 549831,
+    "actorName": "Lynn Adrianna",
+    "characterName": "Letter Writer #1",
+    "profilePath": "https://image.tmdb.org/t/p/w500/bcdoLlSCP5qfTGDSpnyvDPO7sQL.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 0.6902,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-154798-152601",
+    "tmdbPersonId": 154798,
+    "actorName": "Lisa Renee Pitts",
+    "characterName": "Letter Writer #2",
+    "profilePath": "https://image.tmdb.org/t/p/w500/9b0yReVIaTkZpYetW4XIQyYfnl6.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 2.3594,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-1509453-152601",
+    "tmdbPersonId": 1509453,
+    "actorName": "Gabe Gomez",
+    "characterName": "Letter Writer #3",
+    "profilePath": "https://image.tmdb.org/t/p/w500/aHw92lRjEIAr6yIwRnOaIlq0ze4.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 0.433,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-73457-152601",
+    "tmdbPersonId": 73457,
+    "actorName": "Chris Pratt",
+    "characterName": "Paul",
+    "profilePath": "https://image.tmdb.org/t/p/w500/cRH6HPAQ98PlOwwEvhYO4CM9lwu.jpg",
+    "movieTmdbId": 152601,
+    "movieTitle": "Her",
+    "popularity": 7.5469,
+    "rarity": "uncommon",
+    "cardType": "actor"
   }
 ]

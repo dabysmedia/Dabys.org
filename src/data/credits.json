@@ -6,7 +6,12 @@
   },
   {
     "userId": "2",
-    "balance": 100,
-    "updatedAt": "2026-02-13T02:31:03.920Z"
+    "balance": 350,
+    "updatedAt": "2026-02-13T02:32:22.519Z"
+  },
+  {
+    "userId": "3",
+    "balance": 50,
+    "updatedAt": "2026-02-13T02:31:59.205Z"
   }
 ]

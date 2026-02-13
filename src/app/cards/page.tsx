@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -334,7 +334,7 @@ interface Pack {
   allowedCardTypes: CardType[];
 }
 
-export default function CardsPage() {
+function CardsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -2685,3 +2685,16 @@ export default function CardsPage() {
   );
 }
 
+export default function CardsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <CardsContent />
+    </Suspense>
+  );
+}

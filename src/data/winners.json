@@ -69,5 +69,19 @@
     "trailerUrl": "https://www.youtube.com/embed/m2Vh4tfnvKk",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/g2yTT9lB5I1DA1uBWT7m4wrYuVz.jpg",
     "runtime": 92
+  },
+  {
+    "id": "6",
+    "weekId": "8",
+    "movieTitle": "Her",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/her-2013/",
+    "submittedBy": "Carlos",
+    "publishedAt": "2026-02-13T02:32:22.518Z",
+    "tmdbId": 152601,
+    "year": "2013",
+    "overview": "In the not so distant future, Theodore, a lonely writer, purchases a newly developed operating system designed to meet the user's every need. To Theodore's surprise, a romantic relationship develops between him and his operating system. This unconventional love story blends science fiction and romance in a sweet tale that explores the nature of love and the ways that technology isolates and connects us all.",
+    "trailerUrl": "https://www.youtube.com/embed/ne6p6MfLBxc",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/sPPsR9f4K0movWVQ99u4uMqFzEL.jpg"
   }
 ]
