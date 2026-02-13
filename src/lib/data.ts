@@ -1387,7 +1387,7 @@ export function getShopItems(): ShopItem[] {
   const raw = getShopItemsRaw();
   return raw
     .filter((i) => i && typeof i.id === "string" && (i.type === "badge" || i.type === "skip"))
-    .map((i) => ({
+    .map((i): ShopItem => ({
       id: i.id,
       name: String(i.name || "").trim() || "Unnamed",
       description: typeof i.description === "string" ? i.description.trim() : undefined,
