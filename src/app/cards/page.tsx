@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
-import { DISENCHANT_DUST, getPackAPunchCost } from "@/lib/alchemy";
+import { DISENCHANT_DUST, getPackAPunchCost, getQuicksellCredits } from "@/lib/alchemy";
 import { RARITY_BADGE } from "@/lib/constants";
 
 interface User {
@@ -51,7 +51,7 @@ interface Listing {
 const PACK_PRICE = 50;
 
 type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
-type CollectionSubTab = "tradeup" | "alchemy";
+type CollectionSubTab = "tradeup" | "alchemy" | "quicksell";
 
 interface TradeOfferEnriched {
   id: string;
@@ -400,6 +400,9 @@ function CardsContent() {
   const [alchemyPunchFailedCardIds, setAlchemyPunchFailedCardIds] = useState<string[]>([]);
   const [alchemyErrorFading, setAlchemyErrorFading] = useState(false);
   const alchemyErrorClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [quicksellBenchSlots, setQuicksellBenchSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [quicksellVendingId, setQuicksellVendingId] = useState<string | null>(null);
+  const [quicksellError, setQuicksellError] = useState("");
   const [stardustDelta, setStardustDelta] = useState<number | null>(null);
   const [stardustAnimClass, setStardustAnimClass] = useState("");
   const stardustPrevRef = useRef<number>(0);
@@ -528,6 +531,10 @@ function CardsContent() {
     if (searchParams.get("alchemy") === "1") {
       setTab("collection");
       setCollectionSubTab("alchemy");
+    }
+    if (searchParams.get("quicksell") === "1") {
+      setTab("collection");
+      setCollectionSubTab("quicksell");
     }
   }, [searchParams]);
 
@@ -829,6 +836,51 @@ function CardsContent() {
   function removeFromAlchemyBench(cardId: string) {
     setAlchemyBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
     playAlchemyBenchRemove();
+  }
+
+  const quicksellBenchCardIds = quicksellBenchSlots.filter((id): id is string => id != null);
+  const quicksellBenchCards = cards.filter((c) => c.id && quicksellBenchCardIds.includes(c.id));
+
+  function addToQuicksellBench(cardId: string) {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || quicksellBenchCardIds.includes(cardId)) return;
+    if (quicksellBenchCardIds.length >= 5) return;
+    if (card.rarity === "legendary") return;
+    setQuicksellBenchSlots((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((id) => id == null);
+      if (idx >= 0) next[idx] = cardId;
+      return next;
+    });
+  }
+
+  function removeFromQuicksellBench(cardId: string) {
+    setQuicksellBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  async function handleQuicksellAll() {
+    if (!user || quicksellBenchCards.length === 0) return;
+    const totalCr = quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCredits(c.rarity), 0);
+    if (!confirm(`Vendor ${quicksellBenchCards.length} card(s) for ${totalCr} credits? This cannot be undone.`)) return;
+    setQuicksellError("");
+    setQuicksellVendingId("_all");
+    try {
+      const res = await fetch("/api/alchemy/quicksell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardIds: quicksellBenchCardIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setQuicksellError(data?.error ?? "Quicksell failed");
+        return;
+      }
+      if (typeof data.balance === "number") setCreditBalance(data.balance);
+      setQuicksellBenchSlots([null, null, null, null, null]);
+      await loadData();
+    } finally {
+      setQuicksellVendingId(null);
+    }
   }
 
   async function handleAlchemyDisenchantAll() {
@@ -1588,6 +1640,20 @@ function CardsContent() {
               >
                 Alchemy
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectionSubTab("quicksell");
+                  router.replace("/cards?quicksell=1", { scroll: false });
+                }}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  collectionSubTab === "quicksell"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Quicksell
+              </button>
             </div>
 
             {collectionSubTab === "tradeup" && (
@@ -1840,6 +1906,82 @@ function CardsContent() {
               </>
             )}
 
+            {collectionSubTab === "quicksell" && (
+              <>
+                <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <h2 className="text-lg font-semibold text-amber-400/90">Quicksell</h2>
+                    <span className="text-sm text-sky-300/90 flex items-center gap-1.5">
+                      <span className="text-white/50">Credits:</span>
+                      <span className="tabular-nums font-semibold text-sky-200">{creditBalance}</span>
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/60 mb-4">
+                    Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 mb-4">
+                    <div className="flex gap-2">
+                      {quicksellBenchSlots.map((cardId, i) => {
+                        const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
+                        return (
+                          <div
+                            key={`${cardId ?? "empty"}-${i}`}
+                            className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                              cardId && benchCard
+                                ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} group`
+                                : "border-sky-400/50 bg-sky-500/10 hover:border-sky-300/60 hover:bg-sky-500/20"
+                            }`}
+                            onClick={() => cardId && removeFromQuicksellBench(cardId)}
+                          >
+                            {cardId && benchCard ? (
+                              <div className="w-full h-full relative bg-black/20 transition-all duration-200 group-hover:opacity-60 group-hover:grayscale">
+                                {benchCard.profilePath ? (
+                                  <img src={benchCard.profilePath} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                                    {(benchCard.actorName || "?")[0]}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="flex flex-col items-center justify-center gap-1 text-sky-300/90" aria-hidden>
+                                <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="9" />
+                                  <path d="M12 7v10M9 10h6M9 14h6" />
+                                </svg>
+                                <span className="text-[10px] font-bold text-sky-300/90">cr</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {quicksellBenchCards.length > 0 ? (
+                      <div className="flex flex-col items-start gap-2">
+                        <span className="text-xs text-white/50">
+                          Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCredits(c.rarity), 0)} credits
+                        </span>
+                        <button
+                          onClick={() => handleQuicksellAll()}
+                          disabled={quicksellVendingId === "_all"}
+                          className="px-4 py-2 rounded-lg border border-sky-500/40 bg-sky-500/15 text-sky-300 text-sm font-medium hover:bg-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {quicksellVendingId === "_all" ? <span className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin inline-block" /> : "Vendor all"}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-white/40">Add cards from your collection below to vendor for credits.</span>
+                    )}
+                  </div>
+                </div>
+                {quicksellError && (
+                  <div className="mb-8 rounded-xl border border-red-500/40 bg-red-500/15 backdrop-blur-sm px-4 py-3 text-red-300 text-sm">
+                    {quicksellError}
+                  </div>
+                )}
+              </>
+            )}
+
             {/* Your Collection - always visible */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4 mt-8">
               <h2 className="text-lg font-semibold text-white/90">Your Collection ({cards.length})</h2>
@@ -1901,14 +2043,21 @@ function CardsContent() {
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
+                const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
                 const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
                 const canAddAlchemy = collectionSubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const canAddQuicksell = collectionSubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
                 const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && collectionSubTab === "tradeup";
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && collectionSubTab === "alchemy";
-                const ineligible = ineligibleTradeUp || ineligibleAlchemy;
+                const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && collectionSubTab === "quicksell";
+                const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
                 const handleClick = () => {
                   if (collectionSubTab === "alchemy") {
                     if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
+                    return;
+                  }
+                  if (collectionSubTab === "quicksell") {
+                    if (canAddQuicksell && card.id) addToQuicksellBench(card.id);
                     return;
                   }
                   if (canAddTradeUp && card.id) addToTradeUpSlot(card.id!);
@@ -1922,7 +2071,7 @@ function CardsContent() {
                     key={card.id}
                     onClick={handleClick}
                     className={`relative group/card transition-all duration-200 ${
-                      (canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                      (canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") || (canAddQuicksell && collectionSubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
                     } ${card.rarity === "legendary" && collectionSubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
                     {inSlots && collectionSubTab === "tradeup" && (
@@ -1935,12 +2084,17 @@ function CardsContent() {
                         In bench
                       </span>
                     )}
+                    {onQuicksellBench && collectionSubTab === "quicksell" && (
+                      <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-sky-500/90 text-white text-[10px] font-bold">
+                        Quicksell
+                      </span>
+                    )}
                     {myListedCardIds.has(card.id!) && (
                       <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl text-xs text-white/60">
                         Listed
                       </span>
                     )}
-                    <div className={(canAddTradeUp && collectionSubTab === "tradeup") || canAddAlchemy ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
+                    <div className={(canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") || (canAddQuicksell && collectionSubTab === "quicksell") ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
                       <CardDisplay card={card} />
                     </div>
                   </div>
