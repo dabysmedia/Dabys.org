@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/Header";
 import { BadgePill } from "@/components/BadgePill";
 
 interface User { id: string; name: string; }
@@ -58,6 +57,7 @@ export default function HomePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Data
   const [week, setWeek] = useState<Week | null>(null);
@@ -92,7 +92,7 @@ export default function HomePage() {
       const winnersData: Winner[] = winnersRes.ok ? await winnersRes.json() : [];
       setWinners(winnersData);
 
-      if (!weekRes.ok) { setWeek(null); return; }
+      if (!weekRes.ok) { setWeek(null); setDataLoaded(true); return; }
       const weekData: Week = await weekRes.json();
       setWeek(weekData);
 
@@ -113,6 +113,8 @@ export default function HomePage() {
       }
     } catch (e) {
       console.error("Failed to load data", e);
+    } finally {
+      setDataLoaded(true);
     }
   }, []);
 
@@ -255,7 +257,7 @@ export default function HomePage() {
           .slice(0, 3)
       : [];
 
-  if (checking || !user) {
+  if (checking || !user || !dataLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
@@ -270,8 +272,6 @@ export default function HomePage() {
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
-
-      <Header />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
 

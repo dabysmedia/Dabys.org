@@ -63,6 +63,9 @@ function NavLink({
 
 const MOBILE_BREAKPOINT_PX = 768;
 
+const isAppRoute = (path: string | null) =>
+  path !== "/login" && path !== null && !path.startsWith("/admin");
+
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
@@ -102,7 +105,9 @@ export default function Header() {
     } catch {}
   };
 
+  // Only run auth/credits/avatar when on main app routes (not login or admin)
   useEffect(() => {
+    if (!isAppRoute(pathname)) return;
     const cached = localStorage.getItem("dabys_user");
     if (!cached) {
       router.replace("/login");
@@ -121,7 +126,7 @@ export default function Header() {
     } catch {
       router.replace("/login");
     }
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -156,6 +161,9 @@ export default function Header() {
     localStorage.removeItem("dabys_user");
     router.replace("/login");
   };
+
+  // Don't render header on login or admin (layout still mounts us; we stay static elsewhere)
+  if (!isAppRoute(pathname)) return null;
 
   if (!user) {
     return (

@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
-import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
 import { RARITY_COLORS } from "@/lib/constants";
@@ -468,8 +467,6 @@ export default function WinnerDetailPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/80 to-[var(--background)]" />
         </div>
       )}
-
-      <Header />
 
       <main className="relative z-10 max-w-4xl mx-auto px-6 py-10">
         {/* ─── Movie Hero ─── */}

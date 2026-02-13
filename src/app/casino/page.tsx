@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Header from "@/components/Header";
 import { RED_NUMBERS, ROULETTE_WHEEL_ORDER } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
@@ -102,8 +101,6 @@ function CasinoContent() {
 
   return (
     <div className="min-h-screen">
-      <Header />
-
       <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Header block */}
         <div className="flex flex-col gap-5 mb-8">

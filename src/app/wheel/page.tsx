@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/Header";
 
 interface WheelData {
   entries: string[];
@@ -500,8 +499,6 @@ export default function WheelPage() {
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
-
-      <Header />
 
       <main className="relative z-10 max-w-3xl mx-auto px-6 py-12">
         {/* Title */}

@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import ImageCropModal from "@/components/ImageCropModal";
-import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
 
@@ -455,8 +454,6 @@ export default function ProfilePage() {
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
-
-      <Header />
 
       {/* Banner */}
       <div className="relative z-10 h-48 sm:h-64 overflow-hidden bg-gradient-to-br from-purple-900/60 via-indigo-900/60 to-violet-900/60 group/banner">
