@@ -2199,7 +2199,7 @@ function CardsContent() {
                           <Link href={`/profile/${listing.sellerUserId}`} className="text-white/60 hover:text-sky-300 transition-colors truncate">
                             {listing.sellerName}
                           </Link>
-                          {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} appearance={listing.sellerDisplayedBadge.badgeAppearance} />}
+                          {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}
                         </span>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shadow-[0_2px_8px_rgba(0,0,0,0.15)] shrink-0">
                           <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -2427,7 +2427,7 @@ function CardsContent() {
                                   )}
                                   <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
                                 </Link>
-                                {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} appearance={t.counterpartyDisplayedBadge.badgeAppearance} />}
+                                {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} />}
                               </div>
                             )}
                             <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
@@ -2536,7 +2536,7 @@ function CardsContent() {
                                   )}
                                   <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
                                 </Link>
-                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} appearance={t.initiatorDisplayedBadge.badgeAppearance} />}
+                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
                               </div>
                             )}
                             <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
@@ -2583,7 +2583,7 @@ function CardsContent() {
                                     {t.initiatorUserId && (userAvatarMap[t.initiatorUserId] ? <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.initiatorName || "?")[0]}</div>)}
                                     <span className="text-xs font-medium text-white/80 truncate">They give</span>
                                   </Link>
-                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} appearance={t.initiatorDisplayedBadge.badgeAppearance} />}
+                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.offeredCards.slice(0, 8).map((c) => (

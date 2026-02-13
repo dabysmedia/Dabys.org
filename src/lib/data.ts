@@ -1408,45 +1408,6 @@ function normalizeBadgeAppearance(a: unknown): BadgeAppearance {
   return { primaryColor: primary, secondaryColor: secondary, icon, glow };
 }
 
-// ──── Default badge appearance (winner badges, etc.) ────────────────────
-const DEFAULT_BADGE_APPEARANCE_FALLBACK: BadgeAppearance = {
-  primaryColor: "#f59e0b",
-  secondaryColor: "#d97706",
-  icon: "star",
-  glow: true,
-};
-
-function getDefaultBadgeAppearanceRaw(): unknown {
-  try {
-    return readJson<unknown>("defaultBadgeAppearance.json");
-  } catch {
-    return null;
-  }
-}
-
-/** Default appearance for winner badges and any badge without its own. */
-export function getDefaultBadgeAppearance(): BadgeAppearance {
-  const raw = getDefaultBadgeAppearanceRaw();
-  const normalized = normalizeBadgeAppearance(raw);
-  return {
-    primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
-    secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
-    icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
-    glow: normalized.glow ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.glow,
-  };
-}
-
-export function saveDefaultBadgeAppearance(appearance: BadgeAppearance): void {
-  const normalized = normalizeBadgeAppearance(appearance);
-  const toSave = {
-    primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
-    secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
-    icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
-    glow: normalized.glow ?? true,
-  };
-  writeJson("defaultBadgeAppearance.json", toSave);
-}
-
 export function getShopItems(): ShopItem[] {
   const raw = getShopItemsRaw();
   return raw

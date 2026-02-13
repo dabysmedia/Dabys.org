@@ -25,7 +25,7 @@ interface Submission {
   submissionCount?: number;
   pitch?: string;
   avatarUrl?: string;
-  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
+  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 interface Vote { id: string; weekId: string; userId: string; userName: string; submissionId: string; }
 interface Winner {
@@ -41,7 +41,7 @@ interface Winner {
   submittedByUserId?: string;
   backdropUrl?: string;
   submitterAvatarUrl?: string;
-  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
+  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
 interface TmdbMovieDetail { tmdbId: number; title: string; year: string; overview: string; posterUrl: string; backdropUrl: string; trailerUrl: string; letterboxdUrl: string; }
@@ -394,7 +394,7 @@ export default function HomePage() {
                               >
                                 Badge holder
                               </span>
-                              <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} appearance={thisWeekWinner.submitterDisplayedBadge.badgeAppearance} />
+                              <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} />
                             </div>
                           </div>
                           <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
@@ -425,7 +425,7 @@ export default function HomePage() {
                                 >
                                   Badge holder
                                 </span>
-                                <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} appearance={thisWeekWinner.submitterDisplayedBadge.badgeAppearance} />
+                                <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} />
                               </div>
                             </div>
                           </div>
@@ -799,7 +799,7 @@ export default function HomePage() {
                                       {sub.userName}
                                     </Link>
                                   </span>
-                                  {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
+                                  {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
                                 </p>
                               </div>
                             </>
@@ -991,7 +991,7 @@ export default function HomePage() {
                               )}
                             </span>
                             {winner.submitterDisplayedBadge && (
-                              <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} appearance={winner.submitterDisplayedBadge.badgeAppearance} />
+                              <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
                             )}
                           </>
                         )}
@@ -1124,7 +1124,7 @@ function SubmissionsGrid({
                     <p className="text-[11px] text-white/30 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
                       <span>by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors">{sub.userName}</Link></span>
-                      {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
+                      {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
                     </p>
                   </div>
                   <button
@@ -1229,7 +1229,7 @@ function SubmissionsGrid({
                   <p className="text-[11px] text-white/30 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
                     {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
                     <span>by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors relative z-20">{sub.userName}</Link></span>
-                    {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
+                    {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
                     {isMine && (
                       <button
                         type="button"

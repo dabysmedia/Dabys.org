@@ -11,7 +11,6 @@ import {
   getWatchlist,
   getCards,
   getCardById,
-  getDefaultBadgeAppearance,
 } from "@/lib/data";
 import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
@@ -189,7 +188,6 @@ export async function GET(
   const purchasedBadgeWinnerIds = profile.purchasedBadgeWinnerIds ?? [];
   const purchasedBadges = profile.purchasedBadges ?? [];
   const allDisplayableWinnerIds = [...new Set([...completedWinnerIds, ...purchasedBadgeWinnerIds])];
-  const defaultBadgeAppearance = getDefaultBadgeAppearance();
   const completedBadges = [
     ...allDisplayableWinnerIds.map((wid) => {
       const w = allWinners.find((x) => x.id === wid);
@@ -198,7 +196,6 @@ export async function GET(
         winnerId: wid,
         movieTitle: w?.movieTitle ?? "Unknown",
         isHolo: !isPurchased && completedHoloWinnerIds.includes(wid),
-        badgeAppearance: defaultBadgeAppearance,
       };
     }),
     ...purchasedBadges.map((b) => ({
@@ -236,7 +233,6 @@ export async function GET(
             winnerId: displayedBadgeWinnerId,
             movieTitle: w?.movieTitle ?? "Unknown",
             isHolo: completedHoloWinnerIds.includes(displayedBadgeWinnerId),
-            badgeAppearance: defaultBadgeAppearance,
           };
         })()
       : null;

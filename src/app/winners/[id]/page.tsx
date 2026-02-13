@@ -38,7 +38,7 @@ interface Comment {
   parentUserName?: string;
   likeCount?: number;
   likedByMe?: boolean;
-  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
+  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 interface RunnerUp {
@@ -64,7 +64,7 @@ interface WinnerDetail {
   tmdbId?: number;
   submittedByUserId?: string;
   submitterAvatarUrl?: string;
-  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
+  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
   weekTheme?: string;
   runnerUps?: RunnerUp[];
   ratings: Rating[];
@@ -548,7 +548,7 @@ export default function WinnerDetailPage() {
                         >
                           Badge holder
                         </span>
-                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} appearance={winner.submitterDisplayedBadge.badgeAppearance} />
+                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
                       </div>
                     </div>
                     <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
@@ -571,7 +571,7 @@ export default function WinnerDetailPage() {
                         >
                           Badge holder
                         </span>
-                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} appearance={winner.submitterDisplayedBadge.badgeAppearance} />
+                        <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
                       </div>
                     </div>
                   </div>
@@ -1073,7 +1073,7 @@ export default function WinnerDetailPage() {
                           {comment.userName}
                         </Link>
                         {comment.displayedBadge && (
-                          <BadgePill movieTitle={comment.displayedBadge.movieTitle} isHolo={comment.displayedBadge.isHolo} appearance={comment.displayedBadge.badgeAppearance} />
+                          <BadgePill movieTitle={comment.displayedBadge.movieTitle} isHolo={comment.displayedBadge.isHolo} />
                         )}
                         <span className="text-xs text-white/20">
                           {timeAgo(comment.createdAt)}

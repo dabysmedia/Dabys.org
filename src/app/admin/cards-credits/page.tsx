@@ -256,14 +256,6 @@ export default function AdminCardsCreditsPage() {
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
-  const [defaultBadgeAppearanceForm, setDefaultBadgeAppearanceForm] = useState({
-    primaryColor: "#f59e0b",
-    secondaryColor: "#d97706",
-    icon: "star" as "star" | "trophy" | "heart" | "medal" | "fire",
-    glow: true,
-  });
-  const [defaultBadgeAppearanceLoading, setDefaultBadgeAppearanceLoading] = useState(true);
-  const [savingDefaultBadgeAppearance, setSavingDefaultBadgeAppearance] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -386,26 +378,6 @@ export default function AdminCardsCreditsPage() {
     }
   }, []);
 
-  const loadDefaultBadgeAppearance = useCallback(async () => {
-    setDefaultBadgeAppearanceLoading(true);
-    try {
-      const res = await fetch("/api/admin/badge-appearance");
-      if (res.ok) {
-        const d = await res.json();
-        setDefaultBadgeAppearanceForm({
-          primaryColor: d.primaryColor ?? "#f59e0b",
-          secondaryColor: d.secondaryColor ?? "#d97706",
-          icon: ["star", "trophy", "heart", "medal", "fire"].includes(d.icon) ? d.icon : "star",
-          glow: typeof d.glow === "boolean" ? d.glow : true,
-        });
-      }
-    } catch {
-      setError("Failed to load default badge appearance");
-    } finally {
-      setDefaultBadgeAppearanceLoading(false);
-    }
-  }, []);
-
   const loadUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
@@ -471,8 +443,7 @@ export default function AdminCardsCreditsPage() {
     loadPacks();
     loadShopItems();
     loadCreditSettings();
-    loadDefaultBadgeAppearance();
-  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadDefaultBadgeAppearance]);
+  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings]);
 
   useEffect(() => {
     loadData();
@@ -1567,139 +1538,6 @@ export default function AdminCardsCreditsPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Badge appearance (default for all winner badges) */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
-            Badge appearance
-          </h2>
-          {defaultBadgeAppearanceLoading && (
-            <div className="flex items-center gap-2 text-xs text-white/50">
-              <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-              Loading...
-            </div>
-          )}
-        </div>
-        <p className="text-white/40 text-sm mb-4">
-          Default look for winner badges (movie badges from completing card sets). Shop badge items can override this per item in Shop Items below.
-        </p>
-        <div className="max-w-md space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-white/40 mb-1">Primary color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={defaultBadgeAppearanceForm.primaryColor}
-                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, primaryColor: e.target.value }))}
-                  className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
-                />
-                <input
-                  type="text"
-                  value={defaultBadgeAppearanceForm.primaryColor}
-                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, primaryColor: e.target.value }))}
-                  className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
-                  placeholder="#f59e0b"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-white/40 mb-1">Secondary color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={defaultBadgeAppearanceForm.secondaryColor}
-                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, secondaryColor: e.target.value }))}
-                  className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
-                />
-                <input
-                  type="text"
-                  value={defaultBadgeAppearanceForm.secondaryColor}
-                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, secondaryColor: e.target.value }))}
-                  className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
-                  placeholder="#d97706"
-                />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-white/40 mb-1">Icon</label>
-            <select
-              value={defaultBadgeAppearanceForm.icon}
-              onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, icon: e.target.value as typeof f.icon }))}
-              className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
-            >
-              <option value="star">Star</option>
-              <option value="trophy">Trophy</option>
-              <option value="heart">Heart</option>
-              <option value="medal">Medal</option>
-              <option value="fire">Fire</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="default-badge-glow"
-              checked={defaultBadgeAppearanceForm.glow}
-              onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, glow: e.target.checked }))}
-              className="rounded border-white/20"
-            />
-            <label htmlFor="default-badge-glow" className="text-xs text-white/60">Glow</label>
-          </div>
-          <div className="pt-2 border-t border-white/[0.06]">
-            <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
-            <BadgePill
-              movieTitle="Winner"
-              appearance={{
-                primaryColor: defaultBadgeAppearanceForm.primaryColor || "#f59e0b",
-                secondaryColor: defaultBadgeAppearanceForm.secondaryColor || defaultBadgeAppearanceForm.primaryColor || "#d97706",
-                icon: defaultBadgeAppearanceForm.icon,
-                glow: defaultBadgeAppearanceForm.glow,
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            disabled={defaultBadgeAppearanceLoading || savingDefaultBadgeAppearance}
-            onClick={async () => {
-              setSavingDefaultBadgeAppearance(true);
-              setError("");
-              try {
-                const res = await fetch("/api/admin/badge-appearance", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    primaryColor: defaultBadgeAppearanceForm.primaryColor || undefined,
-                    secondaryColor: defaultBadgeAppearanceForm.secondaryColor || undefined,
-                    icon: defaultBadgeAppearanceForm.icon,
-                    glow: defaultBadgeAppearanceForm.glow,
-                  }),
-                });
-                if (res.ok) {
-                  const d = await res.json();
-                  setDefaultBadgeAppearanceForm({
-                    primaryColor: d.primaryColor ?? "#f59e0b",
-                    secondaryColor: d.secondaryColor ?? "#d97706",
-                    icon: ["star", "trophy", "heart", "medal", "fire"].includes(d.icon) ? d.icon : "star",
-                    glow: typeof d.glow === "boolean" ? d.glow : true,
-                  });
-                } else {
-                  const err = await res.json().catch(() => ({}));
-                  setError(err?.error ?? "Failed to save");
-                }
-              } catch {
-                setError("Failed to save default badge appearance");
-              } finally {
-                setSavingDefaultBadgeAppearance(false);
-              }
-            }}
-            className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40"
-          >
-            {savingDefaultBadgeAppearance ? "Saving..." : "Save default badge appearance"}
-          </button>
         </div>
       </div>
 
