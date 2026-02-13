@@ -1740,10 +1740,15 @@ export default function AdminCardsCreditsPage() {
                     type="button"
                     onClick={() => {
                       setEditingBadgeWinnerId(b.winnerId);
+                      const iconVal = b.appearance.icon;
+                      const icon: "star" | "trophy" | "heart" | "medal" | "fire" =
+                        iconVal === "star" || iconVal === "trophy" || iconVal === "heart" || iconVal === "medal" || iconVal === "fire"
+                          ? iconVal
+                          : "star";
                       setEditingBadgeForm({
                         primaryColor: b.appearance.primaryColor ?? "#f59e0b",
                         secondaryColor: b.appearance.secondaryColor ?? "#d97706",
-                        icon: ["star", "trophy", "heart", "medal", "fire"].includes(b.appearance.icon) ? b.appearance.icon : "star",
+                        icon,
                         glow: b.appearance.glow ?? true,
                       });
                     }}
