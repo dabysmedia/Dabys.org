@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
+import { DISENCHANT_DUST, getPackAPunchCost } from "@/lib/alchemy";
+import { RARITY_BADGE } from "@/lib/constants";
 
 interface User {
   id: string;
@@ -49,6 +51,7 @@ interface Listing {
 const PACK_PRICE = 50;
 
 type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
+type CollectionSubTab = "tradeup" | "alchemy";
 
 interface TradeOfferEnriched {
   id: string;
@@ -226,6 +229,93 @@ async function playPackFlipSound(step: number) {
   } catch { /* ignore */ }
 }
 
+// Alchemy bench sounds
+async function playAlchemyBenchAdd() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(554.37, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.06);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.07, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  } catch { /* ignore */ }
+}
+async function playAlchemyBenchRemove() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.setValueAtTime(320, t + 0.06);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.05, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  } catch { /* ignore */ }
+}
+async function playAlchemyDisenchantSuccess() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.06);
+    osc.frequency.setValueAtTime(783.99, t + 0.12);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.02);
+    gain.gain.setValueAtTime(0.1, t + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t);
+    osc.stop(t + 0.28);
+  } catch { /* ignore */ }
+}
+async function playAlchemyPackAPunchSuccess() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(523.25, t);
+    osc.frequency.setValueAtTime(659.25, t + 0.08);
+    osc.frequency.setValueAtTime(783.99, t + 0.16);
+    osc.frequency.setValueAtTime(1046.5, t + 0.24);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.02);
+    gain.gain.setValueAtTime(0.1, t + 0.22);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    osc.start(t);
+    osc.stop(t + 0.4);
+  } catch { /* ignore */ }
+}
+
 interface Winner {
   id: string;
   movieTitle: string;
@@ -246,8 +336,10 @@ interface Pack {
 
 export default function CardsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [tab, setTab] = useState<TabKey>("store");
+  const [collectionSubTab, setCollectionSubTab] = useState<CollectionSubTab>("tradeup");
   const [creditBalance, setCreditBalance] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -296,6 +388,40 @@ export default function CardsPage() {
   const [badgeLossOnConfirm, setBadgeLossOnConfirm] = useState<(() => void | Promise<void>) | null>(null);
   const [badgeLossIsListing, setBadgeLossIsListing] = useState(false);
   const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
+  const [stardust, setStardust] = useState(0);
+  const [alchemyDisenchantingId, setAlchemyDisenchantingId] = useState<string | null>(null);
+  const [alchemyPunchingId, setAlchemyPunchingId] = useState<string | null>(null);
+  const [alchemyError, setAlchemyError] = useState("");
+  const [alchemyBenchSlots, setAlchemyBenchSlots] = useState<(string | null)[]>([null, null, null, null, null]);
+  const [alchemySuccessFlash, setAlchemySuccessFlash] = useState(false);
+  /** Card IDs currently shown as holo on the bench before removal (PAP success animation). */
+  const [alchemyPunchHoloCardIds, setAlchemyPunchHoloCardIds] = useState<string[]>([]);
+  /** Card IDs that just failed PAP — show red glow, then clear. */
+  const [alchemyPunchFailedCardIds, setAlchemyPunchFailedCardIds] = useState<string[]>([]);
+  const [alchemyErrorFading, setAlchemyErrorFading] = useState(false);
+  const alchemyErrorClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [stardustDelta, setStardustDelta] = useState<number | null>(null);
+  const [stardustAnimClass, setStardustAnimClass] = useState("");
+  const stardustPrevRef = useRef<number>(0);
+  const stardustInitializedRef = useRef(false);
+  const stardustAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function setPAPFailureErrorAndFade(message: string) {
+    if (alchemyErrorClearTimeoutRef.current) {
+      clearTimeout(alchemyErrorClearTimeoutRef.current);
+      alchemyErrorClearTimeoutRef.current = null;
+    }
+    setAlchemyErrorFading(false);
+    setAlchemyError(message);
+    alchemyErrorClearTimeoutRef.current = setTimeout(() => {
+      setAlchemyErrorFading(true);
+      alchemyErrorClearTimeoutRef.current = setTimeout(() => {
+        setAlchemyError("");
+        setAlchemyErrorFading(false);
+        alchemyErrorClearTimeoutRef.current = null;
+      }, 500);
+    }, 4500);
+  }
 
   // Pinned badge progress (tracked on winners page, max 3)
   const TCG_TRACKED_KEY = "tcg-tracked-winner-ids";
@@ -318,7 +444,7 @@ export default function CardsPage() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes, stardustRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -328,6 +454,7 @@ export default function CardsPage() {
       fetch("/api/cards/packs"),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
       fetch("/api/users?includeProfile=1"),
+      fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
     ]);
 
     if (creditsRes.ok) {
@@ -357,6 +484,27 @@ export default function CardsPage() {
       const usersWithProfile = await usersRes.json() as { id: string; name: string; avatarUrl?: string }[];
       setUserAvatarMap(usersWithProfile.reduce((acc, x) => ({ ...acc, [x.id]: x.avatarUrl || "" }), {}));
     }
+    if (stardustRes.ok) {
+      const d = await stardustRes.json();
+      const newBalance = typeof d?.balance === "number" ? d.balance : 0;
+      const prev = stardustPrevRef.current;
+      stardustPrevRef.current = newBalance;
+      setStardust(newBalance);
+      if (stardustInitializedRef.current) {
+        const delta = newBalance - prev;
+        if (delta !== 0) {
+          stardustAnimTimeoutRef.current && clearTimeout(stardustAnimTimeoutRef.current);
+          setStardustDelta(delta);
+          setStardustAnimClass(delta > 0 ? "stardust-animate-add" : "stardust-animate-subtract");
+          stardustAnimTimeoutRef.current = setTimeout(() => {
+            setStardustDelta(null);
+            setStardustAnimClass("");
+            stardustAnimTimeoutRef.current = null;
+          }, 900);
+        }
+      }
+      stardustInitializedRef.current = true;
+    }
   }, []);
 
   useEffect(() => {
@@ -377,10 +525,23 @@ export default function CardsPage() {
   }, [router, loadData]);
 
   useEffect(() => {
+    if (searchParams.get("alchemy") === "1") {
+      setTab("collection");
+      setCollectionSubTab("alchemy");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const handler = () => loadData();
     window.addEventListener("dabys-credits-refresh", handler);
     return () => window.removeEventListener("dabys-credits-refresh", handler);
   }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      stardustAnimTimeoutRef.current && clearTimeout(stardustAnimTimeoutRef.current);
+    };
+  }, []);
 
   // Read pinned/tracked winner IDs from localStorage (sync when returning from winners page)
   useEffect(() => {
@@ -571,6 +732,186 @@ export default function CardsPage() {
 
   function removeFromTradeUpSlot(cardId: string) {
     setTradeUpSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  function getDustForRarity(rarity: string): number {
+    return DISENCHANT_DUST[rarity] ?? 0;
+  }
+
+  async function handleAlchemyDisenchant(card: Card) {
+    if (!user) return;
+    const dust = getDustForRarity(card.rarity);
+    if (!confirm(`Disenchant for ${dust} Stardust? This cannot be undone.`)) return;
+    setAlchemyError("");
+    setAlchemyDisenchantingId(card.id);
+    try {
+      const res = await fetch("/api/alchemy/disenchant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardId: card.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlchemyErrorFading(false);
+        setAlchemyError(data?.error ?? "Disenchant failed");
+        return;
+      }
+      playAlchemyDisenchantSuccess();
+      setAlchemySuccessFlash(true);
+      setTimeout(() => setAlchemySuccessFlash(false), 500);
+      setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
+      await loadData();
+    } finally {
+      setAlchemyDisenchantingId(null);
+    }
+  }
+
+  async function handleAlchemyPackAPunch(card: Card) {
+    if (!user) return;
+    const cost = getPackAPunchCost(card.rarity);
+    if (stardust < cost) {
+      setAlchemyErrorFading(false);
+      setAlchemyError(`You need ${cost} Stardust. You have ${stardust}.`);
+      return;
+    }
+    if (!confirm(`Spend ${cost} Stardust to attempt Pack-A-Punch? 50% success rate — Stardust is consumed either way.`)) return;
+    setAlchemyError("");
+    setAlchemyPunchingId(card.id);
+    try {
+      const res = await fetch("/api/alchemy/pack-a-punch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardId: card.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlchemyErrorFading(false);
+        setAlchemyError(data?.error ?? "Pack-A-Punch failed");
+        return;
+      }
+      if (data.success) {
+        playAlchemyPackAPunchSuccess();
+        setAlchemyPunchHoloCardIds([card.id]);
+        setTimeout(() => {
+          setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
+          setAlchemyPunchHoloCardIds([]);
+          loadData();
+        }, 1100);
+      } else {
+        setAlchemyPunchFailedCardIds([card.id]);
+        setPAPFailureErrorAndFade("Pack-A-Punch failed — Stardust consumed. Try again!");
+        await loadData();
+        setTimeout(() => setAlchemyPunchFailedCardIds([]), 900);
+      }
+    } finally {
+      setAlchemyPunchingId(null);
+    }
+  }
+
+  const alchemyBenchCardIds = alchemyBenchSlots.filter((id): id is string => id != null);
+  const alchemyBenchCards = cards.filter((c) => c.id && alchemyBenchCardIds.includes(c.id));
+  const alchemyBenchType = alchemyBenchCards[0]?.isFoil === true ? "foil" : alchemyBenchCards[0]?.isFoil === false ? "normal" : null;
+
+  function addToAlchemyBench(cardId: string) {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || alchemyBenchCardIds.includes(cardId)) return;
+    if (alchemyBenchCardIds.length >= 5) return;
+    if (alchemyBenchType !== null && card.isFoil !== (alchemyBenchType === "foil")) return;
+    playAlchemyBenchAdd();
+    setAlchemyBenchSlots((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((id) => id == null);
+      if (idx >= 0) next[idx] = cardId;
+      return next;
+    });
+  }
+
+  function removeFromAlchemyBench(cardId: string) {
+    setAlchemyBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+    playAlchemyBenchRemove();
+  }
+
+  async function handleAlchemyDisenchantAll() {
+    if (!user || alchemyBenchCards.length === 0) return;
+    const totalDust = alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0);
+    if (!confirm(`Disenchant ${alchemyBenchCards.length} Holo(s) for ${totalDust} Stardust? This cannot be undone.`)) return;
+    setAlchemyError("");
+    setAlchemyDisenchantingId("_all");
+    try {
+      for (const card of alchemyBenchCards) {
+        const res = await fetch("/api/alchemy/disenchant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id, cardId: card.id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAlchemyErrorFading(false);
+          setAlchemyError(data?.error ?? "Disenchant failed");
+          return;
+        }
+      }
+      playAlchemyDisenchantSuccess();
+      setAlchemySuccessFlash(true);
+      setTimeout(() => setAlchemySuccessFlash(false), 500);
+      setAlchemyBenchSlots([null, null, null, null, null]);
+      await loadData();
+    } finally {
+      setAlchemyDisenchantingId(null);
+    }
+  }
+
+  async function handleAlchemyPackAPunchAll() {
+    if (!user || alchemyBenchCards.length === 0) return;
+    const totalCost = alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0);
+    if (stardust < totalCost) {
+      setAlchemyErrorFading(false);
+      setAlchemyError(`You need ${totalCost} Stardust. You have ${stardust}.`);
+      return;
+    }
+    if (!confirm(`Spend ${totalCost} Stardust to Pack-A-Punch ${alchemyBenchCards.length} card(s)? 50% success per card — Stardust is consumed either way.`)) return;
+    setAlchemyError("");
+    setAlchemyPunchingId("_all");
+    try {
+      const succeededIds: string[] = [];
+      const failedIds: string[] = [];
+      for (const card of alchemyBenchCards) {
+        const res = await fetch("/api/alchemy/pack-a-punch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id, cardId: card.id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAlchemyErrorFading(false);
+          setAlchemyError(data?.error ?? "Pack-A-Punch failed");
+          await loadData();
+          return;
+        }
+        if (data.success) succeededIds.push(card.id);
+        else failedIds.push(card.id);
+      }
+      if (succeededIds.length > 0) {
+        playAlchemyPackAPunchSuccess();
+        setAlchemyPunchHoloCardIds(succeededIds);
+        setTimeout(() => {
+          setAlchemyBenchSlots((prev) => prev.map((id) => (id != null && succeededIds.includes(id) ? null : id)));
+          setAlchemyPunchHoloCardIds([]);
+          loadData();
+        }, 1200);
+      }
+      const failedCount = failedIds.length;
+      if (failedCount > 0) {
+        setAlchemyPunchFailedCardIds(failedIds);
+        setPAPFailureErrorAndFade(`${failedCount} Pack-A-Punch attempt(s) failed — Stardust consumed.`);
+        setTimeout(() => setAlchemyPunchFailedCardIds([]), 900);
+      }
+      if (succeededIds.length === 0 || failedCount > 0) {
+        await loadData();
+      }
+    } finally {
+      setAlchemyPunchingId(null);
+    }
   }
 
   async function checkBadgeLossThen(
@@ -1217,8 +1558,42 @@ export default function CardsPage() {
         {/* Collection */}
         {tab === "collection" && (
           <div>
+            {/* Browser-style sub-tabs: Trade up | Alchemy */}
+            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectionSubTab("tradeup");
+                  router.replace("/cards", { scroll: false });
+                }}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  collectionSubTab === "tradeup"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Trade up
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectionSubTab("alchemy");
+                  router.replace("/cards?alchemy=1", { scroll: false });
+                }}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  collectionSubTab === "alchemy"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Alchemy
+              </button>
+            </div>
+
+            {collectionSubTab === "tradeup" && (
+            <>
             {(tradeUpResult || tradeUpResultCredits != null) && (
-              <div className="flex justify-center mb-6">
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                 <div
                   className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
                     tradeUpResultFading ? "opacity-0" : "opacity-100"
@@ -1263,7 +1638,7 @@ export default function CardsPage() {
               </div>
             )}
             {/* Trade Up - frosted glass section */}
-            <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
+            <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
                 Add 5 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
@@ -1351,8 +1726,122 @@ export default function CardsPage() {
                 </button>
               </div>
             </div>
+            </>
+            )}
 
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            {collectionSubTab === "alchemy" && (
+              <>
+                {/* Alchemy bench - one slot: Holo → Disenchant, normal → Pack-A-Punch */}
+                <div className={`rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <h2 className="text-lg font-semibold text-amber-400/90">Alchemy bench</h2>
+                    <span className="text-sm text-amber-400/80 flex items-center gap-1.5 relative">
+                      <span className="text-white/50">Stardust:</span>
+                      <span className={`tabular-nums font-semibold text-amber-200 relative ${stardustAnimClass}`}>
+                        {stardust}
+                        {stardustDelta !== null && (
+                          <span
+                            className={`absolute -top-1 left-[100%] ml-0.5 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold stardust-delta-pop pointer-events-none whitespace-nowrap ${
+                              stardustDelta > 0 ? "text-amber-300 bg-amber-500/25" : "text-purple-300 bg-purple-500/25"
+                            }`}
+                          >
+                            {stardustDelta > 0 ? `+${stardustDelta}` : stardustDelta}
+                          </span>
+                        )}
+                      </span>
+                      <span className="stardust-star-rainbow ml-0.5" aria-hidden>★</span>
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/60 mb-4">
+                    Place up to 5 cards from your collection below. All Holos → disenchant for Stardust. All normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 mb-4">
+                    <div className="flex gap-2">
+                      {alchemyBenchSlots.map((cardId, i) => {
+                        const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
+                        const showAsHolo = cardId != null && alchemyPunchHoloCardIds.includes(cardId);
+                        const showAsFailed = cardId != null && alchemyPunchFailedCardIds.includes(cardId);
+                        return (
+                          <div
+                            key={`${cardId ?? "empty"}-${i}`}
+                            className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                              cardId && benchCard
+                                ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} alchemy-bench-slot-pop group ${showAsHolo ? "ring-2 ring-indigo-400/50 ring-inset alchemy-card-success-flash" : ""} ${showAsFailed ? "ring-2 ring-red-400/60 ring-inset alchemy-card-fail-flash" : ""}`
+                                : "border-dashed hover:opacity-90"
+                            }`}
+                            style={!cardId ? {
+                              borderColor: "transparent",
+                              background: "linear-gradient(rgb(28,28,33), rgb(28,28,33)) padding-box, conic-gradient(from 0deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #8b5cf6, #ec4899, #ef4444) border-box",
+                            } : undefined}
+                            onClick={() => !showAsHolo && cardId && removeFromAlchemyBench(cardId)}
+                          >
+                            {cardId && benchCard ? (
+                              <div className="w-full h-full relative bg-black/20 transition-all duration-200 group-hover:opacity-60 group-hover:grayscale">
+                                {benchCard.profilePath ? (
+                                  <img
+                                    src={benchCard.profilePath}
+                                    alt=""
+                                    className={`w-full h-full object-cover ${showAsHolo ? "holo-sheen" : ""}`}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                                    {(benchCard.actorName || "?")[0]}
+                                  </div>
+                                )}
+                                {showAsHolo && (
+                                  <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-white/40 text-center px-1">Empty</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
+                      <div className="flex flex-col items-start gap-2">
+                        <span className="text-xs text-white/50">
+                          Holo → Disenchant all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
+                        </span>
+                        <button
+                          onClick={() => handleAlchemyDisenchantAll()}
+                          disabled={alchemyDisenchantingId === "_all"}
+                          className="px-4 py-2 rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-300 text-sm font-medium hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {alchemyDisenchantingId === "_all" ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin inline-block" /> : "Disenchant all"}
+                        </button>
+                      </div>
+                    ) : alchemyBenchType === "normal" && alchemyBenchCards.length > 0 ? (
+                      <div className="flex flex-col items-start gap-2">
+                        <span className="text-xs text-white/50">
+                          Normal → Pack-A-Punch all ({alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)} Stardust)
+                        </span>
+                        <button
+                          onClick={() => handleAlchemyPackAPunchAll()}
+                          disabled={alchemyPunchingId === "_all" || stardust < alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)}
+                          className="px-4 py-2 rounded-lg border border-purple-500/40 bg-purple-500/15 text-purple-300 text-sm font-medium hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {alchemyPunchingId === "_all" ? <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin inline-block" /> : "Pack-A-Punch all"}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-white/40">Add cards from your collection below. Holos or normals only (same type).</span>
+                    )}
+                  </div>
+                </div>
+                {alchemyError && (
+                  <div
+                    className={`mb-8 rounded-xl border border-red-500/40 bg-red-500/15 backdrop-blur-sm px-4 py-3 text-red-300 text-sm transition-opacity duration-500 ${alchemyErrorFading ? "opacity-0" : "opacity-100"}`}
+                  >
+                    {alchemyError}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Your Collection - always visible */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 mt-8">
               <h2 className="text-lg font-semibold text-white/90">Your Collection ({cards.length})</h2>
               <div className="flex items-center gap-3">
                 <select
@@ -1411,25 +1900,39 @@ export default function CardsPage() {
                 });
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
-                const canAdd = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
-                const ineligible = tradeUpCardIds.length > 0 && !canAdd && !inSlots;
+                const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
+                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 5 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                const canAddAlchemy = collectionSubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && collectionSubTab === "tradeup";
+                const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && collectionSubTab === "alchemy";
+                const ineligible = ineligibleTradeUp || ineligibleAlchemy;
+                const handleClick = () => {
+                  if (collectionSubTab === "alchemy") {
+                    if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
+                    return;
+                  }
+                  if (canAddTradeUp && card.id) addToTradeUpSlot(card.id!);
+                  else if (card.rarity === "legendary") {
+                    setLegendaryBlockShown(true);
+                    setTimeout(() => setLegendaryBlockShown(false), 2500);
+                  }
+                };
                 return (
                   <div
                     key={card.id}
-                    onClick={() => {
-                      if (canAdd && card.id) addToTradeUpSlot(card.id!);
-                      else if (card.rarity === "legendary") {
-                        setLegendaryBlockShown(true);
-                        setTimeout(() => setLegendaryBlockShown(false), 2500);
-                      }
-                    }}
+                    onClick={handleClick}
                     className={`relative group/card transition-all duration-200 ${
-                      canAdd ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
-                    } ${card.rarity === "legendary" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
+                      (canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                    } ${card.rarity === "legendary" && collectionSubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
-                    {inSlots && (
+                    {inSlots && collectionSubTab === "tradeup" && (
                       <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
                         ✓
+                      </span>
+                    )}
+                    {onAlchemyBench && collectionSubTab === "alchemy" && (
+                      <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-purple-500/90 text-white text-[10px] font-bold">
+                        In bench
                       </span>
                     )}
                     {myListedCardIds.has(card.id!) && (
@@ -1437,7 +1940,7 @@ export default function CardsPage() {
                         Listed
                       </span>
                     )}
-                    <div className={canAdd ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
+                    <div className={(canAddTradeUp && collectionSubTab === "tradeup") || canAddAlchemy ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
                       <CardDisplay card={card} />
                     </div>
                   </div>
@@ -1493,14 +1996,23 @@ export default function CardsPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {listings.map((listing) => (
-                  <div key={listing.id} className="flex flex-col">
+                  <div key={listing.id} className="flex flex-col rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
                     <CardDisplay card={listing.card} />
-                    <div className="mt-0 rounded-b-xl border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-3">
+                    <div className="border-t border-white/10 bg-white/[0.02] p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-amber-400 font-bold text-sm">{listing.askingPrice} cr</span>
                         <span className="text-[10px] text-white/40 truncate flex items-center gap-1.5 flex-wrap min-w-0">
-                          by {listing.sellerName}
+                          by{" "}
+                          <Link href={`/profile/${listing.sellerUserId}`} className="text-white/60 hover:text-sky-300 transition-colors truncate">
+                            {listing.sellerName}
+                          </Link>
                           {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shadow-[0_2px_8px_rgba(0,0,0,0.15)] shrink-0">
+                          <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-sky-300 font-bold text-sm tabular-nums">{listing.askingPrice}</span>
+                          <span className="text-sky-300/70 text-xs font-semibold">cr</span>
                         </span>
                       </div>
                       {listing.sellerUserId === user.id ? (

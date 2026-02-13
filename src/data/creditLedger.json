@@ -2405,5 +2405,258 @@
       "selection": 0
     },
     "createdAt": "2026-02-12T22:24:03.123Z"
+  },
+  {
+    "id": "cl-1770938600839-yul7d0q",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T23:23:20.838Z"
+  },
+  {
+    "id": "cl-1770938602965-msbb8jb",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T23:23:22.964Z"
+  },
+  {
+    "id": "cl-1770938603867-6rqwovh",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T23:23:23.866Z"
+  },
+  {
+    "id": "cl-1770938606013-3zv3xm0",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T23:23:26.012Z"
+  },
+  {
+    "id": "cl-1770938607314-aqp3sv1",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-12T23:23:27.313Z"
+  },
+  {
+    "id": "cl-1770946293793-d3f0t8j",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:31:33.792Z"
+  },
+  {
+    "id": "cl-1770946296466-wmn0pm8",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:31:36.465Z"
+  },
+  {
+    "id": "cl-1770946298402-uki3pw6",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:31:38.402Z"
+  },
+  {
+    "id": "cl-1770946375650-ywi1kj7",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:32:55.649Z"
+  },
+  {
+    "id": "cl-1770946377164-3a6zhaf",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:32:57.163Z"
+  },
+  {
+    "id": "cl-1770946379255-pwum9lo",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:32:59.254Z"
+  },
+  {
+    "id": "cl-1770946402108-gz2k27p",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:22.107Z"
+  },
+  {
+    "id": "cl-1770946403804-arz05bt",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:23.803Z"
+  },
+  {
+    "id": "cl-1770946405747-y66mwda",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:25.746Z"
+  },
+  {
+    "id": "cl-1770946407594-53xkz3g",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:27.593Z"
+  },
+  {
+    "id": "cl-1770946409444-fvtjwkc",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:29.444Z"
+  },
+  {
+    "id": "cl-1770946411466-55d04v3",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:33:31.465Z"
+  },
+  {
+    "id": "cl-1770947113165-nvmfvqv",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:45:13.164Z"
+  },
+  {
+    "id": "cl-1770947118740-9hdjpqw",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:45:18.739Z"
+  },
+  {
+    "id": "cl-1770947120628-2wgh5ju",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-13T01:45:20.626Z"
+  },
+  {
+    "id": "cl-1770949764187-0dnphu0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-13T02:29:24.186Z"
+  },
+  {
+    "id": "cl-1770949767345-lexobld",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-13T02:29:27.344Z"
+  },
+  {
+    "id": "cl-1770949833738-jyphq7f",
+    "userId": "2",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "8",
+      "submissionId": "15"
+    },
+    "createdAt": "2026-02-13T02:30:33.737Z"
+  },
+  {
+    "id": "cl-1770949863921-52w2r8y",
+    "userId": "2",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "16",
+      "weekId": "8"
+    },
+    "createdAt": "2026-02-13T02:31:03.920Z"
+  },
+  {
+    "id": "cl-1770949893566-lo2546a",
+    "userId": "1",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "8",
+      "submissionId": "16"
+    },
+    "createdAt": "2026-02-13T02:31:33.566Z"
   }
 ]

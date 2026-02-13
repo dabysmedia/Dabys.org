@@ -8,6 +8,7 @@ import {
   getWinners,
   saveWinners,
   addCredits,
+  getCreditSettings,
 } from "@/lib/data";
 import { addPoolEntriesForWinner } from "@/lib/cards";
 
@@ -86,7 +87,8 @@ export async function PATCH(request: Request) {
             });
 
             saveWinners(existingWinners);
-            addCredits(winnerSub.userId, 50, "submission_win", { winnerId: newId, weekId });
+            const { submissionWin: amount } = getCreditSettings();
+            addCredits(winnerSub.userId, amount, "submission_win", { winnerId: newId, weekId });
             const newWinner = existingWinners[existingWinners.length - 1];
             if (newWinner?.tmdbId) {
               addPoolEntriesForWinner(newWinner).catch((e) => console.error("Pool add error", e));

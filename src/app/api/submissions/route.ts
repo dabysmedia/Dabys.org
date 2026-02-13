@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSubmissions, saveSubmissions, getCurrentWeek, getProfiles, addCredits, hasReceivedCreditsForWeek } from "@/lib/data";
+import { getSubmissions, saveSubmissions, getCurrentWeek, getProfiles, addCredits, hasReceivedCreditsForWeek, getCreditSettings } from "@/lib/data";
 import { getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(request: Request) {
@@ -109,7 +109,8 @@ export async function POST(request: Request) {
 
   // Award credits only once per user per week (even if they clear and resubmit)
   if (!hasReceivedCreditsForWeek(body.userId, "submission", currentWeek.id)) {
-    addCredits(body.userId, 10, "submission", { submissionId: newId, weekId: currentWeek.id });
+    const { submission: amount } = getCreditSettings();
+    addCredits(body.userId, amount, "submission", { submissionId: newId, weekId: currentWeek.id });
   }
 
   return NextResponse.json(newSub, { status: 201 });

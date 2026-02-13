@@ -127,6 +127,9 @@ export default function AdminCardsCreditsPage() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [creditBalance, setCreditBalance] = useState<number>(0);
   const [creditInput, setCreditInput] = useState("");
+  const [stardustBalance, setStardustBalance] = useState<number>(0);
+  const [stardustInput, setStardustInput] = useState("");
+  const [savingStardust, setSavingStardust] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [pool, setPool] = useState<CharacterPortrayal[]>([]);
   const [packs, setPacks] = useState<Pack[]>([]);
@@ -174,6 +177,22 @@ export default function AdminCardsCreditsPage() {
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
+  const [creditSettings, setCreditSettings] = useState<{
+    submission: number;
+    vote: number;
+    submissionWin: number;
+    rating: number;
+    comment: number;
+  } | null>(null);
+  const [creditSettingsForm, setCreditSettingsForm] = useState({
+    submission: "50",
+    vote: "50",
+    submissionWin: "250",
+    rating: "25",
+    comment: "25",
+  });
+  const [savingCreditSettings, setSavingCreditSettings] = useState(false);
+  const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -255,6 +274,28 @@ export default function AdminCardsCreditsPage() {
     }
   }, []);
 
+  const loadCreditSettings = useCallback(async () => {
+    setCreditSettingsLoading(true);
+    try {
+      const res = await fetch("/api/admin/credit-settings");
+      if (res.ok) {
+        const d = await res.json();
+        setCreditSettings(d);
+        setCreditSettingsForm({
+          submission: String(d.submission ?? 50),
+          vote: String(d.vote ?? 50),
+          submissionWin: String(d.submissionWin ?? 250),
+          rating: String(d.rating ?? 25),
+          comment: String(d.comment ?? 25),
+        });
+      }
+    } catch {
+      setError("Failed to load credit settings");
+    } finally {
+      setCreditSettingsLoading(false);
+    }
+  }, []);
+
   const loadUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
@@ -273,8 +314,9 @@ export default function AdminCardsCreditsPage() {
     setLoading(true);
     setError("");
     try {
-      const [creditsRes, cardsRes, poolRes, attemptsRes, winnersRes] = await Promise.all([
+      const [creditsRes, stardustRes, cardsRes, poolRes, attemptsRes, winnersRes] = await Promise.all([
         fetch(`/api/credits?userId=${encodeURIComponent(selectedUserId)}`),
+        fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/admin/cards?userId=${encodeURIComponent(selectedUserId)}`),
         fetch("/api/admin/character-pool"),
         fetch(`/api/trivia/attempts?userId=${encodeURIComponent(selectedUserId)}`),
@@ -286,6 +328,12 @@ export default function AdminCardsCreditsPage() {
         const bal = typeof d?.balance === "number" ? d.balance : 0;
         setCreditBalance(bal);
         setCreditInput(String(bal));
+      }
+      if (stardustRes.ok) {
+        const d = await stardustRes.json();
+        const bal = typeof d?.balance === "number" ? d.balance : 0;
+        setStardustBalance(bal);
+        setStardustInput(String(bal));
       }
       if (cardsRes.ok) setCards(await cardsRes.json());
       else setCards([]);
@@ -312,7 +360,8 @@ export default function AdminCardsCreditsPage() {
     loadUsers();
     loadPool();
     loadPacks();
-  }, [loadUsers, loadPool, loadPacks]);
+    loadCreditSettings();
+  }, [loadUsers, loadPool, loadPacks, loadCreditSettings]);
 
   useEffect(() => {
     loadData();
@@ -393,6 +442,37 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to save pack");
     } finally {
       setSavingPack(false);
+    }
+  }
+
+  async function handleSaveCreditSettings(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingCreditSettings) return;
+    setSavingCreditSettings(true);
+    setError("");
+    try {
+      const body = {
+        submission: parseInt(creditSettingsForm.submission, 10) || 0,
+        vote: parseInt(creditSettingsForm.vote, 10) || 0,
+        submissionWin: parseInt(creditSettingsForm.submissionWin, 10) || 0,
+        rating: parseInt(creditSettingsForm.rating, 10) || 0,
+        comment: parseInt(creditSettingsForm.comment, 10) || 0,
+      };
+      const res = await fetch("/api/admin/credit-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCreditSettings(data);
+      } else {
+        setError(data.error || "Failed to save credit settings");
+      }
+    } catch {
+      setError("Failed to save credit settings");
+    } finally {
+      setSavingCreditSettings(false);
     }
   }
 
@@ -552,6 +632,36 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to set credits");
     } finally {
       setSavingCredits(false);
+    }
+  }
+
+  async function handleSetStardust(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedUserId || savingStardust) return;
+    const val = parseInt(stardustInput, 10);
+    if (isNaN(val) || val < 0) {
+      setError("Enter a valid non-negative number");
+      return;
+    }
+    setSavingStardust(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/stardust", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, balance: val }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStardustBalance(data.balance);
+        setStardustInput(String(data.balance));
+      } else {
+        setError(data.error || "Failed to set stardust");
+      }
+    } catch {
+      setError("Failed to set stardust");
+    } finally {
+      setSavingStardust(false);
     }
   }
 
@@ -800,6 +910,89 @@ export default function AdminCardsCreditsPage() {
           {error}
         </div>
       )}
+
+      {/* Credit Rewards */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+        <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
+          Credit Rewards
+        </h2>
+        <p className="text-white/40 text-sm mb-4">
+          Credits awarded for each action. Saved to /data (creditSettings.json).
+        </p>
+        {creditSettingsLoading ? (
+          <div className="flex items-center gap-2 text-sm text-white/50">
+            <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+            Loading...
+          </div>
+        ) : (
+          <form onSubmit={handleSaveCreditSettings} className="flex flex-wrap gap-6">
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Submission</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.submission}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, submission: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Vote</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.vote}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vote: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Submission wins</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.submissionWin}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, submissionWin: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Rating a movie</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.rating}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, rating: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Leaving a comment</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.comment}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, comment: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={savingCreditSettings}
+                className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
+              >
+                {savingCreditSettings ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
 
       {/* Manage Card Pool */}
       {/* Manage Packs */}
@@ -1355,6 +1548,37 @@ export default function AdminCardsCreditsPage() {
                 {savingCredits ? "Saving..." : "Save Credits"}
               </button>
             </form>
+          </div>
+
+          {/* Stardust */}
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
+              Stardust
+            </h2>
+            <p className="text-white/40 text-sm mb-4">
+              Current balance: <span className="text-amber-200 font-bold">{stardustBalance}</span>
+            </p>
+            <form onSubmit={handleSetStardust} className="flex gap-3 flex-wrap items-end">
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Set balance to</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={stardustInput}
+                  onChange={(e) => setStardustInput(e.target.value)}
+                  className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40 w-32"
+                  placeholder="0"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingStardust}
+                className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
+              >
+                {savingStardust ? "Saving..." : "Save Stardust"}
+              </button>
+            </form>
+            <p className="text-white/30 text-xs mt-2">Saves to /data (stardust.json).</p>
           </div>
 
           {/* Trivia */}

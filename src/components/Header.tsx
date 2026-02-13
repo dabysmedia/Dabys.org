@@ -159,14 +159,14 @@ export default function Header() {
             href="/"
             className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
           >
-            Dabys.org
+            dabys.org
           </Link>
         </div>
         <div className="flex items-center gap-4">
-          <NavLink href="/wheel" label="Theme Wheel" active={isWheel} />
+          <NavLink href="/wheel" label="Wheel" active={isWheel} />
           <NavLink href="/stats" label="Stats" active={isStats} />
-          <NavLink href="/cards" label="TCG" active={isCards} />
           <NavLink href="/casino" label="Casino" active={isCasino} />
+          <NavLink href="/cards" label="TCG" active={isCards} />
           <Link
             href="/cards"
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative overflow-visible ${

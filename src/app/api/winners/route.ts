@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits } from "@/lib/data";
+import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits, getCreditSettings } from "@/lib/data";
 import { addPoolEntriesForWinner, getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 export async function GET() {
@@ -82,7 +82,8 @@ export async function POST(request: Request) {
     const users = getUsers();
     const submitter = users.find((u) => u.name === body.submittedBy);
     if (submitter) {
-      addCredits(submitter.id, 50, "submission_win", { winnerId: newWinner.id, weekId: newWinner.weekId });
+      const { submissionWin: amount } = getCreditSettings();
+      addCredits(submitter.id, amount, "submission_win", { winnerId: newWinner.id, weekId: newWinner.weekId });
     }
   }
 

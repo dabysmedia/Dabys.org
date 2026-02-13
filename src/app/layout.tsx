@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ScrollingWinnersBg } from "@/components/ScrollingWinnersBg";
 import { AppWithFriends } from "@/components/AppWithFriends";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Dabys.org",
@@ -24,6 +25,7 @@ export default function RootLayout({
         <AppWithFriends>
           <ScrollingWinnersBg />
           {children}
+          <Footer />
         </AppWithFriends>
       </body>
     </html>

@@ -377,6 +377,46 @@ export function removeWatchlistItem(userId: string, tmdbId: number): boolean {
   return true;
 }
 
+// ──── Credit Settings (reward amounts, editable in admin) ─
+export interface CreditSettings {
+  submission: number;
+  vote: number;
+  submissionWin: number;
+  rating: number;
+  comment: number;
+}
+
+const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
+  submission: 50,
+  vote: 50,
+  submissionWin: 250,
+  rating: 25,
+  comment: 25,
+};
+
+function getCreditSettingsRaw(): CreditSettings {
+  try {
+    const raw = readJson<Partial<CreditSettings>>("creditSettings.json");
+    return {
+      submission: typeof raw.submission === "number" ? raw.submission : DEFAULT_CREDIT_SETTINGS.submission,
+      vote: typeof raw.vote === "number" ? raw.vote : DEFAULT_CREDIT_SETTINGS.vote,
+      submissionWin: typeof raw.submissionWin === "number" ? raw.submissionWin : DEFAULT_CREDIT_SETTINGS.submissionWin,
+      rating: typeof raw.rating === "number" ? raw.rating : DEFAULT_CREDIT_SETTINGS.rating,
+      comment: typeof raw.comment === "number" ? raw.comment : DEFAULT_CREDIT_SETTINGS.comment,
+    };
+  } catch {
+    return { ...DEFAULT_CREDIT_SETTINGS };
+  }
+}
+
+export function getCreditSettings(): CreditSettings {
+  return getCreditSettingsRaw();
+}
+
+export function saveCreditSettings(settings: CreditSettings): void {
+  writeJson("creditSettings.json", settings);
+}
+
 // ──── Credits (user balances for TCG) ───────────────────
 export interface UserCredit {
   userId: string;
@@ -515,6 +555,68 @@ export function setCredits(userId: string, balance: number): void {
     createdAt: now,
   });
   saveCreditLedgerRaw(ledger);
+}
+
+// ──── Stardust (Alchemy) ────────────────────────────────
+export interface StardustEntry {
+  userId: string;
+  balance: number;
+  updatedAt: string;
+}
+
+function getStardustRaw(): StardustEntry[] {
+  try {
+    return readJson<StardustEntry[]>("stardust.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveStardustRaw(entries: StardustEntry[]) {
+  writeJson("stardust.json", entries);
+}
+
+export function getStardust(userId: string): number {
+  const entries = getStardustRaw();
+  const entry = entries.find((e) => e.userId === userId);
+  return entry?.balance ?? 0;
+}
+
+export function addStardust(userId: string, amount: number): void {
+  const entries = getStardustRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const current = idx >= 0 ? entries[idx].balance : 0;
+  const newBalance = current + amount;
+  const entry: StardustEntry = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  saveStardustRaw(entries);
+}
+
+export function deductStardust(userId: string, amount: number): boolean {
+  const current = getStardust(userId);
+  if (current < amount) return false;
+  const entries = getStardustRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const newBalance = current - amount;
+  const entry: StardustEntry = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  saveStardustRaw(entries);
+  return true;
+}
+
+/** Set a user's stardust balance (admin). Persists to stardust.json in /data. */
+export function setStardust(userId: string, balance: number): void {
+  const entries = getStardustRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const entry: StardustEntry = { userId, balance: Math.max(0, Math.floor(balance)), updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  saveStardustRaw(entries);
 }
 
 // ──── Card Types (multi-type pool) ───────────────────────
@@ -1168,6 +1270,7 @@ export function wipeUserInventory(userId: string): {
   saveCardsRaw(cardsRaw.filter((c) => c.userId !== userId));
   saveCreditsRaw(getCreditsRaw().filter((c) => c.userId !== userId));
   saveCreditLedgerRaw(getCreditLedgerRaw().filter((e) => e.userId !== userId));
+  saveStardustRaw(getStardustRaw().filter((e) => e.userId !== userId));
 
   const attempts = getTriviaAttemptsRaw();
   const attemptsFiltered = attempts.filter((a) => a.userId !== userId);
@@ -1199,6 +1302,7 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
 
   writeJson("credits.json", []);
   writeJson("creditLedger.json", []);
+  writeJson("stardust.json", []);
   writeJson("cards.json", []);
   writeJson("triviaAttempts.json", []);
   writeJson("triviaSessions.json", []);

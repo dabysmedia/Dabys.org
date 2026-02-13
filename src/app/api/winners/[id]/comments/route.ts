@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits, getCreditSettings } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -41,7 +41,8 @@ export async function POST(
   comments.push(newComment);
   saveComments(comments);
 
-  addCredits(body.userId, 5, "comment", { commentId: newId, winnerId });
+  const { comment: amount } = getCreditSettings();
+  addCredits(body.userId, amount, "comment", { commentId: newId, winnerId });
 
   return NextResponse.json(newComment, { status: 201 });
 }

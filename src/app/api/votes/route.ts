@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getVotes, saveVotes, getCurrentWeek, getSubmissions, addCredits, hasReceivedCreditsForWeek } from "@/lib/data";
+import { getVotes, saveVotes, getCurrentWeek, getSubmissions, addCredits, hasReceivedCreditsForWeek, getCreditSettings } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -71,7 +71,8 @@ export async function POST(request: Request) {
     votes.push(vote);
     // Award credits only once per user per week (even if they clear and vote again)
     if (!hasReceivedCreditsForWeek(body.userId, "vote", currentWeek.id)) {
-      addCredits(body.userId, 10, "vote", { weekId: currentWeek.id, submissionId: body.submissionId });
+      const { vote: amount } = getCreditSettings();
+      addCredits(body.userId, amount, "vote", { weekId: currentWeek.id, submissionId: body.submissionId });
     }
   }
 

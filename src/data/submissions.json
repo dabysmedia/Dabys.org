@@ -207,5 +207,20 @@
     "overview": "The Romanian count known as Dracula is summoned to London by Arthur Holmwood, a young Lord who is one the verge of being wed. Unknown to Arthur's future bride Lucy, her future husband is infected with syphilis and therefore cannot consummate their marriage. Arthur has laid his hopes of being cured on the enigmatic count; as it is said that Dracula has extraordinary powers. But these supernatural powers have sinister origins. The Count is a vampire. Soon Arthur realizes his serious mistake as all hell breaks loose and the Count infects others with his ancient curse. But Dracula has not counted on the young Lord acquiring the assistance of the Dutch Vampire expert Prof. Abraham Van Helsing.",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/mAEMFpc3V2fCGV2JEs9YLIpUs3Z.jpg",
     "createdAt": "2026-02-12T00:28:08.795Z"
+  },
+  {
+    "id": "16",
+    "weekId": "8",
+    "userId": "2",
+    "userName": "Carlos",
+    "movieTitle": "Her",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/eCOtqtfvn7mxGl6nfmq4b1exJRc.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/her-2013/",
+    "tmdbId": 152601,
+    "year": "2013",
+    "overview": "In the not so distant future, Theodore, a lonely writer, purchases a newly developed operating system designed to meet the user's every need. To Theodore's surprise, a romantic relationship develops between him and his operating system. This unconventional love story blends science fiction and romance in a sweet tale that explores the nature of love and the ways that technology isolates and connects us all.",
+    "trailerUrl": "https://www.youtube.com/embed/ne6p6MfLBxc",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/sPPsR9f4K0movWVQ99u4uMqFzEL.jpg",
+    "createdAt": "2026-02-13T02:31:03.919Z"
   }
 ]
