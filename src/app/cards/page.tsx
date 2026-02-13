@@ -45,7 +45,7 @@ interface Listing {
   sellerName: string;
   askingPrice: number;
   card: Card;
-  sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
 }
 
 const PACK_PRICE = 50;
@@ -87,8 +87,8 @@ interface TradeOfferEnriched {
   requestedCards: Card[];
   status: "pending" | "accepted" | "denied";
   createdAt: string;
-  initiatorDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
-  counterpartyDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  initiatorDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
+  counterpartyDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
 }
 
 interface UserWithAvatar {
