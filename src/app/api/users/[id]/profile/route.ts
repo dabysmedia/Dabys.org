@@ -168,10 +168,11 @@ export async function GET(
   const thumbsUpCount = userRatings.filter((r) => r.thumbsUp).length;
   const thumbsDownCount = userRatings.filter((r) => !r.thumbsUp).length;
 
-  // Skips: earned 1 per win, minus however many they've used
+  // Skips: earned 1 per win + bonus from shop, minus however many they've used
   const skipsEarned = totalWins;
+  const bonusSkips = profile.bonusSkips ?? 0;
   const skipsUsed = profile.skipsUsed || 0;
-  const skipsAvailable = Math.max(0, skipsEarned - skipsUsed);
+  const skipsAvailable = Math.max(0, skipsEarned + bonusSkips - skipsUsed);
 
   const watchlist = getWatchlist(id);
 
@@ -181,25 +182,50 @@ export async function GET(
     .map((cardId) => getCardById(cardId))
     .filter((c): c is NonNullable<typeof c> => c != null && c.userId === id);
 
-  // Completed badges (normal + Holo style)
+  // Completed badges (winner-based + Holo) + purchased movie badges + standalone purchased badges
   const completedWinnerIds = getCompletedWinnerIds(id);
   const completedHoloWinnerIds = getCompletedHoloWinnerIds(id);
-  const completedBadges = completedWinnerIds.map((wid) => {
-    const w = allWinners.find((x) => x.id === wid);
-    return {
-      winnerId: wid,
-      movieTitle: w?.movieTitle ?? "Unknown",
-      isHolo: completedHoloWinnerIds.includes(wid),
-    };
-  });
+  const purchasedBadgeWinnerIds = profile.purchasedBadgeWinnerIds ?? [];
+  const purchasedBadges = profile.purchasedBadges ?? [];
+  const allDisplayableWinnerIds = [...new Set([...completedWinnerIds, ...purchasedBadgeWinnerIds])];
+  const completedBadges = [
+    ...allDisplayableWinnerIds.map((wid) => {
+      const w = allWinners.find((x) => x.id === wid);
+      const isPurchased = purchasedBadgeWinnerIds.includes(wid);
+      return {
+        winnerId: wid,
+        movieTitle: w?.movieTitle ?? "Unknown",
+        isHolo: !isPurchased && completedHoloWinnerIds.includes(wid),
+      };
+    }),
+    ...purchasedBadges.map((b) => ({
+      shopItemId: b.itemId,
+      movieTitle: b.name,
+      name: b.name,
+      imageUrl: b.imageUrl,
+      isHolo: false as const,
+    })),
+  ];
 
-  // Single displayed badge (must be completed)
+  // Single displayed badge: either a shop standalone badge or a winner badge
+  const displayedBadgeShopItemId =
+    profile.displayedBadgeShopItemId && purchasedBadges.some((b) => b.itemId === profile.displayedBadgeShopItemId)
+      ? profile.displayedBadgeShopItemId
+      : null;
   const displayedBadgeWinnerId =
-    profile.displayedBadgeWinnerId && completedWinnerIds.includes(profile.displayedBadgeWinnerId)
+    !displayedBadgeShopItemId &&
+    profile.displayedBadgeWinnerId &&
+    allDisplayableWinnerIds.includes(profile.displayedBadgeWinnerId)
       ? profile.displayedBadgeWinnerId
       : null;
-  const displayedBadge =
-    displayedBadgeWinnerId
+  const displayedBadge = displayedBadgeShopItemId
+    ? (() => {
+        const b = purchasedBadges.find((x) => x.itemId === displayedBadgeShopItemId);
+        return b
+          ? { shopItemId: b.itemId, movieTitle: b.name, name: b.name, imageUrl: b.imageUrl, isHolo: false as const }
+          : null;
+      })()
+    : displayedBadgeWinnerId
       ? (() => {
           const w = allWinners.find((x) => x.id === displayedBadgeWinnerId);
           return {
@@ -218,6 +244,7 @@ export async function GET(
       bio: profile.bio,
       featuredCardIds,
       displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
+      displayedBadgeShopItemId: displayedBadgeShopItemId ?? undefined,
     },
     featuredCards,
     displayedBadge,
@@ -275,11 +302,26 @@ export async function PUT(
 
   if (body.displayedBadgeWinnerId !== undefined) {
     const completed = getCompletedWinnerIds(id);
+    const purchased = profile.purchasedBadgeWinnerIds ?? [];
+    const allowed = new Set([...completed, ...purchased]);
     const value = body.displayedBadgeWinnerId;
     if (value === null || value === "") {
       profile.displayedBadgeWinnerId = undefined;
-    } else if (typeof value === "string" && completed.includes(value)) {
+      profile.displayedBadgeShopItemId = undefined;
+    } else if (typeof value === "string" && allowed.has(value)) {
       profile.displayedBadgeWinnerId = value;
+      profile.displayedBadgeShopItemId = undefined;
+    }
+  }
+  if (body.displayedBadgeShopItemId !== undefined) {
+    const value = body.displayedBadgeShopItemId;
+    const purchased = profile.purchasedBadges ?? [];
+    const allowed = new Set(purchased.map((b) => b.itemId));
+    if (value === null || value === "") {
+      profile.displayedBadgeShopItemId = undefined;
+    } else if (typeof value === "string" && allowed.has(value)) {
+      profile.displayedBadgeShopItemId = value;
+      profile.displayedBadgeWinnerId = undefined;
     }
   }
 

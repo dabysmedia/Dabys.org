@@ -15,6 +15,29 @@
       "actor",
       "character"
     ],
-    "isActive": true
+    "isActive": true,
+    "isFree": false
+  },
+  {
+    "id": "pack-1771000454277-lsrtxlr",
+    "name": "free pack",
+    "imageUrl": "/api/uploads/1771000436133-144aom.jpg",
+    "price": 0,
+    "cardsPerPack": 1,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "actor",
+      "director",
+      "character",
+      "scene"
+    ],
+    "isActive": true,
+    "maxPurchasesPerDay": 3,
+    "isFree": true
   }
 ]

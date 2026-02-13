@@ -19,6 +19,7 @@ interface ProfileData {
   bio: string;
   featuredCardIds?: string[];
   displayedBadgeWinnerId?: string | null;
+  displayedBadgeShopItemId?: string | null;
 }
 
 interface FeaturedCard {
@@ -33,16 +34,24 @@ interface FeaturedCard {
 }
 
 interface DisplayedBadge {
-  winnerId: string;
+  winnerId?: string;
+  shopItemId?: string;
   movieTitle: string;
+  name?: string;
+  imageUrl?: string;
   isHolo?: boolean;
 }
 
 interface CompletedBadge {
-  winnerId: string;
+  winnerId?: string;
+  shopItemId?: string;
   movieTitle: string;
+  name?: string;
+  imageUrl?: string;
   isHolo?: boolean;
 }
+
+type BadgeSelection = null | { type: "winner"; id: string } | { type: "shop"; id: string };
 
 interface FavoriteMovie {
   title: string;
@@ -184,8 +193,9 @@ export default function ProfilePage() {
   const [featuredSaving, setFeaturedSaving] = useState(false);
   const [userCardsForFeatured, setUserCardsForFeatured] = useState<FeaturedCard[]>([]);
 
-  // Badges modal
-  const [badgesSelecting, setBadgesSelecting] = useState<string | null>(null);
+  // Badges modal: null = none, { type, id } = winner or shop badge
+  const [badgesSelecting, setBadgesSelecting] = useState<BadgeSelection>(null);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
 
   // View collection modal (when viewing another user's profile)
   const [showCollectionModal, setShowCollectionModal] = useState(false);
@@ -373,7 +383,8 @@ export default function ProfilePage() {
           bio: editBio,
           avatarUrl: editAvatarUrl,
           bannerUrl: editBannerUrl,
-          displayedBadgeWinnerId: badgesSelecting,
+          displayedBadgeWinnerId: badgesSelecting?.type === "winner" ? badgesSelecting.id : null,
+          displayedBadgeShopItemId: badgesSelecting?.type === "shop" ? badgesSelecting.id : null,
         }),
       });
       // Reload profile
@@ -524,7 +535,16 @@ export default function ProfilePage() {
             <div className="shrink-0">
               {!editing ? (
                 <button
-                  onClick={() => { setEditing(true); setBadgesSelecting(profile.displayedBadgeWinnerId ?? null); }}
+                  onClick={() => {
+                    setEditing(true);
+                    setBadgesSelecting(
+                      profile.displayedBadgeShopItemId
+                        ? { type: "shop", id: profile.displayedBadgeShopItemId }
+                        : profile.displayedBadgeWinnerId
+                          ? { type: "winner", id: profile.displayedBadgeWinnerId }
+                          : null
+                    );
+                  }}
                   className="px-4 py-2 text-xs font-medium text-white/60 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/80 transition-all cursor-pointer"
                 >
                   Edit Profile
@@ -532,7 +552,19 @@ export default function ProfilePage() {
               ) : (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setEditing(false); setEditBio(profile.bio); setEditAvatarUrl(profile.avatarUrl); setEditBannerUrl(profile.bannerUrl); setBadgesSelecting(profile.displayedBadgeWinnerId ?? null); }}
+                    onClick={() => {
+                      setEditing(false);
+                      setEditBio(profile.bio);
+                      setEditAvatarUrl(profile.avatarUrl);
+                      setEditBannerUrl(profile.bannerUrl);
+                      setBadgesSelecting(
+                        profile.displayedBadgeShopItemId
+                          ? { type: "shop", id: profile.displayedBadgeShopItemId }
+                          : profile.displayedBadgeWinnerId
+                            ? { type: "winner", id: profile.displayedBadgeWinnerId }
+                            : null
+                      );
+                    }}
                     className="px-3 py-2 text-xs font-medium text-white/40 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/60 transition-all cursor-pointer"
                   >
                     Cancel
@@ -550,30 +582,19 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Display badge (edit only) — own row so it doesn't push the header down */}
-        {isOwnProfile && editing && completedBadges.length > 0 && (
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 mb-6 max-w-md">
-            <p className="text-[11px] uppercase tracking-widest text-white/40 mb-1.5">Display badge</p>
-            <p className="text-xs text-white/50 mb-3">Choose one badge to show next to your name.</p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              <label className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${badgesSelecting === null ? "border-amber-500/50 bg-amber-500/10" : "border-white/[0.08] hover:bg-white/[0.04]"}`}>
-                <input type="radio" name="displayedBadge" checked={badgesSelecting === null} onChange={() => setBadgesSelecting(null)} className="border-white/30" />
-                <span className="text-sm text-white/60">None</span>
-              </label>
-              {completedBadges.map((b) => {
-                const wid = b.winnerId;
-                const selected = badgesSelecting === wid;
-                return (
-                  <label
-                    key={wid}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${selected ? "border-amber-500/50 bg-amber-500/10" : "border-white/[0.08] hover:bg-white/[0.04]"}`}
-                  >
-                    <input type="radio" name="displayedBadge" checked={selected} onChange={() => setBadgesSelecting(wid)} className="border-white/30" />
-                    <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
-                  </label>
-                );
-              })}
-            </div>
+        {/* Equip Badge button (edit only) */}
+        {isOwnProfile && editing && (
+          <div className="mb-6">
+            <button
+              type="button"
+              onClick={() => setShowBadgeModal(true)}
+              className="px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/15 hover:border-amber-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+            >
+              <span>Equip Badge</span>
+              {displayedBadge && (
+                <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} className="opacity-90" />
+              )}
+            </button>
           </div>
         )}
 
@@ -1329,7 +1350,83 @@ export default function ProfilePage() {
         </>
       )}
 
-      {/* Badges modal */}
+      {/* Equip Badge modal */}
+      {showBadgeModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowBadgeModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden"
+            role="dialog"
+            aria-label="Equip Badge"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/10">
+              <h3 className="text-lg font-bold text-white/90">Equip Badge</h3>
+              <p className="text-sm text-white/50 mt-1">Choose a badge to show next to your name.</p>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setBadgesSelecting(null)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                    badgesSelecting === null
+                      ? "border-amber-500/50 bg-amber-500/10"
+                      : "border-white/[0.08] hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <span className="text-sm text-white/60">None</span>
+                </button>
+                {completedBadges
+                  .filter((b) => b.winnerId || b.shopItemId)
+                  .map((b) => {
+                    const isWinner = !!b.winnerId;
+                    const selectionValue: BadgeSelection = isWinner
+                      ? { type: "winner", id: b.winnerId! }
+                      : { type: "shop", id: b.shopItemId! };
+                    const selected =
+                      badgesSelecting?.type === selectionValue.type &&
+                      badgesSelecting.id === selectionValue.id;
+                    const key = isWinner ? `w-${b.winnerId}` : `s-${b.shopItemId}`;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setBadgesSelecting(selectionValue)}
+                        className={`w-full flex items-center justify-center gap-3 p-4 rounded-xl border transition-colors cursor-pointer ${
+                          selected
+                            ? "border-amber-500/50 bg-amber-500/10"
+                            : "border-white/[0.08] hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center min-h-[32px]">
+                          <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+              {completedBadges.length === 0 && (
+                <p className="text-sm text-white/40 text-center py-4">No badges yet. Complete card sets or buy badges in the Shop.</p>
+              )}
+            </div>
+            <div className="p-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowBadgeModal(false)}
+                className="w-full px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-medium hover:bg-amber-500/30 transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Crop modals */}
       <ImageCropModal
         open={cropTarget === "avatar"}

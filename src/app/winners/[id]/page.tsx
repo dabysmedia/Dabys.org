@@ -144,7 +144,7 @@ export default function WinnerDetailPage() {
   const [triviaSubmitting, setTriviaSubmitting] = useState(false);
   const [triviaResult, setTriviaResult] = useState<{ correctCount: number; totalCount: number; creditsEarned: number } | null>(null);
 
-  // Collectible cards for this movie
+  // Card set for this movie
   const [winnerCollection, setWinnerCollection] = useState<{
     poolEntries: { characterId: string; profilePath: string; actorName: string; characterName: string; movieTitle: string; rarity: string; movieTmdbId: number }[];
     ownedCharacterIds: string[];
@@ -215,7 +215,7 @@ export default function WinnerDetailPage() {
     }
   }, [winnerId, router]);
 
-  // Fetch collectible cards when winner has tmdbId
+  // Fetch card set when winner has tmdbId
   useEffect(() => {
     if (!winner?.tmdbId) {
       setWinnerCollection(null);
@@ -851,11 +851,11 @@ export default function WinnerDetailPage() {
           </div>
         </div>
 
-        {/* ─── Collectible Cards ─── */}
+        {/* ─── Card set ─── */}
         {winner.tmdbId && winnerCollection && (
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
             <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
-              Collectible Cards
+              Card set
             </h3>
             {winnerCollection.poolEntries.length === 0 ? (
               <p className="text-sm text-white/40">No cards for this movie yet. Build the character pool to unlock.</p>
@@ -885,7 +885,8 @@ export default function WinnerDetailPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                   {winnerCollection.poolEntries.map((entry) => {
                     const owned = winnerCollection.ownedCharacterIds.includes(entry.characterId);
-                    const card = winnerCollection.ownedCards.find((c) => c.characterId === entry.characterId);
+                    const cardIdx = winnerCollection.ownedCharacterIds.indexOf(entry.characterId);
+                    const card = cardIdx >= 0 ? winnerCollection.ownedCards[cardIdx] : undefined;
                     return (
                       <div key={entry.characterId} className="relative">
                         {owned && card ? (

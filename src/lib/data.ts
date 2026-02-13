@@ -1,9 +1,9 @@
 import fs from "fs";
 import path from "path";
 
-// Default data directory baked into the image
+// All JSON (packs, characterPool, cards, credits, etc.) is read/written under this directory.
+// Default: src/data. Set DATA_DIR=/data (or any path) to save elsewhere (e.g. mounted volume).
 const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
-// Allow overriding via env (e.g. Railway volume mounted at /data)
 const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
 
 function ensureDataFile(filename: string) {
@@ -59,9 +59,17 @@ export interface Profile {
   bannerUrl: string;   // banner/hero background URL
   bio: string;         // short bio text
   skipsUsed: number;   // how many skips this user has spent
+  /** Extra skips granted from shop purchases. */
+  bonusSkips?: number;
   featuredCardIds?: string[];       // up to 6 card IDs to showcase
   /** Single winner ID to show as badge next to name (replaces displayedBadgeWinnerIds). */
   displayedBadgeWinnerId?: string | null;
+  /** Winner IDs from shop purchases (movie badges from shop). */
+  purchasedBadgeWinnerIds?: string[];
+  /** Standalone badges from shop (not tied to a movie). itemId, name, imageUrl snapshot. */
+  purchasedBadges?: { itemId: string; name: string; imageUrl?: string }[];
+  /** Shop item ID to show as displayed badge (standalone badge from shop). */
+  displayedBadgeShopItemId?: string | null;
   /** @deprecated Use displayedBadgeWinnerId. Kept for migration when reading JSON. */
   displayedBadgeWinnerIds?: string[];
 }
@@ -87,6 +95,10 @@ export function getProfile(userId: string): Profile {
       ...found,
       featuredCardIds: found.featuredCardIds ?? [],
       displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
+      bonusSkips: found.bonusSkips ?? 0,
+      purchasedBadgeWinnerIds: found.purchasedBadgeWinnerIds ?? [],
+      purchasedBadges: found.purchasedBadges ?? [],
+      displayedBadgeShopItemId: found.displayedBadgeShopItemId ?? undefined,
     };
   }
   return {
@@ -95,8 +107,12 @@ export function getProfile(userId: string): Profile {
     bannerUrl: "",
     bio: "",
     skipsUsed: 0,
+    bonusSkips: 0,
     featuredCardIds: [],
     displayedBadgeWinnerId: undefined,
+    purchasedBadgeWinnerIds: [],
+    purchasedBadges: [],
+    displayedBadgeShopItemId: undefined,
   };
 }
 
@@ -535,6 +551,69 @@ export function deductCredits(
   return true;
 }
 
+/** Append a ledger entry without changing balance (e.g. free pack purchase for daily limit counting). */
+function addLedgerEntryOnly(
+  userId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, unknown>
+) {
+  const ledger = getCreditLedgerRaw();
+  ledger.push({
+    id: `cl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    userId,
+    amount,
+    reason,
+    metadata,
+    createdAt: new Date().toISOString(),
+  });
+  saveCreditLedgerRaw(ledger);
+}
+
+/** Number of times the user has purchased this pack today (UTC). */
+export function getPackPurchasesCountToday(userId: string, packId: string): number {
+  const ledger = getCreditLedgerRaw();
+  const today = new Date().toISOString().slice(0, 10);
+  return ledger.filter(
+    (e) =>
+      e.userId === userId &&
+      e.reason === "pack_purchase" &&
+      e.metadata &&
+      (e.metadata as { packId?: string }).packId === packId &&
+      e.createdAt.startsWith(today)
+  ).length;
+}
+
+/** Record a pack purchase: deduct credits if amount > 0, else only add ledger entry (for free packs). */
+export function recordPackPurchase(
+  userId: string,
+  packId: string,
+  amount: number
+): boolean {
+  if (amount > 0) {
+    return deductCredits(userId, amount, "pack_purchase", { packId });
+  }
+  addLedgerEntryOnly(userId, 0, "pack_purchase", { packId });
+  return true;
+}
+
+/** Remove today's pack_purchase ledger entries for this user so they can buy packs again today. Returns number of entries removed. */
+export function resetUserPackPurchasesToday(userId: string): number {
+  const ledger = getCreditLedgerRaw();
+  const today = new Date().toISOString().slice(0, 10);
+  const filtered = ledger.filter(
+    (e) =>
+      !(
+        e.userId === userId &&
+        e.reason === "pack_purchase" &&
+        e.createdAt.startsWith(today)
+      )
+  );
+  const removed = ledger.length - filtered.length;
+  if (removed > 0) saveCreditLedgerRaw(filtered);
+  return removed;
+}
+
 export function setCredits(userId: string, balance: number): void {
   const credits = getCreditsRaw();
   const idx = credits.findIndex((c) => c.userId === userId);
@@ -634,6 +713,8 @@ export interface CharacterPortrayal {
   popularity: number;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
   cardType?: CardType; // optional for migration; defaults to "actor"
+  /** When set, this pool entry is an alt-art; owning a card with this characterId counts as owning this character for set completion. */
+  altArtOfCharacterId?: string;
 }
 
 export interface Card {
@@ -1155,6 +1236,10 @@ export interface Pack {
   /** Allowed card types for this pack. Empty = all card types. */
   allowedCardTypes: CardType[];
   isActive: boolean;
+  /** Max purchases per user per day (UTC). Omit or 0 = no limit. */
+  maxPurchasesPerDay?: number;
+  /** If true, pack costs 0 credits. */
+  isFree?: boolean;
 }
 
 function getPacksRaw(): Pack[] {
@@ -1191,6 +1276,11 @@ export function getPacks(): Pack[] {
         ? (p.allowedCardTypes.filter((t) => ALL_CARD_TYPES.includes(t)) as Pack["allowedCardTypes"])
         : ALL_CARD_TYPES,
     isActive: typeof p.isActive === "boolean" ? p.isActive : true,
+    maxPurchasesPerDay:
+      typeof (p as Pack).maxPurchasesPerDay === "number" && (p as Pack).maxPurchasesPerDay! > 0
+        ? (p as Pack).maxPurchasesPerDay
+        : undefined,
+    isFree: !!((p as Pack).isFree),
   }));
 }
 
@@ -1229,6 +1319,11 @@ export function upsertPack(
         ? (input.allowedCardTypes as Pack["allowedCardTypes"])
         : ALL_CARD_TYPES,
     isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+    maxPurchasesPerDay:
+      typeof (input as Pack).maxPurchasesPerDay === "number" && (input as Pack).maxPurchasesPerDay! > 0
+        ? (input as Pack).maxPurchasesPerDay
+        : undefined,
+    isFree: !!((input as Pack).isFree),
   };
   packs.push(newPack);
   savePacks(packs);
@@ -1241,6 +1336,137 @@ export function deletePack(id: string): boolean {
   if (filtered.length === packs.length) return false;
   savePacks(filtered);
   return true;
+}
+
+/** Reorder packs to match the given packIds (shop display order). */
+export function reorderPacks(packIds: string[]): boolean {
+  const packs = getPacks();
+  if (packIds.length !== packs.length) return false;
+  const idSet = new Set(packIds);
+  if (idSet.size !== packIds.length) return false;
+  const byId = new Map(packs.map((p) => [p.id, p]));
+  const reordered: Pack[] = [];
+  for (const id of packIds) {
+    const p = byId.get(id);
+    if (!p) return false;
+    reordered.push(p);
+  }
+  savePacksRaw(reordered);
+  return true;
+}
+
+// ──── Shop items (Others: badges, skips, etc.) ────────────────────────
+export type ShopItemType = "badge" | "skip";
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  type: ShopItemType;
+  /** For type "skip": number of skips granted. Badge items are standalone (no winner). */
+  skipAmount?: number;
+  isActive: boolean;
+  order: number;
+}
+
+function getShopItemsRaw(): ShopItem[] {
+  try {
+    return readJson<ShopItem[]>("shopItems.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveShopItemsRaw(items: ShopItem[]) {
+  writeJson("shopItems.json", items);
+}
+
+export function getShopItems(): ShopItem[] {
+  const raw = getShopItemsRaw();
+  return raw
+    .filter((i) => i && typeof i.id === "string" && (i.type === "badge" || i.type === "skip"))
+    .map((i): ShopItem => ({
+      id: i.id,
+      name: String(i.name || "").trim() || "Unnamed",
+      description: typeof i.description === "string" ? i.description.trim() : undefined,
+      imageUrl: typeof i.imageUrl === "string" ? i.imageUrl.trim() : undefined,
+      price: typeof i.price === "number" && i.price >= 0 ? i.price : 0,
+      type: i.type === "skip" ? "skip" : "badge",
+      skipAmount: i.type === "skip" && typeof i.skipAmount === "number" && i.skipAmount > 0 ? i.skipAmount : 1,
+      isActive: typeof i.isActive === "boolean" ? i.isActive : true,
+      order: typeof i.order === "number" ? i.order : 0,
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+export function getActiveShopItems(): ShopItem[] {
+  return getShopItems().filter((i) => i.isActive);
+}
+
+export function upsertShopItem(input: Omit<ShopItem, "id"> & { id?: string }): ShopItem {
+  const items = getShopItemsRaw();
+  const id = input.id || `shop-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const normalized: ShopItem = {
+    id,
+    name: String(input.name || "").trim() || "Unnamed",
+    description: typeof input.description === "string" ? input.description.trim() : undefined,
+    imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : undefined,
+    price: typeof input.price === "number" && input.price >= 0 ? input.price : 0,
+    type: input.type === "skip" ? "skip" : "badge",
+    skipAmount: input.type === "skip" && typeof input.skipAmount === "number" && input.skipAmount > 0 ? input.skipAmount : 1,
+    isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+    order: typeof input.order === "number" ? input.order : items.length,
+  };
+  const idx = items.findIndex((i) => i.id === id);
+  if (idx >= 0) {
+    items[idx] = normalized;
+  } else {
+    items.push(normalized);
+  }
+  saveShopItemsRaw(items);
+  return normalized;
+}
+
+export function deleteShopItem(id: string): boolean {
+  const items = getShopItemsRaw();
+  const filtered = items.filter((i) => i.id !== id);
+  if (filtered.length === items.length) return false;
+  saveShopItemsRaw(filtered);
+  return true;
+}
+
+export function reorderShopItems(ids: string[]): boolean {
+  const items = getShopItemsRaw();
+  if (ids.length !== items.length) return false;
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const reordered: ShopItem[] = ids.map((id, order) => {
+    const item = byId.get(id);
+    if (!item) return null;
+    return { ...item, order };
+  }).filter((i): i is ShopItem => i != null);
+  if (reordered.length !== items.length) return false;
+  saveShopItemsRaw(reordered);
+  return true;
+}
+
+/** Apply a shop item purchase for a user. Returns true if applied. */
+export function applyShopItemPurchase(userId: string, item: ShopItem): boolean {
+  const profile = getProfile(userId);
+  if (item.type === "badge") {
+    const list = profile.purchasedBadges ?? [];
+    if (list.some((b) => b.itemId === item.id)) return true; // already has it
+    profile.purchasedBadges = [...list, { itemId: item.id, name: item.name, imageUrl: item.imageUrl }];
+    saveProfile(profile);
+    return true;
+  }
+  if (item.type === "skip" && (item.skipAmount ?? 0) > 0) {
+    profile.bonusSkips = (profile.bonusSkips ?? 0) + (item.skipAmount ?? 1);
+    saveProfile(profile);
+    return true;
+  }
+  return false;
 }
 
 // ──── Admin wipe (inventory / full server) ────────────────────────────────

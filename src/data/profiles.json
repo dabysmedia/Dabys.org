@@ -7,7 +7,15 @@
     "featuredCardIds": [
       "card-1770922034855-mn2njbv"
     ],
-    "displayedBadgeWinnerId": "1"
+    "displayedBadgeWinnerId": "2",
+    "bonusSkips": 0,
+    "purchasedBadgeWinnerIds": [],
+    "purchasedBadges": [
+      {
+        "itemId": "shop-1771004386736-vmfh2vn",
+        "name": "MR MONEYBAGS"
+      }
+    ]
   },
   {
     "userId": "1",
