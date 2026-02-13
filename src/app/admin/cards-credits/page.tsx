@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import ImageCropModal from "@/components/ImageCropModal";
 import { CardDisplay } from "@/components/CardDisplay";
-import { BadgePill } from "@/components/BadgePill";
 
 interface User {
   id: string;
@@ -52,12 +51,6 @@ interface Pack {
 }
 
 type ShopItemType = "badge" | "skip";
-interface BadgeAppearance {
-  primaryColor?: string;
-  secondaryColor?: string;
-  icon?: "star" | "trophy" | "heart" | "medal" | "fire";
-  glow?: boolean;
-}
 interface ShopItem {
   id: string;
   name: string;
@@ -66,7 +59,6 @@ interface ShopItem {
   price: number;
   type: ShopItemType;
   skipAmount?: number;
-  badgeAppearance?: BadgeAppearance;
   isActive: boolean;
   order: number;
 }
@@ -211,10 +203,6 @@ export default function AdminCardsCreditsPage() {
     price: string;
     type: ShopItemType;
     skipAmount: string;
-    badgePrimaryColor: string;
-    badgeSecondaryColor: string;
-    badgeIcon: "star" | "trophy" | "heart" | "medal" | "fire";
-    badgeGlow: boolean;
     isActive: boolean;
   }>({
     name: "",
@@ -223,10 +211,6 @@ export default function AdminCardsCreditsPage() {
     price: "0",
     type: "badge",
     skipAmount: "1",
-    badgePrimaryColor: "#f59e0b",
-    badgeSecondaryColor: "#d97706",
-    badgeIcon: "star",
-    badgeGlow: true,
     isActive: true,
   });
   const [savingShopItem, setSavingShopItem] = useState(false);
@@ -459,10 +443,6 @@ export default function AdminCardsCreditsPage() {
       price: "0",
       type: "badge",
       skipAmount: "1",
-      badgePrimaryColor: "#f59e0b",
-      badgeSecondaryColor: "#d97706",
-      badgeIcon: "star",
-      badgeGlow: true,
       isActive: true,
     });
   }
@@ -470,7 +450,6 @@ export default function AdminCardsCreditsPage() {
   function startEditShopItem(item: ShopItem) {
     setEditingShopItemId(item.id);
     setShowCreateShopItem(true);
-    const app = item.badgeAppearance;
     setShopItemForm({
       name: item.name,
       description: item.description ?? "",
@@ -478,10 +457,6 @@ export default function AdminCardsCreditsPage() {
       price: String(item.price),
       type: item.type,
       skipAmount: String(item.skipAmount ?? 1),
-      badgePrimaryColor: app?.primaryColor ?? "#f59e0b",
-      badgeSecondaryColor: app?.secondaryColor ?? "#d97706",
-      badgeIcon: app?.icon ?? "star",
-      badgeGlow: app?.glow ?? true,
       isActive: item.isActive,
     });
   }
@@ -518,12 +493,6 @@ export default function AdminCardsCreditsPage() {
           price,
           type: shopItemForm.type,
           skipAmount: shopItemForm.type === "skip" ? skipAmount : undefined,
-          badgeAppearance: shopItemForm.type === "badge" ? {
-            primaryColor: shopItemForm.badgePrimaryColor || undefined,
-            secondaryColor: shopItemForm.badgeSecondaryColor || undefined,
-            icon: shopItemForm.badgeIcon,
-            glow: shopItemForm.badgeGlow,
-          } : undefined,
           isActive: shopItemForm.isActive,
           order: editingShopItemId ? shopItems.find((i) => i.id === editingShopItemId)?.order : shopItems.length,
         }),
@@ -1615,85 +1584,6 @@ export default function AdminCardsCreditsPage() {
                         onChange={(e) => setShopItemForm((f) => ({ ...f, skipAmount: e.target.value }))}
                         className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
                       />
-                    </div>
-                  )}
-                  {shopItemForm.type === "badge" && (
-                    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-3">
-                      <p className="text-[11px] uppercase tracking-widest text-white/40 font-medium">Badge appearance</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs text-white/40 mb-1">Primary color</label>
-                          <div className="flex gap-2 items-center">
-                            <input
-                              type="color"
-                              value={shopItemForm.badgePrimaryColor}
-                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgePrimaryColor: e.target.value }))}
-                              className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
-                            />
-                            <input
-                              type="text"
-                              value={shopItemForm.badgePrimaryColor}
-                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgePrimaryColor: e.target.value }))}
-                              className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
-                              placeholder="#f59e0b"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-white/40 mb-1">Secondary color</label>
-                          <div className="flex gap-2 items-center">
-                            <input
-                              type="color"
-                              value={shopItemForm.badgeSecondaryColor}
-                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgeSecondaryColor: e.target.value }))}
-                              className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
-                            />
-                            <input
-                              type="text"
-                              value={shopItemForm.badgeSecondaryColor}
-                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgeSecondaryColor: e.target.value }))}
-                              className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
-                              placeholder="#d97706"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-white/40 mb-1">Icon</label>
-                        <select
-                          value={shopItemForm.badgeIcon}
-                          onChange={(e) => setShopItemForm((f) => ({ ...f, badgeIcon: e.target.value as typeof f.badgeIcon }))}
-                          className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
-                        >
-                          <option value="star">Star</option>
-                          <option value="trophy">Trophy</option>
-                          <option value="heart">Heart</option>
-                          <option value="medal">Medal</option>
-                          <option value="fire">Fire</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="shop-badge-glow"
-                          checked={shopItemForm.badgeGlow}
-                          onChange={(e) => setShopItemForm((f) => ({ ...f, badgeGlow: e.target.checked }))}
-                          className="rounded border-white/20"
-                        />
-                        <label htmlFor="shop-badge-glow" className="text-xs text-white/60">Glow</label>
-                      </div>
-                      <div className="pt-2 border-t border-white/[0.06]">
-                        <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
-                        <BadgePill
-                          movieTitle={shopItemForm.name || "Badge"}
-                          appearance={{
-                            primaryColor: shopItemForm.badgePrimaryColor || "#f59e0b",
-                            secondaryColor: shopItemForm.badgeSecondaryColor || shopItemForm.badgePrimaryColor || "#d97706",
-                            icon: shopItemForm.badgeIcon,
-                            glow: shopItemForm.badgeGlow,
-                          }}
-                        />
-                      </div>
                     </div>
                   )}
                   <div>

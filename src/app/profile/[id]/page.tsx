@@ -33,20 +33,12 @@ interface FeaturedCard {
   cardType?: string;
 }
 
-interface BadgeAppearance {
-  primaryColor?: string;
-  secondaryColor?: string;
-  icon?: "star" | "trophy" | "heart" | "medal" | "fire";
-  glow?: boolean;
-}
-
 interface DisplayedBadge {
   winnerId?: string;
   shopItemId?: string;
   movieTitle: string;
   name?: string;
   imageUrl?: string;
-  badgeAppearance?: BadgeAppearance;
   isHolo?: boolean;
 }
 
@@ -56,7 +48,6 @@ interface CompletedBadge {
   movieTitle: string;
   name?: string;
   imageUrl?: string;
-  badgeAppearance?: BadgeAppearance;
   isHolo?: boolean;
 }
 
@@ -522,7 +513,7 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0 pb-1">
             <div className="flex flex-wrap items-center gap-2 gap-y-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-white/95">{user.name}</h1>
-              {displayedBadge && <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} appearance={displayedBadge.badgeAppearance} />}
+              {displayedBadge && <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} />}
             </div>
             {!editing ? (
               <p className="text-white/40 text-sm mt-1 max-w-md">
@@ -601,7 +592,7 @@ export default function ProfilePage() {
             >
               <span>Equip Badge</span>
               {displayedBadge && (
-                <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} appearance={displayedBadge.badgeAppearance} className="opacity-90" />
+                <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} className="opacity-90" />
               )}
             </button>
           </div>
@@ -1413,7 +1404,7 @@ export default function ProfilePage() {
                         }`}
                       >
                         <div className="flex items-center justify-center min-h-[32px]">
-                          <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} appearance={b.badgeAppearance} />
+                          <BadgePill movieTitle={b.movieTitle} isHolo={b.isHolo} />
                         </div>
                       </button>
                     );

@@ -39,10 +39,6 @@ export async function POST(request: Request) {
   const skipAmount = type === "skip" && typeof body.skipAmount === "number" ? body.skipAmount : 1;
   const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
   const order = typeof body.order === "number" ? body.order : getShopItems().length;
-  const badgeAppearance =
-    type === "badge" && body.badgeAppearance && typeof body.badgeAppearance === "object"
-      ? (body.badgeAppearance as { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean })
-      : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -62,7 +58,6 @@ export async function POST(request: Request) {
     price,
     type,
     skipAmount: type === "skip" ? skipAmount : undefined,
-    badgeAppearance: type === "badge" ? badgeAppearance : undefined,
     isActive,
     order,
   });

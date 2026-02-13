@@ -203,7 +203,6 @@ export async function GET(
       movieTitle: b.name,
       name: b.name,
       imageUrl: b.imageUrl,
-      badgeAppearance: b.badgeAppearance,
       isHolo: false as const,
     })),
   ];
@@ -223,7 +222,7 @@ export async function GET(
     ? (() => {
         const b = purchasedBadges.find((x) => x.itemId === displayedBadgeShopItemId);
         return b
-          ? { shopItemId: b.itemId, movieTitle: b.name, name: b.name, imageUrl: b.imageUrl, badgeAppearance: b.badgeAppearance, isHolo: false as const }
+          ? { shopItemId: b.itemId, movieTitle: b.name, name: b.name, imageUrl: b.imageUrl, isHolo: false as const }
           : null;
       })()
     : displayedBadgeWinnerId

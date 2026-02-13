@@ -66,8 +66,8 @@ export interface Profile {
   displayedBadgeWinnerId?: string | null;
   /** Winner IDs from shop purchases (movie badges from shop). */
   purchasedBadgeWinnerIds?: string[];
-  /** Standalone badges from shop (not tied to a movie). Snapshot includes appearance. */
-  purchasedBadges?: { itemId: string; name: string; imageUrl?: string; badgeAppearance?: BadgeAppearance }[];
+  /** Standalone badges from shop (not tied to a movie). itemId, name, imageUrl snapshot. */
+  purchasedBadges?: { itemId: string; name: string; imageUrl?: string }[];
   /** Shop item ID to show as displayed badge (standalone badge from shop). */
   displayedBadgeShopItemId?: string | null;
   /** @deprecated Use displayedBadgeWinnerId. Kept for migration when reading JSON. */
@@ -1358,18 +1358,6 @@ export function reorderPacks(packIds: string[]): boolean {
 // ──── Shop items (Others: badges, skips, etc.) ────────────────────────
 export type ShopItemType = "badge" | "skip";
 
-/** Custom appearance for badge-type shop items. */
-export interface BadgeAppearance {
-  /** Hex color for gradient start (e.g. #f59e0b). */
-  primaryColor?: string;
-  /** Hex color for gradient end; if omitted, uses primaryColor. */
-  secondaryColor?: string;
-  /** Icon key: star | trophy | heart | medal | fire. Default star. */
-  icon?: "star" | "trophy" | "heart" | "medal" | "fire";
-  /** Whether to show glow. Default true for custom badges. */
-  glow?: boolean;
-}
-
 export interface ShopItem {
   id: string;
   name: string;
@@ -1379,8 +1367,6 @@ export interface ShopItem {
   type: ShopItemType;
   /** For type "skip": number of skips granted. Badge items are standalone (no winner). */
   skipAmount?: number;
-  /** For type "badge": optional custom appearance. */
-  badgeAppearance?: BadgeAppearance;
   isActive: boolean;
   order: number;
 }
@@ -1397,17 +1383,6 @@ function saveShopItemsRaw(items: ShopItem[]) {
   writeJson("shopItems.json", items);
 }
 
-function normalizeBadgeAppearance(a: unknown): BadgeAppearance {
-  if (!a || typeof a !== "object") return {};
-  const o = a as Record<string, unknown>;
-  const primary = typeof o.primaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.primaryColor) ? o.primaryColor : undefined;
-  const secondary = typeof o.secondaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.secondaryColor) ? o.secondaryColor : undefined;
-  const iconKeys = ["star", "trophy", "heart", "medal", "fire"] as const;
-  const icon = iconKeys.includes(o.icon as (typeof iconKeys)[number]) ? (o.icon as BadgeAppearance["icon"]) : undefined;
-  const glow = typeof o.glow === "boolean" ? o.glow : undefined;
-  return { primaryColor: primary, secondaryColor: secondary, icon, glow };
-}
-
 export function getShopItems(): ShopItem[] {
   const raw = getShopItemsRaw();
   return raw
@@ -1420,9 +1395,6 @@ export function getShopItems(): ShopItem[] {
       price: typeof i.price === "number" && i.price >= 0 ? i.price : 0,
       type: i.type === "skip" ? "skip" : "badge",
       skipAmount: i.type === "skip" && typeof i.skipAmount === "number" && i.skipAmount > 0 ? i.skipAmount : 1,
-      badgeAppearance: i.type === "badge" && i.badgeAppearance && typeof i.badgeAppearance === "object"
-        ? normalizeBadgeAppearance(i.badgeAppearance)
-        : undefined,
       isActive: typeof i.isActive === "boolean" ? i.isActive : true,
       order: typeof i.order === "number" ? i.order : 0,
     }))
@@ -1444,7 +1416,6 @@ export function upsertShopItem(input: Omit<ShopItem, "id"> & { id?: string }): S
     price: typeof input.price === "number" && input.price >= 0 ? input.price : 0,
     type: input.type === "skip" ? "skip" : "badge",
     skipAmount: input.type === "skip" && typeof input.skipAmount === "number" && input.skipAmount > 0 ? input.skipAmount : 1,
-    badgeAppearance: input.type === "badge" && input.badgeAppearance ? normalizeBadgeAppearance(input.badgeAppearance) : undefined,
     isActive: typeof input.isActive === "boolean" ? input.isActive : true,
     order: typeof input.order === "number" ? input.order : items.length,
   };
@@ -1486,7 +1457,7 @@ export function applyShopItemPurchase(userId: string, item: ShopItem): boolean {
   if (item.type === "badge") {
     const list = profile.purchasedBadges ?? [];
     if (list.some((b) => b.itemId === item.id)) return true; // already has it
-    profile.purchasedBadges = [...list, { itemId: item.id, name: item.name, imageUrl: item.imageUrl, badgeAppearance: item.badgeAppearance }];
+    profile.purchasedBadges = [...list, { itemId: item.id, name: item.name, imageUrl: item.imageUrl }];
     saveProfile(profile);
     return true;
   }
