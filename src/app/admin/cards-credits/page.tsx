@@ -48,6 +48,8 @@ interface Pack {
   isActive: boolean;
   maxPurchasesPerDay?: number;
   isFree?: boolean;
+  restockHourUtc?: number;
+  restockMinuteUtc?: number;
 }
 
 type ShopItemType = "badge" | "skip";
@@ -249,6 +251,8 @@ export default function AdminCardsCreditsPage() {
     allowedCardTypes: CardType[];
     isActive: boolean;
     maxPurchasesPerDay: string;
+    restockHourUtc: string;
+    restockMinuteUtc: string;
     isFree: boolean;
   }>({
     name: "",
@@ -259,6 +263,8 @@ export default function AdminCardsCreditsPage() {
     allowedCardTypes: ["actor", "director", "character", "scene"],
     isActive: true,
     maxPurchasesPerDay: "",
+    restockHourUtc: "0",
+    restockMinuteUtc: "0",
     isFree: false,
   });
 
@@ -539,6 +545,8 @@ export default function AdminCardsCreditsPage() {
       allowedCardTypes: ["actor", "director", "character", "scene"],
       isActive: true,
       maxPurchasesPerDay: "",
+      restockHourUtc: "0",
+      restockMinuteUtc: "0",
       isFree: false,
     });
   }
@@ -555,6 +563,8 @@ export default function AdminCardsCreditsPage() {
       allowedCardTypes: pack.allowedCardTypes,
       isActive: pack.isActive,
       maxPurchasesPerDay: pack.maxPurchasesPerDay != null ? String(pack.maxPurchasesPerDay) : "",
+      restockHourUtc: pack.restockHourUtc != null ? String(pack.restockHourUtc) : "0",
+      restockMinuteUtc: pack.restockMinuteUtc != null ? String(pack.restockMinuteUtc) : "0",
       isFree: !!pack.isFree,
     });
   }
@@ -569,6 +579,8 @@ export default function AdminCardsCreditsPage() {
     const price = parseInt(packForm.price, 10);
     const cardsPerPack = parseInt(packForm.cardsPerPack, 10);
     const maxPurchasesPerDay = packForm.maxPurchasesPerDay.trim() === "" ? undefined : parseInt(packForm.maxPurchasesPerDay, 10);
+    const restockHourUtc = packForm.restockHourUtc.trim() === "" ? undefined : Math.min(23, Math.max(0, parseInt(packForm.restockHourUtc, 10) || 0));
+    const restockMinuteUtc = packForm.restockMinuteUtc.trim() === "" ? undefined : Math.min(59, Math.max(0, parseInt(packForm.restockMinuteUtc, 10) || 0));
     if (!packForm.isFree && (!Number.isFinite(price) || price < 1)) {
       setError("Pack price must be at least 1 when not free");
       return;
@@ -596,6 +608,8 @@ export default function AdminCardsCreditsPage() {
         isActive: packForm.isActive,
         isFree: packForm.isFree,
         maxPurchasesPerDay: maxPurchasesPerDay === undefined ? "" : maxPurchasesPerDay,
+        restockHourUtc: restockHourUtc ?? "",
+        restockMinuteUtc: restockMinuteUtc ?? "",
       };
       if (editingPackId) body.id = editingPackId;
 
@@ -1298,6 +1312,31 @@ export default function AdminCardsCreditsPage() {
                     className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30"
                   />
                   <p className="text-[10px] text-white/40 mt-0.5">Leave empty for no limit. UTC day.</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Restock time (UTC)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={23}
+                      placeholder="0"
+                      value={packForm.restockHourUtc}
+                      onChange={(e) => setPackForm((f) => ({ ...f, restockHourUtc: e.target.value }))}
+                      className="w-16 px-2 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                    />
+                    <span className="text-white/50">:</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={59}
+                      placeholder="0"
+                      value={packForm.restockMinuteUtc}
+                      onChange={(e) => setPackForm((f) => ({ ...f, restockMinuteUtc: e.target.value }))}
+                      className="w-16 px-2 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                    />
+                  </div>
+                  <p className="text-[10px] text-white/40 mt-0.5">Hour:minute when daily limit resets. Countdown uses this.</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">

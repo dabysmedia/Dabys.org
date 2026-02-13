@@ -7,10 +7,16 @@ export async function GET(request: Request) {
 
   const rawPacks = getPacks().filter((p) => p.isActive);
   const packs = userId
-    ? rawPacks.map((p) => ({
-        ...p,
-        purchasesToday: getPackPurchasesCountToday(userId, p.id),
-      }))
+    ? rawPacks.map((p) => {
+        const restock =
+          p.restockHourUtc != null || p.restockMinuteUtc != null
+            ? { restockHourUtc: p.restockHourUtc, restockMinuteUtc: p.restockMinuteUtc }
+            : undefined;
+        return {
+          ...p,
+          purchasesToday: getPackPurchasesCountToday(userId, p.id, restock),
+        };
+      })
     : rawPacks;
   return NextResponse.json({ packs });
 }

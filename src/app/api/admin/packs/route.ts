@@ -65,6 +65,15 @@ export async function POST(request: Request) {
     ["actor", "director", "character", "scene"].includes(t)
   );
 
+  const restockHourUtc =
+    body.restockHourUtc === undefined || body.restockHourUtc === null || body.restockHourUtc === ""
+      ? undefined
+      : Math.min(23, Math.max(0, parseInt(String(body.restockHourUtc), 10) || 0));
+  const restockMinuteUtc =
+    body.restockMinuteUtc === undefined || body.restockMinuteUtc === null || body.restockMinuteUtc === ""
+      ? undefined
+      : Math.min(59, Math.max(0, parseInt(String(body.restockMinuteUtc), 10) || 0));
+
   const pack = upsertPack({
     name,
     imageUrl,
@@ -75,6 +84,8 @@ export async function POST(request: Request) {
     isActive,
     maxPurchasesPerDay: maxPerDay,
     isFree,
+    restockHourUtc: restockHourUtc ?? undefined,
+    restockMinuteUtc: restockMinuteUtc ?? undefined,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -144,6 +155,15 @@ export async function PATCH(request: Request) {
       : Math.max(0, parseInt(String(body.maxPurchasesPerDay), 10) || 0);
   const maxPerDay = maxPurchasesPerDay === 0 ? undefined : maxPurchasesPerDay;
 
+  const restockHourUtc =
+    body.restockHourUtc === undefined || body.restockHourUtc === null || body.restockHourUtc === ""
+      ? (existing as { restockHourUtc?: number }).restockHourUtc
+      : Math.min(23, Math.max(0, parseInt(String(body.restockHourUtc), 10) || 0));
+  const restockMinuteUtc =
+    body.restockMinuteUtc === undefined || body.restockMinuteUtc === null || body.restockMinuteUtc === ""
+      ? (existing as { restockMinuteUtc?: number }).restockMinuteUtc
+      : Math.min(59, Math.max(0, parseInt(String(body.restockMinuteUtc), 10) || 0));
+
   const updated = upsertPack({
     id,
     name,
@@ -155,6 +175,8 @@ export async function PATCH(request: Request) {
     isActive,
     maxPurchasesPerDay: maxPerDay,
     isFree,
+    restockHourUtc: restockHourUtc ?? undefined,
+    restockMinuteUtc: restockMinuteUtc ?? undefined,
   });
 
   return NextResponse.json(updated);

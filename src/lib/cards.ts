@@ -14,6 +14,7 @@ import {
   getListings,
   getPacks,
   getProfile,
+  getPackPurchasesCountToday,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -279,6 +280,19 @@ export function buyPack(
 
   if (packId && !selectedPack) {
     return { success: false, error: "Pack not found" };
+  }
+
+  const effectivePackId = selectedPack?.id ?? "default";
+  const maxPerDay = selectedPack?.maxPurchasesPerDay;
+  if (typeof maxPerDay === "number" && maxPerDay > 0) {
+    const restock =
+      selectedPack?.restockHourUtc != null || selectedPack?.restockMinuteUtc != null
+        ? { restockHourUtc: selectedPack.restockHourUtc, restockMinuteUtc: selectedPack.restockMinuteUtc }
+        : undefined;
+    const purchasesToday = getPackPurchasesCountToday(userId, effectivePackId, restock);
+    if (purchasesToday >= maxPerDay) {
+      return { success: false, error: `Daily limit reached for this pack (${maxPerDay} per day).` };
+    }
   }
 
   const price = selectedPack?.price ?? PACK_PRICE;

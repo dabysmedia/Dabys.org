@@ -570,17 +570,39 @@ function addLedgerEntryOnly(
   saveCreditLedgerRaw(ledger);
 }
 
-/** Number of times the user has purchased this pack today (UTC). */
-export function getPackPurchasesCountToday(userId: string, packId: string): number {
+/** Start of current restock period (UTC). If restockHour/Minute omitted, uses midnight UTC. */
+function getRestockPeriodStartUtc(restockHourUtc?: number, restockMinuteUtc?: number): string {
+  const hour = typeof restockHourUtc === "number" && restockHourUtc >= 0 && restockHourUtc <= 23 ? restockHourUtc : 0;
+  const minute = typeof restockMinuteUtc === "number" && restockMinuteUtc >= 0 && restockMinuteUtc <= 59 ? restockMinuteUtc : 0;
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  const d = now.getUTCDate();
+  const periodStart = new Date(Date.UTC(y, m, d, hour, minute, 0, 0));
+  if (now.getTime() < periodStart.getTime()) {
+    const yesterday = new Date(Date.UTC(y, m, d - 1, hour, minute, 0, 0));
+    return yesterday.toISOString();
+  }
+  return periodStart.toISOString();
+}
+
+/** Number of times the user has purchased this pack in the current restock period (UTC). */
+export function getPackPurchasesCountToday(
+  userId: string,
+  packId: string,
+  restock?: { restockHourUtc?: number; restockMinuteUtc?: number }
+): number {
   const ledger = getCreditLedgerRaw();
-  const today = new Date().toISOString().slice(0, 10);
+  const periodStart = restock
+    ? getRestockPeriodStartUtc(restock.restockHourUtc, restock.restockMinuteUtc)
+    : new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
   return ledger.filter(
     (e) =>
       e.userId === userId &&
       e.reason === "pack_purchase" &&
       e.metadata &&
       (e.metadata as { packId?: string }).packId === packId &&
-      e.createdAt.startsWith(today)
+      e.createdAt >= periodStart
   ).length;
 }
 
@@ -1240,6 +1262,10 @@ export interface Pack {
   maxPurchasesPerDay?: number;
   /** If true, pack costs 0 credits. */
   isFree?: boolean;
+  /** Hour (0–23) UTC when the daily limit resets. Omit = midnight. */
+  restockHourUtc?: number;
+  /** Minute (0–59) UTC when the daily limit resets. Omit = 0. */
+  restockMinuteUtc?: number;
 }
 
 function getPacksRaw(): Pack[] {
@@ -1281,6 +1307,8 @@ export function getPacks(): Pack[] {
         ? (p as Pack).maxPurchasesPerDay
         : undefined,
     isFree: !!((p as Pack).isFree),
+    restockHourUtc: typeof (p as Pack).restockHourUtc === "number" ? (p as Pack).restockHourUtc : undefined,
+    restockMinuteUtc: typeof (p as Pack).restockMinuteUtc === "number" ? (p as Pack).restockMinuteUtc : undefined,
   }));
 }
 
@@ -1324,6 +1352,8 @@ export function upsertPack(
         ? (input as Pack).maxPurchasesPerDay
         : undefined,
     isFree: !!((input as Pack).isFree),
+    restockHourUtc: typeof (input as Pack).restockHourUtc === "number" ? (input as Pack).restockHourUtc : undefined,
+    restockMinuteUtc: typeof (input as Pack).restockMinuteUtc === "number" ? (input as Pack).restockMinuteUtc : undefined,
   };
   packs.push(newPack);
   savePacks(packs);
