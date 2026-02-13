@@ -59,9 +59,17 @@ export interface Profile {
   bannerUrl: string;   // banner/hero background URL
   bio: string;         // short bio text
   skipsUsed: number;   // how many skips this user has spent
+  /** Extra skips granted from shop purchases. */
+  bonusSkips?: number;
   featuredCardIds?: string[];       // up to 6 card IDs to showcase
   /** Single winner ID to show as badge next to name (replaces displayedBadgeWinnerIds). */
   displayedBadgeWinnerId?: string | null;
+  /** Winner IDs from shop purchases (movie badges from shop). */
+  purchasedBadgeWinnerIds?: string[];
+  /** Standalone badges from shop (not tied to a movie). Snapshot includes appearance. */
+  purchasedBadges?: { itemId: string; name: string; imageUrl?: string; badgeAppearance?: BadgeAppearance }[];
+  /** Shop item ID to show as displayed badge (standalone badge from shop). */
+  displayedBadgeShopItemId?: string | null;
   /** @deprecated Use displayedBadgeWinnerId. Kept for migration when reading JSON. */
   displayedBadgeWinnerIds?: string[];
 }
@@ -87,6 +95,10 @@ export function getProfile(userId: string): Profile {
       ...found,
       featuredCardIds: found.featuredCardIds ?? [],
       displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
+      bonusSkips: found.bonusSkips ?? 0,
+      purchasedBadgeWinnerIds: found.purchasedBadgeWinnerIds ?? [],
+      purchasedBadges: found.purchasedBadges ?? [],
+      displayedBadgeShopItemId: found.displayedBadgeShopItemId ?? undefined,
     };
   }
   return {
@@ -95,8 +107,12 @@ export function getProfile(userId: string): Profile {
     bannerUrl: "",
     bio: "",
     skipsUsed: 0,
+    bonusSkips: 0,
     featuredCardIds: [],
     displayedBadgeWinnerId: undefined,
+    purchasedBadgeWinnerIds: [],
+    purchasedBadges: [],
+    displayedBadgeShopItemId: undefined,
   };
 }
 
@@ -1320,6 +1336,261 @@ export function deletePack(id: string): boolean {
   if (filtered.length === packs.length) return false;
   savePacks(filtered);
   return true;
+}
+
+/** Reorder packs to match the given packIds (shop display order). */
+export function reorderPacks(packIds: string[]): boolean {
+  const packs = getPacks();
+  if (packIds.length !== packs.length) return false;
+  const idSet = new Set(packIds);
+  if (idSet.size !== packIds.length) return false;
+  const byId = new Map(packs.map((p) => [p.id, p]));
+  const reordered: Pack[] = [];
+  for (const id of packIds) {
+    const p = byId.get(id);
+    if (!p) return false;
+    reordered.push(p);
+  }
+  savePacksRaw(reordered);
+  return true;
+}
+
+// ──── Shop items (Others: badges, skips, etc.) ────────────────────────
+export type ShopItemType = "badge" | "skip";
+
+/** Custom appearance for badge-type shop items. */
+export interface BadgeAppearance {
+  /** Hex color for gradient start (e.g. #f59e0b). */
+  primaryColor?: string;
+  /** Hex color for gradient end; if omitted, uses primaryColor. */
+  secondaryColor?: string;
+  /** Icon key: star | trophy | heart | medal | fire. Default star. */
+  icon?: "star" | "trophy" | "heart" | "medal" | "fire";
+  /** Whether to show glow. Default true for custom badges. */
+  glow?: boolean;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  type: ShopItemType;
+  /** For type "skip": number of skips granted. Badge items are standalone (no winner). */
+  skipAmount?: number;
+  /** For type "badge": optional custom appearance. */
+  badgeAppearance?: BadgeAppearance;
+  isActive: boolean;
+  order: number;
+}
+
+function getShopItemsRaw(): ShopItem[] {
+  try {
+    return readJson<ShopItem[]>("shopItems.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveShopItemsRaw(items: ShopItem[]) {
+  writeJson("shopItems.json", items);
+}
+
+function normalizeBadgeAppearance(a: unknown): BadgeAppearance {
+  if (!a || typeof a !== "object") return {};
+  const o = a as Record<string, unknown>;
+  const primary = typeof o.primaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.primaryColor) ? o.primaryColor : undefined;
+  const secondary = typeof o.secondaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.secondaryColor) ? o.secondaryColor : undefined;
+  const iconKeys = ["star", "trophy", "heart", "medal", "fire"] as const;
+  const icon = iconKeys.includes(o.icon as (typeof iconKeys)[number]) ? (o.icon as BadgeAppearance["icon"]) : undefined;
+  const glow = typeof o.glow === "boolean" ? o.glow : undefined;
+  return { primaryColor: primary, secondaryColor: secondary, icon, glow };
+}
+
+// ──── Default badge appearance (winner badges, etc.) ────────────────────
+const DEFAULT_BADGE_APPEARANCE_FALLBACK: BadgeAppearance = {
+  primaryColor: "#f59e0b",
+  secondaryColor: "#d97706",
+  icon: "star",
+  glow: true,
+};
+
+function getDefaultBadgeAppearanceRaw(): unknown {
+  try {
+    return readJson<unknown>("defaultBadgeAppearance.json");
+  } catch {
+    return null;
+  }
+}
+
+/** Default appearance for winner badges and any badge without its own. */
+export function getDefaultBadgeAppearance(): BadgeAppearance {
+  const raw = getDefaultBadgeAppearanceRaw();
+  const normalized = normalizeBadgeAppearance(raw);
+  return {
+    primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
+    secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
+    icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
+    glow: normalized.glow ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.glow,
+  };
+}
+
+export function saveDefaultBadgeAppearance(appearance: BadgeAppearance): void {
+  const normalized = normalizeBadgeAppearance(appearance);
+  const toSave = {
+    primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
+    secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
+    icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
+    glow: normalized.glow ?? true,
+  };
+  writeJson("defaultBadgeAppearance.json", toSave);
+}
+
+// Per-winner badge appearance overrides (winnerId -> BadgeAppearance). Missing = use default.
+function getWinnerBadgeAppearancesRaw(): Record<string, unknown> {
+  try {
+    const o = readJson<Record<string, unknown>>("winnerBadgeAppearances.json");
+    return o && typeof o === "object" ? o : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveWinnerBadgeAppearancesRaw(map: Record<string, BadgeAppearance>) {
+  writeJson("winnerBadgeAppearances.json", map);
+}
+
+/** Appearance for a specific winner badge (override or default). */
+export function getWinnerBadgeAppearance(winnerId: string): BadgeAppearance {
+  const raw = getWinnerBadgeAppearancesRaw();
+  const override = raw[winnerId];
+  if (override && typeof override === "object") {
+    const normalized = normalizeBadgeAppearance(override);
+    if (normalized.primaryColor || normalized.secondaryColor || normalized.icon !== undefined || normalized.glow !== undefined) {
+      return {
+        primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
+        secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
+        icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
+        glow: normalized.glow ?? true,
+      };
+    }
+  }
+  return getDefaultBadgeAppearance();
+}
+
+/** Set or clear per-winner badge appearance. Pass null/empty to clear override. */
+export function setWinnerBadgeAppearance(winnerId: string, appearance: BadgeAppearance | null): void {
+  const map = getWinnerBadgeAppearancesRaw() as Record<string, BadgeAppearance>;
+  if (!appearance || (!appearance.primaryColor && !appearance.secondaryColor && appearance.icon === undefined && appearance.glow === undefined)) {
+    delete map[winnerId];
+  } else {
+    map[winnerId] = normalizeBadgeAppearance(appearance);
+  }
+  saveWinnerBadgeAppearancesRaw(map);
+}
+
+/** All winner IDs that have a custom badge appearance (for admin list). */
+export function getWinnerBadgeAppearanceOverrides(): Record<string, BadgeAppearance> {
+  const raw = getWinnerBadgeAppearancesRaw();
+  const out: Record<string, BadgeAppearance> = {};
+  for (const [id, val] of Object.entries(raw)) {
+    if (id && val && typeof val === "object") {
+      const n = normalizeBadgeAppearance(val);
+      if (n.primaryColor || n.secondaryColor || n.icon !== undefined || n.glow !== undefined) out[id] = n;
+    }
+  }
+  return out;
+}
+
+export function getShopItems(): ShopItem[] {
+  const raw = getShopItemsRaw();
+  return raw
+    .filter((i) => i && typeof i.id === "string" && (i.type === "badge" || i.type === "skip"))
+    .map((i) => ({
+      id: i.id,
+      name: String(i.name || "").trim() || "Unnamed",
+      description: typeof i.description === "string" ? i.description.trim() : undefined,
+      imageUrl: typeof i.imageUrl === "string" ? i.imageUrl.trim() : undefined,
+      price: typeof i.price === "number" && i.price >= 0 ? i.price : 0,
+      type: i.type === "skip" ? "skip" : "badge",
+      skipAmount: i.type === "skip" && typeof i.skipAmount === "number" && i.skipAmount > 0 ? i.skipAmount : 1,
+      badgeAppearance: i.type === "badge" && i.badgeAppearance && typeof i.badgeAppearance === "object"
+        ? normalizeBadgeAppearance(i.badgeAppearance)
+        : undefined,
+      isActive: typeof i.isActive === "boolean" ? i.isActive : true,
+      order: typeof i.order === "number" ? i.order : 0,
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+export function getActiveShopItems(): ShopItem[] {
+  return getShopItems().filter((i) => i.isActive);
+}
+
+export function upsertShopItem(input: Omit<ShopItem, "id"> & { id?: string }): ShopItem {
+  const items = getShopItemsRaw();
+  const id = input.id || `shop-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const normalized: ShopItem = {
+    id,
+    name: String(input.name || "").trim() || "Unnamed",
+    description: typeof input.description === "string" ? input.description.trim() : undefined,
+    imageUrl: typeof input.imageUrl === "string" ? input.imageUrl.trim() : undefined,
+    price: typeof input.price === "number" && input.price >= 0 ? input.price : 0,
+    type: input.type === "skip" ? "skip" : "badge",
+    skipAmount: input.type === "skip" && typeof input.skipAmount === "number" && input.skipAmount > 0 ? input.skipAmount : 1,
+    badgeAppearance: input.type === "badge" && input.badgeAppearance ? normalizeBadgeAppearance(input.badgeAppearance) : undefined,
+    isActive: typeof input.isActive === "boolean" ? input.isActive : true,
+    order: typeof input.order === "number" ? input.order : items.length,
+  };
+  const idx = items.findIndex((i) => i.id === id);
+  if (idx >= 0) {
+    items[idx] = normalized;
+  } else {
+    items.push(normalized);
+  }
+  saveShopItemsRaw(items);
+  return normalized;
+}
+
+export function deleteShopItem(id: string): boolean {
+  const items = getShopItemsRaw();
+  const filtered = items.filter((i) => i.id !== id);
+  if (filtered.length === items.length) return false;
+  saveShopItemsRaw(filtered);
+  return true;
+}
+
+export function reorderShopItems(ids: string[]): boolean {
+  const items = getShopItemsRaw();
+  if (ids.length !== items.length) return false;
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const reordered: ShopItem[] = ids.map((id, order) => {
+    const item = byId.get(id);
+    if (!item) return null;
+    return { ...item, order };
+  }).filter((i): i is ShopItem => i != null);
+  if (reordered.length !== items.length) return false;
+  saveShopItemsRaw(reordered);
+  return true;
+}
+
+/** Apply a shop item purchase for a user. Returns true if applied. */
+export function applyShopItemPurchase(userId: string, item: ShopItem): boolean {
+  const profile = getProfile(userId);
+  if (item.type === "badge") {
+    const list = profile.purchasedBadges ?? [];
+    if (list.some((b) => b.itemId === item.id)) return true; // already has it
+    profile.purchasedBadges = [...list, { itemId: item.id, name: item.name, imageUrl: item.imageUrl, badgeAppearance: item.badgeAppearance }];
+    saveProfile(profile);
+    return true;
+  }
+  if (item.type === "skip" && (item.skipAmount ?? 0) > 0) {
+    profile.bonusSkips = (profile.bonusSkips ?? 0) + (item.skipAmount ?? 1);
+    saveProfile(profile);
+    return true;
+  }
+  return false;
 }
 
 // ──── Admin wipe (inventory / full server) ────────────────────────────────

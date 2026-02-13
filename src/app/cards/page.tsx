@@ -356,6 +356,19 @@ interface Pack {
   purchasesToday?: number;
 }
 
+type ShopItemType = "badge" | "skip";
+interface ShopItem {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  type: ShopItemType;
+  skipAmount?: number;
+  isActive: boolean;
+  order: number;
+}
+
 function CardsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -388,6 +401,9 @@ function CardsContent() {
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
+  const [shopSubTab, setShopSubTab] = useState<"packs" | "others">("packs");
+  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
+  const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [tradeStep, setTradeStep] = useState<1 | 2 | 3>(1);
@@ -474,7 +490,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, usersRes, stardustRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, shopItemsRes, tradesRes, usersRes, stardustRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -482,6 +498,7 @@ function CardsContent() {
       fetch("/api/winners"),
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
+      fetch("/api/shop/items"),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
@@ -508,6 +525,10 @@ function CardsContent() {
     if (packsRes.ok) {
       const d = await packsRes.json();
       setPacks(d.packs || []);
+    }
+    if (shopItemsRes.ok) {
+      const d = await shopItemsRes.json();
+      setShopItems(d.items || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
     if (usersRes.ok) {
@@ -997,6 +1018,28 @@ function CardsContent() {
     }
   }
 
+  async function handlePurchaseShopItem(item: ShopItem) {
+    if (!user || creditBalance < item.price || buyingItemId) return;
+    setBuyingItemId(item.id);
+    try {
+      const res = await fetch("/api/shop/purchase-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, itemId: item.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (typeof data.balance === "number") setCreditBalance(data.balance);
+        alert(`Purchased: ${item.name}`);
+        await loadData();
+      } else {
+        alert(data.error || "Failed to purchase");
+      }
+    } finally {
+      setBuyingItemId(null);
+    }
+  }
+
   async function handleBuyListing(listingId: string) {
     if (!user) return;
     const listing = listings.find((l) => l.id === listingId);
@@ -1431,27 +1474,45 @@ function CardsContent() {
         {/* Shop */}
         {tab === "store" && (
           <>
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-white/90 mb-1">Shop</h2>
-                  <p className="text-white/50 text-sm">
-                    Choose a pack, enjoy the art, and unlock new character cards.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-white/50 mb-1">Your balance</p>
-                  <p className="text-sm font-semibold text-amber-300">{creditBalance} credits</p>
-                </div>
-              </div>
+            <h2 className="text-lg font-semibold text-white/90 mb-1">Shop</h2>
+            <p className="text-white/50 text-sm mb-4">
+              {shopSubTab === "packs"
+                ? "Choose a pack, enjoy the art, and unlock new character cards."
+                : "Special items like badges and skips."}
+            </p>
+            <div className="flex gap-1 mb-8 border-b border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setShopSubTab("packs")}
+                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
+                  shopSubTab === "packs"
+                    ? "text-amber-400 border-amber-400"
+                    : "text-white/40 border-transparent hover:text-white/70"
+                }`}
+              >
+                Packs
+              </button>
+              <button
+                type="button"
+                onClick={() => setShopSubTab("others")}
+                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-px ${
+                  shopSubTab === "others"
+                    ? "text-amber-400 border-amber-400"
+                    : "text-white/40 border-transparent hover:text-white/70"
+                }`}
+              >
+                Others
+              </button>
+            </div>
+
+            {shopSubTab === "packs" && (
+            <>
               {poolCount < 5 && (
-                <p className="text-amber-400/70 text-xs mt-3">
+                <p className="text-amber-400/70 text-xs mb-4">
                   No winning movies with TMDB data yet. Win some movies to unlock cards!
                 </p>
               )}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 justify-items-center">
               {packs.map((pack) => {
                 const soldOut =
                   pack.maxPurchasesPerDay != null &&
@@ -1474,13 +1535,9 @@ function CardsContent() {
                 return (
                   <div
                     key={pack.id}
-                    className={`relative rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] backdrop-blur-2xl shadow-[0_18px_45px_rgba(0,0,0,0.45)] group transform transition-all duration-300 ${
-                      soldOut
-                        ? "hover:translate-y-0"
-                        : "hover:-translate-y-1.5 hover:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
-                    }`}
+                    className={`flex flex-col w-fit max-w-full rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden ${soldOut ? "opacity-90" : ""}`}
                   >
-                    <div className="relative w-full">
+                    <div className="relative w-max max-w-full bg-white/[0.03]">
                       {soldOut && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                           <span className="w-full py-3 text-center bg-red-800/70 backdrop-blur-md text-white text-sm font-bold border-y border-red-700/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
@@ -1492,44 +1549,50 @@ function CardsContent() {
                         <img
                           src={pack.imageUrl}
                           alt={pack.name}
-                          className={`w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02] ${soldOut ? "grayscale opacity-70" : ""}`}
+                          className={`block max-w-full h-auto object-contain ${soldOut ? "grayscale opacity-70" : ""}`}
                         />
                       ) : (
-                        <div className="w-full h-40 flex items-center justify-center text-white/20 text-lg">
+                        <div className="flex items-center justify-center text-white/20 text-lg w-40 h-40">
                           No artwork
                         </div>
                       )}
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent group-hover:from-black/70 group-hover:via-black/10" />
-                      <div className="pointer-events-none absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-white/90 truncate">
-                            {pack.name}
-                          </p>
-                          <p className="text-xs text-white/60">
-                            {pack.cardsPerPack} cards per pack
-                          </p>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
-                          {pack.price === 0 ? "Free" : `${pack.price} cr`}
-                        </div>
-                      </div>
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     </div>
-                    <div className={`p-4 space-y-3 ${soldOut ? "opacity-70" : ""}`}>
-                      <div className="flex flex-wrap gap-2 text-[11px]">
-                        <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
+                    <div className={`border-t border-white/10 bg-white/[0.02] p-3 ${soldOut ? "opacity-90" : ""}`}>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white/90 truncate">{pack.name}</p>
+                          <p className="text-[10px] text-white/40">{pack.cardsPerPack} cards per pack</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shadow-[0_2px_8px_rgba(0,0,0,0.15)] shrink-0">
+                          {pack.price === 0 ? (
+                            <span className="text-sky-300 font-bold text-sm">Free</span>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-sky-300 font-bold text-sm tabular-nums">{pack.price}</span>
+                              <span className="text-sky-300/70 text-xs font-semibold">cr</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-2 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-white/50 border border-white/[0.1]">
                           {rarityText}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
+                        <span className="px-2 py-0.5 rounded-md bg-white/[0.06] text-white/50 border border-white/[0.1]">
                           {typeText}
                         </span>
                       </div>
                       <button
                         onClick={() => !soldOut && handleBuyPack(pack)}
                         disabled={disabled}
-                        className={`w-full px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                           soldOut
-                            ? "border-white/20 bg-white/[0.06] text-white/50 cursor-not-allowed"
-                            : "border-amber-500/40 bg-amber-500/15 text-amber-200 hover:border-amber-400 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                            ? "border border-white/10 bg-white/[0.04] text-white/50 cursor-not-allowed"
+                            : "bg-green-600/80 backdrop-blur-md border border-green-500/40 text-white hover:bg-green-500/90 hover:border-green-400/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
                         }`}
                       >
                         {buyingPackId === pack.id ? (
@@ -1557,6 +1620,83 @@ function CardsContent() {
                 </div>
               )}
             </div>
+            </>
+            )}
+
+            {shopSubTab === "others" && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+              {shopItems.map((item) => {
+                const disabled = creditBalance < item.price || buyingItemId === item.id;
+                const needCredits = item.price > 0 && creditBalance < item.price ? item.price - creditBalance : 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col w-full min-w-0 rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden"
+                  >
+                    <div className="relative w-full aspect-[4/3] min-h-[140px] bg-white/[0.03] flex items-center justify-center overflow-hidden">
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center text-white/20 text-2xl w-full h-full min-h-[140px] bg-white/[0.03]">
+                          {item.type === "badge" ? "🏅" : "⏭"}
+                        </div>
+                      )}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    </div>
+                    <div className="border-t border-white/10 bg-white/[0.02] p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white/90 truncate">{item.name}</p>
+                          <p className="text-[10px] text-white/40 capitalize">{item.type}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shrink-0">
+                          {item.price === 0 ? (
+                            <span className="text-sky-300 font-bold text-sm">Free</span>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-sky-300 font-bold text-sm tabular-nums">{item.price}</span>
+                              <span className="text-sky-300/70 text-xs font-semibold">cr</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-[11px] text-white/50 mb-2 line-clamp-2">{item.description}</p>
+                      )}
+                      <button
+                        onClick={() => handlePurchaseShopItem(item)}
+                        disabled={disabled}
+                        className="w-full px-3 py-2 rounded-lg text-sm font-medium bg-green-600/80 backdrop-blur-md border border-green-500/40 text-white hover:bg-green-500/90 hover:border-green-400/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+                      >
+                        {buyingItemId === item.id ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Purchasing...
+                          </>
+                        ) : needCredits > 0 ? (
+                          `Need ${needCredits} more credits`
+                        ) : (
+                          "Purchase"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {shopItems.length === 0 && (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50 col-span-full">
+                  No other items in the shop right now. Check back later!
+                </div>
+              )}
+            </div>
+            )}
 
             {newCards && newCards.length > 0 && (
               <>
@@ -2059,7 +2199,7 @@ function CardsContent() {
                           <Link href={`/profile/${listing.sellerUserId}`} className="text-white/60 hover:text-sky-300 transition-colors truncate">
                             {listing.sellerName}
                           </Link>
-                          {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} />}
+                          {listing.sellerDisplayedBadge && <BadgePill movieTitle={listing.sellerDisplayedBadge.movieTitle} isHolo={listing.sellerDisplayedBadge.isHolo} appearance={listing.sellerDisplayedBadge.badgeAppearance} />}
                         </span>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-400/10 backdrop-blur-md border border-sky-400/20 shadow-[0_2px_8px_rgba(0,0,0,0.15)] shrink-0">
                           <svg className="w-4 h-4 shrink-0 text-sky-300/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -2287,7 +2427,7 @@ function CardsContent() {
                                   )}
                                   <span className="text-sm font-medium text-white/80">{t.counterpartyName || "Unknown"}</span>
                                 </Link>
-                                {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} />}
+                                {t.counterpartyDisplayedBadge && <BadgePill movieTitle={t.counterpartyDisplayedBadge.movieTitle} isHolo={t.counterpartyDisplayedBadge.isHolo} appearance={t.counterpartyDisplayedBadge.badgeAppearance} />}
                               </div>
                             )}
                             <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
@@ -2396,7 +2536,7 @@ function CardsContent() {
                                   )}
                                   <span className="text-sm font-medium text-white/80">{t.initiatorName || "Unknown"}</span>
                                 </Link>
-                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} appearance={t.initiatorDisplayedBadge.badgeAppearance} />}
                               </div>
                             )}
                             <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
@@ -2443,7 +2583,7 @@ function CardsContent() {
                                     {t.initiatorUserId && (userAvatarMap[t.initiatorUserId] ? <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.initiatorName || "?")[0]}</div>)}
                                     <span className="text-xs font-medium text-white/80 truncate">They give</span>
                                   </Link>
-                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} appearance={t.initiatorDisplayedBadge.badgeAppearance} />}
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.offeredCards.slice(0, 8).map((c) => (

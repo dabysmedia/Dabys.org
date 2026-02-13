@@ -1,0 +1,21 @@
+[
+  {
+    "id": "shop-1771004386736-vmfh2vn",
+    "name": "MR MONEYBAGS",
+    "description": "RICHHHHHHARDMILLIE",
+    "price": 10000,
+    "type": "badge",
+    "skipAmount": 1,
+    "isActive": true,
+    "order": 0
+  },
+  {
+    "id": "shop-1771004656212-cris2dv",
+    "name": "skip",
+    "price": 100,
+    "type": "skip",
+    "skipAmount": 1,
+    "isActive": true,
+    "order": 1
+  }
+]

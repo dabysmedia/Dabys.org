@@ -25,7 +25,7 @@ interface Submission {
   submissionCount?: number;
   pitch?: string;
   avatarUrl?: string;
-  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
 }
 interface Vote { id: string; weekId: string; userId: string; userName: string; submissionId: string; }
 interface Winner {
@@ -41,7 +41,7 @@ interface Winner {
   submittedByUserId?: string;
   backdropUrl?: string;
   submitterAvatarUrl?: string;
-  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean } } | null;
 }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
 interface TmdbMovieDetail { tmdbId: number; title: string; year: string; overview: string; posterUrl: string; backdropUrl: string; trailerUrl: string; letterboxdUrl: string; }
@@ -365,9 +365,12 @@ export default function HomePage() {
                     {thisWeekWinner.submittedBy && (
                       thisWeekWinner.submitterDisplayedBadge ? (
                         thisWeekWinner.submittedByUserId ? (
-                          <Link
-                            href={`/profile/${thisWeekWinner.submittedByUserId}`}
-                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0"
+                          <span
+                            role="link"
+                            tabIndex={0}
+                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0 cursor-pointer"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${thisWeekWinner.submittedByUserId!}`); }}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${thisWeekWinner.submittedByUserId!}`); } }}
                           >
                           <div className="shrink-0">
                             {thisWeekWinner.submitterAvatarUrl ? (
@@ -391,13 +394,13 @@ export default function HomePage() {
                               >
                                 Badge holder
                               </span>
-                              <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} />
+                              <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} appearance={thisWeekWinner.submitterDisplayedBadge.badgeAppearance} />
                             </div>
                           </div>
                           <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                           </span>
-                        </Link>
+                        </span>
                         ) : (
                           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] mb-4 min-w-0">
                             <div className="shrink-0">
@@ -422,16 +425,19 @@ export default function HomePage() {
                                 >
                                   Badge holder
                                 </span>
-                                <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} />
+                                <BadgePill movieTitle={thisWeekWinner.submitterDisplayedBadge.movieTitle} isHolo={thisWeekWinner.submitterDisplayedBadge.isHolo} appearance={thisWeekWinner.submitterDisplayedBadge.badgeAppearance} />
                               </div>
                             </div>
                           </div>
                         )
                       ) : (
                         thisWeekWinner.submittedByUserId ? (
-                          <Link
-                            href={`/profile/${thisWeekWinner.submittedByUserId}`}
-                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0"
+                          <span
+                            role="link"
+                            tabIndex={0}
+                            className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.09] hover:border-amber-500/30 transition-all duration-200 mb-4 group/card min-w-0 cursor-pointer"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${thisWeekWinner.submittedByUserId!}`); }}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); router.push(`/profile/${thisWeekWinner.submittedByUserId!}`); } }}
                           >
                             <div className="shrink-0">
                               {thisWeekWinner.submitterAvatarUrl ? (
@@ -449,7 +455,7 @@ export default function HomePage() {
                             <span className="text-white/20 group-hover/card:text-amber-400/50 transition-colors shrink-0" aria-hidden>
                               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                             </span>
-                          </Link>
+                          </span>
                         ) : (
                           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 rounded-2xl border border-white/15 bg-white/[0.06] mb-4 min-w-0">
                             <div className="shrink-0">
@@ -793,7 +799,7 @@ export default function HomePage() {
                                       {sub.userName}
                                     </Link>
                                   </span>
-                                  {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
+                                  {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
                                 </p>
                               </div>
                             </>
@@ -985,7 +991,7 @@ export default function HomePage() {
                               )}
                             </span>
                             {winner.submitterDisplayedBadge && (
-                              <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
+                              <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} appearance={winner.submitterDisplayedBadge.badgeAppearance} />
                             )}
                           </>
                         )}
@@ -1118,7 +1124,7 @@ function SubmissionsGrid({
                     <p className="text-[11px] text-white/30 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
                       <span>by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors">{sub.userName}</Link></span>
-                      {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
+                      {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
                     </p>
                   </div>
                   <button
@@ -1223,7 +1229,7 @@ function SubmissionsGrid({
                   <p className="text-[11px] text-white/30 mt-0.5 truncate flex items-center gap-1.5 flex-wrap">
                     {sub.year && <span className="text-white/40">{sub.year} &middot; </span>}
                     <span>by <Link href={`/profile/${sub.userId}`} className="text-white/40 hover:text-purple-400 transition-colors relative z-20">{sub.userName}</Link></span>
-                    {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} />}
+                    {sub.displayedBadge && <BadgePill movieTitle={sub.displayedBadge.movieTitle} isHolo={sub.displayedBadge.isHolo} appearance={sub.displayedBadge.badgeAppearance} />}
                     {isMine && (
                       <button
                         type="button"

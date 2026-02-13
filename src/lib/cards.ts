@@ -15,6 +15,7 @@ import {
   getProfile,
   getPackPurchasesCountToday,
   recordPackPurchase,
+  getWinnerBadgeAppearance,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -598,6 +599,7 @@ export function getDisplayedBadgeForUser(userId: string): {
   winnerId: string;
   movieTitle: string;
   isHolo: boolean;
+  badgeAppearance?: { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean };
 } | null {
   const profile = getProfile(userId);
   const displayedWinnerId = profile.displayedBadgeWinnerId ?? null;
@@ -611,6 +613,7 @@ export function getDisplayedBadgeForUser(userId: string): {
     winnerId: displayedWinnerId,
     movieTitle: w?.movieTitle ?? "Unknown",
     isHolo: completedHolo.includes(displayedWinnerId),
+    badgeAppearance: getWinnerBadgeAppearance(displayedWinnerId),
   };
 }
 

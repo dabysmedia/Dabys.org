@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import ImageCropModal from "@/components/ImageCropModal";
 import { CardDisplay } from "@/components/CardDisplay";
+import { BadgePill } from "@/components/BadgePill";
 
 interface User {
   id: string;
@@ -48,6 +49,26 @@ interface Pack {
   isActive: boolean;
   maxPurchasesPerDay?: number;
   isFree?: boolean;
+}
+
+type ShopItemType = "badge" | "skip";
+interface BadgeAppearance {
+  primaryColor?: string;
+  secondaryColor?: string;
+  icon?: "star" | "trophy" | "heart" | "medal" | "fire";
+  glow?: boolean;
+}
+interface ShopItem {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  price: number;
+  type: ShopItemType;
+  skipAmount?: number;
+  badgeAppearance?: BadgeAppearance;
+  isActive: boolean;
+  order: number;
 }
 
 function cardTypeDisplayLabel(t: CardType): string {
@@ -176,8 +197,40 @@ export default function AdminCardsCreditsPage() {
   const [packsLoading, setPacksLoading] = useState(false);
   const [savingPack, setSavingPack] = useState(false);
   const [deletingPackId, setDeletingPackId] = useState<string | null>(null);
+  const [reorderingPack, setReorderingPack] = useState(false);
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
   const [showCreatePackForm, setShowCreatePackForm] = useState(false);
+  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
+  const [shopItemsLoading, setShopItemsLoading] = useState(false);
+  const [showCreateShopItem, setShowCreateShopItem] = useState(false);
+  const [editingShopItemId, setEditingShopItemId] = useState<string | null>(null);
+  const [shopItemForm, setShopItemForm] = useState<{
+    name: string;
+    description: string;
+    imageUrl: string;
+    price: string;
+    type: ShopItemType;
+    skipAmount: string;
+    badgePrimaryColor: string;
+    badgeSecondaryColor: string;
+    badgeIcon: "star" | "trophy" | "heart" | "medal" | "fire";
+    badgeGlow: boolean;
+    isActive: boolean;
+  }>({
+    name: "",
+    description: "",
+    imageUrl: "",
+    price: "0",
+    type: "badge",
+    skipAmount: "1",
+    badgePrimaryColor: "#f59e0b",
+    badgeSecondaryColor: "#d97706",
+    badgeIcon: "star",
+    badgeGlow: true,
+    isActive: true,
+  });
+  const [savingShopItem, setSavingShopItem] = useState(false);
+  const [deletingShopItemId, setDeletingShopItemId] = useState<string | null>(null);
   const [showCreateCustomCardForm, setShowCreateCustomCardForm] = useState(false);
   const [triviaAttempts, setTriviaAttempts] = useState<{ id: string; userId: string; winnerId: string; correctCount: number; totalCount: number; creditsEarned: number; completedAt: string }[]>([]);
   const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string; tmdbId?: number }[]>([]);
@@ -203,6 +256,23 @@ export default function AdminCardsCreditsPage() {
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
+  const [defaultBadgeAppearanceForm, setDefaultBadgeAppearanceForm] = useState({
+    primaryColor: "#f59e0b",
+    secondaryColor: "#d97706",
+    icon: "star" as "star" | "trophy" | "heart" | "medal" | "fire",
+    glow: true,
+  });
+  const [defaultBadgeAppearanceLoading, setDefaultBadgeAppearanceLoading] = useState(true);
+  const [savingDefaultBadgeAppearance, setSavingDefaultBadgeAppearance] = useState(false);
+  const [winnerBadges, setWinnerBadges] = useState<{ winnerId: string; movieTitle: string; appearance: BadgeAppearance; isOverride: boolean }[]>([]);
+  const [editingBadgeWinnerId, setEditingBadgeWinnerId] = useState<string | null>(null);
+  const [editingBadgeForm, setEditingBadgeForm] = useState<{ primaryColor: string; secondaryColor: string; icon: "star" | "trophy" | "heart" | "medal" | "fire"; glow: boolean }>({
+    primaryColor: "#f59e0b",
+    secondaryColor: "#d97706",
+    icon: "star",
+    glow: true,
+  });
+  const [savingBadgeOverride, setSavingBadgeOverride] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -288,6 +358,21 @@ export default function AdminCardsCreditsPage() {
     }
   }, []);
 
+  const loadShopItems = useCallback(async () => {
+    setShopItemsLoading(true);
+    try {
+      const res = await fetch("/api/admin/shop-items");
+      if (res.ok) {
+        const d = await res.json();
+        setShopItems(d.items || []);
+      }
+    } catch {
+      setError("Failed to load shop items");
+    } finally {
+      setShopItemsLoading(false);
+    }
+  }, []);
+
   const loadCreditSettings = useCallback(async () => {
     setCreditSettingsLoading(true);
     try {
@@ -307,6 +392,30 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to load credit settings");
     } finally {
       setCreditSettingsLoading(false);
+    }
+  }, []);
+
+  const loadDefaultBadgeAppearance = useCallback(async () => {
+    setDefaultBadgeAppearanceLoading(true);
+    try {
+      const res = await fetch("/api/admin/badge-appearance");
+      if (res.ok) {
+        const d = await res.json();
+        const defaultApp = d.default ?? d;
+        setDefaultBadgeAppearanceForm({
+          primaryColor: defaultApp.primaryColor ?? "#f59e0b",
+          secondaryColor: defaultApp.secondaryColor ?? "#d97706",
+          icon: ["star", "trophy", "heart", "medal", "fire"].includes(defaultApp.icon) ? defaultApp.icon : "star",
+          glow: typeof defaultApp.glow === "boolean" ? defaultApp.glow : true,
+        });
+        if (Array.isArray(d.winnerBadges)) {
+          setWinnerBadges(d.winnerBadges);
+        }
+      }
+    } catch {
+      setError("Failed to load default badge appearance");
+    } finally {
+      setDefaultBadgeAppearanceLoading(false);
     }
   }, []);
 
@@ -373,12 +482,123 @@ export default function AdminCardsCreditsPage() {
     loadUsers();
     loadPool();
     loadPacks();
+    loadShopItems();
     loadCreditSettings();
-  }, [loadUsers, loadPool, loadPacks, loadCreditSettings]);
+    loadDefaultBadgeAppearance();
+  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadDefaultBadgeAppearance]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  function resetShopItemForm() {
+    setEditingShopItemId(null);
+    setShowCreateShopItem(false);
+    setShopItemForm({
+      name: "",
+      description: "",
+      imageUrl: "",
+      price: "0",
+      type: "badge",
+      skipAmount: "1",
+      badgePrimaryColor: "#f59e0b",
+      badgeSecondaryColor: "#d97706",
+      badgeIcon: "star",
+      badgeGlow: true,
+      isActive: true,
+    });
+  }
+
+  function startEditShopItem(item: ShopItem) {
+    setEditingShopItemId(item.id);
+    setShowCreateShopItem(true);
+    const app = item.badgeAppearance;
+    setShopItemForm({
+      name: item.name,
+      description: item.description ?? "",
+      imageUrl: item.imageUrl ?? "",
+      price: String(item.price),
+      type: item.type,
+      skipAmount: String(item.skipAmount ?? 1),
+      badgePrimaryColor: app?.primaryColor ?? "#f59e0b",
+      badgeSecondaryColor: app?.secondaryColor ?? "#d97706",
+      badgeIcon: app?.icon ?? "star",
+      badgeGlow: app?.glow ?? true,
+      isActive: item.isActive,
+    });
+  }
+
+  async function handleSaveShopItem(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingShopItem) return;
+    const name = shopItemForm.name.trim();
+    if (!name) {
+      setError("Name is required");
+      return;
+    }
+    const price = parseInt(shopItemForm.price, 10);
+    if (!Number.isFinite(price) || price < 0) {
+      setError("Price must be 0 or more");
+      return;
+    }
+    const skipAmount = parseInt(shopItemForm.skipAmount, 10);
+    if (shopItemForm.type === "skip" && (!Number.isInteger(skipAmount) || skipAmount < 1)) {
+      setError("Skip amount must be at least 1");
+      return;
+    }
+    setSavingShopItem(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/shop-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingShopItemId || undefined,
+          name,
+          description: shopItemForm.description.trim() || undefined,
+          imageUrl: shopItemForm.imageUrl.trim() || undefined,
+          price,
+          type: shopItemForm.type,
+          skipAmount: shopItemForm.type === "skip" ? skipAmount : undefined,
+          badgeAppearance: shopItemForm.type === "badge" ? {
+            primaryColor: shopItemForm.badgePrimaryColor || undefined,
+            secondaryColor: shopItemForm.badgeSecondaryColor || undefined,
+            icon: shopItemForm.badgeIcon,
+            glow: shopItemForm.badgeGlow,
+          } : undefined,
+          isActive: shopItemForm.isActive,
+          order: editingShopItemId ? shopItems.find((i) => i.id === editingShopItemId)?.order : shopItems.length,
+        }),
+      });
+      if (res.ok) {
+        const item = await res.json();
+        if (editingShopItemId) {
+          setShopItems((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+        } else {
+          setShopItems((prev) => [...prev, item]);
+        }
+        resetShopItemForm();
+      } else {
+        const d = await res.json();
+        setError(d.error || "Failed to save");
+      }
+    } finally {
+      setSavingShopItem(false);
+    }
+  }
+
+  async function handleDeleteShopItem(id: string) {
+    setDeletingShopItemId(id);
+    try {
+      const res = await fetch(`/api/admin/shop-items?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (res.ok) {
+        setShopItems((prev) => prev.filter((i) => i.id !== id));
+        if (editingShopItemId === id) resetShopItemForm();
+      }
+    } finally {
+      setDeletingShopItemId(null);
+    }
+  }
 
   function resetPackForm() {
     setEditingPackId(null);
@@ -500,6 +720,31 @@ export default function AdminCardsCreditsPage() {
     } finally {
       setSavingCreditSettings(false);
     }
+  }
+
+  async function handleReorderPacks(newOrder: string[]) {
+    setReorderingPack(true);
+    try {
+      const res = await fetch("/api/admin/packs/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packIds: newOrder }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.packs)) setPacks(data.packs);
+      }
+    } finally {
+      setReorderingPack(false);
+    }
+  }
+
+  function movePack(index: number, direction: "up" | "down") {
+    const newOrder = [...packs.map((p) => p.id)];
+    const swap = direction === "up" ? index - 1 : index + 1;
+    if (swap < 0 || swap >= newOrder.length) return;
+    [newOrder[index], newOrder[swap]] = [newOrder[swap], newOrder[index]];
+    handleReorderPacks(newOrder);
   }
 
   async function handleDeletePack(id: string) {
@@ -1234,11 +1479,37 @@ export default function AdminCardsCreditsPage() {
               <p className="text-white/40 text-sm">No packs configured yet.</p>
             ) : (
               <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
-                {packs.map((pack) => (
+                {packs.map((pack, index) => (
                   <div
                     key={pack.id}
                     className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
                   >
+                    <div className="flex flex-col gap-0.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => movePack(index, "up")}
+                        disabled={reorderingPack || index === 0}
+                        className="p-1 rounded border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        title="Move up (earlier in shop)"
+                        aria-label="Move up"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePack(index, "down")}
+                        disabled={reorderingPack || index === packs.length - 1}
+                        className="p-1 rounded border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        title="Move down (later in shop)"
+                        aria-label="Move down"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
                     <div className="w-16 h-16 rounded-md overflow-hidden bg-black/40 flex-shrink-0">
                       {pack.imageUrl ? (
                         <img
@@ -1302,6 +1573,541 @@ export default function AdminCardsCreditsPage() {
                         className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40 cursor-pointer"
                       >
                         {deletingPackId === pack.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Badge appearance (default for all winner badges) */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+            Badge appearance
+          </h2>
+          {defaultBadgeAppearanceLoading && (
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+              Loading...
+            </div>
+          )}
+        </div>
+        <p className="text-white/40 text-sm mb-4">
+          Default look for winner badges (movie badges from completing card sets). Shop badge items can override this per item in Shop Items below.
+        </p>
+        <div className="max-w-md space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Primary color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={defaultBadgeAppearanceForm.primaryColor}
+                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, primaryColor: e.target.value }))}
+                  className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={defaultBadgeAppearanceForm.primaryColor}
+                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, primaryColor: e.target.value }))}
+                  className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
+                  placeholder="#f59e0b"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Secondary color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={defaultBadgeAppearanceForm.secondaryColor}
+                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, secondaryColor: e.target.value }))}
+                  className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={defaultBadgeAppearanceForm.secondaryColor}
+                  onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, secondaryColor: e.target.value }))}
+                  className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
+                  placeholder="#d97706"
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-white/40 mb-1">Icon</label>
+            <select
+              value={defaultBadgeAppearanceForm.icon}
+              onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, icon: e.target.value as typeof f.icon }))}
+              className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+            >
+              <option value="star">Star</option>
+              <option value="trophy">Trophy</option>
+              <option value="heart">Heart</option>
+              <option value="medal">Medal</option>
+              <option value="fire">Fire</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="default-badge-glow"
+              checked={defaultBadgeAppearanceForm.glow}
+              onChange={(e) => setDefaultBadgeAppearanceForm((f) => ({ ...f, glow: e.target.checked }))}
+              className="rounded border-white/20"
+            />
+            <label htmlFor="default-badge-glow" className="text-xs text-white/60">Glow</label>
+          </div>
+          <div className="pt-2 border-t border-white/[0.06]">
+            <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
+            <BadgePill
+              movieTitle="Winner"
+              appearance={{
+                primaryColor: defaultBadgeAppearanceForm.primaryColor || "#f59e0b",
+                secondaryColor: defaultBadgeAppearanceForm.secondaryColor || defaultBadgeAppearanceForm.primaryColor || "#d97706",
+                icon: defaultBadgeAppearanceForm.icon,
+                glow: defaultBadgeAppearanceForm.glow,
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            disabled={defaultBadgeAppearanceLoading || savingDefaultBadgeAppearance}
+            onClick={async () => {
+              setSavingDefaultBadgeAppearance(true);
+              setError("");
+              try {
+                const res = await fetch("/api/admin/badge-appearance", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    primaryColor: defaultBadgeAppearanceForm.primaryColor || undefined,
+                    secondaryColor: defaultBadgeAppearanceForm.secondaryColor || undefined,
+                    icon: defaultBadgeAppearanceForm.icon,
+                    glow: defaultBadgeAppearanceForm.glow,
+                  }),
+                });
+                if (res.ok) {
+                  const d = await res.json();
+                  setDefaultBadgeAppearanceForm({
+                    primaryColor: d.primaryColor ?? "#f59e0b",
+                    secondaryColor: d.secondaryColor ?? "#d97706",
+                    icon: ["star", "trophy", "heart", "medal", "fire"].includes(d.icon) ? d.icon : "star",
+                    glow: typeof d.glow === "boolean" ? d.glow : true,
+                  });
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  setError(err?.error ?? "Failed to save");
+                }
+              } catch {
+                setError("Failed to save default badge appearance");
+              } finally {
+                setSavingDefaultBadgeAppearance(false);
+              }
+            }}
+            className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40"
+          >
+            {savingDefaultBadgeAppearance ? "Saving..." : "Save default badge appearance"}
+          </button>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-white/[0.08]">
+          <h3 className="text-sm font-medium text-white/70 mb-2">Edit current badges (per winner)</h3>
+          <p className="text-white/40 text-xs mb-3">
+            Override appearance for each winner badge. Others use the default above.
+          </p>
+          {winnerBadges.length === 0 ? (
+            <p className="text-white/40 text-sm">No winner badges. Winners appear here once they exist.</p>
+          ) : (
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
+              {winnerBadges.map((b) => (
+                <div
+                  key={b.winnerId}
+                  className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5"
+                >
+                  <BadgePill
+                    movieTitle={b.movieTitle}
+                    appearance={b.appearance}
+                  />
+                  <span className="text-[10px] text-white/40 px-1.5 py-0.5 rounded bg-white/5">
+                    {b.isOverride ? "Custom" : "Default"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingBadgeWinnerId(b.winnerId);
+                      setEditingBadgeForm({
+                        primaryColor: b.appearance.primaryColor ?? "#f59e0b",
+                        secondaryColor: b.appearance.secondaryColor ?? "#d97706",
+                        icon: ["star", "trophy", "heart", "medal", "fire"].includes(b.appearance.icon) ? b.appearance.icon : "star",
+                        glow: b.appearance.glow ?? true,
+                      });
+                    }}
+                    className="ml-auto px-2.5 py-1 rounded-lg border border-amber-500/40 text-amber-300 text-xs font-medium hover:bg-amber-500/10"
+                  >
+                    Edit
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {editingBadgeWinnerId && (() => {
+          const b = winnerBadges.find((x) => x.winnerId === editingBadgeWinnerId);
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+              onClick={(e) => e.target === e.currentTarget && setEditingBadgeWinnerId(null)}
+            >
+              <div className="rounded-xl border border-white/[0.08] bg-[#12121a] shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white/90">
+                    Edit badge: {b?.movieTitle ?? editingBadgeWinnerId}
+                  </h3>
+                  <button type="button" onClick={() => setEditingBadgeWinnerId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10">×</button>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1">Primary color</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="color" value={editingBadgeForm.primaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, primaryColor: e.target.value }))} className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent" />
+                        <input type="text" value={editingBadgeForm.primaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, primaryColor: e.target.value }))} className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1">Secondary color</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="color" value={editingBadgeForm.secondaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, secondaryColor: e.target.value }))} className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent" />
+                        <input type="text" value={editingBadgeForm.secondaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, secondaryColor: e.target.value }))} className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Icon</label>
+                    <select value={editingBadgeForm.icon} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, icon: e.target.value as typeof f.icon }))} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm">
+                      <option value="star">Star</option><option value="trophy">Trophy</option><option value="heart">Heart</option><option value="medal">Medal</option><option value="fire">Fire</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="edit-badge-glow" checked={editingBadgeForm.glow} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, glow: e.target.checked }))} className="rounded border-white/20" />
+                    <label htmlFor="edit-badge-glow" className="text-xs text-white/60">Glow</label>
+                  </div>
+                  <div className="pt-2 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
+                    <BadgePill movieTitle={b?.movieTitle ?? "Badge"} appearance={{ primaryColor: editingBadgeForm.primaryColor || "#f59e0b", secondaryColor: editingBadgeForm.secondaryColor || editingBadgeForm.primaryColor || "#d97706", icon: editingBadgeForm.icon, glow: editingBadgeForm.glow }} />
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <button
+                      type="button"
+                      disabled={savingBadgeOverride}
+                      onClick={async () => {
+                        setSavingBadgeOverride(true);
+                        try {
+                          const res = await fetch("/api/admin/badge-appearance", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ winnerId: editingBadgeWinnerId, appearance: { primaryColor: editingBadgeForm.primaryColor || undefined, secondaryColor: editingBadgeForm.secondaryColor || undefined, icon: editingBadgeForm.icon, glow: editingBadgeForm.glow } }) });
+                          if (res.ok) {
+                            await loadDefaultBadgeAppearance();
+                            setEditingBadgeWinnerId(null);
+                          } else {
+                            const err = await res.json().catch(() => ({}));
+                            setError(err?.error ?? "Failed to save");
+                          }
+                        } catch {
+                          setError("Failed to save");
+                        } finally {
+                          setSavingBadgeOverride(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40"
+                    >
+                      {savingBadgeOverride ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingBadgeOverride}
+                      onClick={async () => {
+                        setSavingBadgeOverride(true);
+                        try {
+                          const res = await fetch("/api/admin/badge-appearance", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ winnerId: editingBadgeWinnerId, clear: true }) });
+                          if (res.ok) {
+                            await loadDefaultBadgeAppearance();
+                            setEditingBadgeWinnerId(null);
+                          } else {
+                            const err = await res.json().catch(() => ({}));
+                            setError(err?.error ?? "Failed to clear");
+                          }
+                        } catch {
+                          setError("Failed to clear");
+                        } finally {
+                          setSavingBadgeOverride(false);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10 disabled:opacity-40"
+                    >
+                      Use default
+                    </button>
+                    <button type="button" onClick={() => setEditingBadgeWinnerId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Manage Shop Items (Others) */}
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+            Shop Items — Others ({shopItems.length})
+          </h2>
+          {shopItemsLoading && (
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              Loading...
+            </div>
+          )}
+        </div>
+        <p className="text-white/40 text-sm mb-4">
+          Items shown in the Shop → Others tab (badges, skips). Order matches display order.
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            {!(showCreateShopItem || editingShopItemId) ? (
+              <button
+                type="button"
+                onClick={() => setShowCreateShopItem(true)}
+                className="px-4 py-2.5 rounded-lg border border-green-500/40 bg-green-500/10 text-green-300 text-sm font-medium hover:bg-green-500/20 cursor-pointer"
+              >
+                Add Shop Item
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-white/80">
+                    {editingShopItemId ? "Edit Shop Item" : "Add Shop Item"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={resetShopItemForm}
+                    disabled={savingShopItem}
+                    className="text-xs text-white/50 hover:text-white/70 disabled:opacity-40"
+                  >
+                    Close
+                  </button>
+                </div>
+                <form onSubmit={handleSaveShopItem} className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={shopItemForm.name}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, name: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                      placeholder="e.g. Special Badge"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Type *</label>
+                    <select
+                      value={shopItemForm.type}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, type: e.target.value as ShopItemType }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                    >
+                      <option value="badge">Badge</option>
+                      <option value="skip">Skip</option>
+                    </select>
+                  </div>
+                  {shopItemForm.type === "skip" && (
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1">Skip amount *</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={shopItemForm.skipAmount}
+                        onChange={(e) => setShopItemForm((f) => ({ ...f, skipAmount: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                      />
+                    </div>
+                  )}
+                  {shopItemForm.type === "badge" && (
+                    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-3">
+                      <p className="text-[11px] uppercase tracking-widest text-white/40 font-medium">Badge appearance</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Primary color</label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="color"
+                              value={shopItemForm.badgePrimaryColor}
+                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgePrimaryColor: e.target.value }))}
+                              className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
+                            />
+                            <input
+                              type="text"
+                              value={shopItemForm.badgePrimaryColor}
+                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgePrimaryColor: e.target.value }))}
+                              className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
+                              placeholder="#f59e0b"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-white/40 mb-1">Secondary color</label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="color"
+                              value={shopItemForm.badgeSecondaryColor}
+                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgeSecondaryColor: e.target.value }))}
+                              className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent"
+                            />
+                            <input
+                              type="text"
+                              value={shopItemForm.badgeSecondaryColor}
+                              onChange={(e) => setShopItemForm((f) => ({ ...f, badgeSecondaryColor: e.target.value }))}
+                              className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono"
+                              placeholder="#d97706"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/40 mb-1">Icon</label>
+                        <select
+                          value={shopItemForm.badgeIcon}
+                          onChange={(e) => setShopItemForm((f) => ({ ...f, badgeIcon: e.target.value as typeof f.badgeIcon }))}
+                          className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                        >
+                          <option value="star">Star</option>
+                          <option value="trophy">Trophy</option>
+                          <option value="heart">Heart</option>
+                          <option value="medal">Medal</option>
+                          <option value="fire">Fire</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="shop-badge-glow"
+                          checked={shopItemForm.badgeGlow}
+                          onChange={(e) => setShopItemForm((f) => ({ ...f, badgeGlow: e.target.checked }))}
+                          className="rounded border-white/20"
+                        />
+                        <label htmlFor="shop-badge-glow" className="text-xs text-white/60">Glow</label>
+                      </div>
+                      <div className="pt-2 border-t border-white/[0.06]">
+                        <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
+                        <BadgePill
+                          movieTitle={shopItemForm.name || "Badge"}
+                          appearance={{
+                            primaryColor: shopItemForm.badgePrimaryColor || "#f59e0b",
+                            secondaryColor: shopItemForm.badgeSecondaryColor || shopItemForm.badgePrimaryColor || "#d97706",
+                            icon: shopItemForm.badgeIcon,
+                            glow: shopItemForm.badgeGlow,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Price (credits) *</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={shopItemForm.price}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, price: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Description (optional)</label>
+                    <input
+                      type="text"
+                      value={shopItemForm.description}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, description: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                      placeholder="Short description for the shop"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Image URL (optional)</label>
+                    <input
+                      type="text"
+                      value={shopItemForm.imageUrl}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm"
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="shop-item-active"
+                      checked={shopItemForm.isActive}
+                      onChange={(e) => setShopItemForm((f) => ({ ...f, isActive: e.target.checked }))}
+                      className="rounded border-white/20"
+                    />
+                    <label htmlFor="shop-item-active" className="text-xs text-white/60">Active (visible in shop)</label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={savingShopItem}
+                      className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40"
+                    >
+                      {savingShopItem ? "Saving..." : editingShopItemId ? "Save" : "Add"}
+                    </button>
+                    {editingShopItemId && (
+                      <button
+                        type="button"
+                        onClick={resetShopItemForm}
+                        disabled={savingShopItem}
+                        className="px-4 py-2 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10 disabled:opacity-40"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-white/80 mb-3">Existing Items</h3>
+            {shopItems.length === 0 ? (
+              <p className="text-white/40 text-sm">No shop items yet. Add one to show in Shop → Others.</p>
+            ) : (
+              <div className="space-y-2 max-h-[320px] overflow-y-auto pr-2">
+                {shopItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white/90 truncate">{item.name}</p>
+                      <p className="text-xs text-white/50 capitalize">{item.type} · {item.price} cr {!item.isActive && "· Inactive"}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEditShopItem(item)}
+                        className="px-2 py-1 rounded border border-green-500/40 text-green-300 text-xs hover:bg-green-500/10"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteShopItem(item.id)}
+                        disabled={deletingShopItemId === item.id}
+                        className="px-2 py-1 rounded border border-red-500/40 text-red-300 text-xs hover:bg-red-500/10 disabled:opacity-40"
+                      >
+                        {deletingShopItemId === item.id ? "..." : "Delete"}
                       </button>
                     </div>
                   </div>
