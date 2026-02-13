@@ -2700,5 +2700,35 @@
       "packId": "pack-1770883960789-vqg92vi"
     },
     "createdAt": "2026-02-13T13:25:46.437Z"
+  },
+  {
+    "id": "cl-1771000462383-rrxaadb",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-13T16:34:22.383Z"
+  },
+  {
+    "id": "cl-1771000464305-e8vlinn",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-13T16:34:24.305Z"
+  },
+  {
+    "id": "cl-1771000465801-ompal62",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-13T16:34:25.801Z"
   }
 ]

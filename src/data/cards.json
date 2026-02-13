@@ -1146,5 +1146,47 @@
     "cardType": "actor",
     "id": "card-1770994066861-l4p2mxr",
     "acquiredAt": "2026-02-13T14:47:46.861Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-549831-152601",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Lynn Adrianna",
+    "characterName": "Letter Writer #1",
+    "movieTitle": "Her",
+    "movieTmdbId": 152601,
+    "profilePath": "https://image.tmdb.org/t/p/w500/bcdoLlSCP5qfTGDSpnyvDPO7sQL.jpg",
+    "cardType": "actor",
+    "id": "card-1771000462384-6ani153",
+    "acquiredAt": "2026-02-13T16:34:22.384Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-19541-1858",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Mark Ryan",
+    "characterName": "Bumblebee (voice)",
+    "movieTitle": "Transformers",
+    "movieTmdbId": 1858,
+    "profilePath": "https://image.tmdb.org/t/p/w500/9I0mFMnJJutVwVsCJhh3PtfqtFv.jpg",
+    "cardType": "actor",
+    "id": "card-1771000464306-9sd4eag",
+    "acquiredAt": "2026-02-13T16:34:24.306Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1245-152601",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Samantha (voice)",
+    "movieTitle": "Her",
+    "movieTmdbId": 152601,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "cardType": "actor",
+    "id": "card-1771000465802-eso97p1",
+    "acquiredAt": "2026-02-13T16:34:25.802Z"
   }
 ]
