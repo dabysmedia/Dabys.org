@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { CardDisplay } from "@/components/CardDisplay";
-import { BadgePill, type BadgeAppearance } from "@/components/BadgePill";
+import { BadgePill } from "@/components/BadgePill";
 import { DISENCHANT_DUST, getPackAPunchCost } from "@/lib/alchemy";
 import { RARITY_BADGE } from "@/lib/constants";
 
@@ -45,7 +45,7 @@ interface Listing {
   sellerName: string;
   askingPrice: number;
   card: Card;
-  sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: BadgeAppearance } | null;
+  sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 const PACK_PRICE = 50;
@@ -87,8 +87,8 @@ interface TradeOfferEnriched {
   requestedCards: Card[];
   status: "pending" | "accepted" | "denied";
   createdAt: string;
-  initiatorDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: BadgeAppearance } | null;
-  counterpartyDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean; badgeAppearance?: BadgeAppearance } | null;
+  initiatorDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  counterpartyDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
 interface UserWithAvatar {

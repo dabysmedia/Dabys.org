@@ -264,15 +264,6 @@ export default function AdminCardsCreditsPage() {
   });
   const [defaultBadgeAppearanceLoading, setDefaultBadgeAppearanceLoading] = useState(true);
   const [savingDefaultBadgeAppearance, setSavingDefaultBadgeAppearance] = useState(false);
-  const [winnerBadges, setWinnerBadges] = useState<{ winnerId: string; movieTitle: string; appearance: BadgeAppearance; isOverride: boolean }[]>([]);
-  const [editingBadgeWinnerId, setEditingBadgeWinnerId] = useState<string | null>(null);
-  const [editingBadgeForm, setEditingBadgeForm] = useState<{ primaryColor: string; secondaryColor: string; icon: "star" | "trophy" | "heart" | "medal" | "fire"; glow: boolean }>({
-    primaryColor: "#f59e0b",
-    secondaryColor: "#d97706",
-    icon: "star",
-    glow: true,
-  });
-  const [savingBadgeOverride, setSavingBadgeOverride] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -401,16 +392,12 @@ export default function AdminCardsCreditsPage() {
       const res = await fetch("/api/admin/badge-appearance");
       if (res.ok) {
         const d = await res.json();
-        const defaultApp = d.default ?? d;
         setDefaultBadgeAppearanceForm({
-          primaryColor: defaultApp.primaryColor ?? "#f59e0b",
-          secondaryColor: defaultApp.secondaryColor ?? "#d97706",
-          icon: ["star", "trophy", "heart", "medal", "fire"].includes(defaultApp.icon) ? defaultApp.icon : "star",
-          glow: typeof defaultApp.glow === "boolean" ? defaultApp.glow : true,
+          primaryColor: d.primaryColor ?? "#f59e0b",
+          secondaryColor: d.secondaryColor ?? "#d97706",
+          icon: ["star", "trophy", "heart", "medal", "fire"].includes(d.icon) ? d.icon : "star",
+          glow: typeof d.glow === "boolean" ? d.glow : true,
         });
-        if (Array.isArray(d.winnerBadges)) {
-          setWinnerBadges(d.winnerBadges);
-        }
       }
     } catch {
       setError("Failed to load default badge appearance");
@@ -1714,155 +1701,6 @@ export default function AdminCardsCreditsPage() {
             {savingDefaultBadgeAppearance ? "Saving..." : "Save default badge appearance"}
           </button>
         </div>
-
-        <div className="mt-8 pt-6 border-t border-white/[0.08]">
-          <h3 className="text-sm font-medium text-white/70 mb-2">Edit current badges (per winner)</h3>
-          <p className="text-white/40 text-xs mb-3">
-            Override appearance for each winner badge. Others use the default above.
-          </p>
-          {winnerBadges.length === 0 ? (
-            <p className="text-white/40 text-sm">No winner badges. Winners appear here once they exist.</p>
-          ) : (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
-              {winnerBadges.map((b) => (
-                <div
-                  key={b.winnerId}
-                  className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-2.5"
-                >
-                  <BadgePill
-                    movieTitle={b.movieTitle}
-                    appearance={b.appearance}
-                  />
-                  <span className="text-[10px] text-white/40 px-1.5 py-0.5 rounded bg-white/5">
-                    {b.isOverride ? "Custom" : "Default"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingBadgeWinnerId(b.winnerId);
-                      const iconVal = b.appearance.icon;
-                      const icon: "star" | "trophy" | "heart" | "medal" | "fire" =
-                        iconVal === "star" || iconVal === "trophy" || iconVal === "heart" || iconVal === "medal" || iconVal === "fire"
-                          ? iconVal
-                          : "star";
-                      setEditingBadgeForm({
-                        primaryColor: b.appearance.primaryColor ?? "#f59e0b",
-                        secondaryColor: b.appearance.secondaryColor ?? "#d97706",
-                        icon,
-                        glow: b.appearance.glow ?? true,
-                      });
-                    }}
-                    className="ml-auto px-2.5 py-1 rounded-lg border border-amber-500/40 text-amber-300 text-xs font-medium hover:bg-amber-500/10"
-                  >
-                    Edit
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {editingBadgeWinnerId && (() => {
-          const b = winnerBadges.find((x) => x.winnerId === editingBadgeWinnerId);
-          return (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-              onClick={(e) => e.target === e.currentTarget && setEditingBadgeWinnerId(null)}
-            >
-              <div className="rounded-xl border border-white/[0.08] bg-[#12121a] shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white/90">
-                    Edit badge: {b?.movieTitle ?? editingBadgeWinnerId}
-                  </h3>
-                  <button type="button" onClick={() => setEditingBadgeWinnerId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10">×</button>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-white/40 mb-1">Primary color</label>
-                      <div className="flex gap-2 items-center">
-                        <input type="color" value={editingBadgeForm.primaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, primaryColor: e.target.value }))} className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent" />
-                        <input type="text" value={editingBadgeForm.primaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, primaryColor: e.target.value }))} className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-white/40 mb-1">Secondary color</label>
-                      <div className="flex gap-2 items-center">
-                        <input type="color" value={editingBadgeForm.secondaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, secondaryColor: e.target.value }))} className="w-10 h-8 rounded border border-white/20 cursor-pointer bg-transparent" />
-                        <input type="text" value={editingBadgeForm.secondaryColor} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, secondaryColor: e.target.value }))} className="flex-1 px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs font-mono" />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/40 mb-1">Icon</label>
-                    <select value={editingBadgeForm.icon} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, icon: e.target.value as typeof f.icon }))} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm">
-                      <option value="star">Star</option><option value="trophy">Trophy</option><option value="heart">Heart</option><option value="medal">Medal</option><option value="fire">Fire</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="edit-badge-glow" checked={editingBadgeForm.glow} onChange={(e) => setEditingBadgeForm((f) => ({ ...f, glow: e.target.checked }))} className="rounded border-white/20" />
-                    <label htmlFor="edit-badge-glow" className="text-xs text-white/60">Glow</label>
-                  </div>
-                  <div className="pt-2 border-t border-white/[0.06]">
-                    <p className="text-[10px] text-white/40 mb-1.5">Preview</p>
-                    <BadgePill movieTitle={b?.movieTitle ?? "Badge"} appearance={{ primaryColor: editingBadgeForm.primaryColor || "#f59e0b", secondaryColor: editingBadgeForm.secondaryColor || editingBadgeForm.primaryColor || "#d97706", icon: editingBadgeForm.icon, glow: editingBadgeForm.glow }} />
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <button
-                      type="button"
-                      disabled={savingBadgeOverride}
-                      onClick={async () => {
-                        setSavingBadgeOverride(true);
-                        try {
-                          const res = await fetch("/api/admin/badge-appearance", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ winnerId: editingBadgeWinnerId, appearance: { primaryColor: editingBadgeForm.primaryColor || undefined, secondaryColor: editingBadgeForm.secondaryColor || undefined, icon: editingBadgeForm.icon, glow: editingBadgeForm.glow } }) });
-                          if (res.ok) {
-                            await loadDefaultBadgeAppearance();
-                            setEditingBadgeWinnerId(null);
-                          } else {
-                            const err = await res.json().catch(() => ({}));
-                            setError(err?.error ?? "Failed to save");
-                          }
-                        } catch {
-                          setError("Failed to save");
-                        } finally {
-                          setSavingBadgeOverride(false);
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40"
-                    >
-                      {savingBadgeOverride ? "Saving..." : "Save"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={savingBadgeOverride}
-                      onClick={async () => {
-                        setSavingBadgeOverride(true);
-                        try {
-                          const res = await fetch("/api/admin/badge-appearance", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ winnerId: editingBadgeWinnerId, clear: true }) });
-                          if (res.ok) {
-                            await loadDefaultBadgeAppearance();
-                            setEditingBadgeWinnerId(null);
-                          } else {
-                            const err = await res.json().catch(() => ({}));
-                            setError(err?.error ?? "Failed to clear");
-                          }
-                        } catch {
-                          setError("Failed to clear");
-                        } finally {
-                          setSavingBadgeOverride(false);
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10 disabled:opacity-40"
-                    >
-                      Use default
-                    </button>
-                    <button type="button" onClick={() => setEditingBadgeWinnerId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 text-sm hover:bg-white/10">Cancel</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
       {/* Manage Shop Items (Others) */}

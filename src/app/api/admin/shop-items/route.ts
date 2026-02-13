@@ -6,19 +6,6 @@ import {
   deleteShopItem,
   reorderShopItems,
 } from "@/lib/data";
-import type { BadgeAppearance } from "@/lib/data";
-
-const BADGE_ICONS: readonly BadgeAppearance["icon"][] = ["star", "trophy", "heart", "medal", "fire"];
-function parseBadgeAppearance(raw: unknown): BadgeAppearance | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const o = raw as Record<string, unknown>;
-  const primaryColor = typeof o.primaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.primaryColor) ? o.primaryColor : undefined;
-  const secondaryColor = typeof o.secondaryColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(o.secondaryColor) ? o.secondaryColor : undefined;
-  const icon = typeof o.icon === "string" && BADGE_ICONS.includes(o.icon as BadgeAppearance["icon"]) ? (o.icon as BadgeAppearance["icon"]) : undefined;
-  const glow = typeof o.glow === "boolean" ? o.glow : undefined;
-  if (!primaryColor && !secondaryColor && icon === undefined && glow === undefined) return undefined;
-  return { primaryColor, secondaryColor, icon, glow };
-}
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -53,7 +40,9 @@ export async function POST(request: Request) {
   const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
   const order = typeof body.order === "number" ? body.order : getShopItems().length;
   const badgeAppearance =
-    type === "badge" && body.badgeAppearance ? parseBadgeAppearance(body.badgeAppearance) : undefined;
+    type === "badge" && body.badgeAppearance && typeof body.badgeAppearance === "object"
+      ? (body.badgeAppearance as { primaryColor?: string; secondaryColor?: string; icon?: string; glow?: boolean })
+      : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });

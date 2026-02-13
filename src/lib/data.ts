@@ -1447,62 +1447,6 @@ export function saveDefaultBadgeAppearance(appearance: BadgeAppearance): void {
   writeJson("defaultBadgeAppearance.json", toSave);
 }
 
-// Per-winner badge appearance overrides (winnerId -> BadgeAppearance). Missing = use default.
-function getWinnerBadgeAppearancesRaw(): Record<string, unknown> {
-  try {
-    const o = readJson<Record<string, unknown>>("winnerBadgeAppearances.json");
-    return o && typeof o === "object" ? o : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveWinnerBadgeAppearancesRaw(map: Record<string, BadgeAppearance>) {
-  writeJson("winnerBadgeAppearances.json", map);
-}
-
-/** Appearance for a specific winner badge (override or default). */
-export function getWinnerBadgeAppearance(winnerId: string): BadgeAppearance {
-  const raw = getWinnerBadgeAppearancesRaw();
-  const override = raw[winnerId];
-  if (override && typeof override === "object") {
-    const normalized = normalizeBadgeAppearance(override);
-    if (normalized.primaryColor || normalized.secondaryColor || normalized.icon !== undefined || normalized.glow !== undefined) {
-      return {
-        primaryColor: normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.primaryColor,
-        secondaryColor: normalized.secondaryColor ?? normalized.primaryColor ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.secondaryColor,
-        icon: normalized.icon ?? DEFAULT_BADGE_APPEARANCE_FALLBACK.icon,
-        glow: normalized.glow ?? true,
-      };
-    }
-  }
-  return getDefaultBadgeAppearance();
-}
-
-/** Set or clear per-winner badge appearance. Pass null/empty to clear override. */
-export function setWinnerBadgeAppearance(winnerId: string, appearance: BadgeAppearance | null): void {
-  const map = getWinnerBadgeAppearancesRaw() as Record<string, BadgeAppearance>;
-  if (!appearance || (!appearance.primaryColor && !appearance.secondaryColor && appearance.icon === undefined && appearance.glow === undefined)) {
-    delete map[winnerId];
-  } else {
-    map[winnerId] = normalizeBadgeAppearance(appearance);
-  }
-  saveWinnerBadgeAppearancesRaw(map);
-}
-
-/** All winner IDs that have a custom badge appearance (for admin list). */
-export function getWinnerBadgeAppearanceOverrides(): Record<string, BadgeAppearance> {
-  const raw = getWinnerBadgeAppearancesRaw();
-  const out: Record<string, BadgeAppearance> = {};
-  for (const [id, val] of Object.entries(raw)) {
-    if (id && val && typeof val === "object") {
-      const n = normalizeBadgeAppearance(val);
-      if (n.primaryColor || n.secondaryColor || n.icon !== undefined || n.glow !== undefined) out[id] = n;
-    }
-  }
-  return out;
-}
-
 export function getShopItems(): ShopItem[] {
   const raw = getShopItemsRaw();
   return raw

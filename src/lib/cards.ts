@@ -15,7 +15,7 @@ import {
   getProfile,
   getPackPurchasesCountToday,
   recordPackPurchase,
-  getWinnerBadgeAppearance,
+  getDefaultBadgeAppearance,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -613,7 +613,7 @@ export function getDisplayedBadgeForUser(userId: string): {
     winnerId: displayedWinnerId,
     movieTitle: w?.movieTitle ?? "Unknown",
     isHolo: completedHolo.includes(displayedWinnerId),
-    badgeAppearance: getWinnerBadgeAppearance(displayedWinnerId),
+    badgeAppearance: getDefaultBadgeAppearance(),
   };
 }
 
