@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { resetCodexUnlocks } from "@/lib/data";
+import {
+  resetCodexUnlocks,
+  resetHoloCodexUnlocks,
+  resetAltArtCodexUnlocks,
+  resetBoysCodexUnlocks,
+} from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -16,5 +21,8 @@ export async function POST() {
   if (auth) return auth;
 
   resetCodexUnlocks();
+  resetHoloCodexUnlocks();
+  resetAltArtCodexUnlocks();
+  resetBoysCodexUnlocks();
   return NextResponse.json({ success: true });
 }

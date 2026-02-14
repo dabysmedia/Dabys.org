@@ -169,20 +169,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-1509453-152601",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Gabe Gomez",
-    "characterName": "Letter Writer #3",
-    "movieTitle": "Her",
-    "movieTmdbId": 152601,
-    "profilePath": "https://image.tmdb.org/t/p/w500/aHw92lRjEIAr6yIwRnOaIlq0ze4.jpg",
-    "cardType": "actor",
-    "id": "card-1771071054858-xcwuc6n",
-    "acquiredAt": "2026-02-14T12:10:54.858Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-57415-9353",
     "rarity": "uncommon",
     "isFoil": false,
@@ -193,34 +179,6 @@
     "profilePath": "/api/uploads/1770878289605-xrroo6.jpg",
     "cardType": "actor",
     "id": "card-1771071054858-xeopzys",
-    "acquiredAt": "2026-02-14T12:10:54.858Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-19588-129",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Miyu Irino",
-    "characterName": "Haku (voice)",
-    "movieTitle": "Spirited Away",
-    "movieTmdbId": 129,
-    "profilePath": "https://image.tmdb.org/t/p/w500/8qEEhHUObNvGQr4e6eqLu5z4qTz.jpg",
-    "cardType": "actor",
-    "id": "card-1771071054858-gh2fyrz",
-    "acquiredAt": "2026-02-14T12:10:54.858Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-10959-1858",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Shia LaBeouf",
-    "characterName": "Sam Witwicky",
-    "movieTitle": "Transformers",
-    "movieTmdbId": 1858,
-    "profilePath": "https://image.tmdb.org/t/p/w500/frYAEeYMi9jdt9MIjGA8vCr5yUC.jpg",
-    "cardType": "actor",
-    "id": "card-1771071054858-ykxc0gs",
     "acquiredAt": "2026-02-14T12:10:54.858Z"
   },
   {
@@ -309,20 +267,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-19589-129",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Mari Natsuki",
-    "characterName": "Yubaba / Zeniba (voice)",
-    "movieTitle": "Spirited Away",
-    "movieTmdbId": 129,
-    "profilePath": "https://image.tmdb.org/t/p/w500/MIFzUc77Sx57FQOZsoiGWEbpH2.jpg",
-    "cardType": "actor",
-    "id": "card-1771071690964-rejpeez",
-    "acquiredAt": "2026-02-14T12:21:30.964Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-12073-809",
     "rarity": "uncommon",
     "isFoil": false,
@@ -337,20 +281,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-19592-129",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Tatsuya Gashûin",
-    "characterName": "Aogaeru (voice)",
-    "movieTitle": "Spirited Away",
-    "movieTmdbId": 129,
-    "profilePath": "https://image.tmdb.org/t/p/w500/fLqIdkShknsJmZy4EfBWuWyHN4C.jpg",
-    "cardType": "actor",
-    "id": "card-1771071690965-sny2c53",
-    "acquiredAt": "2026-02-14T12:21:30.965Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-57412-9353",
     "rarity": "uncommon",
     "isFoil": false,
@@ -361,20 +291,6 @@
     "profilePath": "https://image.tmdb.org/t/p/w500/fc7krDmEA4VkIY4KOJjpMXGdsfg.jpg",
     "cardType": "actor",
     "id": "card-1771071766092-9iedvf6",
-    "acquiredAt": "2026-02-14T12:22:46.092Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-57415-9353",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "César Barrón",
-    "characterName": "Ramses",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "/api/uploads/1770878289605-xrroo6.jpg",
-    "cardType": "actor",
-    "id": "card-1771071766092-arzhzjh",
     "acquiredAt": "2026-02-14T12:22:46.092Z"
   },
   {
@@ -393,20 +309,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-19541-1858",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Mark Ryan",
-    "characterName": "Bumblebee (voice)",
-    "movieTitle": "Transformers",
-    "movieTmdbId": 1858,
-    "profilePath": "https://image.tmdb.org/t/p/w500/9I0mFMnJJutVwVsCJhh3PtfqtFv.jpg",
-    "cardType": "actor",
-    "id": "card-1771071766093-tmnygfy",
-    "acquiredAt": "2026-02-14T12:22:46.093Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-6941-809",
     "rarity": "uncommon",
     "isFoil": false,
@@ -418,34 +320,6 @@
     "cardType": "actor",
     "id": "card-1771071766093-t98riog",
     "acquiredAt": "2026-02-14T12:22:46.093Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-19536-1858",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Josh Duhamel",
-    "characterName": "Captain Lennox",
-    "movieTitle": "Transformers",
-    "movieTmdbId": 1858,
-    "profilePath": "https://image.tmdb.org/t/p/w500/5Rp9aeWdN2S623KCjwfii9MhDK1.jpg",
-    "cardType": "actor",
-    "id": "card-1771077372180-jmlx9ca",
-    "acquiredAt": "2026-02-14T13:56:12.180Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-3223-24428",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Robert Downey Jr.",
-    "characterName": "Tony Stark / Iron Man",
-    "movieTitle": "The Avengers",
-    "movieTmdbId": 24428,
-    "profilePath": "https://image.tmdb.org/t/p/w500/5qHNjhtjMD4YWH3UP0rm4tKwxCL.jpg",
-    "cardType": "actor",
-    "id": "card-1771077372181-bmbi1ns",
-    "acquiredAt": "2026-02-14T13:56:12.181Z"
   },
   {
     "userId": "2",
@@ -533,20 +407,6 @@
   },
   {
     "userId": "2",
-    "characterId": "custom-1771076660570-vk3dx3p",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "Carter",
-    "characterName": "NERT FERG",
-    "movieTitle": "Boys",
-    "movieTmdbId": 0,
-    "profilePath": "/api/uploads/1771076659332-0qzdjg.png",
-    "cardType": "character",
-    "id": "card-1771077530630-yr5p9ya",
-    "acquiredAt": "2026-02-14T13:58:50.630Z"
-  },
-  {
-    "userId": "2",
     "characterId": "custom-1771077359137-3tfco5b",
     "rarity": "uncommon",
     "isFoil": false,
@@ -603,48 +463,6 @@
   },
   {
     "userId": "2",
-    "characterId": "custom-1771077601737-iv4oo0n",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "boy 6",
-    "characterName": "boy 6",
-    "movieTitle": "Boys",
-    "movieTmdbId": 0,
-    "profilePath": "/api/uploads/1771077600708-cjao5q.png",
-    "cardType": "character",
-    "id": "card-1771077609611-2tsmgyz",
-    "acquiredAt": "2026-02-14T14:00:09.611Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1771077359137-3tfco5b",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "boy 4",
-    "characterName": "boy 4",
-    "movieTitle": "Boys",
-    "movieTmdbId": 0,
-    "profilePath": "/api/uploads/1771077358141-1a80se.png",
-    "cardType": "character",
-    "id": "card-1771077609611-640mhsk",
-    "acquiredAt": "2026-02-14T14:00:09.611Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1771077343613-1kv8ik9",
-    "rarity": "uncommon",
-    "isFoil": true,
-    "actorName": "boy 2",
-    "characterName": "boy 2",
-    "movieTitle": "Boys",
-    "movieTmdbId": 0,
-    "profilePath": "/api/uploads/1771077340247-32ocky.png",
-    "cardType": "character",
-    "id": "card-1771077609611-dlo1npl",
-    "acquiredAt": "2026-02-14T14:00:09.611Z"
-  },
-  {
-    "userId": "2",
     "characterId": "custom-1771077352439-wcdnmmh",
     "rarity": "uncommon",
     "isFoil": false,
@@ -656,19 +474,5 @@
     "cardType": "character",
     "id": "card-1771077609611-0eimt6n",
     "acquiredAt": "2026-02-14T14:00:09.611Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1771076660570-vk3dx3p",
-    "rarity": "epic",
-    "isFoil": true,
-    "actorName": "Carter",
-    "characterName": "NERT FERG",
-    "movieTitle": "Boys",
-    "movieTmdbId": 0,
-    "profilePath": "/api/uploads/1771076659332-0qzdjg.png",
-    "cardType": "character",
-    "id": "card-1771077609612-fd1ogrg",
-    "acquiredAt": "2026-02-14T14:00:09.612Z"
   }
 ]

@@ -518,6 +518,9 @@ function CardsContent() {
   const acceptedSentPollInitializedRef = useRef(false);
 
   const [discoveredCharacterIds, setDiscoveredCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredHoloCharacterIds, setDiscoveredHoloCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredAltArtCharacterIds, setDiscoveredAltArtCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredBoysCharacterIds, setDiscoveredBoysCharacterIds] = useState<Set<string>>(new Set());
   const [showCodexUploadModal, setShowCodexUploadModal] = useState(false);
   const [codexUploadSelectedIds, setCodexUploadSelectedIds] = useState<Set<string>>(new Set());
   const [codexUploading, setCodexUploading] = useState(false);
@@ -692,6 +695,9 @@ function CardsContent() {
     if (codexRes.ok) {
       const d = await codexRes.json();
       setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
+      setDiscoveredHoloCharacterIds(new Set(Array.isArray(d.holoCharacterIds) ? d.holoCharacterIds : []));
+      setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
+      setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
@@ -1199,11 +1205,26 @@ function CardsContent() {
     }
   }
 
+  function isCardSlotAlreadyInCodex(card: { characterId: string | null; isFoil?: boolean }): boolean {
+    if (!card.characterId) return false;
+    const entry = poolEntries.find((e) => e.characterId === card.characterId);
+    if (!entry) return false;
+    const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
+    const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
+    const isMain = !isAltArt && !isBoys;
+    if (isMain) {
+      return card.isFoil ? discoveredHoloCharacterIds.has(card.characterId) : discoveredCharacterIds.has(card.characterId);
+    }
+    if (isAltArt) return discoveredAltArtCharacterIds.has(card.characterId);
+    if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
+    return false;
+  }
+
   async function handleCodexUploadSelected() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const list = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
-      return c && c.characterId != null && !discoveredCharacterIds.has(c.characterId);
+      return c && c.characterId != null && !isCardSlotAlreadyInCodex(c);
     });
     if (list.length === 0) return;
     codexSkipRequestedRef.current = false;
@@ -1251,7 +1272,11 @@ function CardsContent() {
         const data = await res.json();
         if (res.ok && data.ok && data.characterId) {
           uploadedCount++;
-          setDiscoveredCharacterIds((prev) => new Set([...prev, data.characterId]));
+          const variant = data.variant ?? (data.isFoil ? "holo" : "regular");
+          if (variant === "regular") setDiscoveredCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "holo") setDiscoveredHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "altart") setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
         }
       } catch {
@@ -3401,7 +3426,7 @@ function CardsContent() {
                     const renderEntry = (entry: PoolEntry) => {
                       const discovered =
                         discoveredCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                        discoveredHoloCharacterIds.has(entry.characterId);
                       if (!discovered) {
                         return (
                           <div
@@ -3466,11 +3491,10 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const slotIds = (entries: PoolEntry[]) => new Set(entries.map((e) => e.altArtOfCharacterId ?? e.characterId));
                       const discoveredCount = (entries: PoolEntry[]) => {
                         let n = 0;
                         for (const e of entries) {
-                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
+                          if (discoveredCharacterIds.has(e.characterId) || discoveredHoloCharacterIds.has(e.characterId)) n++;
                         }
                         return n;
                       };
@@ -3510,7 +3534,6 @@ function CardsContent() {
 
             {codexSubTab === "holo" && (() => {
               const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
-              const holoByCharacterId = new Map(cards.filter((c) => c.isFoil).map((c) => [c.characterId!, c]));
               return (
           <>
             {mainEntries.length === 0 ? (
@@ -3542,9 +3565,8 @@ function CardsContent() {
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const renderEntry = (entry: PoolEntry) => {
-                      const discovered = holoByCharacterId.has(entry.characterId);
-                      const holoCard = holoByCharacterId.get(entry.characterId);
-                      if (!discovered || !holoCard) {
+                      const discovered = discoveredHoloCharacterIds.has(entry.characterId);
+                      if (!discovered) {
                         return (
                           <div
                             key={entry.characterId}
@@ -3560,6 +3582,16 @@ function CardsContent() {
                           </div>
                         );
                       }
+                      const holoCard = {
+                        id: entry.characterId,
+                        rarity: entry.rarity,
+                        isFoil: true,
+                        actorName: entry.actorName ?? "",
+                        characterName: entry.characterName ?? "",
+                        movieTitle: entry.movieTitle ?? "",
+                        profilePath: entry.profilePath ?? "",
+                        cardType: entry.cardType,
+                      };
                       return (
                         <div
                           key={entry.characterId}
@@ -3582,7 +3614,7 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const completedCount = (entries: PoolEntry[]) => entries.filter((e) => holoByCharacterId.has(e.characterId)).length;
+                      const completedCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredHoloCharacterIds.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
@@ -3650,9 +3682,7 @@ function CardsContent() {
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const renderEntry = (entry: PoolEntry) => {
-                      const discovered =
-                        discoveredCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                      const discovered = discoveredAltArtCharacterIds.has(entry.characterId);
                       if (!discovered) {
                         return (
                           <div
@@ -3679,15 +3709,12 @@ function CardsContent() {
                         profilePath: entry.profilePath ?? "",
                         cardType: entry.cardType,
                       };
-                      const isNewlyUploaded =
-                        newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                      const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
                       const clearNewDot = () => {
                         if (!isNewlyUploaded) return;
                         setNewlyUploadedToCodexCharacterIds((prev) => {
                           const next = new Set(prev);
                           next.delete(entry.characterId);
-                          if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
                           return next;
                         });
                       };
@@ -3717,13 +3744,7 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const discoveredCount = (entries: PoolEntry[]) => {
-                        let n = 0;
-                        for (const e of entries) {
-                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
-                        }
-                        return n;
-                      };
+                      const discoveredCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredAltArtCharacterIds.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
@@ -3791,9 +3812,7 @@ function CardsContent() {
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const renderEntry = (entry: PoolEntry) => {
-                      const discovered =
-                        discoveredCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                      const discovered = discoveredBoysCharacterIds.has(entry.characterId);
                       if (!discovered) {
                         return (
                           <div
@@ -3820,15 +3839,12 @@ function CardsContent() {
                         profilePath: entry.profilePath ?? "",
                         cardType: entry.cardType,
                       };
-                      const isNewlyUploaded =
-                        newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                      const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
                       const clearNewDot = () => {
                         if (!isNewlyUploaded) return;
                         setNewlyUploadedToCodexCharacterIds((prev) => {
                           const next = new Set(prev);
                           next.delete(entry.characterId);
-                          if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
                           return next;
                         });
                       };
@@ -3858,13 +3874,7 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const discoveredCount = (entries: PoolEntry[]) => {
-                        let n = 0;
-                        for (const e of entries) {
-                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
-                        }
-                        return n;
-                      };
+                      const discoveredCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredBoysCharacterIds.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
@@ -4079,7 +4089,7 @@ function CardsContent() {
                             : [...filtered].sort((a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0));
                       return sorted.map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
-                        const alreadyInCodex = card.characterId != null && discoveredCharacterIds.has(card.characterId);
+                        const alreadyInCodex = isCardSlotAlreadyInCodex(card);
                         return (
                           <button
                             key={card.id}

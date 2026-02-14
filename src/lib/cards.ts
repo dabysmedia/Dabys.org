@@ -18,6 +18,8 @@ import {
   getProfile,
   getPackPurchasesCountToday,
   getCodexUnlockedCharacterIds,
+  getCodexUnlockedHoloCharacterIds,
+  getCodexUnlockedAltArtCharacterIds,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -540,19 +542,21 @@ export function getUserCollectedFoilCharacterIdsForMovie(userId: string, tmdbId:
   return new Set(cards.map((c) => c.characterId));
 }
 
-/** Distinct characterIds (slots) the user has discovered in the codex for a given movie. Alt-art counts as main for the slot. */
+/** Distinct characterIds (slots) the user has discovered in the codex for a given movie. Main slots: regular or holo. Alt-art slot: alt-art codex. */
 export function getUserCodexCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
-  const codexIds = new Set(getCodexUnlockedCharacterIds(userId));
+  const regularIds = new Set(getCodexUnlockedCharacterIds(userId));
+  const holoIds = new Set(getCodexUnlockedHoloCharacterIds(userId));
+  const altArtIds = new Set(getCodexUnlockedAltArtCharacterIds(userId));
   const pool = getPoolEntriesForMovie(tmdbId);
   const slotIds = new Set(pool.map((c) => c.altArtOfCharacterId ?? c.characterId));
   const result = new Set<string>();
   for (const slotId of slotIds) {
-    if (codexIds.has(slotId)) {
+    if (regularIds.has(slotId) || holoIds.has(slotId)) {
       result.add(slotId);
       continue;
     }
     const altEntry = pool.find((p) => p.altArtOfCharacterId === slotId);
-    if (altEntry && codexIds.has(altEntry.characterId)) result.add(slotId);
+    if (altEntry && altArtIds.has(altEntry.characterId)) result.add(slotId);
   }
   return result;
 }

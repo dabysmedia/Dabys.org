@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCodexUnlockedCharacterIds } from "@/lib/data";
+import {
+  getCodexUnlockedCharacterIds,
+  getCodexUnlockedHoloCharacterIds,
+  getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedBoysCharacterIds,
+} from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,5 +15,13 @@ export async function GET(request: Request) {
   }
 
   const characterIds = getCodexUnlockedCharacterIds(userId);
-  return NextResponse.json({ characterIds });
+  const holoCharacterIds = getCodexUnlockedHoloCharacterIds(userId);
+  const altArtCharacterIds = getCodexUnlockedAltArtCharacterIds(userId);
+  const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
+  return NextResponse.json({
+    characterIds,
+    holoCharacterIds,
+    altArtCharacterIds,
+    boysCharacterIds,
+  });
 }

@@ -1012,6 +1012,103 @@ export function resetCodexUnlocks(): void {
   saveCodexUnlocksRaw({});
 }
 
+// ──── Holo Codex (unlock by uploading a foil card to codex; same lock-in behavior as regular codex) ────
+const HOLO_CODEX_UNLOCKS_FILE = "holoCodexUnlocks.json";
+
+function getHoloCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(HOLO_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveHoloCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(HOLO_CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedHoloCharacterIds(userId: string): string[] {
+  const data = getHoloCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockHolo(userId: string, characterId: string): void {
+  const data = getHoloCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  saveHoloCodexUnlocksRaw(data);
+}
+
+/** Clear all holo codex unlocks for all users (admin). */
+export function resetHoloCodexUnlocks(): void {
+  saveHoloCodexUnlocksRaw({});
+}
+
+// ──── Alt-Art Codex (unlock by uploading an alt-art card; same lock-in behavior) ────
+const ALTART_CODEX_UNLOCKS_FILE = "altArtCodexUnlocks.json";
+
+function getAltArtCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(ALTART_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveAltArtCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(ALTART_CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedAltArtCharacterIds(userId: string): string[] {
+  const data = getAltArtCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockAltArt(userId: string, characterId: string): void {
+  const data = getAltArtCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  saveAltArtCodexUnlocksRaw(data);
+}
+
+export function resetAltArtCodexUnlocks(): void {
+  saveAltArtCodexUnlocksRaw({});
+}
+
+// ──── Boys Codex (unlock by uploading a character-type card; same lock-in behavior) ────
+const BOYS_CODEX_UNLOCKS_FILE = "boysCodexUnlocks.json";
+
+function getBoysCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(BOYS_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveBoysCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(BOYS_CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedBoysCharacterIds(userId: string): string[] {
+  const data = getBoysCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockBoys(userId: string, characterId: string): void {
+  const data = getBoysCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  saveBoysCodexUnlocksRaw(data);
+}
+
+export function resetBoysCodexUnlocks(): void {
+  saveBoysCodexUnlocksRaw({});
+}
+
 // ──── Trivia ────────────────────────────────────────────
 export interface TriviaAttempt {
   id: string;
