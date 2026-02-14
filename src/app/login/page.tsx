@@ -24,6 +24,7 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
+  const [otherUsersOpen, setOtherUsersOpen] = useState(false);
 
   // Cached last-login user (from localStorage); resolved against current user list
   const lastUser = useMemo(() => {
@@ -209,7 +210,7 @@ export default function LoginPage() {
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-8">
         {/* Title — same font as main page, outside any container */}
         <h1 className="font-site-title text-4xl sm:text-5xl font-bold text-center mb-1 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
-          Dabys.org
+          dabys.org
         </h1>
         <p className="text-white/40 text-xs tracking-[0.2em] uppercase mb-8">Weekly Movie Club</p>
 
@@ -282,14 +283,25 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Other users — compact list */}
+                  {/* Other users — collapsible, closed by default */}
                   {otherUsers.length > 0 && (
-                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-4">
-                      <p className="text-white/30 text-[11px] uppercase tracking-wider mb-3 px-1">
+                    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setOtherUsersOpen(!otherUsersOpen)}
+                        className="w-full text-left py-3 px-4 text-white/30 text-[11px] uppercase tracking-wider hover:text-white/50 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      >
                         {lastUser ? "Sign in as someone else" : "Select your name"}
-                      </p>
-                      <div className="space-y-2">
-                        {otherUsers.map((user) => renderUserButton(user, "compact"))}
+                        <span className="ml-2 inline-block align-middle transition-transform duration-200" style={{ transform: otherUsersOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                          ▼
+                        </span>
+                      </button>
+                      <div
+                        className={`overflow-hidden transition-all duration-300 ease-in-out ${otherUsersOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-60"}`}
+                      >
+                        <div className="space-y-2 px-4 pb-4 pt-0">
+                          {otherUsers.map((user) => renderUserButton(user, "compact"))}
+                        </div>
                       </div>
                     </div>
                   )}
