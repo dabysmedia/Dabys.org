@@ -560,18 +560,6 @@ function CardsContent() {
     }, 4500);
   }
 
-  // Pinned badge progress (tracked on winners page, max 3)
-  const TCG_TRACKED_KEY = "tcg-tracked-winner-ids";
-  const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
-  const [pinnedProgress, setPinnedProgress] = useState<{
-    winnerId: string;
-    movieTitle: string;
-    owned: number;
-    total: number;
-    completed: boolean;
-    entries: { characterName: string; actorName: string; owned: boolean }[];
-  }[]>([]);
-
   const myListedCardIds = new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
   );
@@ -762,69 +750,6 @@ function CardsContent() {
       codexUploadCompleteTimeoutRef.current && clearTimeout(codexUploadCompleteTimeoutRef.current);
     };
   }, []);
-
-  // Read pinned/tracked winner IDs from localStorage (sync when returning from winners page)
-  useEffect(() => {
-    const read = () => {
-      try {
-        const raw = localStorage.getItem(TCG_TRACKED_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        setTrackedWinnerIds(Array.isArray(parsed) ? parsed.slice(0, 3) : []);
-      } catch { setTrackedWinnerIds([]); }
-    };
-    read();
-    window.addEventListener("storage", read);
-    window.addEventListener("focus", read);
-    return () => {
-      window.removeEventListener("storage", read);
-      window.removeEventListener("focus", read);
-    };
-  }, []);
-
-  // Fetch badge progress for each pinned winner
-  useEffect(() => {
-    if (!user?.id || trackedWinnerIds.length === 0) {
-      setPinnedProgress([]);
-      return;
-    }
-    let cancelled = false;
-    Promise.all(
-      trackedWinnerIds.map((winnerId) =>
-        fetch(`/api/cards/winner-collection?winnerId=${encodeURIComponent(winnerId)}&userId=${encodeURIComponent(user.id)}`).then((r) => r.json())
-      )
-    ).then((results) => {
-      if (cancelled) return;
-      setPinnedProgress(
-        results
-          .filter((d) => d.poolEntries && !d.error)
-          .map((d) => {
-            const ownedSet = new Set(d.ownedCharacterIds ?? []);
-            const entries = (d.poolEntries ?? []).map((e: { characterId: string; characterName: string; actorName: string }) => ({
-              characterName: e.characterName ?? "?",
-              actorName: e.actorName ?? "",
-              owned: ownedSet.has(e.characterId),
-            }));
-            return {
-              winnerId: d.winnerId ?? "",
-              movieTitle: d.movieTitle ?? (d.poolEntries?.[0]?.movieTitle ?? ""),
-              owned: d.ownedCharacterIds?.length ?? 0,
-              total: d.poolEntries?.length ?? 0,
-              completed: !!d.completed,
-              entries,
-            };
-          })
-      );
-    }).catch(() => {
-      if (!cancelled) setPinnedProgress([]);
-    });
-    return () => { cancelled = true; };
-  }, [user?.id, trackedWinnerIds]);
-
-  function unpinWinner(winnerId: string) {
-    const next = trackedWinnerIds.filter((id) => id !== winnerId);
-    setTrackedWinnerIds(next);
-    localStorage.setItem(TCG_TRACKED_KEY, JSON.stringify(next));
-  }
 
   const tradeUpHasResult = tradeUpResult || tradeUpResultCredits != null;
   useEffect(() => {
@@ -1647,70 +1572,6 @@ function CardsContent() {
       </div>
 
       <div className="relative z-10">
-        {/* Floating quest log — left side; hidden on small viewports to reduce clutter */}
-        <aside
-          className="fixed left-4 top-20 z-20 w-56 rounded-2xl border border-white/[0.08] bg-black/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.04)] overflow-hidden hidden md:block"
-          style={{ maxHeight: "min(28rem, calc(100vh - 6rem))" }}
-        >
-          <div className="p-3 border-b border-white/[0.06] bg-white/[0.02]">
-            <h2 className="text-xs font-semibold text-yellow-400/90 uppercase tracking-widest flex items-center gap-2">
-              <svg className="w-4 h-4 text-yellow-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-              Quest log
-            </h2>
-            <p className="text-[10px] text-white/40 mt-1">Track badge progress. Add from a winner&apos;s Collectible Cards.</p>
-          </div>
-          <div className="p-3 overflow-y-auto" style={{ maxHeight: "min(22rem, calc(100vh - 8rem))" }}>
-            {pinnedProgress.length === 0 ? (
-              <p className="text-xs text-white/30 italic py-2">No quests yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {pinnedProgress.map((p) => (
-                  <li
-                    key={p.winnerId}
-                    className="group relative rounded-lg border border-white/[0.06] bg-white/[0.04] hover:border-white/[0.12] hover:bg-white/[0.06] transition-colors overflow-hidden"
-                  >
-                    <div className="p-2.5 pr-8">
-                      <Link href={`/winners/${p.winnerId}`} className="block">
-                        <span className="text-xs font-medium text-white/90 truncate block leading-tight">{p.movieTitle || "Movie"}</span>
-                        <span className={`text-[11px] mt-0.5 block ${p.completed ? "text-amber-400" : "text-white/50"}`}>
-                          {p.completed ? "✓ Complete" : `${p.owned}/${p.total} cards`}
-                        </span>
-                      </Link>
-                      {/* Expanded on hover: collected / missing cards */}
-                      {p.entries.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-white/[0.06] max-h-0 overflow-hidden group-hover:max-h-40 group-hover:overflow-y-auto transition-[max-height] duration-200 ease-out">
-                          <ul className="space-y-1 pr-0.5">
-                            {p.entries.map((e, i) => (
-                              <li key={i} className="flex items-center gap-1.5 text-[10px]">
-                                <span className={e.owned ? "text-yellow-400/90" : "text-white/30"} aria-hidden>
-                                  {e.owned ? "✓" : "—"}
-                                </span>
-                                <span className={`truncate flex-1 ${e.owned ? "text-white/70" : "text-white/40"}`}>
-                                  {e.characterName}{e.actorName ? ` (${e.actorName})` : ""}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => unpinWinner(p.winnerId)}
-                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded flex items-center justify-center text-white/25 hover:text-white/60 hover:bg-white/10 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove from quest log"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
-
         <main className="min-w-0">
           <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">

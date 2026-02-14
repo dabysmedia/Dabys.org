@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FriendsSidebar } from "./FriendsSidebar";
+import { QuestLogSidebar } from "./QuestLogSidebar";
 
 interface User {
   id: string;
@@ -23,7 +24,12 @@ export function AppWithFriends({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
-      {user && <FriendsSidebar currentUserId={user.id} />}
+      {user && (
+        <>
+          <QuestLogSidebar currentUserId={user.id} />
+          <FriendsSidebar currentUserId={user.id} />
+        </>
+      )}
     </>
   );
 }

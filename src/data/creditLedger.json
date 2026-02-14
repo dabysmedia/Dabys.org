@@ -28,5 +28,17 @@
       "packId": "pack-1771000454277-lsrtxlr"
     },
     "createdAt": "2026-02-14T02:02:11.138Z"
+  },
+  {
+    "id": "cl-1771036656922-gmubkai",
+    "userId": "2",
+    "amount": 30,
+    "reason": "trivia",
+    "metadata": {
+      "winnerId": "2",
+      "correctCount": 3,
+      "totalCount": 5
+    },
+    "createdAt": "2026-02-14T02:37:36.921Z"
   }
 ]

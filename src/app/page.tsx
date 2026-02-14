@@ -837,46 +837,39 @@ export default function HomePage() {
 
             {/* If winner published, show top 3 pedestal instead of raw submissions grid */}
             {phase === "winner_published" && submissions.length > 0 && (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
-                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">
-                  Runners-up this Week
-                </h3>
-                <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5 items-end">
+              <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_0_40px_rgba(0,0,0,0.15)] overflow-hidden">
+                <div className="px-6 pt-5 pb-1 border-b border-white/10">
+                  <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest">
+                    Runners-up this Week
+                  </h3>
+                </div>
+                <div className="divide-y divide-white/10">
                   {topThreeSubmissions.slice(1).map((sub, idx) => {
-                    const place = idx + 2; // 2nd and 3rd place only
+                    const place = idx + 2;
                     const votes = voteTally[sub.id] || 0;
-                    const sizeClass =
-                      place === 1
-                        ? "sm:translate-y-0"
-                        : "sm:translate-y-3";
-                    const borderClass =
-                      place === 1
-                        ? "border-amber-500/40 shadow-lg shadow-amber-500/30"
-                        : "border-white/[0.06]";
-
-                    const ribbonLabel =
-                      place === 1 ? "1st" : place === 2 ? "2nd" : "3rd";
-                    const ribbonColor =
-                      place === 1
-                        ? "bg-amber-500 text-black"
-                        : place === 2
-                          ? "bg-slate-400 text-black"
-                          : "bg-amber-700/80 text-amber-100";
+                    const glassClass =
+                      place === 2
+                        ? "bg-white/[0.04] hover:bg-white/[0.06]"
+                        : "bg-amber-900/[0.06] hover:bg-amber-900/[0.1]";
+                    const badgeClass =
+                      place === 2
+                        ? "bg-slate-400/90 text-black border-white/20"
+                        : "bg-amber-700/90 text-amber-100 border-amber-500/20";
 
                     return (
                       <div
                         key={sub.id}
-                        className={`relative rounded-2xl border bg-white/[0.02] px-3 pt-4 pb-4 flex flex-col items-center ${borderClass} ${sizeClass}`}
+                        className={`flex items-center gap-4 px-6 py-4 transition-colors ${glassClass}`}
                       >
-                        {/* Ribbon */}
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                          <div className={`px-3 py-1 rounded-full text-xs font-semibold shadow-md ${ribbonColor}`}>
-                            {ribbonLabel} place
-                          </div>
+                        {/* Place badge */}
+                        <div
+                          className={`shrink-0 w-10 h-10 rounded-xl border backdrop-blur-sm flex items-center justify-center text-sm font-bold ${badgeClass}`}
+                        >
+                          {place}
                         </div>
 
                         {/* Poster */}
-                        <div className="mt-3 w-28 sm:w-28 md:w-32 rounded-xl overflow-hidden border border-white/10 shadow-lg shadow-black/40">
+                        <div className="shrink-0 w-16 h-24 rounded-lg overflow-hidden border border-white/20 bg-white/[0.04] shadow-md">
                           {sub.posterUrl ? (
                             <img
                               src={sub.posterUrl}
@@ -884,19 +877,19 @@ export default function HomePage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-40 flex items-center justify-center text-white/10 text-3xl font-bold">
+                            <div className="w-full h-full flex items-center justify-center text-white/10 text-xl font-bold">
                               {sub.movieTitle.charAt(0)}
                             </div>
                           )}
                         </div>
 
                         {/* Info */}
-                        <div className="mt-3 text-center px-1">
-                          <p className="text-sm font-semibold text-white/90 truncate max-w-[10rem]">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white/90 truncate">
                             {sub.movieTitle}
                           </p>
-                          <p className="text-[11px] text-white/40 mb-1">
-                            {sub.year && <span className="text-white/50">{sub.year} &middot; </span>}
+                          <p className="text-xs text-white/50 mt-0.5">
+                            {sub.year && <span>{sub.year} · </span>}
                             by{" "}
                             <Link
                               href={`/profile/${sub.userId}`}
@@ -905,24 +898,26 @@ export default function HomePage() {
                               {sub.userName}
                             </Link>
                           </p>
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] text-white/70">
-                            <svg
-                              className="w-3.5 h-3.5 text-amber-300"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              strokeWidth={2}
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.959a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.449a1 1 0 00-.364 1.118l1.287 3.96c.3.92-.755 1.688-1.54 1.118l-3.371-2.449a1 1 0 00-1.175 0l-3.37 2.45c-.785.569-1.84-.198-1.54-1.119l1.287-3.959a1 1 0 00-.364-1.118L2.075 9.386c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.274-3.96z"
-                              />
-                            </svg>
-                            <span className="font-semibold tabular-nums">
-                              {votes} vote{votes !== 1 ? "s" : ""}
-                            </span>
-                          </div>
+                        </div>
+
+                        {/* Votes */}
+                        <div className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.08] backdrop-blur-sm border border-white/20 text-xs text-white/80">
+                          <svg
+                            className="w-3.5 h-3.5 text-amber-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.959a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.449a1 1 0 00-.364 1.118l1.287 3.96c.3.92-.755 1.688-1.54 1.118l-3.371-2.449a1 1 0 00-1.175 0l-3.37 2.45c-.785.569-1.84-.198-1.54-1.119l1.287-3.959a1 1 0 00-.364-1.118L2.075 9.386c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69l1.274-3.96z"
+                            />
+                          </svg>
+                          <span className="font-semibold tabular-nums">
+                            {votes} vote{votes !== 1 ? "s" : ""}
+                          </span>
                         </div>
                       </div>
                     );

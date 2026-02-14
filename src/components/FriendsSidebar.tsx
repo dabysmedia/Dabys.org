@@ -37,7 +37,7 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-l-xl border border-r-0 border-white/20 bg-white/[0.08] backdrop-blur-2xl text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-l-xl border border-r-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
           aria-label="Open friends list"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -46,29 +46,21 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
         </button>
       )}
 
-      {/* Overlay when open */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-          aria-hidden
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Panel */}
+      {/* Panel — starts below header, stays open until close button */}
       <aside
-        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] border-l border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-out ${
+        className={`fixed right-0 z-50 w-72 max-w-[85vw] border-l border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
+        style={{ top: "var(--header-height)", height: "calc(100vh - var(--header-height))" }}
         aria-label="Friends list"
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-white/20">
-            <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest">Friends</h2>
+          <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+            <h2 className="text-sm font-semibold text-white/70 uppercase tracking-widest">Friends</h2>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] transition-colors cursor-pointer"
+              className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -89,7 +81,6 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
                   <li key={u.id}>
                     <Link
                       href={`/profile/${u.id}`}
-                      onClick={() => setOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors"
                     >
                       {u.avatarUrl ? (

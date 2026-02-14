@@ -201,7 +201,7 @@ export default function Header() {
 
   if (!user) {
     return (
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex flex-col justify-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
@@ -266,7 +266,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex flex-col justify-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
