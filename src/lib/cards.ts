@@ -8,7 +8,7 @@ import {
   deductCredits,
   getCredits,
   addCredits,
-  getOwnedLegendaryCharacterIds,
+  getOwnedLegendarySlotIds,
   migrateCommonToUncommon,
   getCards,
   getCardById,
@@ -307,17 +307,17 @@ function shuffleArray<T>(arr: T[]): T[] {
   return out;
 }
 
-/** Pick one card from pool with the requested rarity; cascade to lower tier if none available. */
+/** Pick one card from pool with the requested rarity; cascade to lower tier if none available. Legendaries excluded by slot (main + alt-art 1-of-1). */
 function pickCardOfRarity(
   pool: CharacterPortrayal[],
   wantedRarity: Rarity,
-  ownedLegendaryIds: Set<string>
+  ownedLegendarySlotIds: Set<string>
 ): CharacterPortrayal {
   const startIdx = CASCADE_ORDER.indexOf(wantedRarity);
   for (let i = startIdx; i < CASCADE_ORDER.length; i++) {
     const t = CASCADE_ORDER[i];
     let subset = pool.filter((c) => normRarity(c.rarity) === t);
-    if (t === "legendary") subset = subset.filter((c) => !ownedLegendaryIds.has(c.characterId));
+    if (t === "legendary") subset = subset.filter((c) => !ownedLegendarySlotIds.has(c.altArtOfCharacterId ?? c.characterId));
     if (subset.length > 0) {
       return subset[Math.floor(Math.random() * subset.length)];
     }
@@ -379,11 +379,12 @@ export function buyPack(
       const typeOk = !allowedCardTypes || allowedCardTypes.includes(type as any);
       return rarityOk && typeOk;
     });
-  const ownedLegendaryIds = getOwnedLegendaryCharacterIds();
+  const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
+  const ownedSlotsThisPack = new Set(ownedLegendarySlotIds);
 
   function availablePool(): CharacterPortrayal[] {
     return fullPool.filter(
-      (c) => c.rarity !== "legendary" || !ownedLegendaryIds.has(c.characterId)
+      (c) => c.rarity !== "legendary" || !ownedSlotsThisPack.has(c.altArtOfCharacterId ?? c.characterId)
     );
   }
 
@@ -416,7 +417,7 @@ export function buyPack(
     if (pool.length === 0) break;
 
     const wantedRarity = raritySlots[i];
-    const char = pickCardOfRarity(pool, wantedRarity, ownedLegendaryIds);
+    const char = pickCardOfRarity(pool, wantedRarity, ownedSlotsThisPack);
     const isFoil = Math.random() < FOIL_CHANCE;
     const card = addCard({
       userId,
@@ -433,7 +434,7 @@ export function buyPack(
     cards.push(card);
     pickedCharacterIds.add(char.characterId);
     if (char.rarity === "legendary") {
-      ownedLegendaryIds.add(char.characterId);
+      ownedSlotsThisPack.add(char.altArtOfCharacterId ?? char.characterId);
     }
   }
 
@@ -495,11 +496,11 @@ export function tradeUp(
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
   const CASCADE: ("rare" | "epic" | "legendary")[] =
     targetRarity === "rare" ? ["rare", "epic", "legendary"] : targetRarity === "epic" ? ["epic", "legendary"] : ["legendary"];
-  const ownedLegendaryIds = getOwnedLegendaryCharacterIds();
+  const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
   let subset: typeof pool = [];
   for (const tier of CASCADE) {
     subset = pool.filter((c) => norm(c.rarity) === tier);
-    if (tier === "legendary") subset = subset.filter((c) => !ownedLegendaryIds.has(c.characterId));
+    if (tier === "legendary") subset = subset.filter((c) => !ownedLegendarySlotIds.has(c.altArtOfCharacterId ?? c.characterId));
     if (subset.length > 0) break;
   }
   if (subset.length === 0) return { success: false, error: `No ${targetRarity}+ cards available in the character pool` };

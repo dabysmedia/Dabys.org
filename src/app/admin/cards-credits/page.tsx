@@ -92,13 +92,9 @@ const RARITY_ORDER = ["legendary", "epic", "rare", "uncommon"] as const;
 function PoolEntryCard({
   c,
   onEdit,
-  onRemove,
-  removingFromPoolId,
 }: {
   c: CharacterPortrayal;
   onEdit: () => void;
-  onRemove: () => void;
-  removingFromPoolId: string | null;
 }) {
   const card = {
     profilePath: c.profilePath ?? "",
@@ -110,24 +106,23 @@ function PoolEntryCard({
     cardType: c.cardType,
   };
   return (
-    <div className={`relative group ${c.characterId.startsWith("custom-") ? "ring-1 ring-green-500/30 rounded-xl" : ""}`}>
-      <CardDisplay card={card} compact={true} />
-      <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <button
-          onClick={onEdit}
-          className="w-5 h-5 rounded bg-purple-500/80 text-white text-xs hover:bg-purple-500 flex items-center justify-center"
-          title="Edit"
-        >
-          ✎
-        </button>
-        <button
-          onClick={onRemove}
-          disabled={removingFromPoolId === c.characterId}
-          className="w-5 h-5 rounded bg-red-500/80 text-white text-xs hover:bg-red-500 flex items-center justify-center disabled:opacity-50"
-          title="Remove from pool"
-        >
-          ×
-        </button>
+    <div className={`rounded-xl border overflow-hidden bg-white/[0.02] ${c.characterId.startsWith("custom-") ? "ring-1 ring-green-500/30" : ""} ${RARITY_COLORS[c.rarity] ?? "border-white/10"}`}>
+      <div className="relative w-full" style={{ maxWidth: 72 }}>
+        <CardDisplay card={card} compact size="xs" />
+      </div>
+      <div className="p-2">
+        <p className="text-xs font-semibold text-white/90 truncate">{c.actorName}</p>
+        <p className="text-[10px] text-white/60 truncate">{c.characterName}</p>
+        <p className="text-[10px] text-white/40 truncate mt-0.5">{c.movieTitle}</p>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="w-full min-h-[36px] px-3 py-2 rounded-lg text-xs font-medium border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 cursor-pointer touch-manipulation"
+          >
+            Edit
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -232,6 +227,8 @@ export default function AdminCardsCreditsPage() {
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
   const [resettingCodex, setResettingCodex] = useState(false);
+  const [legendaryNotInPool, setLegendaryNotInPool] = useState<Card[]>([]);
+  const [legendaryNotInPoolLoading, setLegendaryNotInPoolLoading] = useState(false);
   const [creditSettings, setCreditSettings] = useState<{
     submission: number;
     vote: number;
@@ -379,6 +376,23 @@ export default function AdminCardsCreditsPage() {
     }
   }, []);
 
+  const loadLegendaryNotInPool = useCallback(async () => {
+    setLegendaryNotInPoolLoading(true);
+    try {
+      const res = await fetch(`/api/admin/legendary-not-in-pool?t=${Date.now()}`);
+      if (res.ok) {
+        const d = await res.json();
+        setLegendaryNotInPool(Array.isArray(d.cards) ? d.cards : []);
+      } else {
+        setLegendaryNotInPool([]);
+      }
+    } catch {
+      setLegendaryNotInPool([]);
+    } finally {
+      setLegendaryNotInPoolLoading(false);
+    }
+  }, []);
+
   const loadUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/users");
@@ -445,7 +459,8 @@ export default function AdminCardsCreditsPage() {
     loadPacks();
     loadShopItems();
     loadCreditSettings();
-  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings]);
+    loadLegendaryNotInPool();
+  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadLegendaryNotInPool]);
 
   useEffect(() => {
     loadData();
@@ -1074,7 +1089,7 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
-  async function handleRemoveFromPool(characterId: string, pendingWinnerId?: string) {
+  async function handleRemoveFromPool(characterId: string, pendingWinnerId?: string, onSuccess?: () => void) {
     setRemovingFromPoolId(characterId);
     setError("");
     try {
@@ -1085,6 +1100,7 @@ export default function AdminCardsCreditsPage() {
       });
       if (res.ok) {
         await loadPool();
+        onSuccess?.();
       } else {
         const data = await res.json();
         setError(data.error || "Failed to remove from pool");
@@ -1174,6 +1190,53 @@ export default function AdminCardsCreditsPage() {
           {error}
         </div>
       )}
+
+      {/* Legendary in inventory, not in pool — at top so always visible */}
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6 mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+          <div>
+            <h3 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">
+              Legendary cards in inventory, not in pool
+            </h3>
+            <p className="text-white/40 text-sm">
+              Only legendaries whose <strong className="text-white/60">characterId</strong> is no longer in the character pool (removed from pool or pool rebuilt). If your legendaries are still in the pool, they won’t appear here.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => loadLegendaryNotInPool()}
+            disabled={legendaryNotInPoolLoading}
+            className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer"
+          >
+            {legendaryNotInPoolLoading ? "Loading…" : "Refresh"}
+          </button>
+        </div>
+        <div className="mt-3">
+          {legendaryNotInPoolLoading ? (
+            <p className="text-white/50 text-sm">Loading…</p>
+          ) : legendaryNotInPool.length === 0 ? (
+            <p className="text-white/50 text-sm">None. Every legendary in inventory has its characterId present in the pool.</p>
+          ) : (
+            <div className="flex flex-wrap gap-6">
+              {legendaryNotInPool.map((card) => (
+                <div
+                  key={card.id}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                >
+                  <CardDisplay card={card} size="md" />
+                  <span className="text-xs text-white/60">
+                    {users.find((u) => u.id === card.userId)?.name ?? card.userId}
+                    {card.isFoil && <span className="ml-1 text-amber-400/90">(Holo)</span>}
+                  </span>
+                  <span className="text-[10px] text-white/40 font-mono truncate w-full max-w-[140px] text-center" title={card.characterId}>
+                    {card.characterId}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Credit Rewards */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
@@ -1862,8 +1925,6 @@ export default function AdminCardsCreditsPage() {
                         key={c.characterId}
                         c={c}
                         onEdit={() => openEditPoolEntry(c, winnerId)}
-                        onRemove={() => handleRemoveFromPool(c.characterId, winnerId)}
-                        removingFromPoolId={removingFromPoolId}
                       />
                     ))}
                   </div>
@@ -2089,8 +2150,6 @@ export default function AdminCardsCreditsPage() {
                               key={c.characterId}
                               c={c}
                               onEdit={() => openEditPoolEntry(c)}
-                              onRemove={() => handleRemoveFromPool(c.characterId)}
-                              removingFromPoolId={removingFromPoolId}
                             />
                           ))}
                         </div>
@@ -2119,8 +2178,6 @@ export default function AdminCardsCreditsPage() {
                                 key={c.characterId}
                                 c={c}
                                 onEdit={() => openEditPoolEntry(c)}
-                                onRemove={() => handleRemoveFromPool(c.characterId)}
-                                removingFromPoolId={removingFromPoolId}
                               />
                             ))}
                           </div>
@@ -2695,21 +2752,41 @@ export default function AdminCardsCreditsPage() {
                     </p>
                   </div>
                 )}
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-col gap-2 pt-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setEditingPoolEntry(null); setEditingPendingWinnerId(null); }}
+                      disabled={savingPoolEdit}
+                      className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingPoolEdit}
+                      className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
+                    >
+                      {savingPoolEdit ? "Saving..." : "Save"}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => { setEditingPoolEntry(null); setEditingPendingWinnerId(null); }}
-                    disabled={savingPoolEdit}
-                    className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
+                    onClick={() =>
+                      editingPoolEntry &&
+                      handleRemoveFromPool(
+                        editingPoolEntry.characterId,
+                        editingPendingWinnerId ?? undefined,
+                        () => {
+                          setEditingPoolEntry(null);
+                          setEditingPendingWinnerId(null);
+                        }
+                      )
+                    }
+                    disabled={savingPoolEdit || removingFromPoolId === editingPoolEntry?.characterId}
+                    className="w-full px-4 py-2 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-40 cursor-pointer text-sm"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingPoolEdit}
-                    className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
-                  >
-                    {savingPoolEdit ? "Saving..." : "Save"}
+                    {removingFromPoolId === editingPoolEntry?.characterId ? "Removing..." : "Remove from pool"}
                   </button>
                 </div>
               </form>

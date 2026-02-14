@@ -1,3 +1,13 @@
+/** Standardized card display sizes (max-width in px). Use with CardDisplay wrapper: max-w-[CARD_MAX_WIDTH_MD] etc. */
+export const CARD_MAX_WIDTH_XS = 72;
+export const CARD_MAX_WIDTH_SM = 100;
+export const CARD_MAX_WIDTH_MD = 140;
+export const CARD_MAX_WIDTH_LG = 160;
+export const CARD_MAX_WIDTH_XL = 280;
+
+/** Aspect ratio for all cards: width / height (e.g. 2/3.35). */
+export const CARD_ASPECT_RATIO = "2 / 3.35";
+
 export const RARITY_COLORS: Record<string, string> = {
   uncommon: "border-green-500/50 bg-green-500/10",
   rare: "border-blue-500/50 bg-blue-500/10",

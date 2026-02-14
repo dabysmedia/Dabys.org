@@ -901,6 +901,31 @@ export function getOwnedLegendaryCharacterIds(): Set<string> {
   return new Set(cards.filter((c) => c.rarity === "legendary").map((c) => c.characterId));
 }
 
+/** Slot ids (base character: altArtOfCharacterId ?? characterId) for which a legendary is already owned. Used so main and alt-art legendaries are 1-of-1 per slot. */
+export function getOwnedLegendarySlotIds(): Set<string> {
+  const cards = getCardsRaw();
+  const pool = getCharacterPool();
+  const poolById = new Map(pool.map((c) => [c.characterId, c]));
+  const slots = new Set<string>();
+  for (const c of cards) {
+    if (c.rarity !== "legendary") continue;
+    const entry = poolById.get(c.characterId);
+    const slot = entry ? (entry.altArtOfCharacterId ?? entry.characterId) : c.characterId;
+    slots.add(slot);
+  }
+  return slots;
+}
+
+/** Legendary cards currently held in inventory whose characterId is not in the character pool. */
+export function getLegendaryCardsNotInPool(): Card[] {
+  const cards = getCardsRaw();
+  const poolIds = new Set(getCharacterPool().map((c) => c.characterId));
+  return cards
+    .filter((c) => c.rarity === "legendary" && !poolIds.has(c.characterId))
+    .map((c) => withDefaultCardType(c))
+    .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
+}
+
 export function getCards(userId: string): Card[] {
   return getCardsRaw()
     .filter((c) => c.userId === userId)
@@ -917,6 +942,16 @@ export function addCard(card: Omit<Card, "id" | "acquiredAt">): Card {
   };
   cards.push(newCard);
   saveCardsRaw(cards);
+
+  // Legendaries are 1-of-1: remove this character from the pool once it's in someone's inventory.
+  if (newCard.rarity === "legendary") {
+    const pool = getCharacterPoolRaw();
+    const filtered = pool.filter((c) => c.characterId !== newCard.characterId);
+    if (filtered.length < pool.length) {
+      saveCharacterPoolRaw(filtered);
+    }
+  }
+
   return newCard;
 }
 

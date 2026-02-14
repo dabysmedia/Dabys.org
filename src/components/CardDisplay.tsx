@@ -1,9 +1,30 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { RARITY_TINTS, RARITY_BADGE, RARITY_GLOW } from "@/lib/constants";
+import {
+  RARITY_TINTS,
+  RARITY_BADGE,
+  RARITY_GLOW,
+  CARD_MAX_WIDTH_XS,
+  CARD_MAX_WIDTH_SM,
+  CARD_MAX_WIDTH_MD,
+  CARD_MAX_WIDTH_LG,
+  CARD_MAX_WIDTH_XL,
+  CARD_ASPECT_RATIO,
+} from "@/lib/constants";
 
 type CardType = "actor" | "director" | "character" | "scene";
+
+export type CardDisplaySize = "xs" | "sm" | "md" | "lg" | "xl" | "full";
+
+const CARD_SIZE_MAX_WIDTH: Record<CardDisplaySize, string | null> = {
+  xs: `${CARD_MAX_WIDTH_XS}px`,
+  sm: `${CARD_MAX_WIDTH_SM}px`,
+  md: `${CARD_MAX_WIDTH_MD}px`,
+  lg: `${CARD_MAX_WIDTH_LG}px`,
+  xl: `${CARD_MAX_WIDTH_XL}px`,
+  full: null,
+};
 
 export interface CardDisplayCard {
   id?: string;
@@ -26,7 +47,17 @@ function cardLabelLines(card: CardDisplayCard): { title: string; subtitle: strin
   return { title: card.characterName, subtitle: card.actorName };
 }
 
-export function CardDisplay({ card, compact, inspect }: { card: CardDisplayCard; compact?: boolean; inspect?: boolean }) {
+export function CardDisplay({
+  card,
+  compact,
+  inspect,
+  size,
+}: {
+  card: CardDisplayCard;
+  compact?: boolean;
+  inspect?: boolean;
+  size?: CardDisplaySize;
+}) {
   const { title, subtitle } = cardLabelLines(card);
   const rarityTint = RARITY_TINTS[card.rarity] || RARITY_TINTS.uncommon;
   const rarityBadgeClass = RARITY_BADGE[card.rarity] || RARITY_BADGE.uncommon;
@@ -38,6 +69,7 @@ export function CardDisplay({ card, compact, inspect }: { card: CardDisplayCard;
   const cardRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState(false);
+  const maxWidth = size ? CARD_SIZE_MAX_WIDTH[size] : null;
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el = cardRef.current;
@@ -61,26 +93,21 @@ export function CardDisplay({ card, compact, inspect }: { card: CardDisplayCard;
     ? `0 0 0 1px rgba(255,255,255,0.08), 0 0 12px ${rarityGlow}, 0 12px 40px rgba(0,0,0,0.7)`
     : "0 0 0 1px rgba(255,255,255,0.08), 0 0 20px rgba(0,0,0,0.3)";
 
-  return (
+  const inner = (
     <div
-      className="group"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      ref={cardRef}
+      className={`card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 ${
+        card.isFoil ? "ring-2 ring-indigo-400/50" : ""
+      }`}
+      style={{
+        background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.02) 100%)",
+        transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(${tilt.x !== 0 || tilt.y !== 0 ? "-2px" : "0"})`,
+        transition: "transform 0.15s ease-out, box-shadow 0.2s ease-out",
+        boxShadow,
+      }}
     >
-      <div
-        ref={cardRef}
-        className={`card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 ${
-          card.isFoil ? "ring-2 ring-indigo-400/50" : ""
-        }`}
-        style={{
-          background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.02) 100%)",
-          transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(${tilt.x !== 0 || tilt.y !== 0 ? "-2px" : "0"})`,
-          transition: "transform 0.15s ease-out, box-shadow 0.2s ease-out",
-          boxShadow,
-        }}
-      >
-        {/* Hero-style layout: art fills entire card and bleeds under nameplate */}
-        <div className="relative overflow-hidden w-full" style={{ aspectRatio: "2 / 3.35" }}>
+      {/* Hero-style layout: art fills entire card and bleeds under nameplate */}
+      <div className="relative overflow-hidden w-full" style={{ aspectRatio: CARD_ASPECT_RATIO }}>
           {/* Full-bleed art — extends under nameplate */}
           <div className="absolute inset-0">
             <div className="absolute inset-0 card-inner-highlight pointer-events-none z-[1]" />
@@ -140,8 +167,18 @@ export function CardDisplay({ card, compact, inspect }: { card: CardDisplayCard;
               <p className={`${movieClass} text-white/50 truncate`}>{card.movieTitle}</p>
             </div>
           )}
-        </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div
+      className={`group ${maxWidth ? "w-full" : ""}`}
+      style={maxWidth ? { maxWidth } : undefined}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      {inner}
     </div>
   );
 }

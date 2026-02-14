@@ -288,18 +288,6 @@
     "cardType": "actor"
   },
   {
-    "characterId": "actor-70851-9353",
-    "tmdbPersonId": 70851,
-    "actorName": "Jack Black",
-    "characterName": "Nacho",
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "movieTmdbId": 9353,
-    "movieTitle": "Nacho Libre",
-    "popularity": 9.7776,
-    "rarity": "legendary",
-    "cardType": "actor"
-  },
-  {
     "characterId": "actor-57409-9353",
     "tmdbPersonId": 57409,
     "actorName": "Ana de la Reguera",
@@ -441,18 +429,6 @@
     "popularity": 7.5469,
     "rarity": "uncommon",
     "cardType": "actor"
-  },
-  {
-    "characterId": "custom-1770993986099-ha56a75",
-    "actorName": "Jack Black",
-    "characterName": "Suited Nacho",
-    "profilePath": "/api/uploads/1770993932519-n8cbjy.jpg",
-    "movieTmdbId": 9353,
-    "movieTitle": "Nacho Libre",
-    "popularity": 0,
-    "rarity": "legendary",
-    "cardType": "actor",
-    "altArtOfCharacterId": "actor-70851-9353"
   },
   {
     "characterId": "actor-3223-24428",
