@@ -463,6 +463,11 @@ export function tradeUp(
   const first = rarities[0];
   if (rarities.some((r) => r !== first)) return { success: false, error: "All 4 cards must be the same rarity" };
 
+  const cardTypes = selected.map((c) => (c.cardType ?? "actor") as NonNullable<typeof c.cardType>);
+  const inputCardType = cardTypes[0];
+  if (cardTypes.some((t) => t !== inputCardType))
+    return { success: false, error: "Cannot mix Boys and actor cards when trading up" };
+
   const TRADE_UP_MAP: Record<string, "rare" | "epic" | "legendary"> = {
     uncommon: "rare",
     rare: "epic",
@@ -482,7 +487,9 @@ export function tradeUp(
     return { success: true, credits: CREDITS_REWARD };
   }
 
-  const pool = getCharacterPool().filter((c) => c.profilePath?.trim());
+  const pool = getCharacterPool()
+    .filter((c) => c.profilePath?.trim())
+    .filter((c) => (c.cardType ?? "actor") === inputCardType);
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
   const CASCADE: ("rare" | "epic" | "legendary")[] =
     targetRarity === "rare" ? ["rare", "epic", "legendary"] : targetRarity === "epic" ? ["epic", "legendary"] : ["legendary"];

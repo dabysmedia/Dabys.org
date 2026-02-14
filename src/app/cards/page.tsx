@@ -445,7 +445,8 @@ function CardsContent() {
   const [revealCount, setRevealCount] = useState(0);
   const [filterRarity, setFilterRarity] = useState<string>("");
   const [filterFoil, setFilterFoil] = useState<"all" | "foil" | "normal">("all");
-  const [filterSort, setFilterSort] = useState<"recent" | "name" | "movie">("recent");
+  const [filterSort, setFilterSort] = useState<"recent" | "name" | "movie" | "type">("recent");
+  const [filterCardType, setFilterCardType] = useState<"all" | "actor" | "character">("all");
   const [showListModal, setShowListModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [listPrice, setListPrice] = useState("");
@@ -850,6 +851,7 @@ function CardsContent() {
     tradeUpCardIds.length === 4 &&
     tradeUpCards.length === 4 &&
     tradeUpCards.every((c) => c.rarity === tradeUpCards[0]?.rarity) &&
+    tradeUpCards.every((c) => (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")) &&
     TRADE_UP_NEXT[tradeUpCards[0]?.rarity || ""];
 
   async function handleTradeUp() {
@@ -2419,6 +2421,15 @@ function CardsContent() {
               <h2 className="text-lg font-semibold text-white/90">Your inventory ({cards.length})</h2>
               <div className="flex items-center gap-3">
                 <select
+                  value={filterCardType}
+                  onChange={(e) => setFilterCardType(e.target.value as "all" | "actor" | "character")}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
+                >
+                  <option value="all">All types</option>
+                  <option value="actor">Actor</option>
+                  <option value="character">Boys</option>
+                </select>
+                <select
                   value={filterRarity}
                   onChange={(e) => setFilterRarity(e.target.value)}
                   className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
@@ -2440,12 +2451,13 @@ function CardsContent() {
                 </select>
                 <select
                   value={filterSort}
-                  onChange={(e) => setFilterSort(e.target.value as "recent" | "name" | "movie")}
+                  onChange={(e) => setFilterSort(e.target.value as "recent" | "name" | "movie" | "type")}
                   className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
                 >
                   <option value="recent">Most recent</option>
                   <option value="name">Name</option>
                   <option value="movie">Movie</option>
+                  <option value="type">Type</option>
                 </select>
               </div>
             </div>
@@ -2454,29 +2466,43 @@ function CardsContent() {
                 <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
               </div>
             ) : (() => {
+              const cardTypeKey = (c: Card) => (c.cardType ?? "actor") as string;
               const filtered = cards
+                .filter((c) => filterCardType === "all" || (filterCardType === "actor" && cardTypeKey(c) !== "character") || (filterCardType === "character" && cardTypeKey(c) === "character"))
                 .filter((c) => !filterRarity || c.rarity === filterRarity)
                 .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
                 .sort((a, b) => {
-                  if (filterSort === "recent") {
-                    const at = new Date(a.acquiredAt ?? 0).getTime();
-                    const bt = new Date(b.acquiredAt ?? 0).getTime();
-                    return bt - at;
+                  const typeOrder = (t: string) => (t === "character" ? 1 : 0);
+                  const secondary = () => {
+                    if (filterSort === "recent" || filterSort === "type") {
+                      const at = new Date(a.acquiredAt ?? 0).getTime();
+                      const bt = new Date(b.acquiredAt ?? 0).getTime();
+                      return bt - at;
+                    }
+                    if (filterSort === "name") {
+                      return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                    }
+                    if (filterSort === "movie") {
+                      const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
+                      return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+                    }
+                    return 0;
+                  };
+                  if (filterSort === "type") {
+                    const ta = typeOrder(cardTypeKey(a));
+                    const tb = typeOrder(cardTypeKey(b));
+                    return ta !== tb ? ta - tb : secondary();
                   }
-                  if (filterSort === "name") {
-                    return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                  }
-                  if (filterSort === "movie") {
-                    const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
-                    return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                  }
+                  if (filterSort === "recent") return secondary();
+                  if (filterSort === "name") return secondary();
+                  if (filterSort === "movie") return secondary();
                   return 0;
                 });
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
                 const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
-                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
+                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
                 const canAddAlchemy = inventorySubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
                 const canAddQuicksell = inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
                 const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && inventorySubTab === "tradeup";
@@ -2539,6 +2565,27 @@ function CardsContent() {
                 );
               };
               const gridClasses = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
+              if (filterSort === "type") {
+                const byType = filtered.reduce((acc, c) => {
+                  const t = cardTypeKey(c) === "character" ? "Boys" : "Actor";
+                  if (!acc[t]) acc[t] = [];
+                  acc[t].push(c);
+                  return acc;
+                }, {} as Record<string, Card[]>);
+                const typeOrder = ["Actor", "Boys"];
+                return (
+                  <div className="flex flex-col gap-8">
+                    {typeOrder.filter((t) => byType[t]?.length).map((typeLabel) => (
+                      <div key={typeLabel}>
+                        <h3 className="text-sm font-medium text-white/70 mb-3">{typeLabel} ({byType[typeLabel].length})</h3>
+                        <div className={gridClasses}>
+                          {byType[typeLabel].map(renderCard)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
               if (filterSort === "movie") {
                 const byMovie = filtered.reduce((acc, c) => {
                   const m = c.movieTitle || "Unknown";
