@@ -1042,6 +1042,13 @@ export function addCodexUnlock(userId: string, characterId: string): void {
   saveCodexUnlocksRaw(data);
 }
 
+export function removeCodexUnlock(userId: string, characterId: string): void {
+  const data = getCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
+  saveCodexUnlocksRaw(data);
+}
+
 /** Clear all codex unlocks for all users (admin). */
 export function resetCodexUnlocks(): void {
   saveCodexUnlocksRaw({});
@@ -1072,6 +1079,13 @@ export function addCodexUnlockHolo(userId: string, characterId: string): void {
   const list = Array.isArray(data[userId]) ? data[userId] : [];
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
+  saveHoloCodexUnlocksRaw(data);
+}
+
+export function removeCodexUnlockHolo(userId: string, characterId: string): void {
+  const data = getHoloCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
   saveHoloCodexUnlocksRaw(data);
 }
 
@@ -1108,6 +1122,13 @@ export function addCodexUnlockAltArt(userId: string, characterId: string): void 
   saveAltArtCodexUnlocksRaw(data);
 }
 
+export function removeCodexUnlockAltArt(userId: string, characterId: string): void {
+  const data = getAltArtCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
+  saveAltArtCodexUnlocksRaw(data);
+}
+
 export function resetAltArtCodexUnlocks(): void {
   saveAltArtCodexUnlocksRaw({});
 }
@@ -1137,6 +1158,13 @@ export function addCodexUnlockBoys(userId: string, characterId: string): void {
   const list = Array.isArray(data[userId]) ? data[userId] : [];
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
+  saveBoysCodexUnlocksRaw(data);
+}
+
+export function removeCodexUnlockBoys(userId: string, characterId: string): void {
+  const data = getBoysCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
   saveBoysCodexUnlocksRaw(data);
 }
 

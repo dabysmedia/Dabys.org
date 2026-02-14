@@ -222,6 +222,21 @@ export default function AdminCardsCreditsPage() {
   const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string; tmdbId?: number }[]>([]);
   const [reopeningWinnerId, setReopeningWinnerId] = useState<string | null>(null);
   const [reopeningAll, setReopeningAll] = useState(false);
+  const [userCodex, setUserCodex] = useState<{
+    characterIds: string[];
+    holoCharacterIds: string[];
+    altArtCharacterIds: string[];
+    boysCharacterIds: string[];
+  } | null>(null);
+  const [codexBusy, setCodexBusy] = useState<Record<string, boolean>>({});
+  const [openUserSection, setOpenUserSection] = useState<Record<string, boolean>>({
+    credits: false,
+    stardust: false,
+    shop: false,
+    trivia: false,
+    collection: false,
+    codex: false,
+  });
   const [wipeConfirmUser, setWipeConfirmUser] = useState("");
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
   const [wipingUser, setWipingUser] = useState(false);
@@ -406,17 +421,22 @@ export default function AdminCardsCreditsPage() {
   }, [selectedUserId]);
 
   const loadData = useCallback(async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) {
+      setUserCodex(null);
+      return;
+    }
     setLoading(true);
     setError("");
+    setUserCodex(null);
     try {
-      const [creditsRes, stardustRes, cardsRes, poolRes, attemptsRes, winnersRes] = await Promise.all([
+      const [creditsRes, stardustRes, cardsRes, poolRes, attemptsRes, winnersRes, codexRes] = await Promise.all([
         fetch(`/api/credits?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/admin/cards?userId=${encodeURIComponent(selectedUserId)}`),
         fetch("/api/admin/character-pool"),
         fetch(`/api/trivia/attempts?userId=${encodeURIComponent(selectedUserId)}`),
         fetch("/api/winners"),
+        fetch(`/api/cards/codex?userId=${encodeURIComponent(selectedUserId)}`),
       ]);
 
       if (creditsRes.ok) {
@@ -446,6 +466,17 @@ export default function AdminCardsCreditsPage() {
         const w = await winnersRes.json();
         setWinners(w || []);
       } else setWinners([]);
+      if (codexRes.ok) {
+        const c = await codexRes.json();
+        setUserCodex({
+          characterIds: c.characterIds ?? [],
+          holoCharacterIds: c.holoCharacterIds ?? [],
+          altArtCharacterIds: c.altArtCharacterIds ?? [],
+          boysCharacterIds: c.boysCharacterIds ?? [],
+        });
+      } else {
+        setUserCodex({ characterIds: [], holoCharacterIds: [], altArtCharacterIds: [], boysCharacterIds: [] });
+      }
     } catch {
       setError("Failed to load data");
     } finally {
@@ -2214,266 +2245,425 @@ export default function AdminCardsCreditsPage() {
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
       ) : selectedUserId && selectedUser ? (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-6">
-            User: {selectedUser.name}
-          </h2>
-
-          {/* Credits */}
-          <section className="mb-8">
-            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Credits</h3>
-            <p className="text-white/40 text-sm mb-4">
-              Current balance: <span className="text-amber-400 font-bold">{creditBalance}</span>
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden mb-8">
+          <div className="p-4 border-b border-white/[0.06]">
+            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
+              User: {selectedUser.name}
+            </h2>
+            <p className="text-white/40 text-xs mt-1">
+              Credits {creditBalance} · Stardust {stardustBalance} · {cards.length} cards
+              {userCodex && (
+                <> · Codex: {userCodex.characterIds.length} / {userCodex.holoCharacterIds.length} / {userCodex.altArtCharacterIds.length} / {userCodex.boysCharacterIds.length}</>
+              )}
             </p>
-            <form onSubmit={handleSetCredits} className="flex gap-3 flex-wrap items-end">
-              <div>
-                <label className="block text-xs text-white/40 mb-1">Set balance to</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={creditInput}
-                  onChange={(e) => setCreditInput(e.target.value)}
-                  className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 w-32"
-                  placeholder="0"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={savingCredits}
-                className="px-5 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
-              >
-                {savingCredits ? "Saving..." : "Save Credits"}
-              </button>
-            </form>
-          </section>
+          </div>
 
-          {/* Stardust */}
-          <section className="mb-8">
-            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Stardust</h3>
-            <p className="text-white/40 text-sm mb-4">
-              Current balance: <span className="text-amber-200 font-bold">{stardustBalance}</span>
-            </p>
-            <form onSubmit={handleSetStardust} className="flex gap-3 flex-wrap items-end">
-              <div>
-                <label className="block text-xs text-white/40 mb-1">Set balance to</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={stardustInput}
-                  onChange={(e) => setStardustInput(e.target.value)}
-                  className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40 w-32"
-                  placeholder="0"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={savingStardust}
-                className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
-              >
-                {savingStardust ? "Saving..." : "Save Stardust"}
-              </button>
-            </form>
-            <p className="text-white/30 text-xs mt-2">Saves to /data (stardust.json).</p>
-          </section>
-
-          {/* Restock pack purchases (today) */}
-          <section className="mb-8">
-            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Shop</h3>
-            <p className="text-white/40 text-sm mb-3">
-              Reset this user&apos;s daily pack purchase count so they can buy packs again today.
-            </p>
+          {/* Collapsible: Credits */}
+          <section className="border-b border-white/[0.06]">
             <button
               type="button"
-              onClick={async () => {
-                if (!selectedUserId || restockingPack) return;
-                setRestockingPack(true);
-                try {
-                  const res = await fetch("/api/admin/restock-pack-purchases", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: selectedUserId }),
-                  });
-                  const data = await res.json().catch(() => ({}));
-                  if (res.ok) {
-                    alert(data.removed > 0 ? `Restocked: ${data.removed} purchase(s) cleared for today.` : "No pack purchases today for this user.");
-                  } else {
-                    alert(data.error || "Failed to restock");
-                  }
-                } finally {
-                  setRestockingPack(false);
-                }
-              }}
-              disabled={restockingPack}
-              className="px-5 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer"
+              onClick={() => setOpenUserSection((s) => ({ ...s, credits: !s.credits }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
             >
-              {restockingPack ? "Restocking..." : "Restock pack purchases (today)"}
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Credits</span>
+              <span className="text-amber-400 font-medium tabular-nums">{creditBalance}</span>
+              <span className="text-white/30 text-sm">{openUserSection.credits ? "▼" : "▶"}</span>
             </button>
+            {openUserSection.credits && (
+              <div className="px-4 pb-4 pt-0">
+                <form onSubmit={handleSetCredits} className="flex gap-3 flex-wrap items-end">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Set balance to</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={creditInput}
+                      onChange={(e) => setCreditInput(e.target.value)}
+                      className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 w-32"
+                      placeholder="0"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={savingCredits}
+                    className="px-5 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
+                  >
+                    {savingCredits ? "Saving..." : "Save Credits"}
+                  </button>
+                </form>
+              </div>
+            )}
           </section>
 
-          {/* Trivia */}
-          <section className="mb-8">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
-              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider">
-                Trivia (completed)
-              </h3>
-              <button
-                onClick={handleReopenAllTrivia}
-                disabled={reopeningAll}
-                className="px-3 py-1.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-500/80 disabled:opacity-40 cursor-pointer"
-                title="Reopen all trivia for all users"
-              >
-                {reopeningAll ? "Reopening All..." : "Reopen All (all users)"}
-              </button>
-            </div>
-            <p className="text-white/40 text-sm mb-4">
-              Reopen trivia for this user so they can play again.
-            </p>
-            {triviaAttempts.length === 0 ? (
-              <p className="text-white/40 text-sm">No completed trivia for this user.</p>
-            ) : (
-              <div className="space-y-2">
-                {Array.from(new Map(triviaAttempts.map((a) => [a.winnerId, a])).values()).map((a) => {
-                  const winner = winners.find((w) => w.id === a.winnerId);
-                  const title = winner?.movieTitle ?? `Winner #${a.winnerId}`;
-                  const isReopening = reopeningWinnerId === a.winnerId;
-                  return (
-                    <div
-                      key={a.winnerId}
-                      className="flex items-center justify-between gap-4 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]"
+          {/* Collapsible: Stardust */}
+          <section className="border-b border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setOpenUserSection((s) => ({ ...s, stardust: !s.stardust }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Stardust</span>
+              <span className="text-amber-200 font-medium tabular-nums">{stardustBalance}</span>
+              <span className="text-white/30 text-sm">{openUserSection.stardust ? "▼" : "▶"}</span>
+            </button>
+            {openUserSection.stardust && (
+              <div className="px-4 pb-4 pt-0">
+                <form onSubmit={handleSetStardust} className="flex gap-3 flex-wrap items-end">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Set balance to</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={stardustInput}
+                      onChange={(e) => setStardustInput(e.target.value)}
+                      className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40 w-32"
+                      placeholder="0"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={savingStardust}
+                    className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
+                  >
+                    {savingStardust ? "Saving..." : "Save Stardust"}
+                  </button>
+                </form>
+                <p className="text-white/30 text-xs mt-2">Saves to /data (stardust.json).</p>
+              </div>
+            )}
+          </section>
+
+          {/* Collapsible: Shop */}
+          <section className="border-b border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setOpenUserSection((s) => ({ ...s, shop: !s.shop }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Shop</span>
+              <span className="text-white/40 text-sm">Restock pack purchases</span>
+              <span className="text-white/30 text-sm">{openUserSection.shop ? "▼" : "▶"}</span>
+            </button>
+            {openUserSection.shop && (
+              <div className="px-4 pb-4 pt-0">
+                <p className="text-white/40 text-sm mb-3">
+                  Reset this user&apos;s daily pack purchase count so they can buy packs again today.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!selectedUserId || restockingPack) return;
+                    setRestockingPack(true);
+                    try {
+                      const res = await fetch("/api/admin/restock-pack-purchases", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: selectedUserId }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok) {
+                        alert(data.removed > 0 ? `Restocked: ${data.removed} purchase(s) cleared for today.` : "No pack purchases today for this user.");
+                      } else {
+                        alert(data.error || "Failed to restock");
+                      }
+                    } finally {
+                      setRestockingPack(false);
+                    }
+                  }}
+                  disabled={restockingPack}
+                  className="px-5 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer"
+                >
+                  {restockingPack ? "Restocking..." : "Restock pack purchases (today)"}
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Collapsible: Trivia */}
+          <section className="border-b border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setOpenUserSection((s) => ({ ...s, trivia: !s.trivia }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Trivia</span>
+              <span className="text-white/40 text-sm">{triviaAttempts.length} completed</span>
+              <span className="text-white/30 text-sm">{openUserSection.trivia ? "▼" : "▶"}</span>
+            </button>
+            {openUserSection.trivia && (
+              <div className="px-4 pb-4 pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+                  <button
+                    onClick={handleReopenAllTrivia}
+                    disabled={reopeningAll}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-500/80 disabled:opacity-40 cursor-pointer"
+                    title="Reopen all trivia for all users"
+                  >
+                    {reopeningAll ? "Reopening All..." : "Reopen All (all users)"}
+                  </button>
+                </div>
+                <p className="text-white/40 text-sm mb-4">Reopen trivia for this user so they can play again.</p>
+                {triviaAttempts.length === 0 ? (
+                  <p className="text-white/40 text-sm">No completed trivia for this user.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {Array.from(new Map(triviaAttempts.map((a) => [a.winnerId, a])).values()).map((a) => {
+                      const winner = winners.find((w) => w.id === a.winnerId);
+                      const title = winner?.movieTitle ?? `Winner #${a.winnerId}`;
+                      const isReopening = reopeningWinnerId === a.winnerId;
+                      return (
+                        <div
+                          key={a.winnerId}
+                          className="flex items-center justify-between gap-4 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]"
+                        >
+                          <span className="text-white/90 truncate">{title}</span>
+                          <span className="text-white/40 text-sm shrink-0">
+                            {a.correctCount}/{a.totalCount} · {a.creditsEarned} credits
+                          </span>
+                          <button
+                            onClick={() => handleReopenTrivia(a.winnerId)}
+                            disabled={isReopening}
+                            className="px-3 py-1.5 rounded-lg bg-amber-600/80 text-white text-sm font-medium hover:bg-amber-500/80 disabled:opacity-40 cursor-pointer shrink-0"
+                          >
+                            {isReopening ? "Reopening..." : "Reopen"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Collapsible: Collection */}
+          <section className="border-b border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setOpenUserSection((s) => ({ ...s, collection: !s.collection }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Collection</span>
+              <span className="text-white/40 text-sm">{cards.length} cards</span>
+              <span className="text-white/30 text-sm">{openUserSection.collection ? "▼" : "▶"}</span>
+            </button>
+            {openUserSection.collection && (
+              <div className="px-4 pb-4 pt-0">
+                <form onSubmit={handleAddCard} className="flex flex-wrap gap-3 items-end mb-6">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-xs text-white/40 mb-1">Add card from pool</label>
+                    <select
+                      value={addCharacterId}
+                      onChange={(e) => setAddCharacterId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-purple-500/50 cursor-pointer [color-scheme:dark] [&_option]:bg-[#1a1a24] [&_option]:text-white"
                     >
-                      <span className="text-white/90 truncate">{title}</span>
-                      <span className="text-white/40 text-sm shrink-0">
-                        {a.correctCount}/{a.totalCount} · {a.creditsEarned} credits
-                      </span>
-                      <button
-                        onClick={() => handleReopenTrivia(a.winnerId)}
-                        disabled={isReopening}
-                        className="px-3 py-1.5 rounded-lg bg-amber-600/80 text-white text-sm font-medium hover:bg-amber-500/80 disabled:opacity-40 cursor-pointer shrink-0"
+                      <option value="">-- Select character --</option>
+                      {pool.filter((c) => c.profilePath?.trim()).map((c) => (
+                        <option key={c.characterId} value={c.characterId}>
+                          {poolOptionLabel(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={addHolo}
+                      onChange={(e) => setAddHolo(e.target.checked)}
+                      className="rounded border-white/30 bg-white/5"
+                    />
+                    <span className="text-sm text-white/60">Holo</span>
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={!addCharacterId || addingCard}
+                    className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
+                  >
+                    {addingCard ? "Adding..." : "Add Card"}
+                  </button>
+                </form>
+                {cards.length === 0 ? (
+                  <p className="text-white/30 text-sm">No cards in collection.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {cards.map((card) => (
+                      <div
+                        key={card.id}
+                        className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}
                       >
-                        {isReopening ? "Reopening..." : "Reopen"}
-                      </button>
+                        <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
+                          {card.profilePath ? (
+                            <img
+                              src={card.profilePath}
+                              alt={card.actorName}
+                              className={`w-full h-full object-cover ${card.isFoil ? "holo-sheen" : ""}`}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
+                              {card.actorName.charAt(0)}
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+                          {card.isFoil && (
+                            <span
+                              className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
+                              style={{
+                                background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                                boxShadow: "0 0 8px rgba(255,255,255,0.5)",
+                              }}
+                            >
+                              HOLO
+                            </span>
+                          )}
+                          {(() => {
+                            const entry = pool.find((p) => p.characterId === card.characterId);
+                            const altOfId = entry?.altArtOfCharacterId;
+                            const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null;
+                            return altOfId ? (
+                              <span
+                                className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90"
+                                title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}
+                              >
+                                Alt
+                              </span>
+                            ) : null;
+                          })()}
+                          <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
+                            {card.rarity}
+                          </span>
+                        </div>
+                        <div className="p-2">
+                          {(() => {
+                            const { title, subtitle } = cardLabelLines(card);
+                            return (
+                              <>
+                                <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
+                                <p className="text-xs text-white/60 truncate">{subtitle}</p>
+                                <p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p>
+                              </>
+                            );
+                          })()}
+                          <div className="mt-3">
+                            <button
+                              onClick={() => openEditCard(card)}
+                              className="w-full min-h-[44px] px-4 py-3 rounded-lg text-sm font-medium border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 cursor-pointer touch-manipulation"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Collapsible: Codex */}
+          <section>
+            <button
+              type="button"
+              onClick={() => setOpenUserSection((s) => ({ ...s, codex: !s.codex }))}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Codex</span>
+              {userCodex ? (
+                <span className="text-white/40 text-sm">
+                  Regular: {userCodex.characterIds.length} · Holo: {userCodex.holoCharacterIds.length} · Alt: {userCodex.altArtCharacterIds.length} · Boys: {userCodex.boysCharacterIds.length}
+                </span>
+              ) : (
+                <span className="text-white/30 text-sm">—</span>
+              )}
+              <span className="text-white/30 text-sm">{openUserSection.codex ? "▼" : "▶"}</span>
+            </button>
+            {openUserSection.codex && userCodex && selectedUserId && (
+              <div className="px-4 pb-4 pt-0 space-y-4">
+                {(["regular", "holo", "altart", "boys"] as const).map((variant) => {
+                  const key = variant === "regular" ? "characterIds" : variant === "holo" ? "holoCharacterIds" : variant === "altart" ? "altArtCharacterIds" : "boysCharacterIds";
+                  const ids = userCodex[key];
+                  const label = variant === "regular" ? "Regular" : variant === "holo" ? "Holo" : variant === "altart" ? "Alt-art" : "Boys";
+                  const poolForVariant = variant === "boys" ? pool.filter((c) => (c.cardType ?? "actor") === "character") : pool.filter((c) => c.profilePath?.trim());
+                  return (
+                    <div key={variant} className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
+                      <h4 className="text-xs font-semibold text-white/60 mb-2">{label}</h4>
+                      <div className="flex flex-wrap gap-2 items-end mb-2">
+                        <select
+                          id={`codex-add-${variant}`}
+                          className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                          onChange={async (e) => {
+                            const characterId = e.target.value;
+                            if (!characterId) return;
+                            e.target.value = "";
+                            const busyKey = `${variant}-add-${characterId}`;
+                            setCodexBusy((b) => ({ ...b, [busyKey]: true }));
+                            try {
+                              const res = await fetch("/api/admin/user-codex", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "add" }),
+                              });
+                              if (res.ok) {
+                                setUserCodex((prev) => prev ? { ...prev, [key]: [...prev[key], characterId] } : null);
+                              }
+                            } finally {
+                              setCodexBusy((b) => ({ ...b, [busyKey]: false }));
+                            }
+                          }}
+                        >
+                          <option value="">Add {label}…</option>
+                          {poolForVariant.filter((c) => !ids.includes(c.characterId)).map((c) => (
+                            <option key={c.characterId} value={c.characterId}>
+                              {poolOptionLabel(c)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <ul className="space-y-1 max-h-40 overflow-y-auto">
+                        {ids.length === 0 ? (
+                          <li className="text-white/30 text-sm">None</li>
+                        ) : (
+                          ids.map((characterId) => {
+                            const entry = pool.find((p) => p.characterId === characterId);
+                            const name = entry ? poolOptionLabel(entry) : characterId;
+                            const busyKey = `${variant}-remove-${characterId}`;
+                            return (
+                              <li key={characterId} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded bg-white/[0.04]">
+                                <span className="text-white/80 text-sm truncate">{name}</span>
+                                <button
+                                  type="button"
+                                  disabled={codexBusy[busyKey]}
+                                  onClick={async () => {
+                                    setCodexBusy((b) => ({ ...b, [busyKey]: true }));
+                                    try {
+                                      const res = await fetch("/api/admin/user-codex", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }),
+                                      });
+                                      if (res.ok) {
+                                        setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId) } : null);
+                                      }
+                                    } finally {
+                                      setCodexBusy((b) => ({ ...b, [busyKey]: false }));
+                                    }
+                                  }}
+                                  className="shrink-0 px-2 py-1 rounded text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 cursor-pointer"
+                                >
+                                  {codexBusy[busyKey] ? "…" : "Remove"}
+                                </button>
+                              </li>
+                            );
+                          })
+                        )}
+                      </ul>
                     </div>
                   );
                 })}
               </div>
             )}
-          </section>
-
-          {/* Cards / Collection */}
-          <section>
-            <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">
-              Collection ({cards.length} cards)
-            </h3>
-
-            {/* Add card */}
-            <form onSubmit={handleAddCard} className="flex flex-wrap gap-3 items-end mb-6">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs text-white/40 mb-1">Add card from pool</label>
-                <select
-                  value={addCharacterId}
-                  onChange={(e) => setAddCharacterId(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-purple-500/50 cursor-pointer [color-scheme:dark] [&_option]:bg-[#1a1a24] [&_option]:text-white"
-                >
-                  <option value="">-- Select character --</option>
-                  {pool.filter((c) => c.profilePath?.trim()).map((c) => (
-                    <option key={c.characterId} value={c.characterId}>
-                      {poolOptionLabel(c)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={addHolo}
-                  onChange={(e) => setAddHolo(e.target.checked)}
-                  className="rounded border-white/30 bg-white/5"
-                />
-                <span className="text-sm text-white/60">Holo</span>
-              </label>
-              <button
-                type="submit"
-                disabled={!addCharacterId || addingCard}
-                className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
-              >
-                {addingCard ? "Adding..." : "Add Card"}
-              </button>
-            </form>
-
-            {/* Cards grid */}
-            {cards.length === 0 ? (
-              <p className="text-white/30 text-sm">No cards in collection.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {cards.map((card) => (
-                  <div
-                    key={card.id}
-                    className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}
-                  >
-                    <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
-                      {card.profilePath ? (
-                        <img
-                          src={card.profilePath}
-                          alt={card.actorName}
-                          className={`w-full h-full object-cover ${card.isFoil ? "holo-sheen" : ""}`}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">
-                          {card.actorName.charAt(0)}
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-                      {card.isFoil && (
-                        <span
-                          className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white"
-                          style={{
-                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
-                            boxShadow: "0 0 8px rgba(255,255,255,0.5)",
-                          }}
-                        >
-                          HOLO
-                        </span>
-                      )}
-                      {(() => {
-                        const entry = pool.find((p) => p.characterId === card.characterId);
-                        const altOfId = entry?.altArtOfCharacterId;
-                        const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null;
-                        return altOfId ? (
-                          <span
-                            className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90"
-                            title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}
-                          >
-                            Alt
-                          </span>
-                        ) : null;
-                      })()}
-                      <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">
-                        {card.rarity}
-                      </span>
-                    </div>
-                    <div className="p-2">
-                      {(() => {
-                        const { title, subtitle } = cardLabelLines(card);
-                        return (
-                          <>
-                            <p className="text-sm font-semibold text-white/90 truncate">{title}</p>
-                            <p className="text-xs text-white/60 truncate">{subtitle}</p>
-                            <p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p>
-                          </>
-                        );
-                      })()}
-                      <div className="mt-3">
-                        <button
-                          onClick={() => openEditCard(card)}
-                          className="w-full min-h-[44px] px-4 py-3 rounded-lg text-sm font-medium border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 cursor-pointer touch-manipulation"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {openUserSection.codex && !userCodex && (
+              <div className="px-4 pb-4 pt-0 text-white/40 text-sm">Loading codex…</div>
             )}
           </section>
         </div>
