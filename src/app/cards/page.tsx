@@ -47,6 +47,26 @@ interface Listing {
   sellerDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
+type MarketplaceSubTab = "listings" | "orders";
+
+interface BuyOrderEnriched {
+  id: string;
+  requesterUserId: string;
+  requesterName: string;
+  characterId: string;
+  offerPrice: number;
+  createdAt: string;
+  poolEntry: {
+    characterId: string;
+    actorName: string;
+    characterName: string;
+    movieTitle: string;
+    profilePath: string;
+    rarity: string;
+  } | null;
+  requesterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+}
+
 const PACK_PRICE = 50;
 
 function getTimeUntilMidnightUTC(): string {
@@ -430,6 +450,14 @@ function CardsContent() {
   const [listing, setListing] = useState(false);
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [delistingId, setDelistingId] = useState<string | null>(null);
+  const [marketplaceSubTab, setMarketplaceSubTab] = useState<MarketplaceSubTab>("listings");
+  const [buyOrders, setBuyOrders] = useState<BuyOrderEnriched[]>([]);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedOrderCharacter, setSelectedOrderCharacter] = useState<PoolEntry | null>(null);
+  const [orderOfferPrice, setOrderOfferPrice] = useState("");
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [fulfillingOrderId, setFulfillingOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [triviaCompletedIds, setTriviaCompletedIds] = useState<Set<string>>(new Set());
   const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null]);
@@ -569,11 +597,12 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
       fetch("/api/marketplace"),
+      fetch("/api/marketplace/orders"),
       fetch("/api/winners"),
       fetch(`/api/trivia/attempts?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
@@ -597,6 +626,7 @@ function CardsContent() {
       setPoolEntries(poolData?.pool ?? []);
     }
     if (listingsRes.ok) setListings(await listingsRes.json());
+    if (ordersRes.ok) setBuyOrders(await ordersRes.json());
     if (winnersRes.ok) {
       const w: Winner[] = await winnersRes.json();
       setWinners(w.filter((x) => x.tmdbId));
@@ -1316,6 +1346,82 @@ function CardsContent() {
       alert("Failed to delist");
     } finally {
       setDelistingId(null);
+    }
+  }
+
+  async function handleCreateOrder() {
+    if (!user || !selectedOrderCharacter) return;
+    const price = orderOfferPrice.trim() === "" ? 0 : parseInt(orderOfferPrice, 10);
+    if (orderOfferPrice.trim() !== "" && (isNaN(price) || price < 0)) {
+      alert("Enter a valid offer price (0 or more)");
+      return;
+    }
+    setCreatingOrder(true);
+    try {
+      const res = await fetch("/api/marketplace/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          characterId: selectedOrderCharacter.characterId,
+          offerPrice: price,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowOrderModal(false);
+        setSelectedOrderCharacter(null);
+        setOrderOfferPrice("");
+        await loadData();
+      } else {
+        alert(data.error || "Failed to create order");
+      }
+    } catch {
+      alert("Failed to create order");
+    } finally {
+      setCreatingOrder(false);
+    }
+  }
+
+  async function handleFulfillOrder(orderId: string, cardId: string) {
+    if (!user) return;
+    setFulfillingOrderId(orderId);
+    try {
+      const res = await fetch(`/api/marketplace/orders/${orderId}/fulfill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await loadData();
+        playTradeAcceptSound();
+      } else {
+        alert(data.error || "Failed to fulfill order");
+      }
+    } catch {
+      alert("Failed to fulfill order");
+    } finally {
+      setFulfillingOrderId(null);
+    }
+  }
+
+  async function handleCancelOrder(orderId: string) {
+    if (!user) return;
+    setCancellingOrderId(orderId);
+    try {
+      const res = await fetch(`/api/marketplace/orders/${orderId}?userId=${encodeURIComponent(user.id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) await loadData();
+      else {
+        const data = await res.json();
+        alert(data.error || "Failed to cancel order");
+      }
+    } catch {
+      alert("Failed to cancel order");
+    } finally {
+      setCancellingOrderId(null);
     }
   }
 
@@ -2427,24 +2533,62 @@ function CardsContent() {
         {/* Marketplace */}
         {tab === "marketplace" && (
           <>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <p className="text-white/50 text-sm">Buy and sell character cards with other collectors.</p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <p className="text-white/50 text-sm">
+                {marketplaceSubTab === "listings" ? "Buy and sell character cards with other collectors." : "Request cards you want. Users who have them can trade to you in one click."}
+              </p>
+              {marketplaceSubTab === "listings" ? (
+                <button
+                  onClick={() => setShowListModal(true)}
+                  className="px-4 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-500/20 backdrop-blur-md text-cyan-300 font-medium hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                >
+                  List a Card
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setSelectedOrderCharacter(null); setOrderOfferPrice(""); setShowOrderModal(true); }}
+                  className="px-4 py-2.5 rounded-xl border border-emerald-500/50 bg-emerald-500/20 backdrop-blur-md text-emerald-300 font-medium hover:border-emerald-400 hover:bg-emerald-500/30 transition-colors cursor-pointer"
+                >
+                  Request a Card
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5 mb-0">
               <button
-                onClick={() => setShowListModal(true)}
-                className="px-4 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-500/20 backdrop-blur-md text-cyan-300 font-medium hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => setMarketplaceSubTab("listings")}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  marketplaceSubTab === "listings"
+                    ? "bg-white/[0.08] text-white border-b border-transparent"
+                    : "text-white/50 hover:text-white/70"
+                }`}
               >
-                List a Card
+                Listings
+              </button>
+              <button
+                type="button"
+                onClick={() => setMarketplaceSubTab("orders")}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  marketplaceSubTab === "orders"
+                    ? "bg-white/[0.08] text-white border-b border-transparent"
+                    : "text-white/50 hover:text-white/70"
+                }`}
+              >
+                Orders
               </button>
             </div>
 
+            {marketplaceSubTab === "listings" && (
+              <>
             {listings.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+              <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
                 <p className="text-white/40 text-sm">No cards for sale yet. List your first card!</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {listings.map((listing) => (
-                  <div key={listing.id} className="flex flex-col rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
+                  <div key={listing.id} className="flex flex-col rounded-b-2xl rounded-t-none border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
                     <CardDisplay card={listing.card} />
                     <div className="border-t border-white/10 bg-white/[0.02] p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -2557,6 +2701,179 @@ function CardsContent() {
                     )}
                   </div>
                 </div>
+              </>
+            )}
+              </>
+            )}
+
+            {marketplaceSubTab === "orders" && (
+              <>
+            {buyOrders.length === 0 ? (
+              <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+                <p className="text-white/40 text-sm">No buy orders yet. Be the first to request a card!</p>
+              </div>
+            ) : (
+              <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="space-y-4">
+                {buyOrders.map((order) => {
+                  const myCardsForOrder = order.poolEntry
+                    ? cards.filter(
+                        (c) =>
+                          c.characterId === order.characterId &&
+                          !myListedCardIds.has(c.id)
+                      )
+                    : [];
+                  const canFulfill = myCardsForOrder.length > 0 && order.requesterUserId !== user?.id;
+                  const isMine = order.requesterUserId === user?.id;
+
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-white/20 bg-white/[0.06] backdrop-blur-xl p-4"
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        {order.poolEntry ? (
+                          <div className="w-16 h-24 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                            <img
+                              src={order.poolEntry.profilePath}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-24 rounded-lg bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center text-white/30 text-xs">
+                            ?
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white/90 font-medium truncate">
+                            {order.poolEntry?.characterName ?? "Unknown"} {order.poolEntry && <span className="text-white/50">· {order.poolEntry.actorName}</span>}
+                          </p>
+                          <p className="text-white/50 text-sm truncate">{order.poolEntry?.movieTitle ?? ""}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <Link
+                              href={`/profile/${order.requesterUserId}`}
+                              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                            >
+                              {order.requesterName}
+                            </Link>
+                            {order.requesterDisplayedBadge && (
+                              <BadgePill movieTitle={order.requesterDisplayedBadge.movieTitle} isHolo={order.requesterDisplayedBadge.isHolo} />
+                            )}
+                            {order.offerPrice > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {order.offerPrice} cr
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        {isMine ? (
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            disabled={cancellingOrderId === order.id}
+                            className="px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 transition-colors cursor-pointer"
+                          >
+                            {cancellingOrderId === order.id ? "Cancelling..." : "Cancel"}
+                          </button>
+                        ) : canFulfill ? (
+                          <button
+                            onClick={() => handleFulfillOrder(order.id, myCardsForOrder[0].id)}
+                            disabled={fulfillingOrderId === order.id}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-40 transition-colors cursor-pointer"
+                          >
+                            {fulfillingOrderId === order.id ? "Trading..." : "Trade to them"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+              </div>
+            )}
+
+            {showOrderModal && (
+              <>
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => !creatingOrder && setShowOrderModal(false)} aria-hidden />
+                <div
+                  className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden flex flex-col"
+                  role="dialog"
+                  aria-label="Request a card"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="p-6 flex flex-col flex-1 min-h-0 overflow-auto">
+                    <h3 className="text-lg font-bold text-white/90 mb-4 shrink-0">Request a Card</h3>
+                    <p className="text-white/50 text-sm mb-4">Select a character from the pool. Others who have that card can fulfill your request in one click.</p>
+                    {!selectedOrderCharacter ? (
+                      <div className="flex-1 min-h-0 overflow-auto pr-1 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                        {poolEntries
+                          .filter((p) => p.profilePath?.trim())
+                          .map((entry) => (
+                            <button
+                              key={entry.characterId}
+                              onClick={() => setSelectedOrderCharacter(entry)}
+                              className="w-full rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-emerald-500/60 focus:ring-emerald-500/60 transition-all cursor-pointer text-left"
+                            >
+                              <div className="aspect-[2/3] rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                                <img src={entry.profilePath} alt="" className="w-full h-full object-cover" />
+                              </div>
+                              <p className="text-[10px] text-white/70 truncate mt-1">{entry.characterName}</p>
+                            </button>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="w-full flex justify-between items-center mb-4">
+                          <span className="text-sm text-white/60">Requesting this card</span>
+                          <button
+                            onClick={() => { setSelectedOrderCharacter(null); setOrderOfferPrice(""); }}
+                            className="text-xs text-emerald-400/80 hover:text-emerald-400 transition-colors cursor-pointer"
+                          >
+                            Change
+                          </button>
+                        </div>
+                        <div className="w-32 mx-auto mb-4">
+                          <div className="aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/10">
+                            <img src={selectedOrderCharacter.profilePath} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <p className="text-center text-sm text-white/80 mt-2">{selectedOrderCharacter.characterName}</p>
+                          <p className="text-center text-xs text-white/50">{selectedOrderCharacter.actorName} · {selectedOrderCharacter.movieTitle}</p>
+                        </div>
+                        <label className="block text-sm text-white/60 mb-2 w-full">Credits to offer (optional, 0 = free request)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={orderOfferPrice}
+                          onChange={(e) => setOrderOfferPrice(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-emerald-500/40 mb-4"
+                          placeholder="0"
+                        />
+                        <div className="flex gap-2 w-full">
+                          <button
+                            onClick={() => { setSelectedOrderCharacter(null); setOrderOfferPrice(""); setShowOrderModal(false); }}
+                            className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleCreateOrder}
+                            disabled={creatingOrder || (orderOfferPrice.trim() !== "" && (isNaN(parseInt(orderOfferPrice, 10)) || parseInt(orderOfferPrice, 10) < 0)) || (orderOfferPrice.trim() !== "" && creditBalance < parseInt(orderOfferPrice, 10))}
+                            className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-40 cursor-pointer"
+                          >
+                            {creatingOrder ? "Creating..." : "Request"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
               </>
             )}
           </>

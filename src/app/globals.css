@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource/bitcount-grid-double/latin-400.css";
+@import "@fontsource/bitcount-grid-double/latin-700.css";
 
 :root {
   --background: #0a0a0f;
@@ -271,6 +273,11 @@ select option {
 /* Card title — Libre Baskerville for premium feel */
 .font-card-title {
   font-family: "Libre Baskerville", Georgia, serif;
+}
+
+/* Site title — Bitcount Grid Double pixel display font */
+.font-site-title {
+  font-family: "Bitcount Grid Double", monospace;
 }
 
 /* Credits add/subtract animation — pulse + color flash */

@@ -271,7 +271,7 @@ export default function Header() {
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/"
-              className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+              className="font-site-title text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
             >
               dabys.org
             </Link>

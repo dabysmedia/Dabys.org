@@ -8,6 +8,10 @@ import {
   getCredits,
   deductCredits,
   addCredits,
+  getBuyOrder,
+  addBuyOrder,
+  removeBuyOrder,
+  getCharacterPool,
 } from "@/lib/data";
 
 export function listCard(
@@ -74,4 +78,78 @@ export function buyListing(
 
   const updatedCard = getCardById(card.id);
   return { success: true, card: updatedCard };
+}
+
+// ──── Buy Orders ─────────────────────────────────────────
+
+export function createBuyOrder(
+  requesterUserId: string,
+  characterId: string,
+  offerPrice: number = 0
+): { success: boolean; order?: ReturnType<typeof addBuyOrder>; error?: string } {
+  const pool = getCharacterPool();
+  const entry = pool.find((c) => c.characterId === characterId);
+  if (!entry) return { success: false, error: "Character not found in pool" };
+
+  const price = Math.max(0, Math.floor(offerPrice));
+  if (price > 0) {
+    const balance = getCredits(requesterUserId);
+    if (balance < price) return { success: false, error: "Not enough credits for offer price" };
+  }
+
+  const order = addBuyOrder({ requesterUserId, characterId, offerPrice: price });
+  return { success: true, order };
+}
+
+export function cancelBuyOrder(
+  userId: string,
+  orderId: string
+): { success: boolean; error?: string } {
+  const order = getBuyOrder(orderId);
+  if (!order) return { success: false, error: "Order not found" };
+  if (order.requesterUserId !== userId) return { success: false, error: "You can't cancel someone else's order" };
+
+  removeBuyOrder(orderId);
+  return { success: true };
+}
+
+export function fulfillBuyOrder(
+  fulfillerUserId: string,
+  orderId: string,
+  cardId: string
+): { success: boolean; error?: string } {
+  const order = getBuyOrder(orderId);
+  if (!order) return { success: false, error: "Order not found" };
+  if (order.requesterUserId === fulfillerUserId) return { success: false, error: "You can't fulfill your own order" };
+
+  const card = getCardById(cardId);
+  if (!card) return { success: false, error: "Card not found" };
+  if (card.userId !== fulfillerUserId) return { success: false, error: "You don't own this card" };
+  if (card.characterId !== order.characterId) return { success: false, error: "Card doesn't match the order" };
+
+  const listedCardIds = new Set(getListings().map((l) => l.cardId));
+  if (listedCardIds.has(cardId)) return { success: false, error: "Card is listed on the marketplace" };
+
+  if (order.offerPrice > 0) {
+    const balance = getCredits(order.requesterUserId);
+    if (balance < order.offerPrice) return { success: false, error: "Buyer no longer has enough credits" };
+
+    const deducted = deductCredits(order.requesterUserId, order.offerPrice, "buy_order_fulfill", {
+      orderId,
+      cardId,
+      fulfillerUserId,
+    });
+    if (!deducted) return { success: false, error: "Failed to deduct credits" };
+
+    addCredits(fulfillerUserId, order.offerPrice, "buy_order_sale", {
+      orderId,
+      cardId,
+      requesterUserId: order.requesterUserId,
+    });
+  }
+
+  transferCard(cardId, order.requesterUserId);
+  removeBuyOrder(orderId);
+
+  return { success: true };
 }

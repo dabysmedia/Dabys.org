@@ -1264,6 +1264,57 @@ export function getListing(listingId: string): Listing | undefined {
   return getListingsRaw().find((l) => l.id === listingId);
 }
 
+// ──── Buy Orders (requests for specific cards; fulfiller transfers in one click) ───
+export interface BuyOrder {
+  id: string;
+  requesterUserId: string;
+  characterId: string;
+  /** Credits the requester is willing to pay (0 = free/gift). */
+  offerPrice: number;
+  createdAt: string;
+}
+
+function getBuyOrdersRaw(): BuyOrder[] {
+  try {
+    return readJson<BuyOrder[]>("buyOrders.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveBuyOrdersRaw(orders: BuyOrder[]) {
+  writeJson("buyOrders.json", orders);
+}
+
+export function getBuyOrders(): BuyOrder[] {
+  return getBuyOrdersRaw();
+}
+
+export function addBuyOrder(order: Omit<BuyOrder, "id" | "createdAt">): BuyOrder {
+  const orders = getBuyOrdersRaw();
+  const newOrder: BuyOrder = {
+    ...order,
+    id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  orders.push(newOrder);
+  saveBuyOrdersRaw(orders);
+  return newOrder;
+}
+
+export function removeBuyOrder(orderId: string): boolean {
+  const orders = getBuyOrdersRaw();
+  const idx = orders.findIndex((o) => o.id === orderId);
+  if (idx < 0) return false;
+  orders.splice(idx, 1);
+  saveBuyOrdersRaw(orders);
+  return true;
+}
+
+export function getBuyOrder(orderId: string): BuyOrder | undefined {
+  return getBuyOrdersRaw().find((o) => o.id === orderId);
+}
+
 // ──── Trades (P2P card offers) ───────────────────────────
 export interface TradeOffer {
   id: string;
@@ -1625,6 +1676,11 @@ export function wipeUserInventory(userId: string): {
   const tradesRemoved = trades.length - tradesFiltered.length;
   saveTradesRaw(tradesFiltered);
 
+  const buyOrders = getBuyOrdersRaw();
+  const buyOrdersFiltered = buyOrders.filter((o) => o.requesterUserId !== userId);
+  const buyOrdersRemoved = buyOrders.length - buyOrdersFiltered.length;
+  if (buyOrdersRemoved > 0) saveBuyOrdersRaw(buyOrdersFiltered);
+
   return {
     cardsRemoved: userCards.length,
     listingsRemoved,
@@ -1646,6 +1702,7 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
   writeJson("triviaAttempts.json", []);
   writeJson("triviaSessions.json", []);
   writeJson("listings.json", []);
+  writeJson("buyOrders.json", []);
   writeJson("trades.json", []);
 
   return { success: true };

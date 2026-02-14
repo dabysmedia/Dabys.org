@@ -11,6 +11,7 @@
     "tunnel:cloudflare": "cloudflared tunnel --url http://localhost:3000"
   },
   "dependencies": {
+    "@fontsource/bitcount-grid-double": "^5.2.2",
     "canvas-confetti": "^1.9.4",
     "next": "^16.1.6",
     "react": "^19.2.4",
