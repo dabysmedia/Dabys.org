@@ -44,5 +44,26 @@
     "maxPurchasesPerDay": 3,
     "isFree": true,
     "discounted": false
+  },
+  {
+    "id": "pack-1771076755342-xbvgzn7",
+    "name": "Boys Pack",
+    "imageUrl": "/api/uploads/1771076752740-zk43dp.jpg",
+    "price": 100,
+    "cardsPerPack": 3,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "character"
+    ],
+    "isActive": false,
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": false
   }
 ]

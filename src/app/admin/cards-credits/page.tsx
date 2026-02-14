@@ -949,7 +949,8 @@ export default function AdminCardsCreditsPage() {
 
   async function handleAddToPool(e: React.FormEvent) {
     e.preventDefault();
-    if (!customActorName.trim() || !customProfilePath.trim() || !customWinnerId || addingToPool) return;
+    const isBoys = customCardType === "character";
+    if (!customActorName.trim() || !customProfilePath.trim() || (!isBoys && !customWinnerId) || addingToPool) return;
     setAddingToPool(true);
     setError("");
     try {
@@ -960,7 +961,7 @@ export default function AdminCardsCreditsPage() {
           actorName: customActorName.trim(),
           characterName: customCharacterName.trim() || "Unknown",
           profilePath: customProfilePath.trim(),
-          winnerId: customWinnerId,
+          ...(customCardType !== "character" && customWinnerId && { winnerId: customWinnerId }),
           rarity: customRarity,
           cardType: customCardType,
           ...(customAltArtOfCharacterId.trim() && { altArtOfCharacterId: customAltArtOfCharacterId.trim() }),
@@ -1942,6 +1943,7 @@ export default function AdminCardsCreditsPage() {
                   />
                 </div>
               </div>
+              {customCardType !== "character" && (
               <div>
                 <label className="block text-xs text-white/40 mb-1">Winner / Movie *</label>
                 <select
@@ -1961,7 +1963,8 @@ export default function AdminCardsCreditsPage() {
                   ))}
                 </select>
               </div>
-              {customWinnerId && (() => {
+              )}
+              {customWinnerId && customCardType !== "character" && (() => {
                 const winner = winners.find((w) => w.id === customWinnerId);
                 const sameMoviePool = pool.filter(
                   (c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (winner?.tmdbId ?? 0)
@@ -2037,7 +2040,7 @@ export default function AdminCardsCreditsPage() {
               </div>
               <button
                 type="submit"
-                disabled={!customActorName.trim() || !customWinnerId || !customProfilePath.trim() || addingToPool}
+                disabled={!customActorName.trim() || !customProfilePath.trim() || (customCardType !== "character" && !customWinnerId) || addingToPool}
                 className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
               >
                 {addingToPool ? "Adding..." : "Add to Pool"}

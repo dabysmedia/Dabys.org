@@ -90,7 +90,7 @@ function useMidnightUTCCountdown(active: boolean): string {
 }
 
 type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
-type CodexSubTab = "codex" | "holo" | "altarts" | "badges";
+type CodexSubTab = "codex" | "holo" | "altarts" | "boys" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
 interface PoolEntry {
@@ -3296,6 +3296,17 @@ function CardsContent() {
               </button>
               <button
                 type="button"
+                onClick={() => setCodexSubTab("boys")}
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
+                  codexSubTab === "boys"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Boys
+              </button>
+              <button
+                type="button"
                 onClick={() => setCodexSubTab("badges")}
                 className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "badges"
@@ -3309,7 +3320,7 @@ function CardsContent() {
             </div>
 
             {codexSubTab === "codex" && (() => {
-              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId);
+              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
               return (
           <>
             {mainEntries.length === 0 ? (
@@ -3451,7 +3462,7 @@ function CardsContent() {
             })()}
 
             {codexSubTab === "holo" && (() => {
-              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId);
+              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
               const holoByCharacterId = new Map(cards.filter((c) => c.isFoil).map((c) => [c.characterId!, c]));
               return (
           <>
@@ -3700,8 +3711,149 @@ function CardsContent() {
             );
             })()}
 
+            {codexSubTab === "boys" && (() => {
+              const boysEntries = poolEntries.filter((e) => (e.cardType ?? "actor") === "character" && !e.altArtOfCharacterId);
+              return (
+          <>
+            {boysEntries.length === 0 ? (
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+                <p className="text-white/40 text-sm">No Boys cards in the pool yet.</p>
+              </div>
+            ) : (
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <span className="text-white/50 text-sm">Sort:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(["rarity", "set", "name"] as const).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCodexSort(key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          codexSort === key
+                            ? "bg-amber-500/20 border border-amber-400/50 text-amber-300"
+                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                        }`}
+                      >
+                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {(() => {
+                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                    const renderEntry = (entry: PoolEntry) => {
+                      const discovered =
+                        discoveredCharacterIds.has(entry.characterId) ||
+                        (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                      if (!discovered) {
+                        return (
+                          <div
+                            key={entry.characterId}
+                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            style={{ aspectRatio: "2 / 3.35" }}
+                          >
+                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                              <span className="text-xs font-medium">?</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const codexCard = {
+                        id: entry.characterId,
+                        rarity: entry.rarity,
+                        isFoil: false,
+                        actorName: entry.actorName ?? "",
+                        characterName: entry.characterName ?? "",
+                        movieTitle: entry.movieTitle ?? "",
+                        profilePath: entry.profilePath ?? "",
+                        cardType: entry.cardType,
+                      };
+                      const isNewlyUploaded =
+                        newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
+                        (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                      const clearNewDot = () => {
+                        if (!isNewlyUploaded) return;
+                        setNewlyUploadedToCodexCharacterIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(entry.characterId);
+                          if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
+                          return next;
+                        });
+                      };
+                      return (
+                        <div
+                          key={entry.characterId}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setInspectedCodexCard(codexCard)}
+                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
+                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
+                          onMouseEnter={clearNewDot}
+                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
+                        >
+                          {isNewlyUploaded && (
+                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                          )}
+                          <CardDisplay card={codexCard} />
+                        </div>
+                      );
+                    };
+                    if (codexSort === "set") {
+                      const key = (e: PoolEntry) => e.movieTmdbId ?? e.movieTitle;
+                      const bySet = new Map<string | number, PoolEntry[]>();
+                      for (const entry of boysEntries) {
+                        const k = key(entry);
+                        if (!bySet.has(k)) bySet.set(k, []);
+                        bySet.get(k)!.push(entry);
+                      }
+                      const discoveredCount = (entries: PoolEntry[]) => {
+                        let n = 0;
+                        for (const e of entries) {
+                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
+                        }
+                        return n;
+                      };
+                      const sets = Array.from(bySet.entries())
+                        .map(([k, entries]) => ({
+                          title: entries[0]?.movieTitle ?? String(k),
+                          entries,
+                          completedCount: discoveredCount(entries),
+                        }))
+                        .sort((a, b) => {
+                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
+                          return a.title.localeCompare(b.title);
+                        });
+                      return sets.flatMap((set, setIndex) => [
+                        setIndex > 0 ? (
+                          <div key={`boys-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
+                        ) : null,
+                        ...set.entries.map((entry) => renderEntry(entry)),
+                      ]);
+                    }
+                    const sorted =
+                      codexSort === "name"
+                        ? [...boysEntries].sort((a, b) =>
+                            ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? "")
+                          )
+                        : [...boysEntries].sort(
+                            (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+                          );
+                    return sorted.map((entry) => renderEntry(entry));
+                  })()}
+                </div>
+              </div>
+            )}
+          </>
+            );
+            })()}
+
             {/* Codex card inspect overlay — centered, large scale; animated enter/exit */}
-            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "holo" || codexSubTab === "altarts") && inspectedCodexCard && (
+            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "holo" || codexSubTab === "altarts" || codexSubTab === "boys") && inspectedCodexCard && (
               <>
                 <div
                   className={`fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm cursor-pointer transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}

@@ -386,9 +386,15 @@ export function buyPack(
   }
 
   let pool = availablePool();
-  if (pool.length < cardsPerPack) {
-    return { success: false, error: "Character pool too small. Add more winning movies." };
+  if (pool.length === 0) {
+    const isBoysOnly =
+      allowedCardTypes?.length === 1 && allowedCardTypes[0] === "character";
+    const error = isBoysOnly
+      ? "Boys pool too small. Add more Boys cards in Admin."
+      : "Character pool too small. Add more winning movies.";
+    return { success: false, error };
   }
+  const cardsToGive = Math.min(pool.length, cardsPerPack);
 
   const deducted = deductCredits(userId, price, "pack_purchase", {
     packId: selectedPack?.id ?? "default",
@@ -403,7 +409,7 @@ export function buyPack(
   const cards: ReturnType<typeof addCard>[] = [];
   const pickedCharacterIds = new Set<string>();
 
-  for (let i = 0; i < cardsPerPack; i++) {
+  for (let i = 0; i < cardsToGive; i++) {
     pool = availablePool().filter((c) => !pickedCharacterIds.has(c.characterId));
     if (pool.length === 0) break;
 

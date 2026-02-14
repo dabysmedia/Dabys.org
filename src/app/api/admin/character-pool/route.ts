@@ -52,20 +52,29 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (!winnerId) {
+  // Boys cards (cardType "character") do not require a winner/movie link
+  const isBoysCard = cardType === "character";
+  if (!isBoysCard && !winnerId) {
     return NextResponse.json(
       { error: "winnerId is required (select a winner/movie)" },
       { status: 400 }
     );
   }
 
-  const winners = getWinners();
-  const winner = winners.find((w) => w.id === winnerId);
-  if (!winner) {
-    return NextResponse.json({ error: "Winner not found" }, { status: 404 });
+  let movieTmdbId: number;
+  let movieTitle: string;
+  if (isBoysCard && !winnerId) {
+    movieTmdbId = 0;
+    movieTitle = (body.movieTitle as string)?.trim() || "Boys";
+  } else {
+    const winners = getWinners();
+    const winner = winners.find((w) => w.id === winnerId);
+    if (!winner) {
+      return NextResponse.json({ error: "Winner not found" }, { status: 404 });
+    }
+    movieTmdbId = winner.tmdbId ?? 0;
+    movieTitle = winner.movieTitle?.trim() || "Unknown";
   }
-  const movieTmdbId = winner.tmdbId ?? 0;
-  const movieTitle = winner.movieTitle?.trim() || "Unknown";
 
   const pool = getCharacterPool();
   const characterId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
