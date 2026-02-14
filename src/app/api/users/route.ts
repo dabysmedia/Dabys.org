@@ -4,16 +4,21 @@ import { getUsers, saveUsers, getProfiles } from "@/lib/data";
 export async function GET(request: Request) {
   const users = getUsers();
   const { searchParams } = new URL(request.url);
+  // Never expose actual PIN; include hasPin so login can prompt for PIN when set
+  const safe = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    hasPin: !!u.pin,
+  }));
   if (searchParams.get("includeProfile") === "1") {
     const profiles = getProfiles();
-    const withAvatar = users.map((u) => ({
-      id: u.id,
-      name: u.name,
+    const withAvatar = safe.map((u) => ({
+      ...u,
       avatarUrl: profiles.find((p) => p.userId === u.id)?.avatarUrl || "",
     }));
     return NextResponse.json(withAvatar);
   }
-  return NextResponse.json(users);
+  return NextResponse.json(safe);
 }
 
 export async function POST(request: Request) {

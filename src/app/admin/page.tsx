@@ -14,6 +14,23 @@ interface WeekData {
   startedAt: string;
 }
 
+interface VoteData {
+  id: string;
+  weekId: string;
+  userId: string;
+  userName: string;
+  submissionId: string;
+  createdAt: string;
+}
+
+interface SubmissionSummary {
+  id: string;
+  weekId: string;
+  movieTitle: string;
+  year?: string;
+  userName: string;
+}
+
 const PHASE_LABELS: Record<string, { label: string; color: string }> = {
   subs_open: { label: "Submissions Open", color: "text-green-400 bg-green-500/10 border-green-500/20" },
   subs_closed: { label: "Submissions Closed", color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20" },
@@ -26,6 +43,8 @@ const PHASE_LABELS: Record<string, { label: string; color: string }> = {
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentWeek, setCurrentWeek] = useState<WeekData | null>(null);
+  const [currentWeekVotes, setCurrentWeekVotes] = useState<VoteData[]>([]);
+  const [currentWeekSubmissions, setCurrentWeekSubmissions] = useState<SubmissionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,9 +57,33 @@ export default function AdminDashboard() {
         const usersData = await usersRes.json();
         setUsers(usersData);
 
+        let weekData: WeekData | null = null;
         if (weekRes.ok) {
-          const weekData = await weekRes.json();
+          weekData = await weekRes.json();
           setCurrentWeek(weekData);
+        }
+
+        if (weekData?.id) {
+          const [votesRes, subsRes] = await Promise.all([
+            fetch(`/api/votes?weekId=${weekData.id}`),
+            fetch(`/api/submissions?weekId=${weekData.id}`),
+          ]);
+          if (votesRes.ok) {
+            const votesData: VoteData[] = await votesRes.json();
+            setCurrentWeekVotes(votesData);
+          }
+          if (subsRes.ok) {
+            const subsData = await subsRes.json();
+            setCurrentWeekSubmissions(
+              subsData.map((s: { id: string; weekId: string; movieTitle: string; year?: string; userName: string }) => ({
+                id: s.id,
+                weekId: s.weekId,
+                movieTitle: s.movieTitle,
+                year: s.year,
+                userName: s.userName,
+              }))
+            );
+          }
         }
       } catch (err) {
         console.error("Failed to load dashboard data", err);
@@ -179,6 +222,41 @@ export default function AdminDashboard() {
           </div>
         </a>
       </div>
+
+      {/* Who has voted (current week) */}
+      {currentWeek && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-white/80 mb-4">Who has voted this week</h2>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+            {currentWeekVotes.length === 0 ? (
+              <p className="px-5 py-6 text-white/50 text-sm">No votes yet for this week.</p>
+            ) : (
+              <ul className="divide-y divide-white/[0.06]">
+                {currentWeekVotes.map((v) => {
+                  const sub = currentWeekSubmissions.find((s) => s.id === v.submissionId);
+                  return (
+                    <li key={v.id} className="px-5 py-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-medium text-white/90">{v.userName || v.userId || "—"}</span>
+                      <span className="text-white/40">voted for</span>
+                      <span className="text-white/80">
+                        {sub ? `${sub.movieTitle}${sub.year ? ` (${sub.year})` : ""}` : "Unknown submission"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="px-5 py-3 border-t border-white/[0.06] bg-white/[0.02]">
+              <a
+                href="/admin/votes"
+                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                View all votes →
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

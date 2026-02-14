@@ -20,6 +20,10 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [pinEditId, setPinEditId] = useState<string | null>(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pinError, setPinError] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -116,6 +120,29 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function savePin(userId: string) {
+    setPinSaving(true);
+    setPinError("");
+    try {
+      const res = await fetch(`/api/users/${userId}/pin`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPin: pinValue.trim() }),
+      });
+      if (res.ok) {
+        setPinEditId(null);
+        setPinValue("");
+      } else {
+        const data = await res.json();
+        setPinError(data.error || "Failed to set PIN");
+      }
+    } catch {
+      setPinError("Something went wrong");
+    } finally {
+      setPinSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -184,7 +211,47 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {/* PIN */}
+                    <div className="flex items-center gap-2">
+                      {pinEditId === user.id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="off"
+                            placeholder="New PIN (blank to clear)"
+                            value={pinValue}
+                            onChange={(e) => setPinValue(e.target.value)}
+                            className="w-28 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/40"
+                          />
+                          <button
+                            onClick={() => savePin(user.id)}
+                            disabled={pinSaving}
+                            className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-50 cursor-pointer"
+                          >
+                            {pinSaving ? "…" : "Set"}
+                          </button>
+                          <button
+                            onClick={() => { setPinEditId(null); setPinValue(""); setPinError(""); }}
+                            className="text-xs text-white/40 hover:text-white/60 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setPinEditId(user.id); setPinValue(""); setPinError(""); }}
+                          className="text-[11px] text-white/25 hover:text-purple-400 transition-colors cursor-pointer"
+                        >
+                          Set PIN
+                        </button>
+                      )}
+                    </div>
+                    {pinEditId === user.id && pinError && (
+                      <span className="text-red-400/80 text-xs">{pinError}</span>
+                    )}
+
                     {/* Skips */}
                     {info && (
                       <div className="flex items-center gap-2">

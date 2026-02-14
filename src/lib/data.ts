@@ -42,6 +42,8 @@ function writeJson<T>(filename: string, data: T) {
 export interface User {
   id: string;
   name: string;
+  /** Optional PIN for login (editable in admin and user profile). */
+  pin?: string;
 }
 
 export function getUsers(): User[] {

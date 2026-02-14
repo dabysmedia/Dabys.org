@@ -144,6 +144,7 @@ interface TmdbSearchResult {
 
 interface FullProfile {
   user: { id: string; name: string };
+  hasPin?: boolean;
   profile: ProfileData;
   stats: Stats;
   ratings: RatingEntry[];
@@ -216,6 +217,12 @@ export default function ProfilePage() {
 
   // Credits (for profile user)
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
+  // PIN (edit own profile)
+  const [editCurrentPin, setEditCurrentPin] = useState("");
+  const [editNewPin, setEditNewPin] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pinError, setPinError] = useState("");
 
   const isOwnProfile = currentUser?.id === profileId;
 
@@ -444,6 +451,34 @@ export default function ProfilePage() {
     }
   }
 
+  async function savePin() {
+    if (!profileId) return;
+    setPinError("");
+    setPinSaving(true);
+    try {
+      const res = await fetch(`/api/users/${profileId}/pin`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPin: editCurrentPin,
+          newPin: editNewPin,
+        }),
+      });
+      if (res.ok) {
+        setEditCurrentPin("");
+        setEditNewPin("");
+        setData((prev) => (prev ? { ...prev, hasPin: !!editNewPin.trim() } : null));
+      } else {
+        const d = await res.json();
+        setPinError(d.error || "Failed to update PIN");
+      }
+    } catch {
+      setPinError("Something went wrong");
+    } finally {
+      setPinSaving(false);
+    }
+  }
+
   function timeAgo(dateStr: string) {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
@@ -587,6 +622,9 @@ export default function ProfilePage() {
                       setEditBio(profile.bio);
                       setEditAvatarUrl(profile.avatarUrl);
                       setEditBannerUrl(profile.bannerUrl);
+                      setEditCurrentPin("");
+                      setEditNewPin("");
+                      setPinError("");
                       setFavoriteMovieSelecting(
                         profile.favoriteMovieTmdbId != null && profile.favoriteMovieSnapshot
                           ? { tmdbId: profile.favoriteMovieTmdbId, ...profile.favoriteMovieSnapshot }
@@ -653,6 +691,53 @@ export default function ProfilePage() {
                 Clear favourite
               </button>
             )}
+          </div>
+        )}
+
+        {/* Login PIN (edit only, own profile) */}
+        {isOwnProfile && editing && data && (
+          <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-3">Login PIN</h3>
+            <p className="text-white/40 text-xs mb-3">
+              Set or change the PIN you enter when logging in. Leave new PIN blank to remove it.
+            </p>
+            <div className="flex flex-wrap gap-3 items-end">
+              {data.hasPin && (
+                <div>
+                  <label className="block text-[11px] text-white/40 mb-1">Current PIN</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="Current PIN"
+                    value={editCurrentPin}
+                    onChange={(e) => setEditCurrentPin(e.target.value)}
+                    className="w-28 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/40"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-[11px] text-white/40 mb-1">{data.hasPin ? "New PIN" : "Set PIN"}</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder={data.hasPin ? "New PIN" : "PIN"}
+                  value={editNewPin}
+                  onChange={(e) => setEditNewPin(e.target.value)}
+                  className="w-28 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={savePin}
+                disabled={pinSaving}
+                className="px-4 py-2 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/15 disabled:opacity-50 cursor-pointer"
+              >
+                {pinSaving ? "Saving…" : data.hasPin ? "Update PIN" : "Set PIN"}
+              </button>
+            </div>
+            {pinError && <p className="text-red-400/80 text-xs mt-2">{pinError}</p>}
           </div>
         )}
 

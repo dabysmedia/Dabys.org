@@ -272,6 +272,7 @@ export async function GET(
 
   return NextResponse.json({
     user: { id: user.id, name: user.name },
+    hasPin: !!user.pin,
     profile: {
       avatarUrl: profile.avatarUrl,
       bannerUrl: profile.bannerUrl,
