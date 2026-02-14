@@ -608,7 +608,7 @@ function CardsContent() {
     const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
-      fetch("/api/cards/character-pool"),
+      fetch("/api/cards/character-pool?codex=1"),
       fetch("/api/marketplace"),
       fetch("/api/marketplace/orders"),
       fetch("/api/winners"),
@@ -3151,9 +3151,12 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.offeredCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
-                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
+                                      <div className="relative flex-1 min-h-0">
+                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                      </div>
+                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -3166,9 +3169,12 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.requestedCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
-                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
+                                      <div className="relative flex-1 min-h-0">
+                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                      </div>
+                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -3265,9 +3271,12 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.offeredCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
-                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
+                                      <div className="relative flex-1 min-h-0">
+                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                      </div>
+                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -3280,9 +3289,12 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 gap-2 flex-1 content-start">
                                   {t.requestedCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5">
-                                      {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
+                                      <div className="relative flex-1 min-h-0">
+                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
+                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
+                                      </div>
+                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
                                     </div>
                                   ))}
                                 </div>

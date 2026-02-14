@@ -926,6 +926,31 @@ export function getLegendaryCardsNotInPool(): Card[] {
     .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
 }
 
+/** Pool entries for codex display: character pool plus one entry per legendary characterId not in pool (so 1of1 custom legendaries have a codex slot and can be uploaded). */
+export function getCodexPoolEntries(): CharacterPortrayal[] {
+  const pool = getCharacterPool();
+  const poolIds = new Set(pool.map((c) => c.characterId));
+  const legendariesNotInPool = getLegendaryCardsNotInPool();
+  const seen = new Set(poolIds);
+  const codexOnly: CharacterPortrayal[] = [];
+  for (const c of legendariesNotInPool) {
+    if (seen.has(c.characterId)) continue;
+    seen.add(c.characterId);
+    codexOnly.push({
+      characterId: c.characterId,
+      actorName: c.actorName ?? "",
+      characterName: c.characterName ?? "",
+      profilePath: c.profilePath ?? "",
+      movieTmdbId: c.movieTmdbId ?? 0,
+      movieTitle: c.movieTitle ?? "",
+      popularity: 0,
+      rarity: "legendary",
+      cardType: (c.cardType ?? "actor") as CharacterPortrayal["cardType"],
+    });
+  }
+  return [...pool, ...codexOnly];
+}
+
 export function getCards(userId: string): Card[] {
   return getCardsRaw()
     .filter((c) => c.userId === userId)
@@ -943,14 +968,8 @@ export function addCard(card: Omit<Card, "id" | "acquiredAt">): Card {
   cards.push(newCard);
   saveCardsRaw(cards);
 
-  // Legendaries are 1-of-1: remove this character from the pool once it's in someone's inventory.
-  if (newCard.rarity === "legendary") {
-    const pool = getCharacterPoolRaw();
-    const filtered = pool.filter((c) => c.characterId !== newCard.characterId);
-    if (filtered.length < pool.length) {
-      saveCharacterPoolRaw(filtered);
-    }
-  }
+  // Legendaries are 1-of-1: they stay in the pool so the codex still has a slot (undiscovered until uploaded).
+  // Pack/tradeUp already exclude owned legendary slots via getOwnedLegendarySlotIds(), so they won't drop again.
 
   return newCard;
 }

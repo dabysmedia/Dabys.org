@@ -244,6 +244,7 @@ export default function AdminCardsCreditsPage() {
   const [resettingCodex, setResettingCodex] = useState(false);
   const [legendaryNotInPool, setLegendaryNotInPool] = useState<Card[]>([]);
   const [legendaryNotInPoolLoading, setLegendaryNotInPoolLoading] = useState(false);
+  const [returnToPoolCardId, setReturnToPoolCardId] = useState<string | null>(null);
   const [creditSettings, setCreditSettings] = useState<{
     submission: number;
     vote: number;
@@ -1262,6 +1263,35 @@ export default function AdminCardsCreditsPage() {
                   <span className="text-[10px] text-white/40 font-mono truncate w-full max-w-[140px] text-center" title={card.characterId}>
                     {card.characterId}
                   </span>
+                  <button
+                    type="button"
+                    disabled={returnToPoolCardId !== null}
+                    onClick={async () => {
+                      if (!card.id) return;
+                      setReturnToPoolCardId(card.id);
+                      try {
+                        const res = await fetch("/api/admin/legendary-not-in-pool", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ cardId: card.id }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.ok) {
+                          await loadLegendaryNotInPool();
+                          await loadPool();
+                        } else {
+                          setError(data?.error ?? "Failed to return to pool");
+                        }
+                      } catch {
+                        setError("Failed to return to pool");
+                      } finally {
+                        setReturnToPoolCardId(null);
+                      }
+                    }}
+                    className="mt-1 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer"
+                  >
+                    {returnToPoolCardId === card.id ? "Adding…" : "Return to pool"}
+                  </button>
                 </div>
               ))}
             </div>
