@@ -246,6 +246,7 @@ export async function GET(
       return {
         winnerId: wid,
         movieTitle: w?.movieTitle ?? "Unknown",
+        posterUrl: w?.posterUrl ?? undefined,
         isHolo: !isPurchased && completedHoloWinnerIds.includes(wid),
       };
     }),
@@ -386,6 +387,7 @@ export async function PUT(
     const allowed = new Set(purchased.map((b) => b.itemId));
     if (value === null || value === "") {
       profile.displayedBadgeShopItemId = undefined;
+      profile.displayedBadgeWinnerId = undefined;
     } else if (typeof value === "string" && allowed.has(value)) {
       profile.displayedBadgeShopItemId = value;
       profile.displayedBadgeWinnerId = undefined;

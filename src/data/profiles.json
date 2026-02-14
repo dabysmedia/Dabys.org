@@ -13,7 +13,15 @@
         "name": "MR MONEYBAGS"
       }
     ],
-    "displayedBadgeShopItemId": "shop-1771004386736-vmfh2vn"
+    "displayedBadgeWinnerId": "1",
+    "favoriteMovieTmdbId": 9353,
+    "favoriteMovieSnapshot": {
+      "title": "Nacho Libre",
+      "posterUrl": "https://image.tmdb.org/t/p/w500/kh7B91bMl2lZ0mH9WhPfaNUIEQH.jpg",
+      "backdropUrl": "https://image.tmdb.org/t/p/w1280/g2yTT9lB5I1DA1uBWT7m4wrYuVz.jpg",
+      "year": "2006",
+      "letterboxdUrl": "https://letterboxd.com/film/nacho-libre-2006/"
+    }
   },
   {
     "userId": "1",

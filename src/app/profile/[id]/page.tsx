@@ -49,6 +49,7 @@ interface CompletedBadge {
   movieTitle: string;
   name?: string;
   imageUrl?: string;
+  posterUrl?: string;
   isHolo?: boolean;
 }
 
@@ -965,6 +966,64 @@ export default function ProfilePage() {
           })()}
         </div>
 
+        {/* Achievements — full-size badges (codex style) */}
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
+          <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium mb-4">Achievements</h3>
+          {completedBadges.length === 0 ? (
+            <p className="text-sm text-white/40">
+              No badges yet. Complete card sets in the Codex (discover all 6 cards for a movie) or buy badges in the Shop.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {completedBadges.map((b) => {
+                const isWinner = !!b.winnerId;
+                const imageUrl = isWinner ? (b.posterUrl ?? "") : (b.imageUrl ?? "");
+                const key = isWinner ? `w-${b.winnerId}` : `s-${b.shopItemId}`;
+                return (
+                  <div
+                    key={key}
+                    className="rounded-xl overflow-hidden border border-amber-500/30 bg-amber-500/5 transition-all hover:ring-2 hover:ring-amber-400/40"
+                    style={{ aspectRatio: "1" }}
+                  >
+                    <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+                      {imageUrl ? (
+                        <>
+                          <img
+                            src={imageUrl}
+                            alt=""
+                            className="w-full h-full object-cover absolute inset-0"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                        </>
+                      ) : (
+                        <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
+                          <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </div>
+                      )}
+                      <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                        {b.movieTitle || b.name || "Badge"}
+                      </span>
+                      {b.isHolo && (
+                        <span
+                          className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
+                          style={{
+                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                            boxShadow: "0 0 6px rgba(255,255,255,0.5)",
+                          }}
+                        >
+                          HOLO
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Thumbs summary */}
         {stats.totalRatings > 0 && (
           <div className="flex items-center gap-4 mb-8 text-sm">
@@ -1703,7 +1762,7 @@ export default function ProfilePage() {
                       : "border-white/[0.08] hover:bg-white/[0.06]"
                   }`}
                 >
-                  <span className="text-sm text-white/60">None</span>
+                  <span className="text-sm text-white/60">None (unequip badge)</span>
                 </button>
                 {completedBadges
                   .filter((b) => b.winnerId || b.shopItemId)
