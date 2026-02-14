@@ -1,6 +1,6 @@
+@import url("https://cdn.jsdelivr.net/npm/@fontsource/bitcount-grid-double@5.2.2/400.css");
+@import url("https://cdn.jsdelivr.net/npm/@fontsource/bitcount-grid-double@5.2.2/700.css");
 @import "tailwindcss";
-@import "@fontsource/bitcount-grid-double/latin-400.css";
-@import "@fontsource/bitcount-grid-double/latin-700.css";
 
 :root {
   --background: #0a0a0f;
