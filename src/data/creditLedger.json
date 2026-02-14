@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "cl-1771030894657-7u21gwr",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-14T01:01:34.656Z"
+  }
+]

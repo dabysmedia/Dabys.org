@@ -69,7 +69,8 @@ function useMidnightUTCCountdown(active: boolean): string {
   return countdown;
 }
 
-type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade" | "codex";
+type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
+type CodexSubTab = "codex" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
 interface PoolEntry {
@@ -77,12 +78,13 @@ interface PoolEntry {
   actorName: string;
   characterName: string;
   movieTitle: string;
+  movieTmdbId?: number;
   profilePath: string;
   rarity: string;
   cardType?: CardType;
   altArtOfCharacterId?: string;
 }
-type CollectionSubTab = "tradeup" | "alchemy" | "quicksell";
+type InventorySubTab = "tradeup" | "alchemy" | "quicksell";
 
 interface TradeOfferEnriched {
   id: string;
@@ -409,7 +411,7 @@ function CardsContent() {
   const [storeSubTab, setStoreSubTab] = useState<StoreSubTab>("packs");
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [purchasingShopItemId, setPurchasingShopItemId] = useState<string | null>(null);
-  const [collectionSubTab, setCollectionSubTab] = useState<CollectionSubTab>("tradeup");
+  const [inventorySubTab, setInventorySubTab] = useState<InventorySubTab>("tradeup");
   const [creditBalance, setCreditBalance] = useState(0);
   const [cards, setCards] = useState<Card[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -491,6 +493,10 @@ function CardsContent() {
   const [codexUploadProgress, setCodexUploadProgress] = useState(0);
   const [newlyUploadedToCodexCharacterIds, setNewlyUploadedToCodexCharacterIds] = useState<Set<string>>(new Set());
   const [codexUploadCompleteCount, setCodexUploadCompleteCount] = useState<number | null>(null);
+  type CodexSortKey = "set" | "name" | "rarity";
+  const [codexSort, setCodexSort] = useState<CodexSortKey>("set");
+  const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const codexUploadCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codexLoadingAudioRef = useRef<HTMLAudioElement | null>(null);
   const codexSkipRequestedRef = useRef(false);
@@ -564,7 +570,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -578,6 +584,7 @@ function CardsContent() {
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/shop/items"),
       fetch(`/api/cards/codex?userId=${encodeURIComponent(u.id)}`),
+      fetch(`/api/cards/badge-progress?userId=${encodeURIComponent(u.id)}`),
     ]);
 
     if (creditsRes.ok) {
@@ -652,6 +659,10 @@ function CardsContent() {
       const d = await codexRes.json();
       setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
     }
+    if (badgeProgressRes.ok) {
+      const d = await badgeProgressRes.json();
+      setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
+    }
   }, []);
 
   useEffect(() => {
@@ -673,12 +684,12 @@ function CardsContent() {
 
   useEffect(() => {
     if (searchParams.get("alchemy") === "1") {
-      setTab("collection");
-      setCollectionSubTab("alchemy");
+      setTab("inventory");
+      setInventorySubTab("alchemy");
     }
     if (searchParams.get("quicksell") === "1") {
-      setTab("collection");
-      setCollectionSubTab("quicksell");
+      setTab("inventory");
+      setInventorySubTab("quicksell");
     }
   }, [searchParams]);
 
@@ -1610,7 +1621,7 @@ function CardsContent() {
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "store", label: "Shop" },
-    { key: "collection", label: "Collection" },
+    { key: "inventory", label: "Inventory" },
     { key: "marketplace", label: "Marketplace" },
     { key: "trivia", label: "Trivia" },
     { key: "trade", label: "Trade" },
@@ -1695,7 +1706,7 @@ function CardsContent() {
           <div>
             <h1 className="text-2xl font-bold text-white/90 mb-2">Trading Card Game</h1>
             <p className="text-white/50 text-sm">
-              Buy packs, manage your collection, trade on the marketplace, and play trivia to earn credits.
+              Buy packs, manage your inventory, trade on the marketplace, and play trivia to earn credits.
             </p>
           </div>
           <div className="relative flex-shrink-0 group self-end sm:self-auto">
@@ -1723,7 +1734,7 @@ function CardsContent() {
                 This is a <strong className="text-amber-300/95">user-driven economy</strong>—prices and value are set by the community.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                Chase a <strong className="text-amber-300/95">badge</strong> (show off a winning movie on your profile) or build your <strong className="text-amber-300/95">collection</strong>.
+                Chase a <strong className="text-amber-300/95">badge</strong> (show off a winning movie on your profile) or build your <strong className="text-amber-300/95">inventory</strong>.
               </p>
               <p className="text-xs text-white/50 leading-relaxed">
                 New cards are added weekly from winning movies.
@@ -2012,19 +2023,19 @@ function CardsContent() {
           </>
         )}
 
-        {/* Collection */}
-        {tab === "collection" && (
+        {/* Inventory */}
+        {tab === "inventory" && (
           <div>
             {/* Browser-style sub-tabs: Trade up | Alchemy */}
             <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
                 type="button"
                 onClick={() => {
-                  setCollectionSubTab("tradeup");
+                  setInventorySubTab("tradeup");
                   router.replace("/cards", { scroll: false });
                 }}
                 className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
-                  collectionSubTab === "tradeup"
+                  inventorySubTab === "tradeup"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
                 }`}
@@ -2034,11 +2045,11 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => {
-                  setCollectionSubTab("alchemy");
+                  setInventorySubTab("alchemy");
                   router.replace("/cards?alchemy=1", { scroll: false });
                 }}
                 className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
-                  collectionSubTab === "alchemy"
+                  inventorySubTab === "alchemy"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
                 }`}
@@ -2048,11 +2059,11 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => {
-                  setCollectionSubTab("quicksell");
+                  setInventorySubTab("quicksell");
                   router.replace("/cards?quicksell=1", { scroll: false });
                 }}
                 className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
-                  collectionSubTab === "quicksell"
+                  inventorySubTab === "quicksell"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
                 }`}
@@ -2061,7 +2072,7 @@ function CardsContent() {
               </button>
             </div>
 
-            {collectionSubTab === "tradeup" && (
+            {inventorySubTab === "tradeup" && (
             <>
             {(tradeUpResult || tradeUpResultCredits != null) && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -2200,7 +2211,7 @@ function CardsContent() {
             </>
             )}
 
-            {collectionSubTab === "alchemy" && (
+            {inventorySubTab === "alchemy" && (
               <>
                 {/* Alchemy bench - one slot: Holo → Disenchant, normal → Pack-A-Punch */}
                 <div className={`rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
@@ -2224,7 +2235,7 @@ function CardsContent() {
                     </span>
                   </div>
                   <p className="text-sm text-white/60 mb-4">
-                    Place up to 5 cards from your collection below. All Holos → disenchant for Stardust. All normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
+                    Place up to 5 cards from your inventory below. All Holos → disenchant for Stardust. All normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
                   </p>
                   <div className="flex flex-wrap items-center gap-4 mb-4">
                     <div className="flex gap-2">
@@ -2297,7 +2308,7 @@ function CardsContent() {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-sm text-white/40">Add cards from your collection below. Holos or normals only (same type).</span>
+                      <span className="text-sm text-white/40">Add cards from your inventory below. Holos or normals only (same type).</span>
                     )}
                   </div>
                 </div>
@@ -2311,7 +2322,7 @@ function CardsContent() {
               </>
             )}
 
-            {collectionSubTab === "quicksell" && (
+            {inventorySubTab === "quicksell" && (
               <>
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -2375,7 +2386,7 @@ function CardsContent() {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-sm text-white/40">Add cards from your collection below to vendor for credits.</span>
+                      <span className="text-sm text-white/40">Add cards from your inventory below to vendor for credits.</span>
                     )}
                   </div>
                 </div>
@@ -2387,9 +2398,9 @@ function CardsContent() {
               </>
             )}
 
-            {/* Your Collection - always visible */}
+            {/* Your inventory - always visible */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4 mt-8">
-              <h2 className="text-lg font-semibold text-white/90">Your Collection ({cards.length})</h2>
+              <h2 className="text-lg font-semibold text-white/90">Your inventory ({cards.length})</h2>
               <div className="flex items-center gap-3">
                 <select
                   value={filterRarity}
@@ -2450,20 +2461,20 @@ function CardsContent() {
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
                 const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
                 const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || card.rarity === tradeUpCards[0]?.rarity);
-                const canAddAlchemy = collectionSubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
-                const canAddQuicksell = collectionSubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
-                const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && collectionSubTab === "tradeup";
-                const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && collectionSubTab === "alchemy";
-                const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && collectionSubTab === "quicksell";
+                const canAddAlchemy = inventorySubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const canAddQuicksell = inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
+                const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && inventorySubTab === "tradeup";
+                const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && inventorySubTab === "alchemy";
+                const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
                 const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
                 const isNewCard = card.acquiredAt && (Date.now() - new Date(card.acquiredAt).getTime() < NEW_CARD_DAYS_MS);
                 const showNewDot = isNewCard && card.id && !seenCardIds.has(card.id);
                 const handleClick = () => {
-                  if (collectionSubTab === "alchemy") {
+                  if (inventorySubTab === "alchemy") {
                     if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
                     return;
                   }
-                  if (collectionSubTab === "quicksell") {
+                  if (inventorySubTab === "quicksell") {
                     if (canAddQuicksell && card.id) addToQuicksellBench(card.id);
                     return;
                   }
@@ -2479,23 +2490,23 @@ function CardsContent() {
                     onClick={handleClick}
                     onMouseEnter={() => showNewDot && card.id && markCardSeen(card.id)}
                     className={`relative group/card transition-all duration-200 ${
-                      (canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") || (canAddQuicksell && collectionSubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
-                    } ${card.rarity === "legendary" && collectionSubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
+                      (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                    } ${card.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
                     {showNewDot && (
                       <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]" aria-label="New card" />
                     )}
-                    {inSlots && collectionSubTab === "tradeup" && (
+                    {inSlots && inventorySubTab === "tradeup" && (
                       <span className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
                         ✓
                       </span>
                     )}
-                    {onAlchemyBench && collectionSubTab === "alchemy" && (
+                    {onAlchemyBench && inventorySubTab === "alchemy" && (
                       <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-purple-500/90 text-white text-[10px] font-bold">
                         In bench
                       </span>
                     )}
-                    {onQuicksellBench && collectionSubTab === "quicksell" && (
+                    {onQuicksellBench && inventorySubTab === "quicksell" && (
                       <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-sky-500/90 text-white text-[10px] font-bold">
                         Quicksell
                       </span>
@@ -2505,7 +2516,7 @@ function CardsContent() {
                         Listed
                       </span>
                     )}
-                    <div className={(canAddTradeUp && collectionSubTab === "tradeup") || (canAddAlchemy && collectionSubTab === "alchemy") || (canAddQuicksell && collectionSubTab === "quicksell") ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
+                    <div className={(canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
                       <CardDisplay card={card} />
                     </div>
                   </div>
@@ -2548,7 +2559,7 @@ function CardsContent() {
               <p className="text-white/50 text-sm">Buy and sell character cards with other collectors.</p>
               <button
                 onClick={() => setShowListModal(true)}
-                className="px-4 py-2.5 rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md text-green-400 font-medium hover:border-green-500/50 hover:bg-green-500/15 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-cyan-500/50 bg-cyan-500/20 backdrop-blur-md text-cyan-300 font-medium hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
               >
                 List a Card
               </button>
@@ -3006,12 +3017,12 @@ function CardsContent() {
           </>
         )}
 
-        {/* Codex */}
+        {/* Codex — upload, then sub-tabs (Codex | Badges), then content */}
         {tab === "codex" && (
-          <>
-            <div className="flex flex-col items-center gap-3 mb-6">
+          <div>
+            <div className="flex flex-col items-center gap-3 mb-4">
               <p className="text-white/50 text-sm text-center max-w-xl">
-                All cards in the game. Upload a card from your Collection to unlock it here (the card is removed from your collection; legendaries re-enter the pool).
+                All cards in the game. Upload a card from your inventory to unlock it here (the card is removed from your inventory; legendaries re-enter the pool).
               </p>
               <button
                 type="button"
@@ -3024,73 +3035,219 @@ function CardsContent() {
                 Upload to Codex
               </button>
             </div>
+            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+              <button
+                type="button"
+                onClick={() => setCodexSubTab("codex")}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  codexSubTab === "codex"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Codex
+              </button>
+              <button
+                type="button"
+                onClick={() => setCodexSubTab("badges")}
+                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                  codexSubTab === "badges"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Badges
+              </button>
+            </div>
+
+            {codexSubTab === "codex" && (
+          <>
             {poolEntries.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
                 <p className="text-white/40 text-sm">No cards in the pool yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {poolEntries.map((entry) => {
-                  const discovered =
-                    discoveredCharacterIds.has(entry.characterId) ||
-                    (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
-                  if (!discovered) {
-                    return (
-                      <div
-                        key={entry.characterId}
-                        className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
-                        style={{ aspectRatio: "2 / 3.35" }}
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <span className="text-white/50 text-sm">Sort:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(["set", "name", "rarity"] as const).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCodexSort(key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          codexSort === key
+                            ? "bg-amber-500/20 border border-amber-400/50 text-amber-300"
+                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                        }`}
                       >
-                        <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {(() => {
+                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                    const renderEntry = (entry: PoolEntry) => {
+                      const discovered =
+                        discoveredCharacterIds.has(entry.characterId) ||
+                        (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                      if (!discovered) {
+                        return (
+                          <div
+                            key={entry.characterId}
+                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            style={{ aspectRatio: "2 / 3.35" }}
+                          >
+                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                              <span className="text-xs font-medium">?</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const codexCard = {
+                        id: entry.characterId,
+                        rarity: entry.rarity,
+                        isFoil: false,
+                        actorName: entry.actorName ?? "",
+                        characterName: entry.characterName ?? "",
+                        movieTitle: entry.movieTitle ?? "",
+                        profilePath: entry.profilePath ?? "",
+                        cardType: entry.cardType,
+                      };
+                      const isNewlyUploaded =
+                        newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
+                        (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                      const clearNewDot = () => {
+                        if (!isNewlyUploaded) return;
+                        setNewlyUploadedToCodexCharacterIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(entry.characterId);
+                          if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
+                          return next;
+                        });
+                      };
+                      return (
+                        <div
+                          key={entry.characterId}
+                          className={`relative ${isNewlyUploaded ? "codex-card-reveal" : ""}`}
+                          onMouseEnter={clearNewDot}
+                        >
+                          {isNewlyUploaded && (
+                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                          )}
+                          <CardDisplay card={codexCard} />
+                        </div>
+                      );
+                    };
+                    if (codexSort === "set") {
+                      const key = (e: PoolEntry) => e.movieTmdbId ?? e.movieTitle;
+                      const bySet = new Map<string | number, PoolEntry[]>();
+                      for (const entry of poolEntries) {
+                        const k = key(entry);
+                        if (!bySet.has(k)) bySet.set(k, []);
+                        bySet.get(k)!.push(entry);
+                      }
+                      const sets = Array.from(bySet.entries())
+                        .map(([k, entries]) => ({ title: entries[0]?.movieTitle ?? String(k), entries }))
+                        .sort((a, b) => a.title.localeCompare(b.title));
+                      return sets.flatMap((set, setIndex) => [
+                        setIndex > 0 ? (
+                          <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
+                        ) : null,
+                        ...set.entries.map((entry) => renderEntry(entry)),
+                      ]);
+                    }
+                    const sorted =
+                      codexSort === "name"
+                        ? [...poolEntries].sort((a, b) =>
+                            (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
+                          )
+                        : [...poolEntries].sort(
+                            (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+                          );
+                    return sorted.map((entry) => renderEntry(entry));
+                  })()}
+                </div>
+              </div>
+            )}
+          </>
+            )}
+
+            {codexSubTab === "badges" && (
+          <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
+            <p className="text-white/50 text-sm mb-6">
+              Collect achievements by completing each set in the Codex (discover all 6 cards for a movie).
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {winners.map((w) => {
+                const collected = completedBadgeWinnerIds.has(w.id);
+                return (
+                  <Link
+                    key={w.id}
+                    href={`/winners/${w.id}`}
+                    className={`block rounded-xl overflow-hidden border transition-all hover:ring-2 hover:ring-amber-400/40 ${
+                      collected
+                        ? "border-amber-500/40 bg-amber-500/10"
+                        : "border-white/10 bg-white/[0.04]"
+                    }`}
+                    style={{ aspectRatio: "1" }}
+                  >
+                    <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+                      {collected ? (
+                        w.posterUrl ? (
+                          <>
+                            <img
+                              src={w.posterUrl}
+                              alt=""
+                              className="w-full h-full object-cover absolute inset-0"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                          </>
+                        ) : (
+                          <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
+                            <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                              <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                          </div>
+                        )
+                      ) : (
+                        <div className="w-full h-full absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/25">
                           <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>
                           <span className="text-xs font-medium">?</span>
                         </div>
-                      </div>
-                    );
-                  }
-                  const codexCard = {
-                    id: entry.characterId,
-                    rarity: entry.rarity,
-                    isFoil: false,
-                    actorName: entry.actorName ?? "",
-                    characterName: entry.characterName ?? "",
-                    movieTitle: entry.movieTitle ?? "",
-                    profilePath: entry.profilePath ?? "",
-                    cardType: entry.cardType,
-                  };
-                  const isNewlyUploaded =
-                    newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
-                    (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
-                  const clearNewDot = () => {
-                    if (!isNewlyUploaded) return;
-                    setNewlyUploadedToCodexCharacterIds((prev) => {
-                      const next = new Set(prev);
-                      next.delete(entry.characterId);
-                      if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
-                      return next;
-                    });
-                  };
-                  return (
-                    <div
-                      key={entry.characterId}
-                      className={`relative ${isNewlyUploaded ? "codex-card-reveal" : ""}`}
-                      onMouseEnter={clearNewDot}
-                    >
-                      {isNewlyUploaded && (
-                        <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
                       )}
-                      <CardDisplay card={codexCard} />
+                      {collected && (
+                        <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                          {w.movieTitle || "Set"}
+                        </span>
+                      )}
+                      {collected && (
+                        <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center" aria-hidden>
+                          <svg className="w-3 h-3 text-amber-950" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                        </span>
+                      )}
                     </div>
-                  );
-                })}
+                  </Link>
+                );
+              })}
+            </div>
+            {winners.length === 0 && (
+              <p className="text-white/40 text-sm text-center py-8">No sets yet. Win some movies to unlock badge achievements.</p>
+            )}
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* Codex upload modal — select collection cards to upload */}
+        {/* Codex upload modal — select inventory cards to upload */}
         {showCodexUploadModal && (
           <>
             <div
@@ -3105,7 +3262,7 @@ function CardsContent() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
-                <h3 className="text-lg font-bold text-white/90">Your collection — select cards to upload to Codex</h3>
+                <h3 className="text-lg font-bold text-white/90">Your inventory — select cards to upload to Codex</h3>
                 <button
                   type="button"
                   onClick={() => !codexUploading && setShowCodexUploadModal(false)}

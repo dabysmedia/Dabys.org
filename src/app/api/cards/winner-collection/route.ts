@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getWinners, getCards, getCharacterPool } from "@/lib/data";
 import {
   getPoolEntriesForMovie,
-  getUserCollectedCharacterIdsForMovie,
+  getUserCodexCharacterIdsForMovie,
   hasCompletedMovie,
 } from "@/lib/cards";
 
@@ -24,10 +24,14 @@ export async function GET(request: Request) {
   }
 
   const poolEntries = getPoolEntriesForMovie(winner.tmdbId);
-  const ownedCharacterIds: string[] = userId ? Array.from(getUserCollectedCharacterIdsForMovie(userId, winner.tmdbId)) : [];
+  // Badge/set completion is from codex (discovered), not inventory.
+  const discoveredSlots = userId ? getUserCodexCharacterIdsForMovie(userId, winner.tmdbId) : new Set<string>();
+  const ownedCharacterIds: string[] = poolEntries
+    .filter((e) => discoveredSlots.has(e.altArtOfCharacterId ?? e.characterId))
+    .map((e) => e.characterId);
   const completed = userId ? hasCompletedMovie(userId, winnerId) : false;
 
-  // Build ownedCards: for each owned characterId, get one card the user owns (main or pool alt-art)
+  // ownedCards: cards in inventory for this movie (for thumbnails; may be fewer than discovered if user uploaded to codex)
   const pool = getCharacterPool();
   const ownedCards: ReturnType<typeof getCards>[number][] = [];
   if (userId) {

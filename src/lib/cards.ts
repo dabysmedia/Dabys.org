@@ -15,6 +15,7 @@ import {
   getPacks,
   getProfile,
   getPackPurchasesCountToday,
+  getCodexUnlockedCharacterIds,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
 
@@ -466,16 +467,33 @@ export function getUserCollectedFoilCharacterIdsForMovie(userId: string, tmdbId:
   return new Set(cards.map((c) => c.characterId));
 }
 
-/** True if user owns all 6 pool characterIds for the winner's movie. */
+/** Distinct characterIds (slots) the user has discovered in the codex for a given movie. Alt-art counts as main for the slot. */
+export function getUserCodexCharacterIdsForMovie(userId: string, tmdbId: number): Set<string> {
+  const codexIds = new Set(getCodexUnlockedCharacterIds(userId));
+  const pool = getPoolEntriesForMovie(tmdbId);
+  const slotIds = new Set(pool.map((c) => c.altArtOfCharacterId ?? c.characterId));
+  const result = new Set<string>();
+  for (const slotId of slotIds) {
+    if (codexIds.has(slotId)) {
+      result.add(slotId);
+      continue;
+    }
+    const altEntry = pool.find((p) => p.altArtOfCharacterId === slotId);
+    if (altEntry && codexIds.has(altEntry.characterId)) result.add(slotId);
+  }
+  return result;
+}
+
+/** True if user has discovered all 6 slots for the winner's movie in the codex (badge = codex completion). */
 export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length < 6) return false;
-  const owned = getUserCollectedCharacterIdsForMovie(userId, winner.tmdbId);
-  const required = new Set(pool.map((c) => c.characterId));
+  const discovered = getUserCodexCharacterIdsForMovie(userId, winner.tmdbId);
+  const required = new Set(pool.map((c) => c.altArtOfCharacterId ?? c.characterId));
   for (const id of required) {
-    if (!owned.has(id)) return false;
+    if (!discovered.has(id)) return false;
   }
   return true;
 }

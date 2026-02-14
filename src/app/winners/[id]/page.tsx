@@ -862,7 +862,7 @@ export default function WinnerDetailPage() {
                   {winnerCollection.completed ? (
                     <span className="text-amber-400 font-medium">Complete! All 6 collected.</span>
                   ) : (
-                    <>Collect {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length}</>
+                    <>Discovered {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length}</>
                   )}
                   {" · "}
                   <Link href="/cards" className="text-amber-400/80 hover:text-amber-400 transition-colors">
