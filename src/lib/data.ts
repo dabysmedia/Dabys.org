@@ -897,6 +897,7 @@ export function updateCardsByCharacterId(
 }
 
 // ──── Codex (unlock by uploading a card; removes card from collection, legendaries re-enter pool) ────
+// Persisted in DATA_DIR (src/data by default, or /data when DATA_DIR env is set).
 const CODEX_UNLOCKS_FILE = "codexUnlocks.json";
 
 function getCodexUnlocksRaw(): Record<string, string[]> {
@@ -922,6 +923,11 @@ export function addCodexUnlock(userId: string, characterId: string): void {
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   saveCodexUnlocksRaw(data);
+}
+
+/** Clear all codex unlocks for all users (admin). */
+export function resetCodexUnlocks(): void {
+  saveCodexUnlocksRaw({});
 }
 
 // ──── Trivia ────────────────────────────────────────────

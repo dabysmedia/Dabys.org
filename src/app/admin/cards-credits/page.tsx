@@ -226,6 +226,7 @@ export default function AdminCardsCreditsPage() {
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
+  const [resettingCodex, setResettingCodex] = useState(false);
   const [creditSettings, setCreditSettings] = useState<{
     submission: number;
     vote: number;
@@ -814,6 +815,27 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to reset server");
     } finally {
       setWipingServer(false);
+    }
+  }
+
+  async function handleResetCodex() {
+    if (resettingCodex) return;
+    if (!confirm("Clear all codex unlocks for every user? Everyone will need to re-discover cards in the Codex.")) return;
+    setResettingCodex(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/codex/reset", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setError("");
+        alert("Codex reset complete. All users’ codex unlocks have been cleared.");
+      } else {
+        setError(data.error || "Failed to reset codex");
+      }
+    } catch {
+      setError("Failed to reset codex");
+    } finally {
+      setResettingCodex(false);
     }
   }
 
@@ -2639,6 +2661,19 @@ export default function AdminCardsCreditsPage() {
                 {rebuildingPool ? "Rebuilding..." : "Rebuild pool (6/movie)"}
               </button>
             )}
+          </div>
+
+          <div>
+            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Reset codex</h3>
+            <p className="text-white/40 text-sm mb-2">Clears all codex unlocks for all users. Everyone will see the Codex as locked until they upload cards again.</p>
+            <button
+              type="button"
+              onClick={handleResetCodex}
+              disabled={resettingCodex}
+              className="px-4 py-2.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-sm font-medium hover:bg-amber-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {resettingCodex ? "Resetting..." : "Reset codex"}
+            </button>
           </div>
 
           <div>

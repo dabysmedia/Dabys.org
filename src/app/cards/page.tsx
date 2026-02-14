@@ -1278,19 +1278,21 @@ function CardsContent() {
 
     codexAudio.pause();
     codexAudio.currentTime = 0;
-    setCodexUploading(false);
-    setCodexUploadProgress(0);
-    setCodexUploadSelectedIds(new Set());
-    setShowCodexUploadModal(false);
-    await loadData();
     if (uploadedCount > 0) {
       setCodexUploadCompleteCount(uploadedCount);
+      const completeSound = new Audio("/data/codex-complete.mp3");
+      completeSound.play().catch(() => {});
       if (codexUploadCompleteTimeoutRef.current) clearTimeout(codexUploadCompleteTimeoutRef.current);
       codexUploadCompleteTimeoutRef.current = setTimeout(() => {
         setCodexUploadCompleteCount(null);
         codexUploadCompleteTimeoutRef.current = null;
       }, 3200);
     }
+    setCodexUploading(false);
+    setCodexUploadProgress(0);
+    setCodexUploadSelectedIds(new Set());
+    setShowCodexUploadModal(false);
+    await loadData();
   }
 
   function toggleCodexUploadSelection(cardId: string) {
@@ -3061,10 +3063,20 @@ function CardsContent() {
                   const isNewlyUploaded =
                     newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
                     (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                  const clearNewDot = () => {
+                    if (!isNewlyUploaded) return;
+                    setNewlyUploadedToCodexCharacterIds((prev) => {
+                      const next = new Set(prev);
+                      next.delete(entry.characterId);
+                      if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
+                      return next;
+                    });
+                  };
                   return (
                     <div
                       key={entry.characterId}
                       className={`relative ${isNewlyUploaded ? "codex-card-reveal" : ""}`}
+                      onMouseEnter={clearNewDot}
                     >
                       {isNewlyUploaded && (
                         <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
