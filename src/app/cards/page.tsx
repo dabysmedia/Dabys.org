@@ -1205,7 +1205,7 @@ function CardsContent() {
     }
   }
 
-  function isCardSlotAlreadyInCodex(card: { characterId: string | null; isFoil?: boolean }): boolean {
+  function isCardSlotAlreadyInCodex(card: { characterId?: string | null; isFoil?: boolean }): boolean {
     if (!card.characterId) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return false;
