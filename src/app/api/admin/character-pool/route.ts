@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
-import type { CardType } from "@/lib/data";
+import type { CardType, CharacterPortrayal } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -97,15 +97,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "characterId required" }, { status: 400 });
   }
 
-  const updates: Partial<{ actorName: string; characterName: string; movieTitle: string; profilePath: string; movieTmdbId: number; rarity: string; cardType: string; popularity: number; altArtOfCharacterId: string | undefined }> = {};
+  const updates: Partial<CharacterPortrayal> = {};
   if (typeof body.actorName === "string") updates.actorName = body.actorName.trim();
   if (typeof body.characterName === "string") updates.characterName = body.characterName.trim() || "Unknown";
   if (typeof body.movieTitle === "string") updates.movieTitle = body.movieTitle.trim();
   if (typeof body.profilePath === "string") updates.profilePath = body.profilePath.trim();
   if (typeof body.movieTmdbId === "number") updates.movieTmdbId = body.movieTmdbId;
   else if (body.movieTmdbId !== undefined) updates.movieTmdbId = parseInt(String(body.movieTmdbId), 10) || 0;
-  if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity;
-  if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType;
+  if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity as CharacterPortrayal["rarity"];
+  if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType as CardType;
   if (typeof body.popularity === "number") updates.popularity = body.popularity;
   if (body.altArtOfCharacterId !== undefined) {
     updates.altArtOfCharacterId =
