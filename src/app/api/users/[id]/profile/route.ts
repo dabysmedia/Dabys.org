@@ -9,8 +9,8 @@ import {
   getComments,
   getWeeks,
   getWatchlist,
-  getCards,
-  getCardById,
+  getCodexUnlockedCharacterIds,
+  getCharacterPool,
 } from "@/lib/data";
 import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
@@ -118,11 +118,32 @@ export async function GET(
     posterUrl: string;
     backdropUrl: string;
     year: string;
-    winnerId: string;
-    stars: number;
-    thumbsUp: boolean;
+    winnerId?: string | null;
+    letterboxdUrl?: string | null;
+    stars?: number | null;
+    thumbsUp?: boolean | null;
   } | null = null;
-  if (userRatings.length > 0) {
+
+  const favoriteTmdbId = profile.favoriteMovieTmdbId ?? undefined;
+  const favoriteSnapshot = profile.favoriteMovieSnapshot ?? undefined;
+
+  if (favoriteTmdbId != null && favoriteSnapshot) {
+    const winner = allWinners.find((w) => w.tmdbId === favoriteTmdbId);
+    const rating = userRatings.find((r) => {
+      const w = allWinners.find((x) => x.id === r.winnerId);
+      return w?.tmdbId === favoriteTmdbId;
+    });
+    favoriteMovie = {
+      title: favoriteSnapshot.title || winner?.movieTitle || "Unknown",
+      posterUrl: favoriteSnapshot.posterUrl || winner?.posterUrl || "",
+      backdropUrl: favoriteSnapshot.backdropUrl || winner?.backdropUrl || "",
+      year: favoriteSnapshot.year || winner?.year || "",
+      winnerId: winner?.id ?? null,
+      letterboxdUrl: favoriteSnapshot.letterboxdUrl ?? null,
+      stars: rating?.stars ?? null,
+      thumbsUp: rating?.thumbsUp ?? null,
+    };
+  } else if (userRatings.length > 0) {
     const best = userRatings.reduce((a, b) => (a.stars > b.stars ? a : b));
     const bestWinner = allWinners.find((w) => w.id === best.winnerId);
     if (bestWinner) {
@@ -132,6 +153,7 @@ export async function GET(
         backdropUrl: bestWinner.backdropUrl || "",
         year: bestWinner.year || "",
         winnerId: bestWinner.id,
+        letterboxdUrl: null,
         stars: best.stars,
         thumbsUp: best.thumbsUp,
       };
@@ -176,11 +198,23 @@ export async function GET(
 
   const watchlist = getWatchlist(id);
 
-  // Featured cards: full card objects for featuredCardIds (filter invalid/transferred)
-  const featuredCardIds = profile.featuredCardIds ?? [];
-  const featuredCards = featuredCardIds
-    .map((cardId) => getCardById(cardId))
-    .filter((c): c is NonNullable<typeof c> => c != null && c.userId === id);
+  // Codex cards: discovered entries from character pool (not inventory)
+  const codexCharacterIds = getCodexUnlockedCharacterIds(id);
+  const pool = getCharacterPool();
+  const poolById = new Map(pool.map((e) => [e.characterId, e]));
+  const codexCards = codexCharacterIds
+    .map((charId) => poolById.get(charId))
+    .filter((e): e is NonNullable<typeof e> => e != null)
+    .map((e) => ({
+      id: e.characterId,
+      rarity: e.rarity,
+      isFoil: false,
+      actorName: e.actorName ?? "",
+      characterName: e.characterName ?? "",
+      movieTitle: e.movieTitle ?? "",
+      profilePath: e.profilePath ?? "",
+      cardType: e.cardType,
+    }));
 
   // Completed badges (winner-based + Holo) + purchased movie badges + standalone purchased badges
   const completedWinnerIds = getCompletedWinnerIds(id);
@@ -242,11 +276,12 @@ export async function GET(
       avatarUrl: profile.avatarUrl,
       bannerUrl: profile.bannerUrl,
       bio: profile.bio,
-      featuredCardIds,
       displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
       displayedBadgeShopItemId: displayedBadgeShopItemId ?? undefined,
+      favoriteMovieTmdbId: profile.favoriteMovieTmdbId ?? undefined,
+      favoriteMovieSnapshot: profile.favoriteMovieSnapshot ?? undefined,
     },
-    featuredCards,
+    codexCards,
     displayedBadge,
     displayedBadges: displayedBadge ? [displayedBadge] : [],
     completedWinnerIds,
@@ -291,15 +326,6 @@ export async function PUT(
   if (typeof body.bio === "string") profile.bio = body.bio.slice(0, 300);
   if (typeof body.skipsUsed === "number") profile.skipsUsed = Math.max(0, Math.floor(body.skipsUsed));
 
-  if (Array.isArray(body.featuredCardIds)) {
-    const userCards = getCards(id);
-    const validIds = body.featuredCardIds
-      .filter((cid: unknown): cid is string => typeof cid === "string")
-      .filter((cid: string) => userCards.some((c) => c.id === cid))
-      .slice(0, 6);
-    profile.featuredCardIds = validIds;
-  }
-
   if (body.displayedBadgeWinnerId !== undefined) {
     const completed = getCompletedWinnerIds(id);
     const purchased = profile.purchasedBadgeWinnerIds ?? [];
@@ -313,6 +339,27 @@ export async function PUT(
       profile.displayedBadgeShopItemId = undefined;
     }
   }
+  if (body.favoriteMovieTmdbId !== undefined) {
+    if (body.favoriteMovieTmdbId == null || body.favoriteMovieTmdbId === "") {
+      profile.favoriteMovieTmdbId = undefined;
+      profile.favoriteMovieSnapshot = undefined;
+    } else if (
+      typeof body.favoriteMovieTmdbId === "number" &&
+      body.favoriteMovieSnapshot &&
+      typeof body.favoriteMovieSnapshot === "object"
+    ) {
+      const s = body.favoriteMovieSnapshot as { title?: string; posterUrl?: string; backdropUrl?: string; year?: string; letterboxdUrl?: string };
+      profile.favoriteMovieTmdbId = body.favoriteMovieTmdbId;
+      profile.favoriteMovieSnapshot = {
+        title: typeof s.title === "string" ? s.title.slice(0, 200) : "",
+        posterUrl: typeof s.posterUrl === "string" ? s.posterUrl.slice(0, 500) : "",
+        backdropUrl: typeof s.backdropUrl === "string" ? s.backdropUrl.slice(0, 500) : "",
+        year: typeof s.year === "string" ? s.year.slice(0, 10) : "",
+        letterboxdUrl: typeof s.letterboxdUrl === "string" ? s.letterboxdUrl.slice(0, 500) : "",
+      };
+    }
+  }
+
   if (body.displayedBadgeShopItemId !== undefined) {
     const value = body.displayedBadgeShopItemId;
     const purchased = profile.purchasedBadges ?? [];

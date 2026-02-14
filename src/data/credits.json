@@ -3,5 +3,10 @@
     "userId": "2",
     "balance": 30,
     "updatedAt": "2026-02-14T02:37:36.921Z"
+  },
+  {
+    "userId": "1",
+    "balance": 300,
+    "updatedAt": "2026-02-14T03:40:42.860Z"
   }
 ]

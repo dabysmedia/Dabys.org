@@ -155,6 +155,9 @@ export default function AdminCardsCreditsPage() {
   const [savingStardust, setSavingStardust] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [pool, setPool] = useState<CharacterPortrayal[]>([]);
+  const [pendingByWinner, setPendingByWinner] = useState<Record<string, CharacterPortrayal[]>>({});
+  const [pushingWinnerId, setPushingWinnerId] = useState<string | null>(null);
+  const [editingPendingWinnerId, setEditingPendingWinnerId] = useState<string | null>(null);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingCredits, setSavingCredits] = useState(false);
@@ -309,6 +312,7 @@ export default function AdminCardsCreditsPage() {
       if (res.ok) {
         const d = await res.json();
         setPool(Array.isArray(d) ? d : (d?.pool ?? []));
+        setPendingByWinner(d?.pendingByWinner ?? {});
       }
     } catch {
       setError("Failed to load pool");
@@ -412,6 +416,7 @@ export default function AdminCardsCreditsPage() {
       if (poolRes.ok) {
         const p = await poolRes.json();
         setPool(Array.isArray(p) ? p : (p?.pool ?? []));
+        setPendingByWinner(p?.pendingByWinner ?? {});
       }
       if (attemptsRes.ok) {
         const a = await attemptsRes.json();
@@ -965,8 +970,31 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
-  function openEditPoolEntry(entry: CharacterPortrayal) {
+  async function handlePushToPool(winnerId: string) {
+    setPushingWinnerId(winnerId);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/character-pool/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ winnerId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await loadPool();
+      } else {
+        setError(data.error || "Failed to push to pool");
+      }
+    } catch {
+      setError("Failed to push to pool");
+    } finally {
+      setPushingWinnerId(null);
+    }
+  }
+
+  function openEditPoolEntry(entry: CharacterPortrayal, pendingWinnerId?: string) {
     setEditingPoolEntry(entry);
+    setEditingPendingWinnerId(pendingWinnerId ?? null);
     setPoolEditForm({
       actorName: entry.actorName,
       characterName: entry.characterName,
@@ -991,6 +1019,7 @@ export default function AdminCardsCreditsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           characterId: editingPoolEntry.characterId,
+          ...(editingPendingWinnerId && { winnerId: editingPendingWinnerId }),
           ...poolEditForm,
         }),
       });
@@ -998,6 +1027,7 @@ export default function AdminCardsCreditsPage() {
       if (res.ok) {
         await loadPool();
         setEditingPoolEntry(null);
+        setEditingPendingWinnerId(null);
       } else {
         setError(data.error || "Failed to update pool entry");
       }
@@ -1029,11 +1059,13 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
-  async function handleRemoveFromPool(characterId: string) {
+  async function handleRemoveFromPool(characterId: string, pendingWinnerId?: string) {
     setRemovingFromPoolId(characterId);
     setError("");
     try {
-      const res = await fetch(`/api/admin/character-pool?characterId=${encodeURIComponent(characterId)}`, {
+      const params = new URLSearchParams({ characterId });
+      if (pendingWinnerId) params.set("winnerId", pendingWinnerId);
+      const res = await fetch(`/api/admin/character-pool?${params.toString()}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -1750,6 +1782,58 @@ export default function AdminCardsCreditsPage() {
         </div>
       </div>
 
+      {/* Pending cards (new sets not yet pushed to pool) */}
+      {Object.keys(pendingByWinner).length > 0 && (
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h2 className="text-sm font-semibold text-amber-400/90 uppercase tracking-widest">
+              Pending cards
+            </h2>
+            <p className="text-xs text-white/40">
+              New winner cards stay here until you push the set to the pool. Then they appear in Manage Card Pool below.
+            </p>
+          </div>
+          <div className="space-y-6">
+            {Object.entries(pendingByWinner).map(([winnerId, entries]) => {
+              const winner = winners.find((w) => w.id === winnerId);
+              const movieTitle = winner?.movieTitle ?? `Winner #${winnerId}`;
+              return (
+                <div
+                  key={winnerId}
+                  className="rounded-lg border border-amber-500/15 bg-white/[0.03] overflow-hidden"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-amber-500/10">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white/80 truncate">{movieTitle}</p>
+                      <p className="text-xs text-white/40">{entries.length} card{entries.length !== 1 ? "s" : ""} pending — edit below, then push to pool</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePushToPool(winnerId)}
+                      disabled={pushingWinnerId === winnerId}
+                      className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {pushingWinnerId === winnerId ? "Pushing…" : "Push to pool"}
+                    </button>
+                  </div>
+                  <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    {entries.map((c) => (
+                      <PoolEntryCard
+                        key={c.characterId}
+                        c={c}
+                        onEdit={() => openEditPoolEntry(c, winnerId)}
+                        onRemove={() => handleRemoveFromPool(c.characterId, winnerId)}
+                        removingFromPoolId={removingFromPoolId}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Manage Card Pool */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -2433,7 +2517,7 @@ export default function AdminCardsCreditsPage() {
         <>
           <div
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => !savingPoolEdit && setEditingPoolEntry(null)}
+            onClick={() => { if (!savingPoolEdit) { setEditingPoolEntry(null); setEditingPendingWinnerId(null); } }}
             aria-hidden
           />
           <div
@@ -2539,17 +2623,27 @@ export default function AdminCardsCreditsPage() {
                       className="w-full px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"
                     >
                       <option value="">— None (normal pool entry) —</option>
-                      {pool
-                        .filter(
+                      {(() => {
+                        const sameMoviePool = pool.filter(
                           (c) =>
                             c.profilePath?.trim() &&
                             (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)
-                        )
-                        .map((c) => (
+                        );
+                        const sameMoviePending = editingPendingWinnerId
+                          ? (pendingByWinner[editingPendingWinnerId] ?? []).filter(
+                              (c) => (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)
+                            )
+                          : [];
+                        const combined = [...sameMoviePool];
+                        sameMoviePending.forEach((c) => {
+                          if (!combined.some((x) => x.characterId === c.characterId)) combined.push(c);
+                        });
+                        return combined.map((c) => (
                           <option key={c.characterId} value={c.characterId}>
                             {poolOptionLabel(c)}
                           </option>
-                        ))}
+                        ));
+                      })()}
                     </select>
                     <p className="text-[10px] text-white/40 mt-1">
                       If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.
@@ -2559,7 +2653,7 @@ export default function AdminCardsCreditsPage() {
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setEditingPoolEntry(null)}
+                    onClick={() => { setEditingPoolEntry(null); setEditingPendingWinnerId(null); }}
                     disabled={savingPoolEdit}
                     className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
                   >

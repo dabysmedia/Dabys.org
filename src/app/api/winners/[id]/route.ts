@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
-import { addPoolEntriesForWinner, getDisplayedBadgeForUser } from "@/lib/cards";
+import { addPendingPoolEntriesForWinner, getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(
   _request: Request,
@@ -143,7 +143,7 @@ export async function PATCH(
   saveWinners(winners);
 
   if (w.tmdbId != null && prevTmdbId !== w.tmdbId) {
-    addPoolEntriesForWinner(w).catch((e) => console.error("Pool add error", e));
+    addPendingPoolEntriesForWinner(w).catch((e) => console.error("Pending pool add error", e));
   }
 
   return NextResponse.json(w);

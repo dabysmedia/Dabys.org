@@ -2,6 +2,8 @@ import {
   getWinners,
   getCharacterPool,
   saveCharacterPool,
+  getPendingPool,
+  savePendingPool,
   addCard,
   deductCredits,
   getCredits,
@@ -139,7 +141,7 @@ export async function buildCharacterPool(): Promise<CharacterPortrayal[]> {
   return pool;
 }
 
-/** Add up to 6 actor cards for a single winner to the pool. Fire-and-forget from API routes. */
+/** Add up to 6 actor cards for a single winner to the main pool. Used by rebuild; new winners use addPendingPoolEntriesForWinner. */
 export async function addPoolEntriesForWinner(winner: Winner): Promise<void> {
   if (!winner.tmdbId) return;
   const tmdbId = winner.tmdbId;
@@ -182,6 +184,58 @@ export async function addPoolEntriesForWinner(winner: Winner): Promise<void> {
 
   if (newEntries.length > 0) {
     saveCharacterPool([...existing, ...newEntries]);
+  }
+}
+
+/** Add up to 6 actor cards for a winner to the pending pool (admin must "push to pool" to add to main pool). */
+export async function addPendingPoolEntriesForWinner(winner: Winner): Promise<void> {
+  if (!winner.tmdbId) return;
+  const tmdbId = winner.tmdbId;
+  const movieTitle = winner.movieTitle;
+  const winnerId = winner.id;
+
+  const mainPool = getCharacterPool();
+  const pending = getPendingPool();
+  const existingKeys = new Set(mainPool.map((c) => c.characterId).filter(Boolean));
+  for (const c of pending[winnerId] ?? []) {
+    existingKeys.add(c.characterId);
+  }
+
+  const data = await fetchTmdbCredits(tmdbId);
+  await delay(TMDB_DELAY_MS);
+  if (!data?.cast?.length) return;
+
+  const newEntries: CharacterPortrayal[] = [];
+  let added = 0;
+  for (const c of data.cast) {
+    if (added >= CARDS_PER_MOVIE) break;
+    if (!c.profile_path?.trim()) continue;
+    const characterName = (c.character || "").trim() || "Unknown";
+    if (isGenericCharacterName(characterName)) continue;
+    const key = `actor-${c.id}-${tmdbId}`;
+    if (existingKeys.has(key)) continue;
+    const actorName = (c.name || "").trim() || "Unknown";
+    const popularity = typeof c.popularity === "number" ? c.popularity : 0;
+    const rarity = assignRarity(popularity);
+    newEntries.push({
+      characterId: key,
+      tmdbPersonId: c.id,
+      actorName,
+      characterName,
+      profilePath: `${TMDB_IMG}/w500${c.profile_path}`,
+      movieTmdbId: tmdbId,
+      movieTitle,
+      popularity,
+      rarity,
+      cardType: "actor",
+    });
+    existingKeys.add(key);
+    added++;
+  }
+
+  if (newEntries.length > 0) {
+    const prev = pending[winnerId] ?? [];
+    savePendingPool({ ...pending, [winnerId]: [...prev, ...newEntries] });
   }
 }
 

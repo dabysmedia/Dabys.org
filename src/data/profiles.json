@@ -24,6 +24,16 @@
     "bio": "",
     "skipsUsed": 1,
     "featuredCardIds": [],
-    "displayedBadgeWinnerId": null
+    "bonusSkips": 0,
+    "purchasedBadgeWinnerIds": [],
+    "purchasedBadges": [],
+    "favoriteMovieTmdbId": 414906,
+    "favoriteMovieSnapshot": {
+      "title": "The Batman",
+      "posterUrl": "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+      "backdropUrl": "https://image.tmdb.org/t/p/w1280/rvtdN5XkWAfGX6xDuPL6yYS2seK.jpg",
+      "year": "2022",
+      "letterboxdUrl": "https://letterboxd.com/film/the-batman-2022/"
+    }
   }
 ]

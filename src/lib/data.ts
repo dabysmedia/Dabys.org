@@ -72,6 +72,10 @@ export interface Profile {
   displayedBadgeShopItemId?: string | null;
   /** @deprecated Use displayedBadgeWinnerId. Kept for migration when reading JSON. */
   displayedBadgeWinnerIds?: string[];
+  /** User-chosen favourite movie from TMDB (overrides auto from highest rating). */
+  favoriteMovieTmdbId?: number | null;
+  /** Snapshot when favourite is from TMDB: title, poster, backdrop, year, letterboxdUrl. */
+  favoriteMovieSnapshot?: { title: string; posterUrl: string; backdropUrl: string; year: string; letterboxdUrl: string } | null;
 }
 
 export function getProfiles(): Profile[] {
@@ -811,6 +815,82 @@ export function getCharacterPool(): CharacterPortrayal[] {
 
 export function saveCharacterPool(pool: CharacterPortrayal[]) {
   saveCharacterPoolRaw(pool);
+}
+
+/** Pending pool: cards for winners not yet "pushed to pool". Key = winnerId. */
+export type PendingPool = Record<string, CharacterPortrayal[]>;
+
+function getPendingPoolRaw(): PendingPool {
+  try {
+    return readJson<PendingPool>("pendingPool.json");
+  } catch {
+    return {};
+  }
+}
+
+function savePendingPoolRaw(pending: PendingPool) {
+  writeJson("pendingPool.json", pending);
+}
+
+export function getPendingPool(): PendingPool {
+  const raw = getPendingPoolRaw();
+  const out: PendingPool = {};
+  for (const [winnerId, entries] of Object.entries(raw)) {
+    if (Array.isArray(entries) && entries.length > 0) {
+      out[winnerId] = entries.map((e) => withDefaultCardType(e));
+    }
+  }
+  return out;
+}
+
+export function savePendingPool(pending: PendingPool) {
+  savePendingPoolRaw(pending);
+}
+
+/** Move a winner's pending pool entries into the main character pool. Returns count pushed. */
+export function pushPendingToPool(winnerId: string): number {
+  const pending = getPendingPoolRaw();
+  const entries = pending[winnerId];
+  if (!entries?.length) return 0;
+  const pool = getCharacterPoolRaw();
+  const existingIds = new Set(pool.map((c) => c.characterId));
+  const toAdd = entries.filter((e) => !existingIds.has(e.characterId)).map((e) => withDefaultCardType(e));
+  if (toAdd.length > 0) {
+    saveCharacterPoolRaw([...pool, ...toAdd]);
+  }
+  delete pending[winnerId];
+  savePendingPoolRaw(pending);
+  return toAdd.length;
+}
+
+/** Update a single entry in the pending pool for a winner. */
+export function updatePendingPoolEntry(
+  winnerId: string,
+  characterId: string,
+  updates: Partial<CharacterPortrayal>
+): CharacterPortrayal | null {
+  const pending = getPendingPoolRaw();
+  const entries = pending[winnerId];
+  if (!entries?.length) return null;
+  const idx = entries.findIndex((c) => c.characterId === characterId);
+  if (idx < 0) return null;
+  const updated = { ...entries[idx], ...updates };
+  entries[idx] = updated;
+  savePendingPoolRaw(pending);
+  return withDefaultCardType(updated);
+}
+
+/** Remove a single entry from the pending pool for a winner. */
+export function removePendingPoolEntry(winnerId: string, characterId: string): boolean {
+  const pending = getPendingPoolRaw();
+  const entries = pending[winnerId];
+  if (!entries?.length) return false;
+  const filtered = entries.filter((c) => c.characterId !== characterId);
+  if (filtered.length === entries.length) return false;
+  if (filtered.length === 0) delete pending[winnerId];
+  else pending[winnerId] = filtered;
+  savePendingPoolRaw(pending);
+  return true;
 }
 
 /** CharacterIds of legendary cards already owned by any user. Legendaries are 1-of-1 and can't drop again. */

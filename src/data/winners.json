@@ -83,5 +83,19 @@
     "overview": "In the not so distant future, Theodore, a lonely writer, purchases a newly developed operating system designed to meet the user's every need. To Theodore's surprise, a romantic relationship develops between him and his operating system. This unconventional love story blends science fiction and romance in a sweet tale that explores the nature of love and the ways that technology isolates and connects us all.",
     "trailerUrl": "https://www.youtube.com/embed/ne6p6MfLBxc",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/sPPsR9f4K0movWVQ99u4uMqFzEL.jpg"
+  },
+  {
+    "id": "7",
+    "weekId": "9",
+    "movieTitle": "The Avengers",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/the-avengers-2012/",
+    "submittedBy": "Jerry",
+    "publishedAt": "2026-02-14T03:40:42.859Z",
+    "tmdbId": 24428,
+    "year": "2012",
+    "overview": "When an unexpected enemy emerges and threatens global safety and security, Nick Fury, director of the international peacekeeping agency known as S.H.I.E.L.D., finds himself in need of a team to pull the world back from the brink of disaster. Spanning the globe, a daring recruitment effort begins!",
+    "trailerUrl": "https://www.youtube.com/embed/hIR8Ar-Z4hw",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9BBTo63ANSmhC4e6r62OJFuK2GL.jpg"
   }
 ]

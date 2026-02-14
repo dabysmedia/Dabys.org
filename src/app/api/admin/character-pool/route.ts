@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool, saveCharacterPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
 import type { CardType } from "@/lib/data";
 
@@ -22,11 +22,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   if (searchParams.get("cleanup") === "1") {
     const pool = cleanupGenericPoolEntries();
-    return NextResponse.json({ pool });
+    return NextResponse.json({ pool, pendingByWinner: getPendingPool() });
   }
 
   const pool = getCharacterPool();
-  return NextResponse.json({ pool });
+  const pendingByWinner = getPendingPool();
+  return NextResponse.json({ pool, pendingByWinner });
 }
 
 export async function POST(request: Request) {
@@ -91,17 +92,12 @@ export async function PATCH(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const characterId = body.characterId as string | undefined;
+  const winnerId = typeof body.winnerId === "string" ? body.winnerId.trim() : undefined;
   if (!characterId) {
     return NextResponse.json({ error: "characterId required" }, { status: 400 });
   }
 
-  const pool = getCharacterPool();
-  const idx = pool.findIndex((c) => c.characterId === characterId);
-  if (idx < 0) {
-    return NextResponse.json({ error: "Pool entry not found" }, { status: 404 });
-  }
-
-  const updates: Partial<typeof pool[0]> = {};
+  const updates: Partial<{ actorName: string; characterName: string; movieTitle: string; profilePath: string; movieTmdbId: number; rarity: string; cardType: string; popularity: number; altArtOfCharacterId: string | undefined }> = {};
   if (typeof body.actorName === "string") updates.actorName = body.actorName.trim();
   if (typeof body.characterName === "string") updates.characterName = body.characterName.trim() || "Unknown";
   if (typeof body.movieTitle === "string") updates.movieTitle = body.movieTitle.trim();
@@ -118,9 +114,20 @@ export async function PATCH(request: Request) {
         : undefined;
   }
 
+  if (winnerId) {
+    const updated = updatePendingPoolEntry(winnerId, characterId, updates);
+    if (!updated) return NextResponse.json({ error: "Pending entry not found" }, { status: 404 });
+    return NextResponse.json(updated);
+  }
+
+  const pool = getCharacterPool();
+  const idx = pool.findIndex((c) => c.characterId === characterId);
+  if (idx < 0) {
+    return NextResponse.json({ error: "Pool entry not found" }, { status: 404 });
+  }
+
   pool[idx] = { ...pool[idx], ...updates };
   saveCharacterPool(pool);
-  // Propagate pool changes to all existing cards with this characterId (so image/name/etc updates show site-wide; alt-art is pool-only)
   const { popularity: _p, altArtOfCharacterId: _a, ...cardUpdates } = updates;
   if (Object.keys(cardUpdates).length > 0) {
     updateCardsByCharacterId(characterId, cardUpdates);
@@ -134,8 +141,15 @@ export async function DELETE(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const characterId = searchParams.get("characterId");
+  const winnerId = searchParams.get("winnerId");
   if (!characterId) {
     return NextResponse.json({ error: "characterId required" }, { status: 400 });
+  }
+
+  if (winnerId) {
+    const removed = removePendingPoolEntry(winnerId, characterId);
+    if (!removed) return NextResponse.json({ error: "Pending entry not found" }, { status: 404 });
+    return NextResponse.json({ success: true });
   }
 
   const pool = getCharacterPool();

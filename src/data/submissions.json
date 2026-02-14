@@ -222,5 +222,20 @@
     "trailerUrl": "https://www.youtube.com/embed/ne6p6MfLBxc",
     "backdropUrl": "https://image.tmdb.org/t/p/w1280/sPPsR9f4K0movWVQ99u4uMqFzEL.jpg",
     "createdAt": "2026-02-13T02:31:03.919Z"
+  },
+  {
+    "id": "17",
+    "weekId": "9",
+    "userId": "1",
+    "userName": "Jerry",
+    "movieTitle": "The Avengers",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/the-avengers-2012/",
+    "tmdbId": 24428,
+    "year": "2012",
+    "overview": "When an unexpected enemy emerges and threatens global safety and security, Nick Fury, director of the international peacekeeping agency known as S.H.I.E.L.D., finds himself in need of a team to pull the world back from the brink of disaster. Spanning the globe, a daring recruitment effort begins!",
+    "trailerUrl": "https://www.youtube.com/embed/hIR8Ar-Z4hw",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/9BBTo63ANSmhC4e6r62OJFuK2GL.jpg",
+    "createdAt": "2026-02-14T03:40:36.384Z"
   }
 ]

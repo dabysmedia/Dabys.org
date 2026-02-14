@@ -59,6 +59,13 @@
     "id": "8",
     "theme": "Thriller",
     "phase": "winner_published",
-    "startedAt": "2026-02-12T00:16:24.756Z"
+    "startedAt": "2026-02-12T00:16:24.756Z",
+    "endedAt": "2026-02-14T03:39:52.242Z"
+  },
+  {
+    "id": "9",
+    "theme": "60s",
+    "phase": "winner_published",
+    "startedAt": "2026-02-14T03:40:12.719Z"
   }
 ]

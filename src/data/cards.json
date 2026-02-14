@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "userId": "1",
+    "characterId": "actor-19537-1858",
+    "rarity": "uncommon",
+    "isFoil": true,
+    "actorName": "Megan Fox",
+    "characterName": "Mikaela Banes",
+    "movieTitle": "Transformers",
+    "movieTmdbId": 1858,
+    "profilePath": "https://image.tmdb.org/t/p/w500/9khvk5svs81TLqIGlI3ZJqYtqaY.jpg",
+    "cardType": "actor",
+    "id": "card-1771038923553-3m4ga0a",
+    "acquiredAt": "2026-02-14T03:15:23.553Z"
+  },
+  {
+    "userId": "1",
+    "characterId": "actor-5823-809",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Julie Andrews",
+    "characterName": "Queen Lillian (voice)",
+    "movieTitle": "Shrek 2",
+    "movieTmdbId": 809,
+    "profilePath": "https://image.tmdb.org/t/p/w500/kTXM2KfsXh2vSav0s9vaDKfs4lR.jpg",
+    "cardType": "actor",
+    "id": "card-1771039222251-fiffuzv",
+    "acquiredAt": "2026-02-14T03:20:22.251Z"
+  },
+  {
+    "userId": "1",
+    "characterId": "actor-1158-111",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "actorName": "Al Pacino",
+    "characterName": "Tony Montana",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/m8HAAjq1T75JypKk0v1FFQn4ysZ.jpg",
+    "cardType": "actor",
+    "id": "card-1771039223531-rj2rkfj",
+    "acquiredAt": "2026-02-14T03:20:23.531Z"
+  }
+]

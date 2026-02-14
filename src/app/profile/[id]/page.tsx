@@ -19,6 +19,8 @@ interface ProfileData {
   featuredCardIds?: string[];
   displayedBadgeWinnerId?: string | null;
   displayedBadgeShopItemId?: string | null;
+  favoriteMovieTmdbId?: number | null;
+  favoriteMovieSnapshot?: { title: string; posterUrl: string; backdropUrl: string; year: string; letterboxdUrl: string } | null;
 }
 
 interface FeaturedCard {
@@ -57,9 +59,12 @@ interface FavoriteMovie {
   posterUrl: string;
   backdropUrl: string;
   year: string;
-  winnerId: string;
-  stars: number;
-  thumbsUp: boolean;
+  /** Link to winner page when favourite is a site winner. */
+  winnerId?: string | null;
+  /** Link to Letterboxd when favourite is from TMDB and not a winner. */
+  letterboxdUrl?: string | null;
+  stars?: number | null;
+  thumbsUp?: boolean | null;
 }
 
 interface Stats {
@@ -146,7 +151,7 @@ interface FullProfile {
   weeksWon: WinEntry[];
   comments: CommentEntry[];
   watchlist: WatchlistEntry[];
-  featuredCards?: FeaturedCard[];
+  codexCards?: FeaturedCard[];
   displayedBadge?: DisplayedBadge | null;
   displayedBadges?: DisplayedBadge[];
   completedWinnerIds?: string[];
@@ -186,20 +191,28 @@ export default function ProfilePage() {
   const watchlistSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchlistDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Featured collection modal
-  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
-  const [featuredSelecting, setFeaturedSelecting] = useState<string[]>([]);
-  const [featuredSaving, setFeaturedSaving] = useState(false);
-  const [userCardsForFeatured, setUserCardsForFeatured] = useState<FeaturedCard[]>([]);
 
   // Badges modal: null = none, { type, id } = winner or shop badge
   const [badgesSelecting, setBadgesSelecting] = useState<BadgeSelection>(null);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
 
-  // View collection modal (when viewing another user's profile)
-  const [showCollectionModal, setShowCollectionModal] = useState(false);
-  const [collectionCards, setCollectionCards] = useState<FeaturedCard[]>([]);
-  const [collectionLoading, setCollectionLoading] = useState(false);
+  // View codex modal (when viewing another user's profile)
+  const [showCodexModal, setShowCodexModal] = useState(false);
+
+  // Favorite movie (TMDB search when editing)
+  const [showFavoriteMovieModal, setShowFavoriteMovieModal] = useState(false);
+  const [favoriteMovieSearchQuery, setFavoriteMovieSearchQuery] = useState("");
+  const [favoriteMovieSearchResults, setFavoriteMovieSearchResults] = useState<TmdbSearchResult[]>([]);
+  const [favoriteMovieSearchLoading, setFavoriteMovieSearchLoading] = useState(false);
+  const [favoriteMovieSelecting, setFavoriteMovieSelecting] = useState<{
+    tmdbId: number;
+    title: string;
+    posterUrl: string;
+    backdropUrl: string;
+    year: string;
+    letterboxdUrl: string;
+  } | null>(null);
+  const favoriteMovieSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Credits (for profile user)
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -249,6 +262,14 @@ export default function ProfilePage() {
       setEditBio(json.profile.bio);
       setEditAvatarUrl(json.profile.avatarUrl);
       setEditBannerUrl(json.profile.bannerUrl);
+      if (json.profile.favoriteMovieTmdbId != null && json.profile.favoriteMovieSnapshot) {
+        setFavoriteMovieSelecting({
+          tmdbId: json.profile.favoriteMovieTmdbId,
+          ...json.profile.favoriteMovieSnapshot,
+        });
+      } else {
+        setFavoriteMovieSelecting(null);
+      }
     } catch {
       router.replace("/");
     }
@@ -288,6 +309,30 @@ export default function ProfilePage() {
       if (watchlistSearchTimeoutRef.current) clearTimeout(watchlistSearchTimeoutRef.current);
     };
   }, [watchlistSearchQuery]);
+
+  // Favorite movie: TMDB search debounce
+  useEffect(() => {
+    if (!showFavoriteMovieModal || !favoriteMovieSearchQuery.trim() || favoriteMovieSearchQuery.trim().length < 2) {
+      setFavoriteMovieSearchResults([]);
+      return;
+    }
+    if (favoriteMovieSearchTimeoutRef.current) clearTimeout(favoriteMovieSearchTimeoutRef.current);
+    favoriteMovieSearchTimeoutRef.current = setTimeout(async () => {
+      setFavoriteMovieSearchLoading(true);
+      try {
+        const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(favoriteMovieSearchQuery.trim())}`);
+        const result = await res.json();
+        setFavoriteMovieSearchResults(result.results || []);
+      } catch {
+        setFavoriteMovieSearchResults([]);
+      } finally {
+        setFavoriteMovieSearchLoading(false);
+      }
+    }, 300);
+    return () => {
+      if (favoriteMovieSearchTimeoutRef.current) clearTimeout(favoriteMovieSearchTimeoutRef.current);
+    };
+  }, [showFavoriteMovieModal, favoriteMovieSearchQuery]);
 
   // Watchlist: close dropdown on outside click
   useEffect(() => {
@@ -384,6 +429,10 @@ export default function ProfilePage() {
           bannerUrl: editBannerUrl,
           displayedBadgeWinnerId: badgesSelecting?.type === "winner" ? badgesSelecting.id : null,
           displayedBadgeShopItemId: badgesSelecting?.type === "shop" ? badgesSelecting.id : null,
+          favoriteMovieTmdbId: favoriteMovieSelecting?.tmdbId ?? null,
+          favoriteMovieSnapshot: favoriteMovieSelecting
+            ? { title: favoriteMovieSelecting.title, posterUrl: favoriteMovieSelecting.posterUrl, backdropUrl: favoriteMovieSelecting.backdropUrl, year: favoriteMovieSelecting.year, letterboxdUrl: favoriteMovieSelecting.letterboxdUrl }
+            : null,
         }),
       });
       // Reload profile
@@ -392,22 +441,6 @@ export default function ProfilePage() {
       setEditing(false);
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function saveFeaturedCards() {
-    setFeaturedSaving(true);
-    try {
-      await fetch(`/api/users/${profileId}/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ featuredCardIds: featuredSelecting.slice(0, 6) }),
-      });
-      const res = await fetch(`/api/users/${profileId}/profile`);
-      if (res.ok) setData(await res.json());
-      setShowFeaturedModal(false);
-    } finally {
-      setFeaturedSaving(false);
     }
   }
 
@@ -440,7 +473,7 @@ export default function ProfilePage() {
     weeksWon,
     comments,
     watchlist = [],
-    featuredCards = [],
+    codexCards = [],
     displayedBadge = null,
     displayedBadges = [],
     completedWinnerIds = [],
@@ -554,6 +587,11 @@ export default function ProfilePage() {
                       setEditBio(profile.bio);
                       setEditAvatarUrl(profile.avatarUrl);
                       setEditBannerUrl(profile.bannerUrl);
+                      setFavoriteMovieSelecting(
+                        profile.favoriteMovieTmdbId != null && profile.favoriteMovieSnapshot
+                          ? { tmdbId: profile.favoriteMovieTmdbId, ...profile.favoriteMovieSnapshot }
+                          : null
+                      );
                       setBadgesSelecting(
                         profile.displayedBadgeShopItemId
                           ? { type: "shop", id: profile.displayedBadgeShopItemId }
@@ -579,9 +617,9 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Equip Badge button (edit only) */}
+        {/* Equip Badge + Choose favourite movie (edit only) */}
         {isOwnProfile && editing && (
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => setShowBadgeModal(true)}
@@ -592,13 +630,42 @@ export default function ProfilePage() {
                 <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} className="opacity-90" />
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowFavoriteMovieModal(true);
+                setFavoriteMovieSearchQuery("");
+                setFavoriteMovieSearchResults([]);
+              }}
+              className="px-4 py-2.5 rounded-xl border border-pink-500/40 bg-pink-500/10 text-pink-300 text-sm font-medium hover:bg-pink-500/15 hover:border-pink-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+            >
+              <span>{favoriteMovieSelecting ? "Change favourite movie" : "Choose favourite movie"}</span>
+              {favoriteMovieSelecting && (
+                <span className="text-pink-400/80 truncate max-w-[120px]">{favoriteMovieSelecting.title}</span>
+              )}
+            </button>
+            {favoriteMovieSelecting && (
+              <button
+                type="button"
+                onClick={() => setFavoriteMovieSelecting(null)}
+                className="px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/50 text-sm hover:bg-white/10 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                Clear favourite
+              </button>
+            )}
           </div>
         )}
 
         {/* Favorite Movie hero */}
-        {stats.favoriteMovie && (
-          <Link
-            href={`/winners/${stats.favoriteMovie.winnerId}`}
+        {stats.favoriteMovie && (() => {
+          const fm = stats.favoriteMovie!;
+          const Wrapper = fm.winnerId ? Link : "a";
+          const wrapperProps = fm.winnerId
+            ? { href: `/winners/${fm.winnerId}` }
+            : { href: fm.letterboxdUrl ?? "#", target: "_blank", rel: "noopener noreferrer" as const };
+          return (
+          <Wrapper
+            {...wrapperProps}
             className="group block relative rounded-2xl overflow-hidden border border-white/[0.08] mb-6 hover:border-pink-500/20 transition-all"
           >
             {/* Backdrop */}
@@ -637,11 +704,12 @@ export default function ProfilePage() {
                 {stats.favoriteMovie.year && (
                   <p className="text-sm text-white/30 mt-0.5">{stats.favoriteMovie.year}</p>
                 )}
+                {stats.favoriteMovie.stars != null && (
                 <div className="flex items-center gap-3 mt-2.5">
                   {/* Stars */}
                   <div className="flex items-center gap-0.5">
                     {[1, 2, 3, 4, 5].map((s) => {
-                      const starVal = stats.favoriteMovie!.stars;
+                      const starVal = stats.favoriteMovie!.stars ?? 0;
                       const filled = starVal >= s;
                       const half = !filled && starVal >= s - 0.5;
                       return (
@@ -666,7 +734,7 @@ export default function ProfilePage() {
                     <span className="text-xs text-yellow-400/50 ml-1 font-medium">{stats.favoriteMovie!.stars}</span>
                   </div>
                   {/* Thumb */}
-                  {stats.favoriteMovie.thumbsUp ? (
+                  {stats.favoriteMovie!.thumbsUp != null && (stats.favoriteMovie!.thumbsUp ? (
                     <span className="flex items-center gap-1 text-green-400/60 text-xs">
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
                     </span>
@@ -674,12 +742,14 @@ export default function ProfilePage() {
                     <span className="flex items-center gap-1 text-red-400/60 text-xs">
                       <svg className="w-3.5 h-3.5 rotate-180" fill="currentColor" viewBox="0 0 24 24"><path d="M2 20h2V8H2v12zm22-9a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.5 1.5 0 00-.44-1.06L15.17 2 8.59 8.59A1.98 1.98 0 008 10v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>
                     </span>
-                  )}
+                  ))}
                 </div>
+                )}
               </div>
             </div>
-          </Link>
-        )}
+          </Wrapper>
+          );
+        })()}
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -730,52 +800,26 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Featured Cards */}
+        {/* Codex */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Featured Cards</h3>
-            <div className="flex items-center gap-3">
-              {!isOwnProfile && (
-                <button
-                  onClick={() => {
-                    setShowCollectionModal(true);
-                    setCollectionLoading(true);
-                    setCollectionCards([]);
-                    fetch(`/api/cards?userId=${encodeURIComponent(profileId)}`)
-                      .then((r) => r.json())
-                      .then((cards: FeaturedCard[]) => setCollectionCards(Array.isArray(cards) ? cards : []))
-                      .catch(() => setCollectionCards([]))
-                      .finally(() => setCollectionLoading(false));
-                  }}
-                  className="text-xs font-medium text-amber-400/90 hover:text-amber-400 border border-amber-500/30 rounded-lg px-3 py-1.5 hover:bg-amber-500/10 transition-colors"
-                >
-                  View collection
-                </button>
-              )}
-              {isOwnProfile && (
-                <button
-                  onClick={() => {
-                    setShowFeaturedModal(true);
-                    setFeaturedSelecting(profile.featuredCardIds ?? []);
-                    fetch(`/api/cards?userId=${profileId}`)
-                      .then((r) => r.json())
-                      .then((cards: FeaturedCard[]) => setUserCardsForFeatured(cards))
-                      .catch(() => setUserCardsForFeatured([]));
-                  }}
-                  className="text-xs text-amber-400/80 hover:text-amber-400 transition-colors"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
+            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Codex</h3>
+            {!isOwnProfile && (
+              <button
+                onClick={() => setShowCodexModal(true)}
+                className="text-xs font-medium text-amber-400/90 hover:text-amber-400 border border-amber-500/30 rounded-lg px-3 py-1.5 hover:bg-amber-500/10 transition-colors"
+              >
+                View codex
+              </button>
+            )}
           </div>
-          {featuredCards.length === 0 ? (
+          {codexCards.length === 0 ? (
             <p className="text-sm text-white/40">
-              {isOwnProfile ? "No featured cards yet. Click Edit to add up to 6 from your collection." : "No featured cards."}
+              {isOwnProfile ? "No cards discovered yet. Upload cards from your inventory to the Codex to unlock them here." : "No cards discovered yet."}
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {featuredCards.map((card) => (
+              {codexCards.map((card) => (
                 <div key={card.id} className="w-full max-w-[120px]">
                   <CardDisplay card={card} />
                 </div>
@@ -1227,99 +1271,24 @@ export default function ProfilePage() {
         </>
       )}
 
-      {/* Featured Cards modal */}
-      {showFeaturedModal && (
+      {/* View codex modal (another user's codex) */}
+      {showCodexModal && (
         <>
           <div
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowFeaturedModal(false)}
-            aria-hidden
-          />
-          <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
-            role="dialog"
-            aria-label="Edit featured cards"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-white/90 mb-4">Featured Cards</h3>
-              <p className="text-sm text-white/50 mb-4">Select up to 6 cards to display (click to toggle)</p>
-              <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto scrollbar-autocomplete mb-4">
-                {userCardsForFeatured.map((card) => {
-                  const selected = featuredSelecting.includes(card.id!);
-                  return (
-                    <button
-                      key={card.id}
-                      type="button"
-                      onClick={() => {
-                        setFeaturedSelecting((prev) =>
-                          selected ? prev.filter((id) => id !== card.id) : prev.length < 6 ? [...prev, card.id!] : prev
-                        );
-                      }}
-                      className={`text-left rounded-lg border overflow-hidden transition-all ${
-                        selected ? "ring-2 ring-amber-500 border-amber-500/50" : "border-white/10 hover:border-white/20"
-                      }`}
-                    >
-                      <div className="aspect-[2/3] relative">
-                        {card.profilePath ? (
-                          <img src={card.profilePath} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/20 text-2xl font-bold">
-                            {card.actorName?.charAt(0) ?? "?"}
-                          </div>
-                        )}
-                        {selected && (
-                          <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">
-                            ✓
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-white/60 truncate px-1 py-0.5">{card.actorName}</p>
-                    </button>
-                  );
-                })}
-              </div>
-              {userCardsForFeatured.length === 0 && (
-                <p className="text-sm text-white/40 mb-4">No cards in your collection. Buy packs in Cards to get started.</p>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowFeaturedModal(false)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-md text-white/80 hover:bg-white/[0.08] hover:border-white/30 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveFeaturedCards}
-                  disabled={featuredSaving}
-                  className="flex-1 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  {featuredSaving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* View collection modal (another user's full collection) */}
-      {showCollectionModal && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowCollectionModal(false)}
+            onClick={() => setShowCodexModal(false)}
             aria-hidden
           />
           <div
             className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
             role="dialog"
-            aria-label="View collection"
+            aria-label="View codex"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
-              <h3 className="text-lg font-bold text-white/90">{user.name}&apos;s collection</h3>
+              <h3 className="text-lg font-bold text-white/90">{user.name}&apos;s codex</h3>
               <button
-                onClick={() => setShowCollectionModal(false)}
+                onClick={() => setShowCodexModal(false)}
                 className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Close"
               >
@@ -1327,21 +1296,102 @@ export default function ProfilePage() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
-              {collectionLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="w-8 h-8 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-                </div>
-              ) : collectionCards.length === 0 ? (
-                <p className="text-sm text-white/40 text-center py-8">No cards in this collection.</p>
+              {codexCards.length === 0 ? (
+                <p className="text-sm text-white/40 text-center py-8">No cards discovered in this codex.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                  {collectionCards.map((card) => (
+                  {codexCards.map((card) => (
                     <div key={card.id} className="w-full max-w-[140px] mx-auto">
                       <CardDisplay card={card} />
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Choose favourite movie modal */}
+      {showFavoriteMovieModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowFavoriteMovieModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden"
+            role="dialog"
+            aria-label="Choose favourite movie"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/10">
+              <h3 className="text-lg font-bold text-white/90">Choose favourite movie</h3>
+              <p className="text-sm text-white/50 mt-1">Search TMDB to pick a movie to display on your profile.</p>
+            </div>
+            <div className="p-4">
+              <input
+                type="text"
+                value={favoriteMovieSearchQuery}
+                onChange={(e) => setFavoriteMovieSearchQuery(e.target.value)}
+                placeholder="Search movies..."
+                className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white/90 placeholder:text-white/30 focus:outline-none focus:border-pink-500/40"
+                autoFocus
+              />
+              <div className="mt-3 max-h-64 overflow-y-auto space-y-2 scrollbar-autocomplete">
+                {favoriteMovieSearchLoading && (
+                  <div className="flex justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-pink-400/30 border-t-pink-400 rounded-full animate-spin" />
+                  </div>
+                )}
+                {!favoriteMovieSearchLoading && favoriteMovieSearchQuery.trim().length >= 2 && favoriteMovieSearchResults.length === 0 && (
+                  <p className="text-sm text-white/40 text-center py-4">No results. Try a different search.</p>
+                )}
+                {!favoriteMovieSearchLoading &&
+                  favoriteMovieSearchResults.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/tmdb/movie/${m.id}`);
+                          if (!res.ok) return;
+                          const movie = await res.json();
+                          setFavoriteMovieSelecting({
+                            tmdbId: movie.tmdbId,
+                            title: movie.title,
+                            posterUrl: movie.posterUrl || "",
+                            backdropUrl: movie.backdropUrl || "",
+                            year: movie.year || "",
+                            letterboxdUrl: movie.letterboxdUrl || "",
+                          });
+                          setShowFavoriteMovieModal(false);
+                        } catch { /* ignore */ }
+                      }}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-white/[0.08] hover:border-pink-500/30 hover:bg-pink-500/10 transition-colors cursor-pointer text-left"
+                    >
+                      {m.posterUrl ? (
+                        <img src={m.posterUrl} alt="" className="w-10 h-14 object-cover rounded flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-14 rounded bg-white/5 flex items-center justify-center text-white/20 text-xs flex-shrink-0">?</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-white/90 truncate">{m.title}</p>
+                        {m.year && <p className="text-xs text-white/40">{m.year}</p>}
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowFavoriteMovieModal(false)}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         </>
