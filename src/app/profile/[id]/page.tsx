@@ -157,6 +157,7 @@ interface FullProfile {
   displayedBadges?: DisplayedBadge[];
   completedWinnerIds?: string[];
   completedBadges?: CompletedBadge[];
+  featuredCards?: FeaturedCard[];
 }
 
 export default function ProfilePage() {
@@ -199,6 +200,12 @@ export default function ProfilePage() {
 
   // View codex modal (when viewing another user's profile)
   const [showCodexModal, setShowCodexModal] = useState(false);
+  type CodexViewSortKey = "set" | "name" | "rarity";
+  const [codexViewSort, setCodexViewSort] = useState<CodexViewSortKey>("set");
+
+  // Feature cards (pick from codex, max 6) — edit state
+  const [showFeaturedCardsModal, setShowFeaturedCardsModal] = useState(false);
+  const [editFeaturedCharacterIds, setEditFeaturedCharacterIds] = useState<string[]>([]);
 
   // Favorite movie (TMDB search when editing)
   const [showFavoriteMovieModal, setShowFavoriteMovieModal] = useState(false);
@@ -436,6 +443,7 @@ export default function ProfilePage() {
           bannerUrl: editBannerUrl,
           displayedBadgeWinnerId: badgesSelecting?.type === "winner" ? badgesSelecting.id : null,
           displayedBadgeShopItemId: badgesSelecting?.type === "shop" ? badgesSelecting.id : null,
+          featuredCardIds: editFeaturedCharacterIds,
           favoriteMovieTmdbId: favoriteMovieSelecting?.tmdbId ?? null,
           favoriteMovieSnapshot: favoriteMovieSelecting
             ? { title: favoriteMovieSelecting.title, posterUrl: favoriteMovieSelecting.posterUrl, backdropUrl: favoriteMovieSelecting.backdropUrl, year: favoriteMovieSelecting.year, letterboxdUrl: favoriteMovieSelecting.letterboxdUrl }
@@ -509,6 +517,7 @@ export default function ProfilePage() {
     comments,
     watchlist = [],
     codexCards = [],
+    featuredCards = [],
     displayedBadge = null,
     displayedBadges = [],
     completedWinnerIds = [],
@@ -602,6 +611,7 @@ export default function ProfilePage() {
                 <button
                   onClick={() => {
                     setEditing(true);
+                    setEditFeaturedCharacterIds(profile.featuredCardIds ?? []);
                     setBadgesSelecting(
                       profile.displayedBadgeShopItemId
                         ? { type: "shop", id: profile.displayedBadgeShopItemId }
@@ -625,6 +635,7 @@ export default function ProfilePage() {
                       setEditCurrentPin("");
                       setEditNewPin("");
                       setPinError("");
+                      setEditFeaturedCharacterIds(profile.featuredCardIds ?? []);
                       setFavoriteMovieSelecting(
                         profile.favoriteMovieTmdbId != null && profile.favoriteMovieSnapshot
                           ? { tmdbId: profile.favoriteMovieTmdbId, ...profile.favoriteMovieSnapshot }
@@ -655,7 +666,7 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Equip Badge + Choose favourite movie (edit only) */}
+        {/* Equip Badge + Feature cards + Choose favourite movie (edit only) */}
         {isOwnProfile && editing && (
           <div className="mb-6 flex flex-wrap gap-3">
             <button
@@ -666,6 +677,16 @@ export default function ProfilePage() {
               <span>Equip Badge</span>
               {displayedBadge && (
                 <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} className="opacity-90" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFeaturedCardsModal(true)}
+              className="px-4 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/15 hover:border-cyan-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+            >
+              <span>Feature cards</span>
+              {editFeaturedCharacterIds.length > 0 && (
+                <span className="text-cyan-400/80">({editFeaturedCharacterIds.length}/6)</span>
               )}
             </button>
             <button
@@ -862,55 +883,86 @@ export default function ProfilePage() {
           {isOwnProfile ? (
             <Link
               href="/cards"
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-amber-500/40 hover:bg-white/[0.04] transition-colors block"
+              className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4 hover:border-sky-400/40 hover:bg-sky-400/15 transition-colors block"
             >
               <div className="flex items-center gap-2 mb-1.5">
-                <svg className="w-4 h-4 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
               </div>
-              <p className="text-xl font-bold text-amber-400">{creditBalance ?? "—"}</p>
+              <p className="text-xl font-bold text-sky-300">{creditBalance ?? "—"}</p>
             </Link>
           ) : (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-4">
               <div className="flex items-center gap-2 mb-1.5">
-                <svg className="w-4 h-4 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
               </div>
-              <p className="text-xl font-bold text-amber-400">{creditBalance ?? "—"}</p>
+              <p className="text-xl font-bold text-sky-300">{creditBalance ?? "—"}</p>
             </div>
           )}
         </div>
 
-        {/* Codex */}
+        {/* Feature cards — pick from codex, up to 6 */}
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Codex</h3>
-            {!isOwnProfile && (
+            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Feature cards</h3>
+            <div className="flex items-center gap-2">
+              {isOwnProfile && editing && (
+                <button
+                  type="button"
+                  onClick={() => setShowFeaturedCardsModal(true)}
+                  className="text-xs font-medium text-cyan-400/90 hover:text-cyan-400 border border-cyan-500/30 rounded-lg px-3 py-1.5 hover:bg-cyan-500/10 transition-colors"
+                >
+                  Edit featured
+                </button>
+              )}
               <button
                 onClick={() => setShowCodexModal(true)}
-                className="text-xs font-medium text-amber-400/90 hover:text-amber-400 border border-amber-500/30 rounded-lg px-3 py-1.5 hover:bg-amber-500/10 transition-colors"
+                className="text-xs font-medium text-sky-400/90 hover:text-sky-400 border border-sky-500/30 rounded-lg px-3 py-1.5 hover:bg-sky-500/10 transition-colors"
               >
                 View codex
               </button>
-            )}
-          </div>
-          {codexCards.length === 0 ? (
-            <p className="text-sm text-white/40">
-              {isOwnProfile ? "No cards discovered yet. Upload cards from your inventory to the Codex to unlock them here." : "No cards discovered yet."}
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {codexCards.map((card) => (
-                <div key={card.id} className="w-full max-w-[120px]">
-                  <CardDisplay card={card} />
-                </div>
-              ))}
             </div>
-          )}
+          </div>
+          {(() => {
+            const displayedFeatured = isOwnProfile && editing
+              ? editFeaturedCharacterIds
+                  .map((id) => codexCards.find((c) => c.id === id))
+                  .filter((c): c is FeaturedCard => c != null)
+              : featuredCards;
+            if (displayedFeatured.length === 0) {
+              return (
+                <p className="text-sm text-white/40">
+                  {isOwnProfile
+                    ? "No featured cards yet. Click Edit featured to pick up to 6 cards from your Codex."
+                    : "No featured cards."}
+                </p>
+              );
+            }
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {displayedFeatured.map((card) => (
+                  <div key={card.id} className="relative w-full max-w-[120px] group">
+                    <CardDisplay card={card} />
+                    {isOwnProfile && editing && (
+                      <button
+                        type="button"
+                        onClick={() => setEditFeaturedCharacterIds((prev) => prev.filter((id) => id !== card.id))}
+                        className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-red-500/90 hover:bg-red-500 border border-white/20 text-white flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white cursor-pointer transition-opacity"
+                        aria-label={`Remove ${card.characterName || card.actorName} from featured`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Thumbs summary */}
@@ -1357,6 +1409,82 @@ export default function ProfilePage() {
       )}
 
       {/* View codex modal (another user's codex) */}
+      {/* Feature cards modal — pick from codex (max 6) */}
+      {showFeaturedCardsModal && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowFeaturedCardsModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+            role="dialog"
+            aria-label="Feature cards"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+              <h3 className="text-lg font-bold text-white/90">Feature cards</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-white/50">{editFeaturedCharacterIds.length} / 6 selected</span>
+                <button
+                  onClick={() => setShowFeaturedCardsModal(false)}
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <p className="text-sm text-white/50 mb-4">Pick up to 6 cards from your Codex to feature on your profile. Click a card to add or remove.</p>
+              {codexCards.length === 0 ? (
+                <p className="text-sm text-white/40 text-center py-8">No cards in your Codex yet. Upload cards from your inventory to the Codex first.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                  {codexCards.map((card) => {
+                    const isSelected = editFeaturedCharacterIds.includes(card.id);
+                    const canAdd = !isSelected && editFeaturedCharacterIds.length < 6;
+                    return (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setEditFeaturedCharacterIds((prev) => prev.filter((id) => id !== card.id));
+                          } else if (canAdd) {
+                            setEditFeaturedCharacterIds((prev) => [...prev, card.id]);
+                          }
+                        }}
+                        className={`relative w-full max-w-[140px] mx-auto rounded-xl overflow-hidden ring-2 transition-all cursor-pointer focus:outline-none focus:ring-cyan-400 ${
+                          isSelected ? "ring-cyan-400/80 ring-offset-2 ring-offset-[#0a0a0f]" : "ring-transparent hover:ring-white/20"
+                        } ${!isSelected && !canAdd ? "opacity-60 cursor-not-allowed" : ""}`}
+                      >
+                        <CardDisplay card={card} />
+                        {isSelected && (
+                          <span className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center text-[10px] font-bold text-white shadow-lg" aria-hidden>
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowFeaturedCardsModal(false)}
+                className="w-full px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-medium hover:bg-cyan-500/30 transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {showCodexModal && (
         <>
           <div
@@ -1370,28 +1498,92 @@ export default function ProfilePage() {
             aria-label="View codex"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 flex-wrap gap-3">
               <h3 className="text-lg font-bold text-white/90">{user.name}&apos;s codex</h3>
-              <button
-                onClick={() => setShowCodexModal(false)}
-                className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <div className="flex items-center gap-2">
+                {(["set", "name", "rarity"] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setCodexViewSort(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      codexViewSort === key
+                        ? "bg-sky-500/20 border border-sky-400/50 text-sky-300"
+                        : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                    }`}
+                  >
+                    {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowCodexModal(false)}
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
               {codexCards.length === 0 ? (
                 <p className="text-sm text-white/40 text-center py-8">No cards discovered in this codex.</p>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                  {codexCards.map((card) => (
-                    <div key={card.id} className="w-full max-w-[140px] mx-auto">
-                      <CardDisplay card={card} />
+              ) : (() => {
+                const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                if (codexViewSort === "set") {
+                  const bySet = new Map<string, FeaturedCard[]>();
+                  for (const card of codexCards) {
+                    const key = card.movieTitle || "Unknown";
+                    if (!bySet.has(key)) bySet.set(key, []);
+                    bySet.get(key)!.push(card);
+                  }
+                  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                  const sets = Array.from(bySet.entries())
+                    .map(([title, cards]) => ({
+                      title,
+                      cards: [...cards].sort(
+                        (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+                      ),
+                    }))
+                    .sort((a, b) => {
+                      if (a.cards.length !== b.cards.length) return b.cards.length - a.cards.length;
+                      return a.title.localeCompare(b.title);
+                    });
+                  return (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                      {sets.flatMap((set, setIndex) => [
+                        setIndex > 0 ? (
+                          <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-2 mb-2 pt-2" aria-hidden />
+                        ) : null,
+                        <div key={`codex-set-${setIndex}`} className="col-span-full text-xs font-medium text-white/40 uppercase tracking-wider mb-1">
+                          {set.title}
+                        </div>,
+                        ...set.cards.map((card) => (
+                          <div key={card.id} className="w-full max-w-[140px] mx-auto">
+                            <CardDisplay card={card} />
+                          </div>
+                        )),
+                      ])}
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+                const sorted =
+                  codexViewSort === "name"
+                    ? [...codexCards].sort((a, b) =>
+                        (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
+                      )
+                    : [...codexCards].sort(
+                        (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+                      );
+                return (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                    {sorted.map((card) => (
+                      <div key={card.id} className="w-full max-w-[140px] mx-auto">
+                        <CardDisplay card={card} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>

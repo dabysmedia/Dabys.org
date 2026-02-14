@@ -63,7 +63,7 @@ export interface Profile {
   skipsUsed: number;   // how many skips this user has spent
   /** Extra skips granted from shop purchases. */
   bonusSkips?: number;
-  featuredCardIds?: string[];       // up to 6 card IDs to showcase
+  featuredCardIds?: string[];       // up to 6 codex character IDs to showcase
   /** Single winner ID to show as badge next to name (replaces displayedBadgeWinnerIds). */
   displayedBadgeWinnerId?: string | null;
   /** Winner IDs from shop purchases (movie badges from shop). */

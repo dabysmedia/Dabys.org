@@ -202,7 +202,24 @@ export async function GET(
   const codexCharacterIds = getCodexUnlockedCharacterIds(id);
   const pool = getCharacterPool();
   const poolById = new Map(pool.map((e) => [e.characterId, e]));
+  const codexCharacterIdsSet = new Set(codexCharacterIds);
   const codexCards = codexCharacterIds
+    .map((charId) => poolById.get(charId))
+    .filter((e): e is NonNullable<typeof e> => e != null)
+    .map((e) => ({
+      id: e.characterId,
+      rarity: e.rarity,
+      isFoil: false,
+      actorName: e.actorName ?? "",
+      characterName: e.characterName ?? "",
+      movieTitle: e.movieTitle ?? "",
+      profilePath: e.profilePath ?? "",
+      cardType: e.cardType,
+    }));
+
+  // Featured cards: subset of codex by profile.featuredCardIds (codex character IDs), order preserved, max 6
+  const featuredIds = (profile.featuredCardIds ?? []).filter((charId) => codexCharacterIdsSet.has(charId)).slice(0, 6);
+  const featuredCards = featuredIds
     .map((charId) => poolById.get(charId))
     .filter((e): e is NonNullable<typeof e> => e != null)
     .map((e) => ({
@@ -277,12 +294,14 @@ export async function GET(
       avatarUrl: profile.avatarUrl,
       bannerUrl: profile.bannerUrl,
       bio: profile.bio,
+      featuredCardIds: featuredIds,
       displayedBadgeWinnerId: displayedBadgeWinnerId ?? undefined,
       displayedBadgeShopItemId: displayedBadgeShopItemId ?? undefined,
       favoriteMovieTmdbId: profile.favoriteMovieTmdbId ?? undefined,
       favoriteMovieSnapshot: profile.favoriteMovieSnapshot ?? undefined,
     },
     codexCards,
+    featuredCards,
     displayedBadge,
     displayedBadges: displayedBadge ? [displayedBadge] : [],
     completedWinnerIds,
@@ -371,6 +390,13 @@ export async function PUT(
       profile.displayedBadgeShopItemId = value;
       profile.displayedBadgeWinnerId = undefined;
     }
+  }
+
+  if (Array.isArray(body.featuredCardIds)) {
+    const codexIds = new Set(getCodexUnlockedCharacterIds(id));
+    profile.featuredCardIds = body.featuredCardIds
+      .filter((charId: unknown) => typeof charId === "string" && codexIds.has(charId))
+      .slice(0, 6);
   }
 
   saveProfile(profile);
