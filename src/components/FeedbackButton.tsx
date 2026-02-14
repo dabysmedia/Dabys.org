@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-export function FeedbackButton() {
+const MOBILE_BREAKPOINT_PX = 768;
+
+export function FeedbackButton({ inline = false }: { inline?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -11,6 +13,16 @@ export function FeedbackButton() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    if (inline) return;
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
+    const update = () => setIsNarrow(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, [inline]);
 
   useEffect(() => {
     try {
@@ -60,12 +72,21 @@ export function FeedbackButton() {
 
   if (pathname?.startsWith("/admin")) return null;
 
+  // On mobile, only show floating button when not inline (floating is hidden on narrow)
+  if (!inline && isNarrow) return null;
+
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+    <div
+      className={
+        inline
+          ? "flex flex-col gap-2"
+          : "fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
+      }
+    >
       {open && (
         <form
           onSubmit={handleSubmit}
-          className="w-80 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-4 flex flex-col gap-3"
+          className={`rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-4 flex flex-col gap-3 ${inline ? "w-full" : "w-80"}`}
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-white/80">Feedback</span>
@@ -109,7 +130,11 @@ export function FeedbackButton() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.2)] px-4 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+        className={
+          inline
+            ? "min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation text-white/80 hover:bg-white/10 w-full cursor-pointer"
+            : "rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.2)] px-4 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+        }
         aria-label={open ? "Close feedback" : "Send feedback"}
       >
         Feedback

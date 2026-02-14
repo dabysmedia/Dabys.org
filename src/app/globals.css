@@ -67,6 +67,25 @@ select option {
   background: rgba(34, 211, 238, 0.65);
 }
 
+/* Thin horizontal scrollbar for TCG tabs (mobile) */
+.scrollbar-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.scrollbar-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+.scrollbar-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.scrollbar-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Chrome silver glow animation for Winners Circle — slow, subtle, lava-lamp feel */
 @keyframes winners-glow {
   0%, 100% {

@@ -1124,7 +1124,7 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
-  async function handleRemoveCard(cardId: string) {
+  async function handleRemoveCard(cardId: string, onSuccess?: () => void) {
     setRemovingId(cardId);
     setError("");
     try {
@@ -1133,6 +1133,7 @@ export default function AdminCardsCreditsPage() {
       });
       if (res.ok) {
         setCards((prev) => prev.filter((c) => c.id !== cardId));
+        onSuccess?.();
       } else {
         const data = await res.json();
         setError(data.error || "Failed to remove card");
@@ -2363,19 +2364,12 @@ export default function AdminCardsCreditsPage() {
                           </>
                         );
                       })()}
-                      <div className="mt-2 flex gap-1">
+                      <div className="mt-3">
                         <button
                           onClick={() => openEditCard(card)}
-                          className="flex-1 px-2 py-1.5 rounded text-xs border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 cursor-pointer"
+                          className="w-full min-h-[44px] px-4 py-3 rounded-lg text-sm font-medium border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 cursor-pointer touch-manipulation"
                         >
                           Edit
-                        </button>
-                        <button
-                          onClick={() => handleRemoveCard(card.id)}
-                          disabled={removingId === card.id}
-                          className="flex-1 px-2 py-1.5 rounded text-xs border border-red-500/30 text-red-400 hover:bg-red-500/10 disabled:opacity-40 cursor-pointer"
-                        >
-                          {removingId === card.id ? "Removing..." : "Remove"}
                         </button>
                       </div>
                     </div>
@@ -2489,21 +2483,31 @@ export default function AdminCardsCreditsPage() {
                     <span className="text-sm text-white/60">Holo</span>
                   </label>
                 </div>
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-col gap-2 pt-2">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCard(null)}
+                      disabled={savingEdit}
+                      className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingEdit}
+                      className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
+                    >
+                      {savingEdit ? "Saving..." : "Save"}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setEditingCard(null)}
-                    disabled={savingEdit}
-                    className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer"
+                    onClick={() => editingCard && handleRemoveCard(editingCard.id, () => setEditingCard(null))}
+                    disabled={savingEdit || removingId === editingCard?.id}
+                    className="w-full px-4 py-2 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-40 cursor-pointer text-sm"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingEdit}
-                    className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
-                  >
-                    {savingEdit ? "Saving..." : "Save"}
+                    {removingId === editingCard?.id ? "Removing..." : "Delete card"}
                   </button>
                 </div>
               </form>

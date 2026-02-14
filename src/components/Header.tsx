@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 // Web Audio API — credit gain chime (no assets)
 let creditsAudioContext: AudioContext | null = null;
@@ -264,6 +265,54 @@ export default function Header() {
     </Link>
   );
 
+  const creditsBlockMenu = (
+    <Link
+      href="/cards"
+      onClick={closeMenu}
+      className={`flex items-center gap-3 min-h-[48px] px-4 py-3 rounded-xl border text-base font-medium transition-colors relative overflow-visible touch-manipulation ${
+        isCards
+          ? "bg-sky-400/15 border-sky-400/30 text-sky-300"
+          : "bg-sky-400/10 border-sky-400/20 text-sky-300 hover:bg-sky-400/15"
+      }`}
+    >
+      <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span className={`tabular-nums ${creditAnimClass}`}>{creditBalance}</span>
+      <span className="text-sky-300/60 text-sm">credits</span>
+      {creditDelta !== null && (
+        <span
+          className={`absolute -top-1 -right-1 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold credits-delta-pop pointer-events-none ${
+            creditDelta > 0 ? "text-emerald-400 bg-emerald-500/20" : "text-amber-400 bg-amber-500/20"
+          }`}
+        >
+          {creditDelta > 0 ? `+${creditDelta}` : creditDelta}
+        </span>
+      )}
+    </Link>
+  );
+
+  const profileBlockMenu = (
+    <Link
+      href={`/profile/${user.id}`}
+      onClick={closeMenu}
+      className="flex items-center gap-4 min-h-[48px] py-3 hover:opacity-80 transition-opacity touch-manipulation"
+    >
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          className="w-10 h-10 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-purple-500/20">
+          {user.name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <span className="text-white/70 text-base font-medium">{user.name}</span>
+    </Link>
+  );
+
   return (
     <>
       <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex items-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
@@ -335,64 +384,67 @@ export default function Header() {
             role="dialog"
             aria-label="Navigation menu"
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/[0.06] bg-white/[0.02]">
-              <span className="text-sm font-semibold text-white/70">Menu</span>
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.06] bg-white/[0.02]">
+              <span className="text-base font-semibold text-white/70">Menu</span>
               <button
                 type="button"
                 onClick={closeMenu}
-                className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer touch-manipulation"
                 aria-label="Close menu"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <nav className="flex flex-col gap-1 p-4 overflow-y-auto">
+            <nav className="flex flex-col gap-2 p-4 overflow-y-auto">
               <Link
                 href="/wheel"
                 onClick={closeMenu}
-                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors ${isWheel ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isWheel ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 Wheel
               </Link>
               <Link
                 href="/stats"
                 onClick={closeMenu}
-                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors ${isStats ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isStats ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 Stats
               </Link>
               <Link
                 href="/casino"
                 onClick={closeMenu}
-                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors ${isCasino ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isCasino ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 Casino
               </Link>
               <Link
                 href="/cards"
                 onClick={closeMenu}
-                className={`px-4 py-3 rounded-xl text-left font-medium transition-colors relative ${isCards ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors relative touch-manipulation ${isCards ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 TCG
                 {hasIncomingTrade && (
-                  <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+                  <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
                 )}
               </Link>
+              <div className="min-h-[48px] flex items-center">
+                <FeedbackButton inline />
+              </div>
             </nav>
-            <div className="mt-auto p-4 border-t border-white/[0.06] bg-white/[0.02] flex flex-col gap-3">
+            <div className="mt-auto p-4 border-t border-white/[0.06] bg-white/[0.02] flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                {creditsBlock}
+                {creditsBlockMenu}
               </div>
               <div className="flex items-center gap-3">
-                {profileBlock}
+                {profileBlockMenu}
                 <button
                   onClick={() => { closeMenu(); logout(); }}
-                  className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-white/40 hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer touch-manipulation"
                   title="Log out"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                   </svg>
                 </button>

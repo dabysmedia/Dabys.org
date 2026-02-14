@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCardById, removeCard, addCodexUnlock, getListings } from "@/lib/data";
+import { getCardById, removeCard, addCodexUnlock, getListings, getCodexUnlockedCharacterIds } from "@/lib/data";
 
 /** Upload a card to the codex: removes it from your collection and unlocks that character in the codex. Legendaries (1-of-1) re-enter the pool. */
 export async function POST(request: Request) {
@@ -38,6 +38,14 @@ export async function POST(request: Request) {
   const characterId = card.characterId;
   if (!characterId) {
     return NextResponse.json({ error: "Card has no character" }, { status: 400 });
+  }
+
+  const alreadyInCodex = getCodexUnlockedCharacterIds(userId).includes(characterId);
+  if (alreadyInCodex) {
+    return NextResponse.json(
+      { error: "This character is already in your codex" },
+      { status: 400 }
+    );
   }
 
   removeCard(cardId);

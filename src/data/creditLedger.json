@@ -92,5 +92,87 @@
       "weekId": "9"
     },
     "createdAt": "2026-02-14T03:40:42.860Z"
+  },
+  {
+    "id": "cl-1771070329633-oyf1z3d",
+    "userId": "2",
+    "amount": 99969,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 30
+    },
+    "createdAt": "2026-02-14T11:58:49.633Z"
+  },
+  {
+    "id": "cl-1771070346439-2guta6a",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T11:59:06.439Z"
+  },
+  {
+    "id": "cl-1771070427094-9zifo0i",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T12:00:27.094Z"
+  },
+  {
+    "id": "cl-1771071054857-c6tp1zp",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T12:10:54.856Z"
+  },
+  {
+    "id": "cl-1771071403611-scgwt1y",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T12:16:43.611Z"
+  },
+  {
+    "id": "cl-1771071621932-3qv3j8m",
+    "userId": "2",
+    "amount": 5,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771071403612-zdy9ked"
+      ]
+    },
+    "createdAt": "2026-02-14T12:20:21.932Z"
+  },
+  {
+    "id": "cl-1771071690963-itmojng",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T12:21:30.962Z"
+  },
+  {
+    "id": "cl-1771071766092-grraet0",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-14T12:22:46.091Z"
   }
 ]

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
+const MOBILE_BREAKPOINT_PX = 768;
+
 const NAV_ITEMS = [
   {
     label: "Dashboard",
@@ -106,6 +108,27 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX - 1}px)`);
+    const update = () => {
+      const narrow = mql.matches;
+      setIsNarrow(narrow);
+      if (!narrow) setMobileMenuOpen(false);
+    };
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -140,79 +163,142 @@ export default function AdminLayout({
 
   if (!authenticated) return null;
 
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const navLinkClass = (isActive: boolean) =>
+    `flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 touch-manipulation min-h-[44px] md:min-h-0 px-4 py-3 md:px-3 md:py-2.5 ${
+      isActive
+        ? "bg-purple-500/15 text-purple-300 border border-purple-500/20"
+        : "text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-transparent"
+    }`;
+
+  const sidebarContent = (
+    <div className="flex flex-col h-full">
+      <div className="px-4 md:px-6 py-5 border-b border-white/[0.06] flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
+            Admin Panel
+          </h1>
+          <p className="text-[11px] text-white/30 mt-1 hidden md:block">Dabys.org Management</p>
+        </div>
+        {isNarrow && (
+          <button
+            type="button"
+            onClick={closeMobileMenu}
+            className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer touch-manipulation"
+            aria-label="Close menu"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {NAV_ITEMS.map((item) => {
+          const isActive =
+            item.href === "/admin"
+              ? pathname === "/admin"
+              : pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={isNarrow ? closeMobileMenu : undefined}
+              className={navLinkClass(isActive)}
+            >
+              <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center md:w-5 md:h-5 ${isActive ? "text-purple-400" : "text-white/30"}`}>
+                {item.icon}
+              </span>
+              <span className="md:text-sm text-base">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
+        <Link
+          href="/"
+          onClick={isNarrow ? closeMobileMenu : undefined}
+          className="flex items-center gap-3 min-h-[48px] md:min-h-0 px-4 py-3 md:px-3 md:py-2.5 rounded-xl md:rounded-lg text-base md:text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all touch-manipulation"
+        >
+          <svg className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+          Back to Site
+        </Link>
+        <button
+          onClick={() => { closeMobileMenu(); handleLogout(); }}
+          className="w-full flex items-center gap-3 min-h-[48px] md:min-h-0 px-4 py-3 md:px-3 md:py-2.5 rounded-xl md:rounded-lg text-base md:text-sm text-white/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-all cursor-pointer touch-manipulation"
+        >
+          <svg className="w-6 h-6 md:w-5 md:h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+          </svg>
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex">
+    <div
+      className={`flex flex-col md:flex-row ${isNarrow ? "min-h-[100dvh]" : "min-h-screen"}`}
+      style={isNarrow ? { height: "100dvh" } : undefined}
+    >
       {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
       </div>
 
-      {/* Sidebar */}
-      <aside className="relative z-10 w-64 flex-shrink-0 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="flex flex-col h-full">
-          {/* Sidebar header */}
-          <div className="px-6 py-5 border-b border-white/[0.06]">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
-              Admin Panel
-            </h1>
-            <p className="text-[11px] text-white/30 mt-1">Dabys.org Management</p>
-          </div>
+      {/* Mobile: compact top bar, full width */}
+      {isNarrow && (
+        <header className="fixed top-0 left-0 right-0 z-30 flex items-center gap-2 px-3 py-2 border-b border-white/[0.06] bg-black/80 backdrop-blur-xl md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/80 transition-colors cursor-pointer touch-manipulation"
+            aria-label="Open menu"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h1 className="text-base font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent truncate">
+            Admin
+          </h1>
+        </header>
+      )}
 
-          {/* Nav links */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                item.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                    isActive
-                      ? "bg-purple-500/15 text-purple-300 border border-purple-500/20"
-                      : "text-white/50 hover:text-white/80 hover:bg-white/[0.04] border border-transparent"
-                  }`}
-                >
-                  <span className={isActive ? "text-purple-400" : "text-white/30"}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Sidebar footer */}
-          <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
-            <Link
-              href="/"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-all"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-              </svg>
-              Back to Site
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-all cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
+      {/* Sidebar: full-screen drawer on mobile, static on desktop */}
+      {isNarrow && mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          aria-hidden
+          onClick={closeMobileMenu}
+        />
+      )}
+      <aside
+        className={`relative z-10 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl transition-transform duration-200 ease-out ${
+          isNarrow
+            ? `fixed top-0 left-0 bottom-0 z-50 w-[min(100%,20rem)] shadow-xl ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
+            : "w-64 flex-shrink-0"
+        }`}
+      >
+        {sidebarContent}
       </aside>
 
-      {/* Main content */}
-      <main className="relative z-10 flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-8 py-8">
+      {/* Main content: fixed fill below header on mobile so it uses all space; flex on desktop */}
+      <main
+        className={
+          isNarrow
+            ? "fixed left-0 right-0 top-12 bottom-0 z-10 flex flex-col min-h-0 overflow-hidden"
+            : "relative z-10 flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
+        }
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8">
           {children}
         </div>
       </main>

@@ -1045,8 +1045,8 @@ function CardsContent() {
         setQuicksellError(data?.error ?? "Quicksell failed");
         return;
       }
-      if (typeof data.balance === "number") setCreditBalance(data.balance);
       setQuicksellBenchSlots([null, null, null, null, null]);
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: totalCr } }));
       await loadData();
     } finally {
       setQuicksellVendingId(null);
@@ -1191,7 +1191,11 @@ function CardsContent() {
 
   async function handleCodexUploadSelected() {
     if (!user || codexUploadSelectedIds.size === 0) return;
-    const list = [...codexUploadSelectedIds];
+    const list = [...codexUploadSelectedIds].filter((cardId) => {
+      const c = cards.find((x) => x.id === cardId);
+      return c && c.characterId != null && !discoveredCharacterIds.has(c.characterId);
+    });
+    if (list.length === 0) return;
     codexSkipRequestedRef.current = false;
     setCodexUploading(true);
     setCodexUploadProgress(0);
@@ -1681,7 +1685,7 @@ function CardsContent() {
 
       <div className="relative z-10">
         <main className="min-w-0">
-          <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white/90 mb-2">Trading Card Game</h1>
@@ -1732,34 +1736,37 @@ function CardsContent() {
           </div>
         </div>
 
-        {/* In-page tabs */}
-        <div className="flex gap-1 mb-8 border-b border-white/[0.08]">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-5 py-3 text-sm font-medium transition-all cursor-pointer relative ${
-                tab === t.key
-                  ? "text-amber-400 border-b-2 border-amber-400"
-                  : "text-white/40 hover:text-white/70"
-              }`}
-            >
-              {t.label}
-              {t.key === "trade" && receivedTrades.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
-              )}
-            </button>
-          ))}
+        {/* In-page tabs — wrap on mobile (2 per row) for proper scaling; single row + scroll from sm up */}
+        <div className="min-w-0 mb-6 sm:mb-8">
+          <div className="flex flex-wrap gap-2 sm:gap-1 sm:flex-nowrap sm:border-b sm:border-white/[0.08] sm:-mx-4 sm:px-4 md:-mx-6 md:px-6 sm:overflow-x-auto sm:overflow-y-hidden scrollbar-tabs">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none min-h-[48px] sm:min-h-[44px] px-4 py-3.5 sm:py-3 rounded-xl sm:rounded-none text-base sm:text-sm font-medium transition-all cursor-pointer relative touch-manipulation ${
+                  tab === t.key
+                    ? "bg-purple-500/20 text-amber-400 ring-2 ring-amber-400/50 sm:ring-0 sm:bg-transparent sm:border-b-2 sm:border-amber-400 sm:-mb-px"
+                    : "bg-white/[0.06] text-white/40 hover:bg-white/[0.08] hover:text-white/70 sm:bg-transparent"
+                }`}
+              >
+                {t.label}
+                {t.key === "trade" && receivedTrades.length > 0 && (
+                  <span className="absolute top-2.5 right-3 sm:top-1.5 sm:right-1.5 w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Store: Packs | Other */}
         {tab === "store" && (
           <>
-            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5 mb-6">
+            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-4 sm:mb-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
                 type="button"
                 onClick={() => setStoreSubTab("packs")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   storeSubTab === "packs"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -1770,7 +1777,7 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => setStoreSubTab("other")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   storeSubTab === "other"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -1778,6 +1785,7 @@ function CardsContent() {
               >
                 Other
               </button>
+              </div>
             </div>
 
             {storeSubTab === "packs" && (
@@ -1959,19 +1967,19 @@ function CardsContent() {
                   onClick={() => setNewCards(null)}
                   aria-hidden
                 />
-                <div className="fixed inset-0 z-40 flex items-center justify-center px-4">
-                  <div className="relative w-full max-w-4xl rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-6 overflow-hidden">
-                    <div className="relative">
-                    <h2 className="text-lg font-semibold text-white/90 mb-4 text-center">
+                <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center p-3 pt-[calc(var(--header-height)+0.5rem)] sm:pt-4 sm:px-4 sm:p-4">
+                  <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[calc(100dvh-var(--header-height)-1rem)] sm:max-h-none rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col">
+                    <div className="relative flex-shrink-0">
+                    <h2 className="text-base sm:text-lg font-semibold text-white/90 mb-3 sm:mb-4 text-center">
                       You got
                     </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 max-sm:mx-auto">
                       {newCards.map((card, i) => {
                         const revealed = i < revealCount;
                         return (
                           <div key={card.id} className="relative">
                             {!revealed && (
-                              <div className="aspect-[2/3] rounded-xl border border-white/[0.18] bg-white/[0.06] flex items-center justify-center text-3xl font-semibold text-white/40">
+                              <div className="aspect-[2/3] rounded-xl border border-white/[0.18] bg-white/[0.06] flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white/40">
                                 ?
                               </div>
                             )}
@@ -1984,7 +1992,7 @@ function CardsContent() {
                         );
                       })}
                     </div>
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-4 sm:mt-6 flex justify-center flex-shrink-0">
                       <button
                         onClick={() => {
                           setNewCards(null);
@@ -2007,14 +2015,15 @@ function CardsContent() {
         {tab === "inventory" && (
           <div>
             {/* Browser-style sub-tabs: Trade up | Alchemy */}
-            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
                 type="button"
                 onClick={() => {
                   setInventorySubTab("tradeup");
                   router.replace("/cards", { scroll: false });
                 }}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   inventorySubTab === "tradeup"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -2028,7 +2037,7 @@ function CardsContent() {
                   setInventorySubTab("alchemy");
                   router.replace("/cards?alchemy=1", { scroll: false });
                 }}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   inventorySubTab === "alchemy"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -2042,7 +2051,7 @@ function CardsContent() {
                   setInventorySubTab("quicksell");
                   router.replace("/cards?quicksell=1", { scroll: false });
                 }}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   inventorySubTab === "quicksell"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -2050,6 +2059,7 @@ function CardsContent() {
               >
                 Quicksell
               </button>
+              </div>
             </div>
 
             {inventorySubTab === "tradeup" && (
@@ -2305,13 +2315,7 @@ function CardsContent() {
             {inventorySubTab === "quicksell" && (
               <>
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <h2 className="text-lg font-semibold text-amber-400/90">Quicksell</h2>
-                    <span className="text-sm text-sky-300/90 flex items-center gap-1.5">
-                      <span className="text-white/50">Credits:</span>
-                      <span className="tabular-nums font-semibold text-sky-200">{creditBalance}</span>
-                    </span>
-                  </div>
+                  <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Quicksell</h2>
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
                   </p>
@@ -2556,11 +2560,12 @@ function CardsContent() {
               )}
             </div>
 
-            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5 mb-0">
+            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5 mb-0">
               <button
                 type="button"
                 onClick={() => setMarketplaceSubTab("listings")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   marketplaceSubTab === "listings"
                     ? "bg-white/[0.08] text-white border-b border-transparent"
                     : "text-white/50 hover:text-white/70"
@@ -2571,7 +2576,7 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => setMarketplaceSubTab("orders")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   marketplaceSubTab === "orders"
                     ? "bg-white/[0.08] text-white border-b border-transparent"
                     : "text-white/50 hover:text-white/70"
@@ -2579,6 +2584,7 @@ function CardsContent() {
               >
                 Orders
               </button>
+              </div>
             </div>
 
             {marketplaceSubTab === "listings" && (
@@ -3221,11 +3227,12 @@ function CardsContent() {
                 Upload to Codex
               </button>
             </div>
-            <div className="flex gap-0 rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
                 type="button"
                 onClick={() => setCodexSubTab("codex")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "codex"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -3236,7 +3243,7 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => setCodexSubTab("holo")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "holo"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -3247,7 +3254,7 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => setCodexSubTab("altarts")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "altarts"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -3258,7 +3265,7 @@ function CardsContent() {
               <button
                 type="button"
                 onClick={() => setCodexSubTab("badges")}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "badges"
                     ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
                     : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
@@ -3266,6 +3273,7 @@ function CardsContent() {
               >
                 Badges
               </button>
+              </div>
             </div>
 
             {codexSubTab === "codex" && (() => {
@@ -3369,20 +3377,21 @@ function CardsContent() {
                         bySet.get(k)!.push(entry);
                       }
                       const slotIds = (entries: PoolEntry[]) => new Set(entries.map((e) => e.altArtOfCharacterId ?? e.characterId));
-                      const isSetCompleted = (entries: PoolEntry[]) => {
-                        const required = slotIds(entries);
-                        if (required.size < 6) return false;
-                        for (const id of required) if (!discoveredCharacterIds.has(id)) return false;
-                        return true;
+                      const discoveredCount = (entries: PoolEntry[]) => {
+                        let n = 0;
+                        for (const e of entries) {
+                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
+                        }
+                        return n;
                       };
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
                           entries,
-                          completed: isSetCompleted(entries),
+                          completedCount: discoveredCount(entries),
                         }))
                         .sort((a, b) => {
-                          if (a.completed !== b.completed) return a.completed ? -1 : 1;
+                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
                       return sets.flatMap((set, setIndex) => [
@@ -3483,18 +3492,15 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const isSetCompleted = (entries: PoolEntry[]) => {
-                        for (const e of entries) if (!holoByCharacterId.has(e.characterId)) return false;
-                        return true;
-                      };
+                      const completedCount = (entries: PoolEntry[]) => entries.filter((e) => holoByCharacterId.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
                           entries,
-                          completed: isSetCompleted(entries),
+                          completedCount: completedCount(entries),
                         }))
                         .sort((a, b) => {
-                          if (a.completed !== b.completed) return a.completed ? -1 : 1;
+                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
                       return sets.flatMap((set, setIndex) => [
@@ -3621,21 +3627,21 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const slotIds = (entries: PoolEntry[]) => new Set(entries.map((e) => e.altArtOfCharacterId ?? e.characterId));
-                      const isSetCompleted = (entries: PoolEntry[]) => {
-                        const required = slotIds(entries);
-                        if (required.size < 6) return false;
-                        for (const id of required) if (!discoveredCharacterIds.has(id)) return false;
-                        return true;
+                      const discoveredCount = (entries: PoolEntry[]) => {
+                        let n = 0;
+                        for (const e of entries) {
+                          if (discoveredCharacterIds.has(e.characterId) || (e.altArtOfCharacterId != null && discoveredCharacterIds.has(e.altArtOfCharacterId))) n++;
+                        }
+                        return n;
                       };
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
                           title: entries[0]?.movieTitle ?? String(k),
                           entries,
-                          completed: isSetCompleted(entries),
+                          completedCount: discoveredCount(entries),
                         }))
                         .sort((a, b) => {
-                          if (a.completed !== b.completed) return a.completed ? -1 : 1;
+                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
                       return sets.flatMap((set, setIndex) => [
@@ -3772,7 +3778,11 @@ function CardsContent() {
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+              className="fixed left-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl -translate-x-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+              style={{
+                top: "calc(var(--header-height) + 0.5rem)",
+                maxHeight: "calc(100vh - var(--header-height) - 1rem)",
+              }}
               role="dialog"
               aria-label="Upload to Codex"
               onClick={(e) => e.stopPropagation()}
@@ -3826,7 +3836,7 @@ function CardsContent() {
                         ))}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-5">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                     {(() => {
                       const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                       const filtered = cards.filter((c) => !myListedCardIds.has(c.id!));
@@ -3838,19 +3848,28 @@ function CardsContent() {
                             : [...filtered].sort((a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0));
                       return sorted.map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
+                        const alreadyInCodex = card.characterId != null && discoveredCharacterIds.has(card.characterId);
                         return (
                           <button
                             key={card.id}
                             type="button"
-                            onClick={() => card.id && toggleCodexUploadSelection(card.id)}
-                            className={`relative text-left rounded-xl overflow-hidden transition-all cursor-pointer border-2 ${
-                              selected ? "ring-2 ring-cyan-400/35 border-cyan-400/30 backdrop-blur-sm bg-cyan-500/[0.08]" : "border-white/10 hover:border-white/25"
+                            onClick={() => !alreadyInCodex && card.id && toggleCodexUploadSelection(card.id)}
+                            disabled={alreadyInCodex}
+                            className={`relative text-left rounded-xl overflow-hidden transition-all border-2 ${
+                              alreadyInCodex
+                                ? "opacity-60 cursor-not-allowed border-white/5 grayscale"
+                                : "cursor-pointer " + (selected ? "ring-2 ring-cyan-400/35 border-cyan-400/30 backdrop-blur-sm bg-cyan-500/[0.08]" : "border-white/10 hover:border-white/25")
                             }`}
                           >
-                            <div className="w-full max-w-[200px] mx-auto">
+                            <div className="w-full max-w-[140px] mx-auto">
                               <CardDisplay card={card} />
                             </div>
-                            {selected && (
+                            {alreadyInCodex && (
+                              <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">
+                                <span className="text-[10px] uppercase tracking-wider text-white/80 font-medium px-2 py-1 rounded bg-white/10">In Codex</span>
+                              </span>
+                            )}
+                            {selected && !alreadyInCodex && (
                               <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-400/50 backdrop-blur-md border border-white/20 text-white/90 text-xs font-bold flex items-center justify-center z-10 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
                                 ✓
                               </span>
