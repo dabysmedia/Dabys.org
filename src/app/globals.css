@@ -42,6 +42,27 @@ select option {
   background: rgba(139, 92, 246, 0.7);
 }
 
+/* Styled scrollbar for Codex upload modal — cyan/credit blue */
+.scrollbar-codex-modal {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.5) rgba(255, 255, 255, 0.06);
+}
+.scrollbar-codex-modal::-webkit-scrollbar {
+  width: 10px;
+}
+.scrollbar-codex-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+}
+.scrollbar-codex-modal::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.4);
+  border-radius: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.04);
+}
+.scrollbar-codex-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.65);
+}
+
 /* Chrome silver glow animation for Winners Circle — slow, subtle, lava-lamp feel */
 @keyframes winners-glow {
   0%, 100% {
@@ -406,4 +427,32 @@ select option {
 }
 .codex-card-reveal {
   animation: codex-card-reveal 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Codex inspect overlay — card enter/exit */
+@keyframes codex-inspect-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes codex-inspect-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+.codex-inspect-enter {
+  animation: codex-inspect-enter 0.25s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+.codex-inspect-exit {
+  animation: codex-inspect-exit 0.2s ease-in forwards;
 }

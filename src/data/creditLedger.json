@@ -8,5 +8,25 @@
       "packId": "pack-1771000454277-lsrtxlr"
     },
     "createdAt": "2026-02-14T01:01:34.656Z"
+  },
+  {
+    "id": "cl-1771033286633-xuptm4k",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-14T01:41:26.632Z"
+  },
+  {
+    "id": "cl-1771034531139-sfwicji",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-14T02:02:11.138Z"
   }
 ]

@@ -26,10 +26,15 @@ function cardLabelLines(card: CardDisplayCard): { title: string; subtitle: strin
   return { title: card.characterName, subtitle: card.actorName };
 }
 
-export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?: boolean }) {
+export function CardDisplay({ card, compact, inspect }: { card: CardDisplayCard; compact?: boolean; inspect?: boolean }) {
   const { title, subtitle } = cardLabelLines(card);
   const rarityTint = RARITY_TINTS[card.rarity] || RARITY_TINTS.uncommon;
   const rarityBadgeClass = RARITY_BADGE[card.rarity] || RARITY_BADGE.uncommon;
+  const titleClass = inspect ? "text-xl font-semibold sm:text-2xl" : "text-sm font-semibold";
+  const subtitleClass = inspect ? "text-base sm:text-lg" : "text-xs";
+  const movieClass = inspect ? "text-sm sm:text-base mt-1.5" : "text-[10px] mt-0.5";
+  const rarityClass = inspect ? "text-sm px-2.5 py-1.5" : "text-[10px] px-1.5 py-0.5";
+  const rarityIconSize = inspect ? "w-4 h-4" : "w-2 h-2";
   const cardRef = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState(false);
@@ -104,7 +109,7 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
           </div>
           {card.isFoil && (
             <span
-              className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm z-10"
+              className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
               style={{
                 background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
                 boxShadow: "0 0 8px rgba(255,255,255,0.5)",
@@ -115,24 +120,24 @@ export function CardDisplay({ card, compact }: { card: CardDisplayCard; compact?
           )}
           {/* Nameplate overlay — art bleeds underneath, gradient for readability */}
           {!compact && (
-            <div className="absolute inset-x-0 bottom-0 z-10 card-nameplate">
+            <div className={`absolute inset-x-0 bottom-0 z-10 card-nameplate ${inspect ? "p-4 sm:p-5" : ""}`}>
               {/* Rarity badge — sits just above character name */}
               <span className={`inline-flex items-center gap-0.5 mb-1 ${rarityBadgeClass}`}>
-                <svg className="w-2 h-2 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24">
+                <svg className={`${rarityIconSize} shrink-0 opacity-90`} fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
                 <span
-                  className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium uppercase bg-black/50 backdrop-blur-sm leading-none"
+                  className={`inline-flex rounded font-medium uppercase bg-black/50 backdrop-blur-sm leading-none ${rarityClass}`}
                   style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
                 >
                   {card.rarity}
                 </span>
               </span>
-              <p className="text-sm font-semibold font-card-title text-white/95 truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+              <p className={`${titleClass} font-card-title text-white/95 truncate`} style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
                 {title}
               </p>
-              <p className="text-xs text-white/70 truncate">{subtitle}</p>
-              <p className="text-[10px] text-white/50 truncate mt-0.5">{card.movieTitle}</p>
+              <p className={`${subtitleClass} text-white/70 truncate`}>{subtitle}</p>
+              <p className={`${movieClass} text-white/50 truncate`}>{card.movieTitle}</p>
             </div>
           )}
         </div>

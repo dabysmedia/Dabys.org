@@ -497,6 +497,17 @@ function CardsContent() {
   const [codexSort, setCodexSort] = useState<CodexSortKey>("set");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
+  const [codexInspectClosing, setCodexInspectClosing] = useState(false);
+  const [inspectedCodexCard, setInspectedCodexCard] = useState<{
+    id: string;
+    rarity: string;
+    isFoil: boolean;
+    actorName: string;
+    characterName: string;
+    movieTitle: string;
+    profilePath: string;
+    cardType?: CardType;
+  } | null>(null);
   const codexUploadCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codexLoadingAudioRef = useRef<HTMLAudioElement | null>(null);
   const codexSkipRequestedRef = useRef(false);
@@ -3135,8 +3146,13 @@ function CardsContent() {
                       return (
                         <div
                           key={entry.characterId}
-                          className={`relative ${isNewlyUploaded ? "codex-card-reveal" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setInspectedCodexCard(codexCard)}
+                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
+                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
                           onMouseEnter={clearNewDot}
+                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
                         >
                           {isNewlyUploaded && (
                             <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
@@ -3177,6 +3193,39 @@ function CardsContent() {
               </div>
             )}
           </>
+            )}
+
+            {/* Codex card inspect overlay — centered, large scale; animated enter/exit */}
+            {tab === "codex" && codexSubTab === "codex" && inspectedCodexCard && (
+              <>
+                <div
+                  className={`fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm cursor-pointer transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}
+                  onClick={() => !codexInspectClosing && setCodexInspectClosing(true)}
+                  aria-hidden
+                />
+                <div
+                  className="fixed inset-0 z-[56] pointer-events-none flex items-center justify-center p-8"
+                  aria-modal
+                  aria-label="Inspect card"
+                >
+                  <div
+                    onAnimationEnd={(e) => {
+                      if (e.animationName === "codex-inspect-exit") {
+                        setInspectedCodexCard(null);
+                        setCodexInspectClosing(false);
+                      }
+                    }}
+                    className={`pointer-events-auto w-full max-w-[min(22rem,85vw)] cursor-default rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)] ${codexInspectClosing ? "codex-inspect-exit" : "codex-inspect-enter"}`}
+                    onClick={(e) => e.stopPropagation()}
+                    role="dialog"
+                  >
+                    <CardDisplay card={inspectedCodexCard} inspect />
+                  </div>
+                </div>
+                <p className={`fixed bottom-8 left-1/2 z-[56] -translate-x-1/2 pointer-events-none text-sm text-white/60 transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}>
+                  Click outside to close
+                </p>
+              </>
             )}
 
             {codexSubTab === "badges" && (
@@ -3256,7 +3305,7 @@ function CardsContent() {
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
               role="dialog"
               aria-label="Upload to Codex"
               onClick={(e) => e.stopPropagation()}
@@ -3286,13 +3335,17 @@ function CardsContent() {
                   </div>
                 </div>
               )}
-              <div className="p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="p-6 overflow-y-auto flex-1 min-h-0 scrollbar-codex-modal pr-1">
                 {cards.filter((c) => !myListedCardIds.has(c.id!)).length === 0 ? (
                   <p className="text-sm text-white/40 text-center py-8">No cards available to upload (unlist any listed cards first).</p>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-5">
                     {cards
                       .filter((c) => !myListedCardIds.has(c.id!))
+                      .sort((a, b) => {
+                        const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                        return (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0);
+                      })
                       .map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
                         return (
@@ -3304,7 +3357,7 @@ function CardsContent() {
                               selected ? "ring-2 ring-cyan-500 border-cyan-500/60" : "border-white/10 hover:border-white/25"
                             }`}
                           >
-                            <div className="w-full max-w-[140px] mx-auto">
+                            <div className="w-full max-w-[200px] mx-auto">
                               <CardDisplay card={card} />
                             </div>
                             {selected && (
