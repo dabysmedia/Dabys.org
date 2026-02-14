@@ -896,6 +896,34 @@ export function updateCardsByCharacterId(
   return changed;
 }
 
+// ──── Codex (unlock by uploading a card; removes card from collection, legendaries re-enter pool) ────
+const CODEX_UNLOCKS_FILE = "codexUnlocks.json";
+
+function getCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedCharacterIds(userId: string): string[] {
+  const data = getCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlock(userId: string, characterId: string): void {
+  const data = getCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  saveCodexUnlocksRaw(data);
+}
+
 // ──── Trivia ────────────────────────────────────────────
 export interface TriviaAttempt {
   id: string;

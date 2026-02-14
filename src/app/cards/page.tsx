@@ -69,8 +69,19 @@ function useMidnightUTCCountdown(active: boolean): string {
   return countdown;
 }
 
-type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade";
+type TabKey = "store" | "collection" | "marketplace" | "trivia" | "trade" | "codex";
 type StoreSubTab = "packs" | "other";
+/** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
+interface PoolEntry {
+  characterId: string;
+  actorName: string;
+  characterName: string;
+  movieTitle: string;
+  profilePath: string;
+  rarity: string;
+  cardType?: CardType;
+  altArtOfCharacterId?: string;
+}
 type CollectionSubTab = "tradeup" | "alchemy" | "quicksell";
 
 interface TradeOfferEnriched {
@@ -248,7 +259,6 @@ async function playPackFlipSound(step: number) {
     osc.stop(t + 0.12);
   } catch { /* ignore */ }
 }
-
 // Alchemy bench sounds
 async function playAlchemyBenchAdd() {
   const ctx = getTradeUpAudioContext();
@@ -406,6 +416,7 @@ function CardsContent() {
   const [loading, setLoading] = useState(true);
   const [buyingPackId, setBuyingPackId] = useState<string | null>(null);
   const [poolCount, setPoolCount] = useState(0);
+  const [poolEntries, setPoolEntries] = useState<PoolEntry[]>([]);
   const [newCards, setNewCards] = useState<Card[] | null>(null);
   const [revealCount, setRevealCount] = useState(0);
   const [filterRarity, setFilterRarity] = useState<string>("");
@@ -472,6 +483,18 @@ function CardsContent() {
   const tradesPollInitializedRef = useRef(false);
   const acceptedSentTradeIdsRef = useRef<Set<string>>(new Set());
   const acceptedSentPollInitializedRef = useRef(false);
+
+  const [discoveredCharacterIds, setDiscoveredCharacterIds] = useState<Set<string>>(new Set());
+  const [showCodexUploadModal, setShowCodexUploadModal] = useState(false);
+  const [codexUploadSelectedIds, setCodexUploadSelectedIds] = useState<Set<string>>(new Set());
+  const [codexUploading, setCodexUploading] = useState(false);
+  const [codexUploadProgress, setCodexUploadProgress] = useState(0);
+  const [newlyUploadedToCodexCharacterIds, setNewlyUploadedToCodexCharacterIds] = useState<Set<string>>(new Set());
+  const [codexUploadCompleteCount, setCodexUploadCompleteCount] = useState<number | null>(null);
+  const codexUploadCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const codexLoadingAudioRef = useRef<HTMLAudioElement | null>(null);
+  const codexSkipRequestedRef = useRef(false);
+  const codexAnimationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const SEEN_CARDS_KEY = "dabys-seen-cards";
   const NEW_CARD_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -541,7 +564,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool"),
@@ -554,6 +577,7 @@ function CardsContent() {
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/shop/items"),
+      fetch(`/api/cards/codex?userId=${encodeURIComponent(u.id)}`),
     ]);
 
     if (creditsRes.ok) {
@@ -564,6 +588,7 @@ function CardsContent() {
     if (poolRes.ok) {
       const poolData = await poolRes.json();
       setPoolCount(poolData?.count ?? 0);
+      setPoolEntries(poolData?.pool ?? []);
     }
     if (listingsRes.ok) setListings(await listingsRes.json());
     if (winnersRes.ok) {
@@ -622,6 +647,10 @@ function CardsContent() {
     if (shopItemsRes.ok) {
       const d = await shopItemsRes.json();
       setShopItems(d.items ?? []);
+    }
+    if (codexRes.ok) {
+      const d = await codexRes.json();
+      setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
     }
   }, []);
 
@@ -708,6 +737,7 @@ function CardsContent() {
   useEffect(() => {
     return () => {
       stardustAnimTimeoutRef.current && clearTimeout(stardustAnimTimeoutRef.current);
+      codexUploadCompleteTimeoutRef.current && clearTimeout(codexUploadCompleteTimeoutRef.current);
     };
   }, []);
 
@@ -1180,6 +1210,98 @@ function CardsContent() {
     }
   }
 
+  async function handleCodexUploadSelected() {
+    if (!user || codexUploadSelectedIds.size === 0) return;
+    const list = [...codexUploadSelectedIds];
+    codexSkipRequestedRef.current = false;
+    setCodexUploading(true);
+    setCodexUploadProgress(0);
+    if (!codexLoadingAudioRef.current) codexLoadingAudioRef.current = new Audio("/data/codex-loading.mp3");
+    const codexAudio = codexLoadingAudioRef.current;
+    codexAudio.loop = true;
+    codexAudio.play().catch(() => {});
+
+    const startTime = Date.now();
+    const ANIMATION_MS = 3000;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        codexSkipRequestedRef.current = true;
+        if (codexAnimationIntervalRef.current) {
+          clearInterval(codexAnimationIntervalRef.current);
+          codexAnimationIntervalRef.current = null;
+        }
+        setCodexUploadProgress(100);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    codexAnimationIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, Math.round((elapsed / ANIMATION_MS) * 100));
+      setCodexUploadProgress(pct);
+      if (pct >= 100 && codexAnimationIntervalRef.current) {
+        clearInterval(codexAnimationIntervalRef.current);
+        codexAnimationIntervalRef.current = null;
+      }
+    }, 50);
+
+    let uploadedCount = 0;
+    for (let i = 0; i < list.length; i++) {
+      const cardId = list[i];
+      try {
+        const res = await fetch("/api/cards/upload-to-codex", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.id, cardId }),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok && data.characterId) {
+          uploadedCount++;
+          setDiscoveredCharacterIds((prev) => new Set([...prev, data.characterId]));
+          setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
+        }
+      } catch {
+        /* skip failed */
+      }
+    }
+
+    while (Date.now() - startTime < ANIMATION_MS && !codexSkipRequestedRef.current) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    if (codexAnimationIntervalRef.current) {
+      clearInterval(codexAnimationIntervalRef.current);
+      codexAnimationIntervalRef.current = null;
+    }
+    setCodexUploadProgress(100);
+    window.removeEventListener("keydown", onKeyDown);
+
+    codexAudio.pause();
+    codexAudio.currentTime = 0;
+    setCodexUploading(false);
+    setCodexUploadProgress(0);
+    setCodexUploadSelectedIds(new Set());
+    setShowCodexUploadModal(false);
+    await loadData();
+    if (uploadedCount > 0) {
+      setCodexUploadCompleteCount(uploadedCount);
+      if (codexUploadCompleteTimeoutRef.current) clearTimeout(codexUploadCompleteTimeoutRef.current);
+      codexUploadCompleteTimeoutRef.current = setTimeout(() => {
+        setCodexUploadCompleteCount(null);
+        codexUploadCompleteTimeoutRef.current = null;
+      }, 3200);
+    }
+  }
+
+  function toggleCodexUploadSelection(cardId: string) {
+    setCodexUploadSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
+  }
+
   async function handlePurchaseShopItem(item: ShopItem) {
     if (!user || creditBalance < item.price || purchasingShopItemId) return;
     setPurchasingShopItemId(item.id);
@@ -1490,6 +1612,7 @@ function CardsContent() {
     { key: "marketplace", label: "Marketplace" },
     { key: "trivia", label: "Trivia" },
     { key: "trade", label: "Trade" },
+    { key: "codex", label: "Codex" },
   ];
 
   return (
@@ -2878,6 +3001,218 @@ function CardsContent() {
                 <p className="text-white/30 text-xs">Click &quot;Start Trade&quot; to send an offer to another user.</p>
               </div>
             )}
+          </>
+        )}
+
+        {/* Codex */}
+        {tab === "codex" && (
+          <>
+            <div className="flex flex-col items-center gap-3 mb-6">
+              <p className="text-white/50 text-sm text-center max-w-xl">
+                All cards in the game. Upload a card from your Collection to unlock it here (the card is removed from your collection; legendaries re-enter the pool).
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCodexUploadModal(true);
+                  setCodexUploadSelectedIds(new Set());
+                }}
+                className="px-6 py-2 rounded-xl border-2 border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-bold hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
+              >
+                Upload to Codex
+              </button>
+            </div>
+            {poolEntries.length === 0 ? (
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+                <p className="text-white/40 text-sm">No cards in the pool yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {poolEntries.map((entry) => {
+                  const discovered =
+                    discoveredCharacterIds.has(entry.characterId) ||
+                    (entry.altArtOfCharacterId != null && discoveredCharacterIds.has(entry.altArtOfCharacterId));
+                  if (!discovered) {
+                    return (
+                      <div
+                        key={entry.characterId}
+                        className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                        style={{ aspectRatio: "2 / 3.35" }}
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                          <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          </svg>
+                          <span className="text-xs font-medium">?</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  const codexCard = {
+                    id: entry.characterId,
+                    rarity: entry.rarity,
+                    isFoil: false,
+                    actorName: entry.actorName ?? "",
+                    characterName: entry.characterName ?? "",
+                    movieTitle: entry.movieTitle ?? "",
+                    profilePath: entry.profilePath ?? "",
+                    cardType: entry.cardType,
+                  };
+                  const isNewlyUploaded =
+                    newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
+                    (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
+                  return (
+                    <div
+                      key={entry.characterId}
+                      className={`relative ${isNewlyUploaded ? "codex-card-reveal" : ""}`}
+                    >
+                      {isNewlyUploaded && (
+                        <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                      )}
+                      <CardDisplay card={codexCard} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Codex upload modal — select collection cards to upload */}
+        {showCodexUploadModal && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => !codexUploading && setShowCodexUploadModal(false)}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+              role="dialog"
+              aria-label="Upload to Codex"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+                <h3 className="text-lg font-bold text-white/90">Your collection — select cards to upload to Codex</h3>
+                <button
+                  type="button"
+                  onClick={() => !codexUploading && setShowCodexUploadModal(false)}
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              {/* Thin progress bar inside modal — light blue glow */}
+              {codexUploading && (
+                <div className="shrink-0 px-6 pt-1 pb-2">
+                  <div className="h-0.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-sky-400 transition-all duration-300 ease-out"
+                      style={{
+                        width: `${codexUploadProgress}%`,
+                        boxShadow: "0 0 12px rgba(34, 211, 238, 0.6), 0 0 24px rgba(34, 211, 238, 0.35)",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="p-6 overflow-y-auto flex-1 min-h-0">
+                {cards.filter((c) => !myListedCardIds.has(c.id!)).length === 0 ? (
+                  <p className="text-sm text-white/40 text-center py-8">No cards available to upload (unlist any listed cards first).</p>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                    {cards
+                      .filter((c) => !myListedCardIds.has(c.id!))
+                      .map((card) => {
+                        const selected = card.id != null && codexUploadSelectedIds.has(card.id);
+                        return (
+                          <button
+                            key={card.id}
+                            type="button"
+                            onClick={() => card.id && toggleCodexUploadSelection(card.id)}
+                            className={`relative text-left rounded-xl overflow-hidden transition-all cursor-pointer border-2 ${
+                              selected ? "ring-2 ring-cyan-500 border-cyan-500/60" : "border-white/10 hover:border-white/25"
+                            }`}
+                          >
+                            <div className="w-full max-w-[140px] mx-auto">
+                              <CardDisplay card={card} />
+                            </div>
+                            {selected && (
+                              <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-500 text-black text-xs font-bold flex items-center justify-center z-10">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-4 border-t border-white/10 shrink-0 flex items-center justify-between gap-4">
+                <span className="text-sm text-white/50">
+                  {codexUploadSelectedIds.size} selected
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => !codexUploading && setShowCodexUploadModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] text-white/80 hover:bg-white/[0.08] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCodexUploadSelected}
+                    disabled={codexUploadSelectedIds.size === 0 || codexUploading}
+                    className="px-6 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/20 text-cyan-300 font-medium hover:bg-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {codexUploading ? "Uploading…" : `Upload ${codexUploadSelectedIds.size} to Codex`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Codex upload complete popup */}
+        {codexUploadCompleteCount !== null && (
+          <>
+            <div
+              className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm cursor-pointer"
+              onClick={() => {
+                setCodexUploadCompleteCount(null);
+                if (codexUploadCompleteTimeoutRef.current) {
+                  clearTimeout(codexUploadCompleteTimeoutRef.current);
+                  codexUploadCompleteTimeoutRef.current = null;
+                }
+              }}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-[61] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-cyan-400/40 bg-gradient-to-b from-cyan-950/95 to-sky-950/95 backdrop-blur-xl shadow-[0_0_40px_rgba(34,211,238,0.25),0_8px_32px_rgba(0,0,0,0.4)] px-10 py-8 text-center animate-[codex-card-reveal_0.4s_ease-out_both] cursor-pointer"
+              role="alert"
+              aria-live="polite"
+              onClick={() => {
+                setCodexUploadCompleteCount(null);
+                if (codexUploadCompleteTimeoutRef.current) {
+                  clearTimeout(codexUploadCompleteTimeoutRef.current);
+                  codexUploadCompleteTimeoutRef.current = null;
+                }
+              }}
+            >
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 rounded-full bg-cyan-400/20 border-2 border-cyan-400/60 flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                  <svg className="w-8 h-8 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-white/95">
+                {codexUploadCompleteCount} {codexUploadCompleteCount === 1 ? "Card" : "Cards"} Uploaded to Codex
+              </p>
+              <p className="text-sm text-cyan-300/80 mt-1">Click anywhere to close</p>
+            </div>
           </>
         )}
 
