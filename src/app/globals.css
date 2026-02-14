@@ -8,7 +8,7 @@
   --card-bg: rgba(255, 255, 255, 0.04);
   --card-border: rgba(255, 255, 255, 0.08);
   /* Header height — sidebars start just below it */
-  --header-height: 4rem;
+  --header-height: 5rem;
 }
 
 body {

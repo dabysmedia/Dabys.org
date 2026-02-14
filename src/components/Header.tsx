@@ -201,8 +201,8 @@ export default function Header() {
 
   if (!user) {
     return (
-      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex flex-col justify-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-center">
+      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex items-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+        <div className="w-full max-w-6xl mx-auto px-6 flex items-center justify-center min-h-[var(--header-height)]">
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
       </header>
@@ -266,9 +266,9 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex flex-col justify-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 h-[var(--header-height)] min-h-[var(--header-height)] flex items-center border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-xl">
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between min-h-[var(--header-height)] py-3">
+          <div className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/"
               className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
@@ -292,7 +292,7 @@ export default function Header() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5 sm:gap-6">
               <NavLink href="/wheel" label="Wheel" active={isWheel} />
               <NavLink href="/stats" label="Stats" active={isStats} />
               <NavLink href="/casino" label="Casino" active={isCasino} />
