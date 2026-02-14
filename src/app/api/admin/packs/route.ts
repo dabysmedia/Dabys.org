@@ -74,6 +74,12 @@ export async function POST(request: Request) {
       ? undefined
       : Math.min(59, Math.max(0, parseInt(String(body.restockMinuteUtc), 10) || 0));
 
+  const discounted = !!body.discounted;
+  const rawDiscountPercent = body.discountPercent;
+  const discountPercent =
+    typeof rawDiscountPercent === "number" && rawDiscountPercent >= 0 && rawDiscountPercent <= 100
+      ? Math.round(rawDiscountPercent)
+      : undefined;
   const pack = upsertPack({
     name,
     imageUrl,
@@ -86,6 +92,8 @@ export async function POST(request: Request) {
     isFree,
     restockHourUtc: restockHourUtc ?? undefined,
     restockMinuteUtc: restockMinuteUtc ?? undefined,
+    discounted,
+    discountPercent: discounted ? discountPercent : undefined,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -164,6 +172,16 @@ export async function PATCH(request: Request) {
       ? (existing as { restockMinuteUtc?: number }).restockMinuteUtc
       : Math.min(59, Math.max(0, parseInt(String(body.restockMinuteUtc), 10) || 0));
 
+  const discounted =
+    body.discounted !== undefined ? !!body.discounted : !!(existing as { discounted?: boolean }).discounted;
+  const rawDiscountPercent = body.discountPercent;
+  const discountPercent =
+    rawDiscountPercent === undefined || rawDiscountPercent === null
+      ? (existing as { discountPercent?: number }).discountPercent
+      : typeof rawDiscountPercent === "number" && rawDiscountPercent >= 0 && rawDiscountPercent <= 100
+        ? Math.round(rawDiscountPercent)
+        : (existing as { discountPercent?: number }).discountPercent;
+
   const updated = upsertPack({
     id,
     name,
@@ -177,6 +195,8 @@ export async function PATCH(request: Request) {
     isFree,
     restockHourUtc: restockHourUtc ?? undefined,
     restockMinuteUtc: restockMinuteUtc ?? undefined,
+    discounted,
+    discountPercent: discounted ? discountPercent : undefined,
   });
 
   return NextResponse.json(updated);

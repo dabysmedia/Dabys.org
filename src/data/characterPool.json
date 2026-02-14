@@ -453,5 +453,77 @@
     "rarity": "legendary",
     "cardType": "actor",
     "altArtOfCharacterId": "actor-70851-9353"
+  },
+  {
+    "characterId": "actor-3223-24428",
+    "tmdbPersonId": 3223,
+    "actorName": "Robert Downey Jr.",
+    "characterName": "Tony Stark / Iron Man",
+    "profilePath": "https://image.tmdb.org/t/p/w500/5qHNjhtjMD4YWH3UP0rm4tKwxCL.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 7.7967,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-16828-24428",
+    "tmdbPersonId": 16828,
+    "actorName": "Chris Evans",
+    "characterName": "Steve Rogers / Captain America",
+    "profilePath": "https://image.tmdb.org/t/p/w500/3bOGNsHlrswhyW79uvIHH1V43JI.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 6.3166,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-103-24428",
+    "tmdbPersonId": 103,
+    "actorName": "Mark Ruffalo",
+    "characterName": "Bruce Banner / The Hulk",
+    "profilePath": "https://image.tmdb.org/t/p/w500/5GilHMOt5PAQh6rlUKZzGmaKEI7.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 5.6687,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-74568-24428",
+    "tmdbPersonId": 74568,
+    "actorName": "Chris Hemsworth",
+    "characterName": "Thor",
+    "profilePath": "https://image.tmdb.org/t/p/w500/piQGdoIQOF3C1EI5cbYZLAW1gfj.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 7.4905,
+    "rarity": "uncommon",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-1245-24428",
+    "tmdbPersonId": 1245,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Natasha Romanoff / Black Widow",
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 16.0315,
+    "rarity": "rare",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-17604-24428",
+    "tmdbPersonId": 17604,
+    "actorName": "Jeremy Renner",
+    "characterName": "Clint Barton / Hawkeye",
+    "profilePath": "https://image.tmdb.org/t/p/w500/yB84D1neTYXfWBaV0QOE9RF2VCu.jpg",
+    "movieTmdbId": 24428,
+    "movieTitle": "The Avengers",
+    "popularity": 4.3813,
+    "rarity": "uncommon",
+    "cardType": "actor"
   }
 ]

@@ -350,7 +350,13 @@ export function buyPack(
     }
   }
 
-  const price = selectedPack?.price ?? PACK_PRICE;
+  const basePrice = selectedPack?.price ?? PACK_PRICE;
+  const price =
+    selectedPack?.discounted &&
+    typeof selectedPack.discountPercent === "number" &&
+    selectedPack.discountPercent > 0
+      ? Math.floor(basePrice * (1 - selectedPack.discountPercent / 100))
+      : basePrice;
   const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
 
   const balance = getCredits(userId);

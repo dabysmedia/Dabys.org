@@ -409,6 +409,8 @@ interface Pack {
   allowedCardTypes: CardType[];
   maxPurchasesPerDay?: number;
   purchasesToday?: number;
+  discounted?: boolean;
+  discountPercent?: number;
 }
 
 interface ShopItem {
@@ -522,7 +524,7 @@ function CardsContent() {
   const [newlyUploadedToCodexCharacterIds, setNewlyUploadedToCodexCharacterIds] = useState<Set<string>>(new Set());
   const [codexUploadCompleteCount, setCodexUploadCompleteCount] = useState<number | null>(null);
   type CodexSortKey = "set" | "name" | "rarity";
-  const [codexSort, setCodexSort] = useState<CodexSortKey>("rarity");
+  const [codexSort, setCodexSort] = useState<CodexSortKey>("set");
   type CodexUploadSortKey = "rarity" | "set" | "name";
   const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("rarity");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
@@ -1166,7 +1168,13 @@ function CardsContent() {
   }
 
   async function handleBuyPack(pack: Pack) {
-    if (!user || creditBalance < pack.price || buyingPackId) return;
+    const effectivePrice =
+      pack.discounted &&
+      typeof pack.discountPercent === "number" &&
+      pack.discountPercent > 0
+        ? Math.floor(pack.price * (1 - pack.discountPercent / 100))
+        : pack.price;
+    if (!user || creditBalance < effectivePrice || buyingPackId) return;
     setBuyingPackId(pack.id);
     try {
       const res = await fetch("/api/cards/buy-pack", {
@@ -1178,7 +1186,7 @@ function CardsContent() {
       if (res.ok && data.cards) {
         setNewCards(data.cards);
         await loadData();
-        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -pack.price } }));
+        window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -effectivePrice } }));
       } else {
         alert(data.error || "Failed to buy pack");
       }
@@ -1712,13 +1720,13 @@ function CardsContent() {
             >
               <p className="text-sm font-semibold text-amber-300 mb-2">How the TCG works</p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                Collect character cards from winning movies. Buy packs with credits, trade up duplicates for rarer cards, and buy or sell on the marketplace.
+                <strong className="text-amber-300/95">Earn credits</strong> from Trivia (answer questions about winning movies). <strong className="text-amber-300/95">Buy packs</strong> in the Store to get character cards. Trade up 5 duplicates for a rarer card, or use <strong className="text-amber-300/95">Alchemy</strong> (disenchant Holos for Stardust; Pack-A-Punch normals to Holo) and <strong className="text-amber-300/95">Quicksell</strong> for credits.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                This is a <strong className="text-amber-300/95">user-driven economy</strong>—prices and value are set by the community.
+                Buy or sell on the <strong className="text-amber-300/95">Marketplace</strong> and <strong className="text-amber-300/95">Trade</strong> with others—a user-driven economy.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                Chase a <strong className="text-amber-300/95">badge</strong> (show off a winning movie on your profile) or build your <strong className="text-amber-300/95">inventory</strong>.
+                <strong className="text-amber-300/95">Codex</strong>: Upload cards from inventory to discover them (card leaves collection; legendaries re-enter pool). Complete each set (6 cards per movie) to earn <strong className="text-amber-300/95">badges</strong> for your profile.
               </p>
               <p className="text-xs text-white/50 leading-relaxed">
                 New cards are added weekly from winning movies.
@@ -1797,6 +1805,12 @@ function CardsContent() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {packs.map((pack) => {
+                const effectivePrice =
+                  pack.discounted &&
+                  typeof pack.discountPercent === "number" &&
+                  pack.discountPercent > 0
+                    ? Math.floor(pack.price * (1 - pack.discountPercent / 100))
+                    : pack.price;
                 const atDailyLimit =
                   typeof pack.maxPurchasesPerDay === "number" &&
                   pack.maxPurchasesPerDay > 0 &&
@@ -1804,9 +1818,9 @@ function CardsContent() {
                 const disabled =
                   atDailyLimit ||
                   poolCount < pack.cardsPerPack ||
-                  (pack.price > 0 && creditBalance < pack.price) ||
+                  (effectivePrice > 0 && creditBalance < effectivePrice) ||
                   buyingPackId === pack.id;
-                const needCredits = pack.price > 0 && creditBalance < pack.price ? pack.price - creditBalance : 0;
+                const needCredits = effectivePrice > 0 && creditBalance < effectivePrice ? effectivePrice - creditBalance : 0;
                 const rarityText =
                   pack.allowedRarities && pack.allowedRarities.length < 4
                     ? pack.allowedRarities.join(", ")
@@ -1825,6 +1839,13 @@ function CardsContent() {
                     }`}
                   >
                     <div className="relative w-full">
+                      {pack.discounted && (
+                        <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                          <span className="inline-block px-3 py-1.5 rounded-lg bg-red-500/90 text-white text-xs font-bold uppercase tracking-wider shadow-lg border border-red-400/50">
+                            Sale{typeof pack.discountPercent === "number" && pack.discountPercent > 0 ? ` ${pack.discountPercent}%` : ""}
+                          </span>
+                        </div>
+                      )}
                       {atDailyLimit && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                           <span className="w-full py-3 text-center bg-rose-950/55 backdrop-blur-md text-white/95 text-xs font-medium tracking-[0.25em] uppercase border-y border-rose-900/40 shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
@@ -1853,8 +1874,19 @@ function CardsContent() {
                             {pack.cardsPerPack} cards per pack
                           </p>
                         </div>
-                        <div className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
-                          {pack.price} cr
+                        <div className="flex items-center gap-2">
+                          {effectivePrice < pack.price ? (
+                            <>
+                              <span className="text-white/40 text-xs line-through">{pack.price} cr</span>
+                              <span className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
+                                {effectivePrice} cr
+                              </span>
+                            </>
+                          ) : (
+                            <span className="px-3 py-1 rounded-full bg-sky-400/20 text-sky-50 text-xs font-semibold shadow-sm border border-sky-400/40 transition-colors duration-200 group-hover:bg-sky-400/40 group-hover:border-sky-300/70">
+                              {pack.price} cr
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

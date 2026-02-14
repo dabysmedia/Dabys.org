@@ -50,6 +50,8 @@ interface Pack {
   isFree?: boolean;
   restockHourUtc?: number;
   restockMinuteUtc?: number;
+  discounted?: boolean;
+  discountPercent?: number;
 }
 
 type ShopItemType = "badge" | "skip";
@@ -258,6 +260,8 @@ export default function AdminCardsCreditsPage() {
     restockHourUtc: string;
     restockMinuteUtc: string;
     isFree: boolean;
+    discounted: boolean;
+    discountPercent: string;
   }>({
     name: "",
     imageUrl: "",
@@ -270,6 +274,8 @@ export default function AdminCardsCreditsPage() {
     restockHourUtc: "0",
     restockMinuteUtc: "0",
     isFree: false,
+    discounted: false,
+    discountPercent: "",
   });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
@@ -554,6 +560,8 @@ export default function AdminCardsCreditsPage() {
       restockHourUtc: "0",
       restockMinuteUtc: "0",
       isFree: false,
+      discounted: false,
+      discountPercent: "",
     });
   }
 
@@ -572,6 +580,8 @@ export default function AdminCardsCreditsPage() {
       restockHourUtc: pack.restockHourUtc != null ? String(pack.restockHourUtc) : "0",
       restockMinuteUtc: pack.restockMinuteUtc != null ? String(pack.restockMinuteUtc) : "0",
       isFree: !!pack.isFree,
+      discounted: !!pack.discounted,
+      discountPercent: pack.discountPercent != null ? String(pack.discountPercent) : "",
     });
   }
 
@@ -613,6 +623,10 @@ export default function AdminCardsCreditsPage() {
         allowedCardTypes: packForm.allowedCardTypes,
         isActive: packForm.isActive,
         isFree: packForm.isFree,
+        discounted: packForm.discounted,
+        discountPercent: packForm.discounted && packForm.discountPercent.trim() !== ""
+          ? Math.min(100, Math.max(0, parseInt(packForm.discountPercent, 10) || 0))
+          : undefined,
         maxPurchasesPerDay: maxPurchasesPerDay === undefined ? "" : maxPurchasesPerDay,
         restockHourUtc: restockHourUtc ?? "",
         restockMinuteUtc: restockMinuteUtc ?? "",
@@ -1469,6 +1483,30 @@ export default function AdminCardsCreditsPage() {
                 />
                 Active in store
               </label>
+              <label className="flex items-center gap-2 text-sm text-white/70">
+                <input
+                  type="checkbox"
+                  checked={packForm.discounted}
+                  onChange={(e) => setPackForm((f) => ({ ...f, discounted: e.target.checked }))}
+                  className="rounded border-white/30 bg-white/5"
+                />
+                Discounted (show &quot;Sale&quot; label in shop)
+              </label>
+              {packForm.discounted && (
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Discount %</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="e.g. 20"
+                    value={packForm.discountPercent}
+                    onChange={(e) => setPackForm((f) => ({ ...f, discountPercent: e.target.value }))}
+                    className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30"
+                  />
+                  <p className="text-[10px] text-white/40 mt-0.5">Optional. Shows e.g. &quot;Sale 20%&quot; on the pack.</p>
+                </div>
+              )}
               <div className="flex gap-2 pt-2">
                 {editingPackId && (
                   <button

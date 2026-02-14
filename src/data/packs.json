@@ -16,7 +16,11 @@
       "character"
     ],
     "isActive": true,
-    "isFree": false
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": true,
+    "discountPercent": 25
   },
   {
     "id": "pack-1771000454277-lsrtxlr",
@@ -38,6 +42,7 @@
     ],
     "isActive": true,
     "maxPurchasesPerDay": 3,
-    "isFree": true
+    "isFree": true,
+    "discounted": false
   }
 ]

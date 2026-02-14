@@ -1482,6 +1482,10 @@ export interface Pack {
   restockHourUtc?: number;
   /** Minute (0–59) UTC when the daily limit resets. Omit = 0. */
   restockMinuteUtc?: number;
+  /** If true, show a "Sale" label on the pack in the shop. */
+  discounted?: boolean;
+  /** When discounted, optional percentage to display (e.g. 20 for "20% off"). 0–100. */
+  discountPercent?: number;
 }
 
 function getPacksRaw(): Pack[] {
@@ -1525,6 +1529,11 @@ export function getPacks(): Pack[] {
     isFree: !!((p as Pack).isFree),
     restockHourUtc: typeof (p as Pack).restockHourUtc === "number" ? (p as Pack).restockHourUtc : undefined,
     restockMinuteUtc: typeof (p as Pack).restockMinuteUtc === "number" ? (p as Pack).restockMinuteUtc : undefined,
+    discounted: !!((p as Pack).discounted),
+    discountPercent:
+      typeof (p as Pack).discountPercent === "number" && (p as Pack).discountPercent! >= 0 && (p as Pack).discountPercent! <= 100
+        ? Math.round((p as Pack).discountPercent!)
+        : undefined,
   }));
 }
 
@@ -1570,6 +1579,11 @@ export function upsertPack(
     isFree: !!((input as Pack).isFree),
     restockHourUtc: typeof (input as Pack).restockHourUtc === "number" ? (input as Pack).restockHourUtc : undefined,
     restockMinuteUtc: typeof (input as Pack).restockMinuteUtc === "number" ? (input as Pack).restockMinuteUtc : undefined,
+    discounted: !!((input as Pack).discounted),
+    discountPercent:
+      typeof (input as Pack).discountPercent === "number" && (input as Pack).discountPercent! >= 0 && (input as Pack).discountPercent! <= 100
+        ? Math.round((input as Pack).discountPercent!)
+        : undefined,
   };
   packs.push(newPack);
   savePacks(packs);
