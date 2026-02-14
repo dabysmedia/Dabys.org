@@ -3169,9 +3169,23 @@ function CardsContent() {
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
+                      const slotIds = (entries: PoolEntry[]) => new Set(entries.map((e) => e.altArtOfCharacterId ?? e.characterId));
+                      const isSetCompleted = (entries: PoolEntry[]) => {
+                        const required = slotIds(entries);
+                        if (required.size < 6) return false;
+                        for (const id of required) if (!discoveredCharacterIds.has(id)) return false;
+                        return true;
+                      };
                       const sets = Array.from(bySet.entries())
-                        .map(([k, entries]) => ({ title: entries[0]?.movieTitle ?? String(k), entries }))
-                        .sort((a, b) => a.title.localeCompare(b.title));
+                        .map(([k, entries]) => ({
+                          title: entries[0]?.movieTitle ?? String(k),
+                          entries,
+                          completed: isSetCompleted(entries),
+                        }))
+                        .sort((a, b) => {
+                          if (a.completed !== b.completed) return a.completed ? -1 : 1;
+                          return a.title.localeCompare(b.title);
+                        });
                       return sets.flatMap((set, setIndex) => [
                         setIndex > 0 ? (
                           <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
@@ -3354,14 +3368,14 @@ function CardsContent() {
                             type="button"
                             onClick={() => card.id && toggleCodexUploadSelection(card.id)}
                             className={`relative text-left rounded-xl overflow-hidden transition-all cursor-pointer border-2 ${
-                              selected ? "ring-2 ring-cyan-500 border-cyan-500/60" : "border-white/10 hover:border-white/25"
+                              selected ? "ring-2 ring-cyan-400/35 border-cyan-400/30 backdrop-blur-sm bg-cyan-500/[0.08]" : "border-white/10 hover:border-white/25"
                             }`}
                           >
                             <div className="w-full max-w-[200px] mx-auto">
                               <CardDisplay card={card} />
                             </div>
                             {selected && (
-                              <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-500 text-black text-xs font-bold flex items-center justify-center z-10">
+                              <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-400/50 backdrop-blur-md border border-white/20 text-white/90 text-xs font-bold flex items-center justify-center z-10 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
                                 ✓
                               </span>
                             )}
