@@ -219,6 +219,7 @@ export default function AdminCardsCreditsPage() {
   const [savingShopItem, setSavingShopItem] = useState(false);
   const [deletingShopItemId, setDeletingShopItemId] = useState<string | null>(null);
   const [showCreateCustomCardForm, setShowCreateCustomCardForm] = useState(false);
+  const [poolSectionOpen, setPoolSectionOpen] = useState(false);
   const [triviaAttempts, setTriviaAttempts] = useState<{ id: string; userId: string; winnerId: string; correctCount: number; totalCount: number; creditsEarned: number; completedAt: string }[]>([]);
   const [winners, setWinners] = useState<{ id: string; movieTitle: string; posterUrl?: string; tmdbId?: number }[]>([]);
   const [reopeningWinnerId, setReopeningWinnerId] = useState<string | null>(null);
@@ -253,6 +254,10 @@ export default function AdminCardsCreditsPage() {
     votesReceivedPerVote: number;
     rating: number;
     comment: number;
+    quicksellUncommon: number;
+    quicksellRare: number;
+    quicksellEpic: number;
+    tradeUpLegendaryFailureCredits: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -261,6 +266,10 @@ export default function AdminCardsCreditsPage() {
     votesReceivedPerVote: "50",
     rating: "25",
     comment: "25",
+    quicksellUncommon: "5",
+    quicksellRare: "20",
+    quicksellEpic: "80",
+    tradeUpLegendaryFailureCredits: "100",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
@@ -391,6 +400,10 @@ export default function AdminCardsCreditsPage() {
           votesReceivedPerVote: String(d.votesReceivedPerVote ?? 50),
           rating: String(d.rating ?? 25),
           comment: String(d.comment ?? 25),
+          quicksellUncommon: String(d.quicksellUncommon ?? 5),
+          quicksellRare: String(d.quicksellRare ?? 20),
+          quicksellEpic: String(d.quicksellEpic ?? 80),
+          tradeUpLegendaryFailureCredits: String(d.tradeUpLegendaryFailureCredits ?? 100),
         });
       }
     } catch {
@@ -735,6 +748,10 @@ export default function AdminCardsCreditsPage() {
         votesReceivedPerVote: parseInt(creditSettingsForm.votesReceivedPerVote, 10) || 0,
         rating: parseInt(creditSettingsForm.rating, 10) || 0,
         comment: parseInt(creditSettingsForm.comment, 10) || 0,
+        quicksellUncommon: parseInt(creditSettingsForm.quicksellUncommon, 10) ?? 0,
+        quicksellRare: parseInt(creditSettingsForm.quicksellRare, 10) ?? 0,
+        quicksellEpic: parseInt(creditSettingsForm.quicksellEpic, 10) ?? 0,
+        tradeUpLegendaryFailureCredits: parseInt(creditSettingsForm.tradeUpLegendaryFailureCredits, 10) ?? 0,
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -1440,6 +1457,53 @@ export default function AdminCardsCreditsPage() {
               />
               <span className="ml-1 text-xs text-white/40">cr</span>
             </div>
+            <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
+              <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={creditSettingsForm.quicksellUncommon}
+                  onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))}
+                  className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+                />
+                <span className="ml-1 text-xs text-white/40">cr</span>
+              </div>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Quicksell rare</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={creditSettingsForm.quicksellRare}
+                  onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellRare: e.target.value }))}
+                  className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+                />
+                <span className="ml-1 text-xs text-white/40">cr</span>
+              </div>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Quicksell epic</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={creditSettingsForm.quicksellEpic}
+                  onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellEpic: e.target.value }))}
+                  className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+                />
+                <span className="ml-1 text-xs text-white/40">cr</span>
+              </div>
+              <div>
+                <label className="block text-xs text-white/40 mb-1" title="When 4 epics are traded up and the result is credits (67% chance) instead of a legendary">Epic→Legendary trade-up failure</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={creditSettingsForm.tradeUpLegendaryFailureCredits}
+                  onChange={(e) => setCreditSettingsForm((f) => ({ ...f, tradeUpLegendaryFailureCredits: e.target.value }))}
+                  className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+                />
+                <span className="ml-1 text-xs text-white/40">cr</span>
+              </div>
+            </div>
             <div className="flex items-end">
               <button
                 type="submit"
@@ -2134,12 +2198,19 @@ export default function AdminCardsCreditsPage() {
 
       {/* Manage Card Pool */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <button
+          type="button"
+          onClick={() => setPoolSectionOpen((o) => !o)}
+          className="flex flex-wrap items-center justify-between gap-4 w-full text-left mb-4"
+        >
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
             Manage Card Pool ({pool.length} cards)
           </h2>
-        </div>
+          <span className="text-white/30 text-sm">{poolSectionOpen ? "▼" : "▶"}</span>
+        </button>
 
+        {poolSectionOpen && (
+        <>
         <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2">
           <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Drop chance</span>
           <span className="text-sm text-white/80"><span className="capitalize text-white/60">Legendary</span> <span className="font-medium">1%</span></span>
@@ -2387,6 +2458,8 @@ export default function AdminCardsCreditsPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* User selector */}

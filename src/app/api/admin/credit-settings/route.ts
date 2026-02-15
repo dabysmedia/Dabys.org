@@ -39,6 +39,10 @@ export async function PATCH(request: Request) {
     votesReceivedPerVote: parse(body.votesReceivedPerVote, current.votesReceivedPerVote),
     rating: parse(body.rating, current.rating),
     comment: parse(body.comment, current.comment),
+    quicksellUncommon: parse(body.quicksellUncommon, current.quicksellUncommon),
+    quicksellRare: parse(body.quicksellRare, current.quicksellRare),
+    quicksellEpic: parse(body.quicksellEpic, current.quicksellEpic),
+    tradeUpLegendaryFailureCredits: parse(body.tradeUpLegendaryFailureCredits, current.tradeUpLegendaryFailureCredits),
   };
 
   saveCreditSettings(settings);

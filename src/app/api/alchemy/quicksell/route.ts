@@ -5,8 +5,8 @@ import {
   addCredits,
   getCredits,
   getListings,
+  getCreditSettings,
 } from "@/lib/data";
-import { getQuicksellCredits } from "@/lib/alchemy";
 
 export async function POST(request: Request) {
   let body: { userId?: string; cardIds?: string[] };
@@ -48,7 +48,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const cr = getQuicksellCredits(card.rarity);
+    const settings = getCreditSettings();
+    const cr =
+      card.rarity === "uncommon"
+        ? settings.quicksellUncommon
+        : card.rarity === "rare"
+          ? settings.quicksellRare
+          : card.rarity === "epic"
+            ? settings.quicksellEpic
+            : 0;
     if (cr <= 0) {
       return NextResponse.json(
         { error: `Invalid rarity for quicksell: ${card.rarity}` },

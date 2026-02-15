@@ -509,6 +509,8 @@ function CardsContent() {
   const [quicksellBenchSlots, setQuicksellBenchSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [quicksellVendingId, setQuicksellVendingId] = useState<string | null>(null);
   const [quicksellError, setQuicksellError] = useState("");
+  /** Fetched from /api/settings/quicksell so display reflects admin-configured prices. */
+  const [quicksellPrices, setQuicksellPrices] = useState<{ quicksellUncommon: number; quicksellRare: number; quicksellEpic: number } | null>(null);
   const [stardustDelta, setStardustDelta] = useState<number | null>(null);
   const [stardustAnimClass, setStardustAnimClass] = useState("");
   const stardustPrevRef = useRef<number>(0);
@@ -607,7 +609,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool?codex=1"),
@@ -623,6 +625,7 @@ function CardsContent() {
       fetch("/api/shop/items"),
       fetch(`/api/cards/codex?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards/badge-progress?userId=${encodeURIComponent(u.id)}`),
+      fetch("/api/settings/quicksell"),
     ]);
 
     if (creditsRes.ok) {
@@ -693,6 +696,12 @@ function CardsContent() {
     if (shopItemsRes.ok) {
       const d = await shopItemsRes.json();
       setShopItems(d.items ?? []);
+    }
+    if (quicksellPricesRes.ok) {
+      const d = await quicksellPricesRes.json();
+      if (typeof d?.quicksellUncommon === "number" && typeof d?.quicksellRare === "number" && typeof d?.quicksellEpic === "number") {
+        setQuicksellPrices({ quicksellUncommon: d.quicksellUncommon, quicksellRare: d.quicksellRare, quicksellEpic: d.quicksellEpic });
+      }
     }
     if (codexRes.ok) {
       const d = await codexRes.json();
@@ -1064,9 +1073,20 @@ function CardsContent() {
     setQuicksellBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
   }
 
+  /** Credits for quicksell display/confirm: use admin-configured prices when loaded, else defaults. */
+  function getQuicksellCreditsForDisplay(rarity: string): number {
+    if (rarity === "legendary") return 0;
+    if (quicksellPrices) {
+      if (rarity === "uncommon") return quicksellPrices.quicksellUncommon;
+      if (rarity === "rare") return quicksellPrices.quicksellRare;
+      if (rarity === "epic") return quicksellPrices.quicksellEpic;
+    }
+    return getQuicksellCredits(rarity);
+  }
+
   async function handleQuicksellAll() {
     if (!user || quicksellBenchCards.length === 0) return;
-    const totalCr = quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCredits(c.rarity), 0);
+    const totalCr = quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0);
     if (!confirm(`Vendor ${quicksellBenchCards.length} card(s) for ${totalCr} credits? This cannot be undone.`)) return;
     setQuicksellError("");
     setQuicksellVendingId("_all");
@@ -1082,7 +1102,8 @@ function CardsContent() {
         return;
       }
       setQuicksellBenchSlots([null, null, null, null, null]);
-      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: totalCr } }));
+      const received = typeof data?.creditsReceived === "number" ? data.creditsReceived : totalCr;
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: received } }));
       await loadData();
     } finally {
       setQuicksellVendingId(null);
@@ -2452,7 +2473,7 @@ function CardsContent() {
                     {quicksellBenchCards.length > 0 ? (
                       <div className="flex flex-col items-start gap-2">
                         <span className="text-xs text-white/50">
-                          Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCredits(c.rarity), 0)} credits
+                          Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0)} credits
                         </span>
                         <button
                           onClick={() => handleQuicksellAll()}

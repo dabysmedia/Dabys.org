@@ -18,7 +18,7 @@ export function getPackAPunchCost(rarity: string): number {
   return PACK_A_PUNCH_COST[rarity] ?? PACK_A_PUNCH_COST.uncommon;
 }
 
-/** Credits received when vendoring (quicksell) a card by rarity. Legendary cannot be quicksold. */
+/** Credits per rarity for quicksell (vendor). Used for client-side display. Legendary cannot be quicksold. Server uses getCreditSettings() for actual payouts. */
 export const QUICKSELL_CREDITS: Record<string, number> = {
   uncommon: 5,
   rare: 20,
@@ -26,6 +26,7 @@ export const QUICKSELL_CREDITS: Record<string, number> = {
   legendary: 0,
 };
 
+/** Client-safe: returns quicksell credits from default map. Server API uses credit settings for actual amount. */
 export function getQuicksellCredits(rarity: string): number {
   return QUICKSELL_CREDITS[rarity] ?? (rarity === "legendary" ? 0 : QUICKSELL_CREDITS.uncommon);
 }
