@@ -207,7 +207,7 @@ export default function LoginPage() {
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/15 blur-[140px]" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-8">
+      <div className="relative z-10 min-h-[100vh] h-[100dvh] overflow-y-auto overflow-x-hidden flex flex-col items-center justify-center px-4 py-8">
         {/* Title — same font as main page, outside any container */}
         <h1 className="font-site-title text-4xl sm:text-5xl font-bold text-center mb-1 bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
           dabys.org
@@ -297,7 +297,7 @@ export default function LoginPage() {
                         </span>
                       </button>
                       <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out ${otherUsersOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-60"}`}
+                        className={`transition-all duration-300 ease-in-out ${otherUsersOpen ? "max-h-[320px] opacity-100 overflow-y-auto overflow-x-hidden scrollbar-autocomplete" : "max-h-0 opacity-60 overflow-hidden"}`}
                       >
                         <div className="space-y-2 px-4 pb-4 pt-0">
                           {otherUsers.map((user) => renderUserButton(user, "compact"))}
