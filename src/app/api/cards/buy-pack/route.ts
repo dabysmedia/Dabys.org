@@ -9,6 +9,9 @@ export async function POST(request: Request) {
   }
 
   const packId = typeof body.packId === "string" ? body.packId : undefined;
+  if (!packId) {
+    return NextResponse.json({ error: "packId is required" }, { status: 400 });
+  }
 
   const result = buyPack(body.userId, packId);
   if (!result.success) {

@@ -367,7 +367,12 @@ export function buyPack(
   }
 
   const allowedRarities = selectedPack?.allowedRarities;
-  const allowedCardTypes = selectedPack?.allowedCardTypes;
+  // Character Pack must never drop Boys (character); enforce in code regardless of stored config.
+  let allowedCardTypes = selectedPack?.allowedCardTypes;
+  if (selectedPack?.name?.toLowerCase().trim() === "character pack") {
+    allowedCardTypes = (allowedCardTypes ?? []).filter((t) => t !== "character");
+    if (allowedCardTypes.length === 0) allowedCardTypes = ["actor"];
+  }
 
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
 
@@ -376,7 +381,7 @@ export function buyPack(
     .filter((c) => {
       const rarityOk = !allowedRarities || allowedRarities.includes(norm(c.rarity) as any);
       const type = (c.cardType ?? "actor") as NonNullable<typeof c.cardType>;
-      const typeOk = !allowedCardTypes || allowedCardTypes.includes(type as any);
+      const typeOk = !allowedCardTypes || allowedCardTypes.length === 0 || allowedCardTypes.includes(type as any);
       return rarityOk && typeOk;
     });
   const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
