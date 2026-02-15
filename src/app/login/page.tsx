@@ -145,6 +145,32 @@ export default function LoginPage() {
     }
   }
 
+  async function handleAdminLoginAsUser(userId: string) {
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        router.push("/admin");
+      } else {
+        setAdminError("Could not sign in as admin");
+      }
+    } catch {
+      setAdminError("Something went wrong");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  const defaultAdmins = useMemo(
+    () => users.filter((u) => ["jerry", "carlos"].includes(u.name.trim().toLowerCase())),
+    [users]
+  );
+
   function renderUserButton(user: User, size: "primary" | "compact") {
     const isPrimary = size === "primary";
     return (
@@ -359,6 +385,22 @@ export default function LoginPage() {
               {adminError && (
                 <p className="text-red-400/80 text-xs mt-2">{adminError}</p>
               )}
+              {defaultAdmins.length > 0 && (
+                <p className="text-white/40 text-xs mt-3 mb-1">Or sign in without password:</p>
+              )}
+              <div className="flex flex-wrap gap-2 mt-1">
+                {defaultAdmins.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleAdminLoginAsUser(u.id)}
+                    disabled={adminLoading}
+                    className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 text-xs font-medium hover:bg-white/10 disabled:opacity-50 cursor-pointer"
+                  >
+                    Enter as {u.name}
+                  </button>
+                ))}
+              </div>
             </form>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getLegendaryCardsNotInPool, getCharacterPool, getCardById, saveCharacterPool } from "@/lib/data";
+import { getLegendaryCardsInInventory, getCharacterPool, getCardById, saveCharacterPool } from "@/lib/data";
 import type { CharacterPortrayal } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export async function GET() {
   const auth = await requireAdmin();
   if (auth) return auth;
 
-  const cards = getLegendaryCardsNotInPool();
+  const cards = getLegendaryCardsInInventory();
   return NextResponse.json({ cards }, { headers: { "Cache-Control": "no-store" } });
 }
 

@@ -2698,9 +2698,10 @@ function CardsContent() {
                 <p className="text-white/40 text-sm">No cards for sale yet. List your first card!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {listings.map((listing) => (
-                  <div key={listing.id} className="flex flex-col rounded-b-2xl rounded-t-none border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
+                  <div key={listing.id} className="flex flex-col rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
                     <CardDisplay card={listing.card} />
                     <div className="border-t border-white/10 bg-white/[0.02] p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
@@ -2731,7 +2732,7 @@ function CardsContent() {
                         <button
                           onClick={() => handleBuyListing(listing.id)}
                           disabled={creditBalance < listing.askingPrice || buyingId === listing.id}
-                          className="w-full px-3 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          className="w-full px-3 py-2 rounded-lg border border-amber-500/50 bg-amber-500/20 backdrop-blur-md text-amber-300 text-sm font-medium hover:border-amber-400 hover:bg-amber-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           {buyingId === listing.id ? "Buying..." : "Buy"}
                         </button>
@@ -2739,6 +2740,7 @@ function CardsContent() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 

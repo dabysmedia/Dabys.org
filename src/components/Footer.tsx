@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+const DEFAULT_ADMIN_NAMES = ["jerry", "carlos"];
 
 export function Footer() {
   const router = useRouter();
@@ -9,6 +11,20 @@ export function Footer() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("dabys_user");
+      if (raw) {
+        const u = JSON.parse(raw) as { id?: string; name?: string };
+        if (u?.id && u?.name && DEFAULT_ADMIN_NAMES.includes(u.name.trim().toLowerCase()))
+          setCurrentUser({ id: u.id, name: u.name });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function handleAdminLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +42,24 @@ export function Footer() {
         setAdminError("Wrong password");
         setAdminPassword("");
       }
+    } catch {
+      setAdminError("Something went wrong");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleAdminLoginAsUser(userId: string) {
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) router.push("/admin");
+      else setAdminError("Could not sign in as admin");
     } catch {
       setAdminError("Something went wrong");
     } finally {
@@ -62,6 +96,16 @@ export function Footer() {
               </button>
             </div>
             {adminError && <p className="text-red-400/80 text-xs mt-2">{adminError}</p>}
+            {currentUser && (
+              <button
+                type="button"
+                onClick={() => handleAdminLoginAsUser(currentUser.id)}
+                disabled={adminLoading}
+                className="mt-2 w-full px-3 py-1.5 rounded-lg border border-white/20 text-white/60 text-xs hover:bg-white/10 disabled:opacity-50 cursor-pointer"
+              >
+                Enter as {currentUser.name}
+              </button>
+            )}
           </form>
         </div>
 

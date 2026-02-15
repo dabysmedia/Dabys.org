@@ -523,5 +523,16 @@
     "popularity": 0,
     "rarity": "legendary",
     "cardType": "actor"
+  },
+  {
+    "characterId": "custom-1771114639037-51mdjhh",
+    "actorName": "athlete jerry",
+    "characterName": "jerry",
+    "profilePath": "/api/uploads/1771114637863-f94qfg.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Boys",
+    "popularity": 0,
+    "rarity": "uncommon",
+    "cardType": "character"
   }
 ]

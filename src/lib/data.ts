@@ -926,6 +926,17 @@ export function getLegendaryCardsNotInPool(): Card[] {
     .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
 }
 
+/** All legendary cards currently in inventory, with inPool true/false per card. */
+export function getLegendaryCardsInInventory(): (Card & { inPool: boolean })[] {
+  const cards = getCardsRaw();
+  const poolIds = new Set(getCharacterPool().map((c) => c.characterId));
+  return cards
+    .filter((c) => c.rarity === "legendary")
+    .map((c) => withDefaultCardType(c) as Card & { inPool: boolean })
+    .map((c) => ({ ...c, inPool: poolIds.has(c.characterId) }))
+    .sort((a, b) => new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime());
+}
+
 /** Pool entries for codex display: character pool plus one entry per legendary characterId not in pool (so 1of1 custom legendaries have a codex slot and can be uploaded). */
 export function getCodexPoolEntries(): CharacterPortrayal[] {
   const pool = getCharacterPool();

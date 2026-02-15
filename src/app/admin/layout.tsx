@@ -133,7 +133,19 @@ export default function AdminLayout({
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch("/api/admin/check");
+        let userId: string | null = null;
+        try {
+          const raw = localStorage.getItem("dabys_user");
+          if (raw) {
+            const u = JSON.parse(raw) as { id?: string };
+            if (u?.id) userId = u.id;
+          }
+        } catch {
+          /* ignore */
+        }
+        const res = await fetch("/api/admin/check", {
+          headers: userId ? { "X-User-Id": userId } : {},
+        });
         if (res.ok) {
           setAuthenticated(true);
         } else {
@@ -173,8 +185,8 @@ export default function AdminLayout({
     }`;
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      <div className="px-4 md:px-6 py-5 border-b border-white/[0.06] flex items-center justify-between gap-3">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="px-4 md:px-6 py-5 border-b border-white/[0.06] flex items-center justify-between gap-3 flex-shrink-0">
         <div>
           <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
             Admin Panel
@@ -195,7 +207,7 @@ export default function AdminLayout({
         )}
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 min-h-0 px-3 py-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const isActive =
             item.href === "/admin"
@@ -218,7 +230,7 @@ export default function AdminLayout({
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-white/[0.06] space-y-2">
+      <div className="mt-auto flex-shrink-0 px-3 py-4 border-t border-white/[0.06] space-y-2">
         <Link
           href="/"
           onClick={isNarrow ? closeMobileMenu : undefined}
@@ -244,7 +256,7 @@ export default function AdminLayout({
 
   return (
     <div
-      className={`flex flex-col md:flex-row ${isNarrow ? "min-h-[100dvh]" : "min-h-screen"}`}
+      className={`flex flex-col ${isNarrow ? "min-h-[100dvh]" : "min-h-screen"}`}
       style={isNarrow ? { height: "100dvh" } : undefined}
     >
       {/* Ambient glow */}
@@ -272,7 +284,7 @@ export default function AdminLayout({
         </header>
       )}
 
-      {/* Sidebar: full-screen drawer on mobile, static on desktop */}
+      {/* Sidebar: full-screen drawer on mobile, sticky on desktop so it scrolls with the page */}
       {isNarrow && mobileMenuOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
@@ -280,28 +292,36 @@ export default function AdminLayout({
           onClick={closeMobileMenu}
         />
       )}
-      <aside
-        className={`relative z-10 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl transition-transform duration-200 ease-out ${
-          isNarrow
-            ? `fixed top-0 left-0 bottom-0 z-50 w-[min(100%,20rem)] shadow-xl ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
-            : "w-64 flex-shrink-0"
-        }`}
-      >
-        {sidebarContent}
-      </aside>
-
-      {/* Main content: fixed fill below header on mobile so it uses all space; flex on desktop */}
-      <main
+      <div
         className={
           isNarrow
-            ? "fixed left-0 right-0 top-12 bottom-0 z-10 flex flex-col min-h-0 overflow-hidden"
-            : "relative z-10 flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
+            ? "flex flex-col flex-1 min-h-0"
+            : "md:flex md:flex-row md:min-h-screen flex-1 min-h-0 md:overflow-y-auto"
         }
       >
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8">
-          {children}
-        </div>
-      </main>
+        <aside
+          className={`relative z-10 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl transition-transform duration-200 ease-out flex flex-col ${
+            isNarrow
+              ? `fixed top-0 left-0 bottom-0 z-50 w-[min(100%,20rem)] shadow-xl ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
+              : "w-64 flex-shrink-0 md:sticky md:top-0 md:self-start md:h-screen md:min-h-0"
+          }`}
+        >
+          {sidebarContent}
+        </aside>
+
+        {/* Main content: fixed fill below header on mobile; scrolls with page on desktop */}
+        <main
+          className={
+            isNarrow
+              ? "fixed left-0 right-0 top-12 bottom-0 z-10 flex flex-col min-h-0 overflow-hidden"
+              : "relative z-10 flex-1 min-w-0 md:min-h-screen"
+          }
+        >
+          <div className={isNarrow ? "flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8" : "w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8 overflow-x-hidden"}>
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

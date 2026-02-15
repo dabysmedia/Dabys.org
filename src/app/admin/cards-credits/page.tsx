@@ -160,8 +160,8 @@ export default function AdminCardsCreditsPage() {
   const [savingCredits, setSavingCredits] = useState(false);
   const [restockingPack, setRestockingPack] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
+  const [addingCardCharacterId, setAddingCardCharacterId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [addCharacterId, setAddCharacterId] = useState("");
   const [addHolo, setAddHolo] = useState(false);
   const [error, setError] = useState("");
   const [poolLoading, setPoolLoading] = useState(false);
@@ -242,8 +242,8 @@ export default function AdminCardsCreditsPage() {
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
   const [resettingCodex, setResettingCodex] = useState(false);
-  const [legendaryNotInPool, setLegendaryNotInPool] = useState<Card[]>([]);
-  const [legendaryNotInPoolLoading, setLegendaryNotInPoolLoading] = useState(false);
+  const [legendaryInInventory, setLegendaryInInventory] = useState<(Card & { inPool: boolean })[]>([]);
+  const [legendaryInInventoryLoading, setLegendaryInInventoryLoading] = useState(false);
   const [returnToPoolCardId, setReturnToPoolCardId] = useState<string | null>(null);
   const [creditSettings, setCreditSettings] = useState<{
     submission: number;
@@ -392,20 +392,20 @@ export default function AdminCardsCreditsPage() {
     }
   }, []);
 
-  const loadLegendaryNotInPool = useCallback(async () => {
-    setLegendaryNotInPoolLoading(true);
+  const loadLegendaryInInventory = useCallback(async () => {
+    setLegendaryInInventoryLoading(true);
     try {
       const res = await fetch(`/api/admin/legendary-not-in-pool?t=${Date.now()}`);
       if (res.ok) {
         const d = await res.json();
-        setLegendaryNotInPool(Array.isArray(d.cards) ? d.cards : []);
+        setLegendaryInInventory(Array.isArray(d.cards) ? d.cards : []);
       } else {
-        setLegendaryNotInPool([]);
+        setLegendaryInInventory([]);
       }
     } catch {
-      setLegendaryNotInPool([]);
+      setLegendaryInInventory([]);
     } finally {
-      setLegendaryNotInPoolLoading(false);
+      setLegendaryInInventoryLoading(false);
     }
   }, []);
 
@@ -491,8 +491,8 @@ export default function AdminCardsCreditsPage() {
     loadPacks();
     loadShopItems();
     loadCreditSettings();
-    loadLegendaryNotInPool();
-  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadLegendaryNotInPool]);
+    loadLegendaryInInventory();
+  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadLegendaryInInventory]);
 
   useEffect(() => {
     loadData();
@@ -965,10 +965,10 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
-  async function handleAddCard(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedUserId || !addCharacterId || addingCard) return;
+  async function handleAddCard(characterId: string) {
+    if (!selectedUserId || !characterId || addingCard) return;
     setAddingCard(true);
+    setAddingCardCharacterId(characterId);
     setError("");
     try {
       const res = await fetch("/api/admin/cards", {
@@ -976,14 +976,13 @@ export default function AdminCardsCreditsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: selectedUserId,
-          characterId: addCharacterId,
+          characterId,
           isFoil: addHolo,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setCards((prev) => [...prev, data]);
-        setAddCharacterId("");
       } else {
         setError(data.error || "Failed to add card");
       }
@@ -991,6 +990,7 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to add card");
     } finally {
       setAddingCard(false);
+      setAddingCardCharacterId(null);
     }
   }
 
@@ -1223,77 +1223,113 @@ export default function AdminCardsCreditsPage() {
         </div>
       )}
 
-      {/* Legendary in inventory, not in pool — at top so always visible */}
+      {/* Legendaries currently in inventory — who has what */}
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6 mb-8">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
           <div>
             <h3 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">
-              Legendary cards in inventory, not in pool
+              Legendaries currently in inventory
             </h3>
             <p className="text-white/40 text-sm">
-              Only legendaries whose <strong className="text-white/60">characterId</strong> is no longer in the character pool (removed from pool or pool rebuilt). If your legendaries are still in the pool, they won’t appear here.
+              Who has what legendary. Cards not in the character pool can be returned to the pool so they can drop again.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => loadLegendaryNotInPool()}
-            disabled={legendaryNotInPoolLoading}
+            onClick={() => loadLegendaryInInventory()}
+            disabled={legendaryInInventoryLoading}
             className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer"
           >
-            {legendaryNotInPoolLoading ? "Loading…" : "Refresh"}
+            {legendaryInInventoryLoading ? "Loading…" : "Refresh"}
           </button>
         </div>
-        <div className="mt-3">
-          {legendaryNotInPoolLoading ? (
+        <div className="mt-4">
+          {legendaryInInventoryLoading ? (
             <p className="text-white/50 text-sm">Loading…</p>
-          ) : legendaryNotInPool.length === 0 ? (
-            <p className="text-white/50 text-sm">None. Every legendary in inventory has its characterId present in the pool.</p>
+          ) : legendaryInInventory.length === 0 ? (
+            <p className="text-white/50 text-sm">No legendary cards in any user&apos;s inventory.</p>
           ) : (
-            <div className="flex flex-wrap gap-6">
-              {legendaryNotInPool.map((card) => (
-                <div
-                  key={card.id}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <CardDisplay card={card} size="md" />
-                  <span className="text-xs text-white/60">
-                    {users.find((u) => u.id === card.userId)?.name ?? card.userId}
-                    {card.isFoil && <span className="ml-1 text-amber-400/90">(Holo)</span>}
-                  </span>
-                  <span className="text-[10px] text-white/40 font-mono truncate w-full max-w-[140px] text-center" title={card.characterId}>
-                    {card.characterId}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={returnToPoolCardId !== null}
-                    onClick={async () => {
-                      if (!card.id) return;
-                      setReturnToPoolCardId(card.id);
-                      try {
-                        const res = await fetch("/api/admin/legendary-not-in-pool", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ cardId: card.id }),
-                        });
-                        const data = await res.json();
-                        if (res.ok && data.ok) {
-                          await loadLegendaryNotInPool();
-                          await loadPool();
-                        } else {
-                          setError(data?.error ?? "Failed to return to pool");
-                        }
-                      } catch {
-                        setError("Failed to return to pool");
-                      } finally {
-                        setReturnToPoolCardId(null);
-                      }
-                    }}
-                    className="mt-1 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer"
-                  >
-                    {returnToPoolCardId === card.id ? "Adding…" : "Return to pool"}
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-6">
+              {(() => {
+                const byUser = new Map<string, (Card & { inPool: boolean })[]>();
+                for (const card of legendaryInInventory) {
+                  const list = byUser.get(card.userId) ?? [];
+                  list.push(card);
+                  byUser.set(card.userId, list);
+                }
+                const sortedUserIds = Array.from(byUser.keys()).sort((a, b) => {
+                  const na = users.find((u) => u.id === a)?.name ?? a;
+                  const nb = users.find((u) => u.id === b)?.name ?? b;
+                  return na.localeCompare(nb);
+                });
+                return sortedUserIds.map((userId) => {
+                  const userCards = byUser.get(userId) ?? [];
+                  const userName = users.find((u) => u.id === userId)?.name ?? userId;
+                  return (
+                    <div key={userId} className="rounded-lg border border-white/[0.1] bg-white/[0.03] p-5">
+                      <h4 className="text-sm font-medium text-white/90 mb-4">
+                        {userName}
+                        <span className="ml-2 text-white/40 font-normal">
+                          ({userCards.length} {userCards.length === 1 ? "legendary" : "legendaries"})
+                        </span>
+                      </h4>
+                      <div className="flex flex-wrap gap-5">
+                        {userCards.map((card) => (
+                          <div
+                            key={card.id}
+                            className="flex flex-col items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] p-4 min-w-[160px]"
+                          >
+                            <CardDisplay card={card} size="md" />
+                            <span
+                              className="text-[10px] text-white/55 font-mono truncate w-full max-w-[180px] text-center min-w-0"
+                              title={card.characterId}
+                            >
+                              {card.characterId}
+                            </span>
+                            {card.isFoil && <span className="text-xs text-amber-400/90">Holo</span>}
+                            <span
+                              className={`text-[10px] px-2.5 py-1 rounded-md mt-0.5 ${card.inPool ? "bg-emerald-500/20 text-emerald-400/90" : "bg-amber-500/20 text-amber-400/90"}`}
+                            >
+                              {card.inPool ? "In pool" : "Not in pool"}
+                            </span>
+                            {!card.inPool && (
+                              <button
+                                type="button"
+                                disabled={returnToPoolCardId !== null}
+                                onClick={async () => {
+                                  if (!card.id) return;
+                                  setReturnToPoolCardId(card.id);
+                                  try {
+                                    const res = await fetch("/api/admin/legendary-not-in-pool", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ cardId: card.id }),
+                                    });
+                                    const data = await res.json();
+                                    if (res.ok && data.ok) {
+                                      await loadLegendaryInInventory();
+                                      await loadPool();
+                                    } else {
+                                      setError(data?.error ?? "Failed to return to pool");
+                                    }
+                                  } catch {
+                                    setError("Failed to return to pool");
+                                  } finally {
+                                    setReturnToPoolCardId(null);
+                                  }
+                                }}
+                                className="mt-2 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer"
+                              >
+                                {returnToPoolCardId === card.id ? "Adding…" : "Return to pool"}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
@@ -2479,22 +2515,8 @@ export default function AdminCardsCreditsPage() {
             </button>
             {openUserSection.collection && (
               <div className="px-4 pb-4 pt-0">
-                <form onSubmit={handleAddCard} className="flex flex-wrap gap-3 items-end mb-6">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs text-white/40 mb-1">Add card from pool</label>
-                    <select
-                      value={addCharacterId}
-                      onChange={(e) => setAddCharacterId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-purple-500/50 cursor-pointer [color-scheme:dark] [&_option]:bg-[#1a1a24] [&_option]:text-white"
-                    >
-                      <option value="">-- Select character --</option>
-                      {pool.filter((c) => c.profilePath?.trim()).map((c) => (
-                        <option key={c.characterId} value={c.characterId}>
-                          {poolOptionLabel(c)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="mb-4">
+                  <p className="text-xs text-white/40 mb-2">Add card from pool — click a card to add it to this user&apos;s collection.</p>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2502,16 +2524,50 @@ export default function AdminCardsCreditsPage() {
                       onChange={(e) => setAddHolo(e.target.checked)}
                       className="rounded border-white/30 bg-white/5"
                     />
-                    <span className="text-sm text-white/60">Holo</span>
+                    <span className="text-sm text-white/60">Add as Holo</span>
                   </label>
-                  <button
-                    type="submit"
-                    disabled={!addCharacterId || addingCard}
-                    className="px-5 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
-                  >
-                    {addingCard ? "Adding..." : "Add Card"}
-                  </button>
-                </form>
+                </div>
+                <div className="max-h-[320px] overflow-y-auto rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 mb-6">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                    {pool.filter((c) => c.profilePath?.trim()).map((c) => {
+                      const cardForDisplay = {
+                        profilePath: c.profilePath ?? "",
+                        actorName: c.actorName,
+                        characterName: c.characterName,
+                        movieTitle: c.movieTitle,
+                        rarity: c.rarity,
+                        isFoil: addHolo,
+                        cardType: c.cardType,
+                      };
+                      const isAdding = addingCardCharacterId === c.characterId;
+                      return (
+                        <div
+                          key={c.characterId}
+                          className={`rounded-xl border overflow-hidden bg-white/[0.03] transition-all ${RARITY_COLORS[c.rarity] ?? "border-white/10"} hover:ring-2 hover:ring-green-500/40`}
+                        >
+                          <div className="relative w-full" style={{ maxWidth: 100 }}>
+                            <CardDisplay card={cardForDisplay} size="xs" />
+                          </div>
+                          <div className="p-2">
+                            <p className="text-[10px] font-semibold text-white/90 truncate" title={c.actorName}>{c.actorName}</p>
+                            <p className="text-[10px] text-white/50 truncate" title={c.characterName}>{c.characterName}</p>
+                            <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded uppercase ${RARITY_COLORS[c.rarity] ?? ""}`}>
+                              {c.rarity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleAddCard(c.characterId)}
+                              disabled={addingCard}
+                              className="mt-2 w-full min-h-[32px] px-2 py-1.5 rounded-lg text-[10px] font-medium bg-green-600/90 text-white hover:bg-green-500 disabled:opacity-50 cursor-pointer"
+                            >
+                              {isAdding ? "Adding…" : "Add"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
                 {cards.length === 0 ? (
                   <p className="text-white/30 text-sm">No cards in collection.</p>
                 ) : (
