@@ -90,6 +90,8 @@ function useMidnightUTCCountdown(active: boolean): string {
 }
 
 type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
+const TCG_TAB_STORAGE_KEY = "dabys_tcg_tab";
+const TAB_KEYS: TabKey[] = ["store", "inventory", "marketplace", "trivia", "trade", "codex"];
 type CodexSubTab = "codex" | "holo" | "altarts" | "boys" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
@@ -732,6 +734,30 @@ function CardsContent() {
       setInventorySubTab("quicksell");
     }
   }, [searchParams]);
+
+  // Restore last selected tab when returning to TCG page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(TCG_TAB_STORAGE_KEY);
+      if (saved && TAB_KEYS.includes(saved as TabKey)) setTab(saved as TabKey);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Remember current tab when it changes (skip first run on mount so we don't overwrite restored value)
+  const isFirstTabEffectRun = useRef(true);
+  useEffect(() => {
+    if (isFirstTabEffectRun.current) {
+      isFirstTabEffectRun.current = false;
+      return;
+    }
+    try {
+      sessionStorage.setItem(TCG_TAB_STORAGE_KEY, tab);
+    } catch {
+      /* ignore */
+    }
+  }, [tab]);
 
   useEffect(() => {
     const handler = () => loadData();
@@ -1796,8 +1822,8 @@ function CardsContent() {
         {/* Store: Packs | Other */}
         {tab === "store" && (
           <>
-            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-4 sm:mb-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
-              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+            <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5 mb-0">
               <button
                 type="button"
                 onClick={() => setStoreSubTab("packs")}
@@ -1824,13 +1850,13 @@ function CardsContent() {
             </div>
 
             {storeSubTab === "packs" && (
-            <>
+            <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
               {poolCount < 5 && (
                 <p className="text-amber-400/70 text-xs mb-4">
                   No winning movies with TMDB data yet. Win some movies to unlock cards!
                 </p>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {packs.map((pack) => {
                 const effectivePrice =
                   pack.discounted &&
@@ -1955,20 +1981,21 @@ function CardsContent() {
                 );
               })}
               {packs.length === 0 && (
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50">
+                <p className="text-white/50 text-sm text-center col-span-full py-4">
                   No packs are available in the shop right now. Check back later!
-                </div>
+                </p>
               )}
               </div>
-            </>
+            </div>
             )}
 
             {storeSubTab === "other" && (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 mb-8">
+              <div className="rounded-b-2xl rounded-t-none border border-t-0 border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                 {shopItems.length === 0 ? (
-                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center text-sm text-white/50 col-span-full">
+                  <p className="text-white/50 text-sm text-center col-span-full py-4">
                     No items in the shop right now. Check back later!
-                  </div>
+                  </p>
                 ) : (
                   shopItems.map((item) => {
                     const disabled = !user || creditBalance < item.price || purchasingShopItemId === item.id;
@@ -2016,6 +2043,7 @@ function CardsContent() {
                     );
                   })
                 )}
+                </div>
               </div>
             )}
 

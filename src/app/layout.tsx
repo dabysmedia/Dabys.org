@@ -5,6 +5,7 @@ import { AppWithFriends } from "@/components/AppWithFriends";
 import { Footer } from "@/components/Footer";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import Header from "@/components/Header";
+import { ScrollRestoration } from "@/components/ScrollRestoration";
 
 export const metadata: Metadata = {
   title: "Dabys.org",
@@ -31,6 +32,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <AppWithFriends>
+          <ScrollRestoration />
           <ScrollingWinnersBg />
           <Header />
           {children}
