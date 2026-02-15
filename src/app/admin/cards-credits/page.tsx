@@ -250,6 +250,7 @@ export default function AdminCardsCreditsPage() {
     submission: number;
     vote: number;
     submissionWin: number;
+    votesReceivedPerVote: number;
     rating: number;
     comment: number;
   } | null>(null);
@@ -257,6 +258,7 @@ export default function AdminCardsCreditsPage() {
     submission: "50",
     vote: "50",
     submissionWin: "250",
+    votesReceivedPerVote: "50",
     rating: "25",
     comment: "25",
   });
@@ -386,6 +388,7 @@ export default function AdminCardsCreditsPage() {
           submission: String(d.submission ?? 50),
           vote: String(d.vote ?? 50),
           submissionWin: String(d.submissionWin ?? 250),
+          votesReceivedPerVote: String(d.votesReceivedPerVote ?? 50),
           rating: String(d.rating ?? 25),
           comment: String(d.comment ?? 25),
         });
@@ -729,6 +732,7 @@ export default function AdminCardsCreditsPage() {
         submission: parseInt(creditSettingsForm.submission, 10) || 0,
         vote: parseInt(creditSettingsForm.vote, 10) || 0,
         submissionWin: parseInt(creditSettingsForm.submissionWin, 10) || 0,
+        votesReceivedPerVote: parseInt(creditSettingsForm.votesReceivedPerVote, 10) || 0,
         rating: parseInt(creditSettingsForm.rating, 10) || 0,
         comment: parseInt(creditSettingsForm.comment, 10) || 0,
       };
@@ -1402,6 +1406,17 @@ export default function AdminCardsCreditsPage() {
                 className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
               />
               <span className="ml-1 text-xs text-white/40">cr</span>
+            </div>
+            <div>
+              <label className="block text-xs text-white/40 mb-1" title="Per vote received, when winner is published (non-winners only)">Votes received</label>
+              <input
+                type="number"
+                min={0}
+                value={creditSettingsForm.votesReceivedPerVote}
+                onChange={(e) => setCreditSettingsForm((f) => ({ ...f, votesReceivedPerVote: e.target.value }))}
+                className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40"
+              />
+              <span className="ml-1 text-xs text-white/40">cr/vote</span>
             </div>
             <div>
               <label className="block text-xs text-white/40 mb-1">Rating a movie</label>

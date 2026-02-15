@@ -36,6 +36,7 @@ export async function PATCH(request: Request) {
     submission: parse(body.submission, current.submission),
     vote: parse(body.vote, current.vote),
     submissionWin: parse(body.submissionWin, current.submissionWin),
+    votesReceivedPerVote: parse(body.votesReceivedPerVote, current.votesReceivedPerVote),
     rating: parse(body.rating, current.rating),
     comment: parse(body.comment, current.comment),
   };

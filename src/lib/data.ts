@@ -404,6 +404,8 @@ export interface CreditSettings {
   submission: number;
   vote: number;
   submissionWin: number;
+  /** Credits per vote received, awarded to non-winning submitters when winner is published. */
+  votesReceivedPerVote: number;
   rating: number;
   comment: number;
 }
@@ -412,6 +414,7 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   submission: 50,
   vote: 50,
   submissionWin: 250,
+  votesReceivedPerVote: 50,
   rating: 25,
   comment: 25,
 };
@@ -423,6 +426,7 @@ function getCreditSettingsRaw(): CreditSettings {
       submission: typeof raw.submission === "number" ? raw.submission : DEFAULT_CREDIT_SETTINGS.submission,
       vote: typeof raw.vote === "number" ? raw.vote : DEFAULT_CREDIT_SETTINGS.vote,
       submissionWin: typeof raw.submissionWin === "number" ? raw.submissionWin : DEFAULT_CREDIT_SETTINGS.submissionWin,
+      votesReceivedPerVote: typeof raw.votesReceivedPerVote === "number" ? raw.votesReceivedPerVote : DEFAULT_CREDIT_SETTINGS.votesReceivedPerVote,
       rating: typeof raw.rating === "number" ? raw.rating : DEFAULT_CREDIT_SETTINGS.rating,
       comment: typeof raw.comment === "number" ? raw.comment : DEFAULT_CREDIT_SETTINGS.comment,
     };

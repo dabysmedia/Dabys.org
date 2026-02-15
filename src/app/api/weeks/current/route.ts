@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Submission } from "@/lib/data";
 import {
   getWeeks,
   saveWeeks,
@@ -11,6 +12,23 @@ import {
   getCreditSettings,
 } from "@/lib/data";
 import { addPendingPoolEntriesForWinner } from "@/lib/cards";
+
+/** Award credits per vote received to non-winning submitters when winner is published. */
+function awardVotesReceivedCredits(
+  winnerSubmissionId: string,
+  allSubmissions: Submission[],
+  tally: Record<string, number>,
+  creditsPerVote: number,
+  weekId: string
+) {
+  for (const sub of allSubmissions) {
+    if (sub.id === winnerSubmissionId) continue;
+    const votes = tally[sub.id] ?? 0;
+    if (votes > 0) {
+      addCredits(sub.userId, creditsPerVote * votes, "votes_received", { weekId, submissionId: sub.id });
+    }
+  }
+}
 
 export async function GET() {
   const current = getCurrentWeek();
@@ -84,8 +102,9 @@ export async function PATCH(request: Request) {
             backdropUrl: chosen.backdropUrl,
           });
           saveWinners(existingWinners);
-          const { submissionWin: amount } = getCreditSettings();
+          const { submissionWin: amount, votesReceivedPerVote } = getCreditSettings();
           addCredits(chosen.userId, amount, "submission_win", { winnerId: newId, weekId });
+          awardVotesReceivedCredits(chosen.id, allSubmissions, tally, votesReceivedPerVote, weekId);
           const newWinner = existingWinners[existingWinners.length - 1];
           if (newWinner?.tmdbId) {
             addPendingPoolEntriesForWinner(newWinner).catch((e) => console.error("Pending pool add error", e));
@@ -130,8 +149,9 @@ export async function PATCH(request: Request) {
             backdropUrl: winnerSub.backdropUrl,
           });
           saveWinners(existingWinners);
-          const { submissionWin: amount } = getCreditSettings();
+          const { submissionWin: amount, votesReceivedPerVote } = getCreditSettings();
           addCredits(winnerSub.userId, amount, "submission_win", { winnerId: newId, weekId });
+          awardVotesReceivedCredits(winnerSub.id, allSubmissions, tally, votesReceivedPerVote, weekId);
           const newWinner = existingWinners[existingWinners.length - 1];
           if (newWinner?.tmdbId) {
             addPendingPoolEntriesForWinner(newWinner).catch((e) => console.error("Pending pool add error", e));
