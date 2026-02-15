@@ -44,3 +44,4 @@ src/data/characterPool.json
 src/data/creditLedger.json
 src/data/credits.json
 src/data/packs.json
+src/data/blackjackSessions.json

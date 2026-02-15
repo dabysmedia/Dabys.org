@@ -434,5 +434,177 @@
       "packId": "pack-1770883960789-vqg92vi"
     },
     "createdAt": "2026-02-15T00:25:12.360Z"
+  },
+  {
+    "id": "cl-1771120221767-gkuuwns",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:21.766Z"
+  },
+  {
+    "id": "cl-1771120225949-i8ikvmt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:25.949Z"
+  },
+  {
+    "id": "cl-1771120227278-xzsqlbi",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-15T01:50:27.277Z"
+  },
+  {
+    "id": "cl-1771120228875-28ogb95",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:28.874Z"
+  },
+  {
+    "id": "cl-1771120230195-nkwfbey",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:30.194Z"
+  },
+  {
+    "id": "cl-1771120231398-2ik7o9m",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:31.398Z"
+  },
+  {
+    "id": "cl-1771120232862-l5r9tbz",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-15T01:50:32.861Z"
+  },
+  {
+    "id": "cl-1771120233630-fwoihzl",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:33.629Z"
+  },
+  {
+    "id": "cl-1771120233632-nq78u1x",
+    "userId": "2",
+    "amount": 25,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 25
+    },
+    "createdAt": "2026-02-15T01:50:33.631Z"
+  },
+  {
+    "id": "cl-1771120234892-2ynm1rg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:34.891Z"
+  },
+  {
+    "id": "cl-1771120235955-i8nf4h3",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-15T01:50:35.954Z"
+  },
+  {
+    "id": "cl-1771120236562-tsvyzwr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:36.561Z"
+  },
+  {
+    "id": "cl-1771120236565-byskyd4",
+    "userId": "2",
+    "amount": 25,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 25
+    },
+    "createdAt": "2026-02-15T01:50:36.564Z"
+  },
+  {
+    "id": "cl-1771120237389-7tylavv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:37.388Z"
+  },
+  {
+    "id": "cl-1771120240803-ir2a4io",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-15T01:50:40.802Z"
+  },
+  {
+    "id": "cl-1771120242357-uabtawm",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-15T01:50:42.357Z"
   }
 ]

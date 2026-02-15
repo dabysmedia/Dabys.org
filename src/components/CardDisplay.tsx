@@ -52,11 +52,14 @@ export function CardDisplay({
   compact,
   inspect,
   size,
+  inCodex,
 }: {
   card: CardDisplayCard;
   compact?: boolean;
   inspect?: boolean;
   size?: CardDisplaySize;
+  /** When true, shows a thin blue bar at the top edge to indicate this card is already in the user's codex. */
+  inCodex?: boolean;
 }) {
   const { title, subtitle } = cardLabelLines(card);
   const rarityTint = RARITY_TINTS[card.rarity] || RARITY_TINTS.uncommon;
@@ -96,7 +99,7 @@ export function CardDisplay({
   const inner = (
     <div
       ref={cardRef}
-      className={`card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 ${
+      className={`relative card-hover-lift card-premium-glow rounded-xl overflow-hidden backdrop-blur-xl border border-white/10 ${
         card.isFoil ? "ring-2 ring-indigo-400/50" : ""
       }`}
       style={{
@@ -106,6 +109,13 @@ export function CardDisplay({
         boxShadow,
       }}
     >
+      {/* Thin blue bar when card is already in codex */}
+      {inCodex && (
+        <div
+          className="absolute top-0 left-0 right-0 z-20 h-[3px] rounded-t-xl bg-cyan-400/95 pointer-events-none"
+          aria-hidden
+        />
+      )}
       {/* Hero-style layout: art fills entire card and bleeds under nameplate */}
       <div className="relative overflow-hidden w-full" style={{ aspectRatio: CARD_ASPECT_RATIO }}>
           {/* Full-bleed art — extends under nameplate */}
