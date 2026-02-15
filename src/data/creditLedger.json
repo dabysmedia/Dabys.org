@@ -1,610 +1,62 @@
 [
   {
-    "id": "cl-1771030894657-7u21gwr",
+    "id": "cl-1771124930744-ukqkvgo",
     "userId": "2",
     "amount": 0,
     "reason": "pack_purchase",
     "metadata": {
       "packId": "pack-1771000454277-lsrtxlr"
     },
-    "createdAt": "2026-02-14T01:01:34.656Z"
+    "createdAt": "2026-02-15T03:08:50.744Z"
   },
   {
-    "id": "cl-1771033286633-xuptm4k",
+    "id": "cl-1771124931759-illpl4f",
     "userId": "2",
     "amount": 0,
     "reason": "pack_purchase",
     "metadata": {
       "packId": "pack-1771000454277-lsrtxlr"
     },
-    "createdAt": "2026-02-14T01:41:26.632Z"
+    "createdAt": "2026-02-15T03:08:51.758Z"
   },
   {
-    "id": "cl-1771034531139-sfwicji",
+    "id": "cl-1771124932564-an7h73y",
     "userId": "2",
     "amount": 0,
     "reason": "pack_purchase",
     "metadata": {
       "packId": "pack-1771000454277-lsrtxlr"
     },
-    "createdAt": "2026-02-14T02:02:11.138Z"
+    "createdAt": "2026-02-15T03:08:52.564Z"
   },
   {
-    "id": "cl-1771036656922-gmubkai",
+    "id": "cl-1771124947060-adid9aj",
     "userId": "2",
-    "amount": 30,
-    "reason": "trivia",
-    "metadata": {
-      "winnerId": "2",
-      "correctCount": 3,
-      "totalCount": 5
-    },
-    "createdAt": "2026-02-14T02:37:36.921Z"
-  },
-  {
-    "id": "cl-1771038923551-szdwirx",
-    "userId": "1",
-    "amount": 0,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771000454277-lsrtxlr"
-    },
-    "createdAt": "2026-02-14T03:15:23.551Z"
-  },
-  {
-    "id": "cl-1771039222251-u11ufks",
-    "userId": "1",
-    "amount": 0,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771000454277-lsrtxlr"
-    },
-    "createdAt": "2026-02-14T03:20:22.250Z"
-  },
-  {
-    "id": "cl-1771039223530-xsuec1p",
-    "userId": "1",
-    "amount": 0,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771000454277-lsrtxlr"
-    },
-    "createdAt": "2026-02-14T03:20:23.529Z"
-  },
-  {
-    "id": "cl-1771040436387-d0vjopf",
-    "userId": "1",
-    "amount": 50,
-    "reason": "submission",
-    "metadata": {
-      "submissionId": "17",
-      "weekId": "9"
-    },
-    "createdAt": "2026-02-14T03:40:36.386Z"
-  },
-  {
-    "id": "cl-1771040442861-kwyxdz6",
-    "userId": "1",
-    "amount": 250,
-    "reason": "submission_win",
-    "metadata": {
-      "winnerId": "7",
-      "weekId": "9"
-    },
-    "createdAt": "2026-02-14T03:40:42.860Z"
-  },
-  {
-    "id": "cl-1771070329633-oyf1z3d",
-    "userId": "2",
-    "amount": 99969,
+    "amount": 800,
     "reason": "admin_set",
     "metadata": {
-      "prevBalance": 30
+      "prevBalance": 0
     },
-    "createdAt": "2026-02-14T11:58:49.633Z"
+    "createdAt": "2026-02-15T03:09:07.059Z"
   },
   {
-    "id": "cl-1771070346439-2guta6a",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T11:59:06.439Z"
-  },
-  {
-    "id": "cl-1771070427094-9zifo0i",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T12:00:27.094Z"
-  },
-  {
-    "id": "cl-1771071054857-c6tp1zp",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T12:10:54.856Z"
-  },
-  {
-    "id": "cl-1771071403611-scgwt1y",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T12:16:43.611Z"
-  },
-  {
-    "id": "cl-1771071621932-3qv3j8m",
-    "userId": "2",
-    "amount": 5,
-    "reason": "quicksell",
-    "metadata": {
-      "cardIds": [
-        "card-1771071403612-zdy9ked"
-      ]
-    },
-    "createdAt": "2026-02-14T12:20:21.932Z"
-  },
-  {
-    "id": "cl-1771071690963-itmojng",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T12:21:30.962Z"
-  },
-  {
-    "id": "cl-1771071766092-grraet0",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-14T12:22:46.091Z"
-  },
-  {
-    "id": "cl-1771077372180-q55bu4u",
+    "id": "cl-1771124956874-qko53cw",
     "userId": "2",
     "amount": -37,
     "reason": "pack_purchase",
     "metadata": {
       "packId": "pack-1770883960789-vqg92vi"
     },
-    "createdAt": "2026-02-14T13:56:12.180Z"
+    "createdAt": "2026-02-15T03:09:16.874Z"
   },
   {
-    "id": "cl-1771077530629-hyoa7ep",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771076755342-xbvgzn7"
-    },
-    "createdAt": "2026-02-14T13:58:50.628Z"
-  },
-  {
-    "id": "cl-1771077569529-i8ghekh",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771076755342-xbvgzn7"
-    },
-    "createdAt": "2026-02-14T13:59:29.529Z"
-  },
-  {
-    "id": "cl-1771077609610-grw6ns1",
-    "userId": "2",
-    "amount": -50,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771076755342-xbvgzn7"
-    },
-    "createdAt": "2026-02-14T14:00:09.610Z"
-  },
-  {
-    "id": "cl-1771115075813-vjs04mm",
+    "id": "cl-1771124960444-f0k483b",
     "userId": "2",
     "amount": -37,
     "reason": "pack_purchase",
     "metadata": {
       "packId": "pack-1770883960789-vqg92vi"
     },
-    "createdAt": "2026-02-15T00:24:35.812Z"
-  },
-  {
-    "id": "cl-1771115077397-8n1wavk",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:37.396Z"
-  },
-  {
-    "id": "cl-1771115079132-vpelgzm",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:39.132Z"
-  },
-  {
-    "id": "cl-1771115080768-87t97o7",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:40.768Z"
-  },
-  {
-    "id": "cl-1771115082563-9dz8yxh",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:42.562Z"
-  },
-  {
-    "id": "cl-1771115084407-c0m92c0",
-    "userId": "2",
-    "amount": -100,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771076755342-xbvgzn7"
-    },
-    "createdAt": "2026-02-15T00:24:44.407Z"
-  },
-  {
-    "id": "cl-1771115086500-izmvv5y",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:46.499Z"
-  },
-  {
-    "id": "cl-1771115088178-2qbq9cy",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:48.178Z"
-  },
-  {
-    "id": "cl-1771115090048-hhqrui1",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:50.048Z"
-  },
-  {
-    "id": "cl-1771115091723-a43orha",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:51.722Z"
-  },
-  {
-    "id": "cl-1771115093683-bky70ub",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:53.682Z"
-  },
-  {
-    "id": "cl-1771115095413-ppzgu1n",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:55.412Z"
-  },
-  {
-    "id": "cl-1771115097309-x64clt0",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:57.309Z"
-  },
-  {
-    "id": "cl-1771115098964-9i82lhb",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:24:58.964Z"
-  },
-  {
-    "id": "cl-1771115100637-nj538tx",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:25:00.637Z"
-  },
-  {
-    "id": "cl-1771115102285-ssate4o",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:25:02.284Z"
-  },
-  {
-    "id": "cl-1771115104156-4vdly13",
-    "userId": "2",
-    "amount": -100,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771076755342-xbvgzn7"
-    },
-    "createdAt": "2026-02-15T00:25:04.156Z"
-  },
-  {
-    "id": "cl-1771115105960-yq0d0ss",
-    "userId": "2",
-    "amount": 0,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771000454277-lsrtxlr"
-    },
-    "createdAt": "2026-02-15T00:25:05.959Z"
-  },
-  {
-    "id": "cl-1771115107181-qaczqhf",
-    "userId": "2",
-    "amount": 0,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1771000454277-lsrtxlr"
-    },
-    "createdAt": "2026-02-15T00:25:07.180Z"
-  },
-  {
-    "id": "cl-1771115108857-cl9yzey",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:25:08.857Z"
-  },
-  {
-    "id": "cl-1771115110660-nmjn86r",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:25:10.659Z"
-  },
-  {
-    "id": "cl-1771115112360-cu19t8o",
-    "userId": "2",
-    "amount": -37,
-    "reason": "pack_purchase",
-    "metadata": {
-      "packId": "pack-1770883960789-vqg92vi"
-    },
-    "createdAt": "2026-02-15T00:25:12.360Z"
-  },
-  {
-    "id": "cl-1771120221767-gkuuwns",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:21.766Z"
-  },
-  {
-    "id": "cl-1771120225949-i8ikvmt",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:25.949Z"
-  },
-  {
-    "id": "cl-1771120227278-xzsqlbi",
-    "userId": "2",
-    "amount": 20,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 20
-    },
-    "createdAt": "2026-02-15T01:50:27.277Z"
-  },
-  {
-    "id": "cl-1771120228875-28ogb95",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:28.874Z"
-  },
-  {
-    "id": "cl-1771120230195-nkwfbey",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:30.194Z"
-  },
-  {
-    "id": "cl-1771120231398-2ik7o9m",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:31.398Z"
-  },
-  {
-    "id": "cl-1771120232862-l5r9tbz",
-    "userId": "2",
-    "amount": 20,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 20
-    },
-    "createdAt": "2026-02-15T01:50:32.861Z"
-  },
-  {
-    "id": "cl-1771120233630-fwoihzl",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:33.629Z"
-  },
-  {
-    "id": "cl-1771120233632-nq78u1x",
-    "userId": "2",
-    "amount": 25,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 25
-    },
-    "createdAt": "2026-02-15T01:50:33.631Z"
-  },
-  {
-    "id": "cl-1771120234892-2ynm1rg",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:34.891Z"
-  },
-  {
-    "id": "cl-1771120235955-i8nf4h3",
-    "userId": "2",
-    "amount": 20,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 20
-    },
-    "createdAt": "2026-02-15T01:50:35.954Z"
-  },
-  {
-    "id": "cl-1771120236562-tsvyzwr",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:36.561Z"
-  },
-  {
-    "id": "cl-1771120236565-byskyd4",
-    "userId": "2",
-    "amount": 25,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 25
-    },
-    "createdAt": "2026-02-15T01:50:36.564Z"
-  },
-  {
-    "id": "cl-1771120237389-7tylavv",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:37.388Z"
-  },
-  {
-    "id": "cl-1771120240803-ir2a4io",
-    "userId": "2",
-    "amount": -10,
-    "reason": "casino_blackjack",
-    "metadata": {
-      "bet": 10
-    },
-    "createdAt": "2026-02-15T01:50:40.802Z"
-  },
-  {
-    "id": "cl-1771120242357-uabtawm",
-    "userId": "2",
-    "amount": 20,
-    "reason": "casino_blackjack_win",
-    "metadata": {
-      "bet": 10,
-      "result": "win",
-      "payout": 20
-    },
-    "createdAt": "2026-02-15T01:50:42.357Z"
+    "createdAt": "2026-02-15T03:09:20.444Z"
   }
 ]

@@ -80,6 +80,19 @@ export async function POST(request: Request) {
     typeof rawDiscountPercent === "number" && rawDiscountPercent >= 0 && rawDiscountPercent <= 100
       ? Math.round(rawDiscountPercent)
       : undefined;
+
+  // Parse rarityWeights
+  const rawRarityWeights = body.rarityWeights;
+  const rarityWeights =
+    rawRarityWeights && typeof rawRarityWeights === "object"
+      ? {
+          legendary: typeof rawRarityWeights.legendary === "number" ? rawRarityWeights.legendary : 1,
+          epic: typeof rawRarityWeights.epic === "number" ? rawRarityWeights.epic : 10,
+          rare: typeof rawRarityWeights.rare === "number" ? rawRarityWeights.rare : 25,
+          uncommon: typeof rawRarityWeights.uncommon === "number" ? rawRarityWeights.uncommon : 64,
+        }
+      : undefined;
+
   const pack = upsertPack({
     name,
     imageUrl,
@@ -94,6 +107,7 @@ export async function POST(request: Request) {
     restockMinuteUtc: restockMinuteUtc ?? undefined,
     discounted,
     discountPercent: discounted ? discountPercent : undefined,
+    rarityWeights,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -182,6 +196,20 @@ export async function PATCH(request: Request) {
         ? Math.round(rawDiscountPercent)
         : (existing as { discountPercent?: number }).discountPercent;
 
+  // Parse rarityWeights — keep existing if not provided
+  const rawRarityWeights = body.rarityWeights;
+  const rarityWeights =
+    rawRarityWeights === undefined
+      ? existing.rarityWeights
+      : rawRarityWeights && typeof rawRarityWeights === "object"
+        ? {
+            legendary: typeof rawRarityWeights.legendary === "number" ? rawRarityWeights.legendary : 1,
+            epic: typeof rawRarityWeights.epic === "number" ? rawRarityWeights.epic : 10,
+            rare: typeof rawRarityWeights.rare === "number" ? rawRarityWeights.rare : 25,
+            uncommon: typeof rawRarityWeights.uncommon === "number" ? rawRarityWeights.uncommon : 64,
+          }
+        : undefined;
+
   const updated = upsertPack({
     id,
     name,
@@ -197,6 +225,7 @@ export async function PATCH(request: Request) {
     restockMinuteUtc: restockMinuteUtc ?? undefined,
     discounted,
     discountPercent: discounted ? discountPercent : undefined,
+    rarityWeights,
   });
 
   return NextResponse.json(updated);

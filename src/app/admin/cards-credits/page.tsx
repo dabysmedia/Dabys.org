@@ -52,6 +52,7 @@ interface Pack {
   restockMinuteUtc?: number;
   discounted?: boolean;
   discountPercent?: number;
+  rarityWeights?: { legendary: number; epic: number; rare: number; uncommon: number };
 }
 
 type ShopItemType = "badge" | "skip";
@@ -275,6 +276,8 @@ export default function AdminCardsCreditsPage() {
     isFree: boolean;
     discounted: boolean;
     discountPercent: string;
+    useCustomWeights: boolean;
+    rarityWeights: { legendary: string; epic: string; rare: string; uncommon: string };
   }>({
     name: "",
     imageUrl: "",
@@ -289,6 +292,8 @@ export default function AdminCardsCreditsPage() {
     isFree: false,
     discounted: false,
     discountPercent: "",
+    useCustomWeights: false,
+    rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
   });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
@@ -609,12 +614,15 @@ export default function AdminCardsCreditsPage() {
       isFree: false,
       discounted: false,
       discountPercent: "",
+      useCustomWeights: false,
+      rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
     });
   }
 
   function startEditPack(pack: Pack) {
     setEditingPackId(pack.id);
     setShowCreatePackForm(true);
+    const w = pack.rarityWeights;
     setPackForm({
       name: pack.name,
       imageUrl: pack.imageUrl,
@@ -629,6 +637,10 @@ export default function AdminCardsCreditsPage() {
       isFree: !!pack.isFree,
       discounted: !!pack.discounted,
       discountPercent: pack.discountPercent != null ? String(pack.discountPercent) : "",
+      useCustomWeights: !!w,
+      rarityWeights: w
+        ? { legendary: String(w.legendary), epic: String(w.epic), rare: String(w.rare), uncommon: String(w.uncommon) }
+        : { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
     });
   }
 
@@ -677,6 +689,14 @@ export default function AdminCardsCreditsPage() {
         maxPurchasesPerDay: maxPurchasesPerDay === undefined ? "" : maxPurchasesPerDay,
         restockHourUtc: restockHourUtc ?? "",
         restockMinuteUtc: restockMinuteUtc ?? "",
+        rarityWeights: packForm.useCustomWeights
+          ? {
+              legendary: Math.max(0, parseFloat(packForm.rarityWeights.legendary) || 0),
+              epic: Math.max(0, parseFloat(packForm.rarityWeights.epic) || 0),
+              rare: Math.max(0, parseFloat(packForm.rarityWeights.rare) || 0),
+              uncommon: Math.max(0, parseFloat(packForm.rarityWeights.uncommon) || 0),
+            }
+          : undefined,
       };
       if (editingPackId) body.id = editingPackId;
 
@@ -1668,6 +1688,61 @@ export default function AdminCardsCreditsPage() {
                   <p className="text-[10px] text-white/40 mt-0.5">Optional. Shows e.g. &quot;Sale 20%&quot; on the pack.</p>
                 </div>
               )}
+
+              {/* ── Drop rate weights ────────────────── */}
+              <label className="flex items-center gap-2 text-sm text-white/70">
+                <input
+                  type="checkbox"
+                  checked={packForm.useCustomWeights}
+                  onChange={(e) => setPackForm((f) => ({ ...f, useCustomWeights: e.target.checked }))}
+                  className="rounded border-white/30 bg-white/5"
+                />
+                Custom drop rates
+              </label>
+              {packForm.useCustomWeights && (() => {
+                const vals = {
+                  legendary: parseFloat(packForm.rarityWeights.legendary) || 0,
+                  epic: parseFloat(packForm.rarityWeights.epic) || 0,
+                  rare: parseFloat(packForm.rarityWeights.rare) || 0,
+                  uncommon: parseFloat(packForm.rarityWeights.uncommon) || 0,
+                };
+                const total = vals.legendary + vals.epic + vals.rare + vals.uncommon;
+                const pct = (v: number) => total > 0 ? ((v / total) * 100).toFixed(1) : "0.0";
+                return (
+                  <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2">
+                    <p className="text-[10px] text-white/50 mb-1">
+                      Set relative weights for each rarity tier. They are normalised to percentages automatically.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {(["legendary", "epic", "rare", "uncommon"] as const).map((r) => (
+                        <div key={r}>
+                          <label className="block text-[11px] text-white/50 mb-0.5 capitalize">{r}</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={packForm.rarityWeights[r]}
+                            onChange={(e) =>
+                              setPackForm((f) => ({
+                                ...f,
+                                rarityWeights: { ...f.rarityWeights, [r]: e.target.value },
+                              }))
+                            }
+                            className="w-full px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
+                          />
+                          <span className="text-[10px] text-white/40">{pct(vals[r])}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[11px] font-medium ${total > 0 ? "text-white/60" : "text-red-400"}`}>
+                        Total weight: {total} {total > 0 ? `(${(["legendary", "epic", "rare", "uncommon"] as const).map((r) => `${r[0].toUpperCase()}:${pct(vals[r])}%`).join(" ")})` : "— add at least one non-zero weight"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex gap-2 pt-2">
                 {editingPackId && (
                   <button
@@ -1777,6 +1852,16 @@ export default function AdminCardsCreditsPage() {
                           .join(", ")}{" "}
                         ({pack.allowedCardTypes.join(", ")})
                       </p>
+                      {pack.rarityWeights && (() => {
+                        const w = pack.rarityWeights;
+                        const t = w.legendary + w.epic + w.rare + w.uncommon || 1;
+                        const p = (v: number) => ((v / t) * 100).toFixed(1);
+                        return (
+                          <p className="text-[10px] text-purple-300/70 mt-0.5">
+                            Rates: L:{p(w.legendary)}% E:{p(w.epic)}% R:{p(w.rare)}% U:{p(w.uncommon)}%
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-col gap-1">
                       <button

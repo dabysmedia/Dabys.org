@@ -1676,9 +1676,19 @@ export interface Pack {
   discounted?: boolean;
   /** When discounted, optional percentage to display (e.g. 20 for "20% off"). 0–100. */
   discountPercent?: number;
+  /**
+   * Custom rarity drop-rate weights for this pack (percentage chance per tier).
+   * Values should sum to 100. If omitted, uses global defaults (1/10/25/64).
+   */
+  rarityWeights?: {
+    legendary: number;
+    epic: number;
+    rare: number;
+    uncommon: number;
+  };
 }
 
-function getPacksRaw(): Pack[] {
+export function getPacksRaw(): Pack[] {
   try {
     return readJson<Pack[]>("packs.json");
   } catch {
@@ -1724,6 +1734,20 @@ export function getPacks(): Pack[] {
       typeof (p as Pack).discountPercent === "number" && (p as Pack).discountPercent! >= 0 && (p as Pack).discountPercent! <= 100
         ? Math.round((p as Pack).discountPercent!)
         : undefined,
+    rarityWeights: p.rarityWeights && typeof p.rarityWeights === "object"
+      ? (() => {
+          const num = (v: unknown, fallback: number) => {
+            const n = typeof v === "number" ? v : Number(v);
+            return Number.isFinite(n) ? n : fallback;
+          };
+          return {
+            legendary: num(p.rarityWeights!.legendary, 1),
+            epic: num(p.rarityWeights!.epic, 10),
+            rare: num(p.rarityWeights!.rare, 25),
+            uncommon: num(p.rarityWeights!.uncommon, 64),
+          };
+        })()
+      : undefined,
   }));
 }
 
@@ -1774,6 +1798,14 @@ export function upsertPack(
       typeof (input as Pack).discountPercent === "number" && (input as Pack).discountPercent! >= 0 && (input as Pack).discountPercent! <= 100
         ? Math.round((input as Pack).discountPercent!)
         : undefined,
+    rarityWeights: input.rarityWeights && typeof input.rarityWeights === "object"
+      ? {
+          legendary: typeof input.rarityWeights.legendary === "number" ? input.rarityWeights.legendary : 1,
+          epic: typeof input.rarityWeights.epic === "number" ? input.rarityWeights.epic : 10,
+          rare: typeof input.rarityWeights.rare === "number" ? input.rarityWeights.rare : 25,
+          uncommon: typeof input.rarityWeights.uncommon === "number" ? input.rarityWeights.uncommon : 64,
+        }
+      : undefined,
   };
   packs.push(newPack);
   savePacks(packs);

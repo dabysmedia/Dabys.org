@@ -1,1 +1,74 @@
-[{"id":"pack-1770883960789-vqg92vi","name":"Character Pack","imageUrl":"/api/uploads/1770883940118-rizxgm.jpg","price":50,"cardsPerPack":5,"allowedRarities":["uncommon","rare","epic","legendary"],"allowedCardTypes":["actor"],"isActive":true,"isFree":false,"restockHourUtc":0,"restockMinuteUtc":0,"discounted":true,"discountPercent":25},{"id":"pack-1771000454277-lsrtxlr","name":"free pack","imageUrl":"/api/uploads/1771000436133-144aom.jpg","price":0,"cardsPerPack":1,"allowedRarities":["uncommon","rare","epic","legendary"],"allowedCardTypes":["actor","director","character","scene"],"isActive":true,"maxPurchasesPerDay":3,"isFree":true,"discounted":false},{"id":"pack-1771076755342-xbvgzn7","name":"Boys Pack","imageUrl":"/api/uploads/1771076752740-zk43dp.jpg","price":100,"cardsPerPack":3,"allowedRarities":["uncommon","rare","epic","legendary"],"allowedCardTypes":["character"],"isActive":true,"isFree":false,"restockHourUtc":0,"restockMinuteUtc":0,"discounted":false}]
+[
+  {
+    "id": "pack-1770883960789-vqg92vi",
+    "name": "Character Pack",
+    "imageUrl": "/api/uploads/1770883940118-rizxgm.jpg",
+    "price": 50,
+    "cardsPerPack": 5,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "actor"
+    ],
+    "isActive": true,
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": true,
+    "discountPercent": 25,
+    "rarityWeights": {
+      "legendary": 100,
+      "epic": 0,
+      "rare": 0,
+      "uncommon": 0
+    }
+  },
+  {
+    "id": "pack-1771000454277-lsrtxlr",
+    "name": "free pack",
+    "imageUrl": "/api/uploads/1771000436133-144aom.jpg",
+    "price": 0,
+    "cardsPerPack": 1,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "actor",
+      "director",
+      "character",
+      "scene"
+    ],
+    "isActive": true,
+    "maxPurchasesPerDay": 3,
+    "isFree": true,
+    "discounted": false
+  },
+  {
+    "id": "pack-1771076755342-xbvgzn7",
+    "name": "Boys Pack",
+    "imageUrl": "/api/uploads/1771076752740-zk43dp.jpg",
+    "price": 100,
+    "cardsPerPack": 3,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "character"
+    ],
+    "isActive": true,
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": false
+  }
+]

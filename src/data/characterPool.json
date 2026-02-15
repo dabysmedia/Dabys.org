@@ -20,7 +20,7 @@
     "movieTmdbId": 111,
     "movieTitle": "Scarface",
     "popularity": 2.7742,
-    "rarity": "epic",
+    "rarity": "legendary",
     "cardType": "actor"
   },
   {
@@ -44,7 +44,7 @@
     "movieTmdbId": 111,
     "movieTitle": "Scarface",
     "popularity": 2.4963,
-    "rarity": "rare",
+    "rarity": "legendary",
     "cardType": "actor"
   },
   {
@@ -80,7 +80,7 @@
     "movieTmdbId": 809,
     "movieTitle": "Shrek 2",
     "popularity": 3.9581,
-    "rarity": "uncommon",
+    "rarity": "legendary",
     "cardType": "actor"
   },
   {
@@ -152,7 +152,7 @@
     "movieTmdbId": 1858,
     "movieTitle": "Transformers",
     "popularity": 4.471,
-    "rarity": "uncommon",
+    "rarity": "legendary",
     "cardType": "actor"
   },
   {
