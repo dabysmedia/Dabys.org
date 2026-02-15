@@ -522,7 +522,8 @@
     "movieTitle": "Nacho Libre",
     "popularity": 0,
     "rarity": "legendary",
-    "cardType": "actor"
+    "cardType": "actor",
+    "altArtOfCharacterId": "actor-70851-9353"
   },
   {
     "characterId": "custom-1771114639037-51mdjhh",

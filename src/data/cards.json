@@ -1902,5 +1902,19 @@
     "cardType": "actor",
     "id": "card-1771118624231-lvd5wyh",
     "acquiredAt": "2026-02-15T01:23:44.231Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "custom-1770993986099-ha56a75",
+    "rarity": "legendary",
+    "isFoil": false,
+    "actorName": "Jack Black",
+    "characterName": "Suited Nacho",
+    "movieTitle": "Nacho Libre",
+    "movieTmdbId": 9353,
+    "profilePath": "/api/uploads/1770993932519-n8cbjy.jpg",
+    "cardType": "actor",
+    "id": "card-1771122583482-s82fssf",
+    "acquiredAt": "2026-02-15T02:29:43.482Z"
   }
 ]

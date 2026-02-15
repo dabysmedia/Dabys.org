@@ -1246,6 +1246,12 @@ function CardsContent() {
     return false;
   }
 
+  function isAltArtCard(card: { characterId?: string | null }): boolean {
+    if (!card.characterId) return false;
+    const entry = poolEntries.find((e) => e.characterId === card.characterId);
+    return (entry?.altArtOfCharacterId ?? null) != null;
+  }
+
   async function handleCodexUploadSelected() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const list = [...codexUploadSelectedIds].filter((cardId) => {
@@ -2612,7 +2618,7 @@ function CardsContent() {
                       </span>
                     )}
                     <div className={(canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
-                      <CardDisplay card={card} inCodex={isCardSlotAlreadyInCodex(card)} />
+                      <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} />
                     </div>
                   </div>
                 );
@@ -2730,7 +2736,7 @@ function CardsContent() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {listings.map((listing) => (
                   <div key={listing.id} className="flex flex-col rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
-                    <CardDisplay card={listing.card} inCodex={isCardSlotAlreadyInCodex(listing.card)} />
+                    <CardDisplay card={{ ...listing.card, isAltArt: isAltArtCard(listing.card) }} inCodex={isCardSlotAlreadyInCodex(listing.card)} />
                     <div className="border-t border-white/10 bg-white/[0.02] p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[10px] text-white/40 truncate flex items-center gap-1.5 flex-wrap min-w-0">
@@ -2795,7 +2801,7 @@ function CardsContent() {
                                 onClick={() => setSelectedCard(card)}
                                 className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-white/60 focus:ring-white/60 transition-all cursor-pointer text-left"
                               >
-                                <CardDisplay card={card} inCodex={isCardSlotAlreadyInCodex(card)} />
+                                <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} />
                               </button>
                             ))}
                           </div>
@@ -2813,7 +2819,7 @@ function CardsContent() {
                           </button>
                         </div>
                         <div className="w-32 mx-auto mb-6">
-                          <CardDisplay card={selectedCard} inCodex={selectedCard ? isCardSlotAlreadyInCodex(selectedCard) : false} />
+                          <CardDisplay card={selectedCard ? { ...selectedCard, isAltArt: isAltArtCard(selectedCard) } : undefined!} inCodex={selectedCard ? isCardSlotAlreadyInCodex(selectedCard) : false} />
                         </div>
                         <label className="block text-sm text-white/60 mb-2 w-full">Asking price (credits)</label>
                         <input
@@ -2962,7 +2968,7 @@ function CardsContent() {
                               onClick={() => setSelectedOrderCharacter(entry)}
                               className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-emerald-500/60 focus:ring-emerald-500/60 transition-all cursor-pointer text-left"
                             >
-                              <CardDisplay card={{ ...entry, isFoil: false }} inCodex={isCardSlotAlreadyInCodex({ ...entry, isFoil: false })} />
+                              <CardDisplay card={{ ...entry, isFoil: false, isAltArt: !!entry.altArtOfCharacterId }} inCodex={isCardSlotAlreadyInCodex({ ...entry, isFoil: false })} />
                             </button>
                           ))}
                         </div>
@@ -2979,7 +2985,7 @@ function CardsContent() {
                           </button>
                         </div>
                         <div className="w-32 mx-auto mb-6">
-                          <CardDisplay card={{ ...selectedOrderCharacter, isFoil: false }} inCodex={selectedOrderCharacter ? isCardSlotAlreadyInCodex({ ...selectedOrderCharacter, isFoil: false }) : false} />
+                          <CardDisplay card={selectedOrderCharacter ? { ...selectedOrderCharacter, isFoil: false, isAltArt: !!selectedOrderCharacter.altArtOfCharacterId } : undefined!} inCodex={selectedOrderCharacter ? isCardSlotAlreadyInCodex({ ...selectedOrderCharacter, isFoil: false }) : false} />
                         </div>
                         <label className="block text-sm text-white/60 mb-2 w-full">Credits to offer (optional, 0 = free request)</label>
                         <input
@@ -3494,6 +3500,7 @@ function CardsContent() {
                         movieTitle: entry.movieTitle ?? "",
                         profilePath: entry.profilePath ?? "",
                         cardType: entry.cardType,
+                        isAltArt: !!entry.altArtOfCharacterId,
                       };
                       const isNewlyUploaded =
                         newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
@@ -3750,6 +3757,7 @@ function CardsContent() {
                         movieTitle: entry.movieTitle ?? "",
                         profilePath: entry.profilePath ?? "",
                         cardType: entry.cardType,
+                        isAltArt: !!entry.altArtOfCharacterId,
                       };
                       const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
                       const clearNewDot = () => {
@@ -3880,6 +3888,7 @@ function CardsContent() {
                         movieTitle: entry.movieTitle ?? "",
                         profilePath: entry.profilePath ?? "",
                         cardType: entry.cardType,
+                        isAltArt: !!entry.altArtOfCharacterId,
                       };
                       const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
                       const clearNewDot = () => {
@@ -4145,7 +4154,7 @@ function CardsContent() {
                             }`}
                           >
                             <div className="w-full max-w-[140px] mx-auto">
-                              <CardDisplay card={card} inCodex={alreadyInCodex} />
+                              <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={alreadyInCodex} />
                             </div>
                             {alreadyInCodex && (
                               <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">

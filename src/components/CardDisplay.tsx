@@ -35,6 +35,8 @@ export interface CardDisplayCard {
   movieTitle: string;
   profilePath: string;
   cardType?: CardType | string;
+  /** When true, shows a red "Alt Art" tag on the top-left (similar to the holo badge). */
+  isAltArt?: boolean;
 }
 
 const TILT_MAX = 8;
@@ -144,6 +146,17 @@ export function CardDisplay({
               }}
             />
           </div>
+          {card.isAltArt && (
+            <span
+              className={`absolute top-2 left-2 rounded font-bold text-white/95 backdrop-blur-md z-10 border border-white/20 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
+              style={{
+                background: "rgba(0,0,0,0.25)",
+                boxShadow: "0 0 12px rgba(0,0,0,0.2)",
+              }}
+            >
+              ALT
+            </span>
+          )}
           {card.isFoil && (
             <span
               className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
