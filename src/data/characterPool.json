@@ -12,18 +12,6 @@
     "cardType": "actor"
   },
   {
-    "characterId": "actor-1159-111",
-    "tmdbPersonId": 1159,
-    "actorName": "Steven Bauer",
-    "characterName": "Manny Ray",
-    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
-    "movieTmdbId": 111,
-    "movieTitle": "Scarface",
-    "popularity": 2.7742,
-    "rarity": "legendary",
-    "cardType": "actor"
-  },
-  {
     "characterId": "actor-1160-111",
     "tmdbPersonId": 1160,
     "actorName": "Michelle Pfeiffer",
@@ -33,18 +21,6 @@
     "movieTitle": "Scarface",
     "popularity": 4.0558,
     "rarity": "uncommon",
-    "cardType": "actor"
-  },
-  {
-    "characterId": "actor-1161-111",
-    "tmdbPersonId": 1161,
-    "actorName": "Mary Elizabeth Mastrantonio",
-    "characterName": "Gina",
-    "profilePath": "https://image.tmdb.org/t/p/w500/vbZ1E557K5oj34xLHR5ErO8wPCi.jpg",
-    "movieTmdbId": 111,
-    "movieTitle": "Scarface",
-    "popularity": 2.4963,
-    "rarity": "legendary",
     "cardType": "actor"
   },
   {
@@ -69,18 +45,6 @@
     "movieTitle": "Scarface",
     "popularity": 2.1856,
     "rarity": "uncommon",
-    "cardType": "actor"
-  },
-  {
-    "characterId": "actor-12073-809",
-    "tmdbPersonId": 12073,
-    "actorName": "Mike Myers",
-    "characterName": "Shrek (voice)",
-    "profilePath": "https://image.tmdb.org/t/p/w500/gjfDl52Kk02MPgUYFjs9bOy33OY.jpg",
-    "movieTmdbId": 809,
-    "movieTitle": "Shrek 2",
-    "popularity": 3.9581,
-    "rarity": "legendary",
     "cardType": "actor"
   },
   {
@@ -535,5 +499,38 @@
     "popularity": 0,
     "rarity": "uncommon",
     "cardType": "character"
+  },
+  {
+    "characterId": "actor-1161-111",
+    "actorName": "Mary Elizabeth Mastrantonio",
+    "characterName": "Gina",
+    "profilePath": "https://image.tmdb.org/t/p/w500/vbZ1E557K5oj34xLHR5ErO8wPCi.jpg",
+    "movieTmdbId": 111,
+    "movieTitle": "Scarface",
+    "popularity": 0,
+    "rarity": "legendary",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-1159-111",
+    "actorName": "Steven Bauer",
+    "characterName": "Manny Ray",
+    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
+    "movieTmdbId": 111,
+    "movieTitle": "Scarface",
+    "popularity": 0,
+    "rarity": "legendary",
+    "cardType": "actor"
+  },
+  {
+    "characterId": "actor-12073-809",
+    "actorName": "Mike Myers",
+    "characterName": "Shrek (voice)",
+    "profilePath": "https://image.tmdb.org/t/p/w500/gjfDl52Kk02MPgUYFjs9bOy33OY.jpg",
+    "movieTmdbId": 809,
+    "movieTitle": "Shrek 2",
+    "popularity": 0,
+    "rarity": "legendary",
+    "cardType": "actor"
   }
 ]

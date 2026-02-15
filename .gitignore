@@ -51,3 +51,5 @@ src/data/packs.json
 src/data/listings.json
 src/data/credits.json
 src/data/characterPool.json
+src/data/packs.json
+.cursor/debug.log
