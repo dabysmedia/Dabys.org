@@ -320,9 +320,13 @@ export default function Header() {
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/"
-              className="font-site-title text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+              className="flex items-center hover:opacity-90 transition-opacity"
             >
-              dabys.org
+              <img
+                src="/dabys-logo.png"
+                alt="Daby's"
+                className="h-14 w-auto max-h-[4.5rem] object-contain sm:h-16 sm:max-h-[4.75rem]"
+              />
             </Link>
           </div>
 
