@@ -66,6 +66,13 @@
     "id": "9",
     "theme": "60s",
     "phase": "vote_open",
-    "startedAt": "2026-02-14T03:40:12.719Z"
+    "startedAt": "2026-02-14T03:40:12.719Z",
+    "endedAt": "2026-02-15T19:09:13.078Z"
+  },
+  {
+    "id": "10",
+    "theme": "test",
+    "phase": "winner_published",
+    "startedAt": "2026-02-15T19:09:34.690Z"
   }
 ]

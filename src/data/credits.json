@@ -1,7 +1,32 @@
 [
   {
     "userId": "2",
-    "balance": 467,
-    "updatedAt": "2026-02-15T03:18:30.868Z"
+    "balance": 517,
+    "updatedAt": "2026-02-15T18:58:56.012Z"
+  },
+  {
+    "userId": "4",
+    "balance": 100,
+    "updatedAt": "2026-02-15T18:59:25.879Z"
+  },
+  {
+    "userId": "1",
+    "balance": 100,
+    "updatedAt": "2026-02-15T19:11:03.951Z"
+  },
+  {
+    "userId": "5",
+    "balance": 100,
+    "updatedAt": "2026-02-15T19:09:47.476Z"
+  },
+  {
+    "userId": "3",
+    "balance": 100,
+    "updatedAt": "2026-02-15T19:10:54.877Z"
+  },
+  {
+    "userId": "9",
+    "balance": 350,
+    "updatedAt": "2026-02-15T19:11:18.243Z"
   }
 ]

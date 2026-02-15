@@ -128,5 +128,137 @@
       "packId": "pack-1770883960789-vqg92vi"
     },
     "createdAt": "2026-02-15T03:18:30.868Z"
+  },
+  {
+    "id": "cl-1771181936013-hewhude",
+    "userId": "2",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "18",
+      "weekId": "9"
+    },
+    "createdAt": "2026-02-15T18:58:56.012Z"
+  },
+  {
+    "id": "cl-1771181946657-fk4tqzy",
+    "userId": "4",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "19",
+      "weekId": "9"
+    },
+    "createdAt": "2026-02-15T18:59:06.657Z"
+  },
+  {
+    "id": "cl-1771181965880-9mq8318",
+    "userId": "4",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "9",
+      "submissionId": "17"
+    },
+    "createdAt": "2026-02-15T18:59:25.879Z"
+  },
+  {
+    "id": "cl-1771181971645-apo40w9",
+    "userId": "1",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "9",
+      "submissionId": "18"
+    },
+    "createdAt": "2026-02-15T18:59:31.645Z"
+  },
+  {
+    "id": "cl-1771181980342-04zzpqr",
+    "userId": "5",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "9",
+      "submissionId": "19"
+    },
+    "createdAt": "2026-02-15T18:59:40.341Z"
+  },
+  {
+    "id": "cl-1771182587477-b74ax78",
+    "userId": "5",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "20",
+      "weekId": "10"
+    },
+    "createdAt": "2026-02-15T19:09:47.476Z"
+  },
+  {
+    "id": "cl-1771182600105-375iqh4",
+    "userId": "3",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "21",
+      "weekId": "10"
+    },
+    "createdAt": "2026-02-15T19:10:00.105Z"
+  },
+  {
+    "id": "cl-1771182630170-muytr1r",
+    "userId": "9",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "22",
+      "weekId": "10"
+    },
+    "createdAt": "2026-02-15T19:10:30.170Z"
+  },
+  {
+    "id": "cl-1771182648450-if1lflt",
+    "userId": "9",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "10",
+      "submissionId": "20"
+    },
+    "createdAt": "2026-02-15T19:10:48.449Z"
+  },
+  {
+    "id": "cl-1771182654878-r1zxw9e",
+    "userId": "3",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "10",
+      "submissionId": "20"
+    },
+    "createdAt": "2026-02-15T19:10:54.877Z"
+  },
+  {
+    "id": "cl-1771182663951-h3pqurc",
+    "userId": "1",
+    "amount": 50,
+    "reason": "vote",
+    "metadata": {
+      "weekId": "10",
+      "submissionId": "21"
+    },
+    "createdAt": "2026-02-15T19:11:03.951Z"
+  },
+  {
+    "id": "cl-1771182678244-1v3mf9m",
+    "userId": "9",
+    "amount": 250,
+    "reason": "submission_win",
+    "metadata": {
+      "winnerId": "8",
+      "weekId": "10"
+    },
+    "createdAt": "2026-02-15T19:11:18.243Z"
   }
 ]

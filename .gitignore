@@ -53,3 +53,4 @@ src/data/credits.json
 src/data/characterPool.json
 src/data/packs.json
 .cursor/debug.log
+src/data/winners.json

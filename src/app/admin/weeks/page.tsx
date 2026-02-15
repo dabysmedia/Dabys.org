@@ -48,6 +48,12 @@ export default function AdminWeeksPage() {
   const [deletingWeekId, setDeletingWeekId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; theme: string } | null>(null);
 
+  // Tie resolution when advancing to winner_published
+  const [tiedSubmissions, setTiedSubmissions] = useState<
+    { id: string; movieTitle: string; userName: string; posterUrl: string }[] | null
+  >(null);
+  const [resolvingTie, setResolvingTie] = useState(false);
+
   useEffect(() => {
     loadWeeks();
   }, []);
@@ -94,15 +100,52 @@ export default function AdminWeeksPage() {
   async function setPhase(phase: string) {
     setSaving(true);
     try {
-      await fetch("/api/weeks/current", {
+      const res = await fetch("/api/weeks/current", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phase }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.tie === true && Array.isArray(data.tiedSubmissions) && data.tiedSubmissions.length > 0) {
+        setTiedSubmissions(data.tiedSubmissions);
+        setSaving(false);
+        return;
+      }
+      if (!res.ok) {
+        alert(data.error || "Failed to update phase");
+        return;
+      }
       loadWeeks();
     } finally {
       setSaving(false);
     }
+  }
+
+  async function resolveTie(submissionId: string) {
+    if (!tiedSubmissions?.length) return;
+    setResolvingTie(true);
+    try {
+      const res = await fetch("/api/weeks/current", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "winner_published", submissionId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to set winner");
+        return;
+      }
+      setTiedSubmissions(null);
+      loadWeeks();
+    } finally {
+      setResolvingTie(false);
+    }
+  }
+
+  function handleRandomPick() {
+    if (!tiedSubmissions?.length) return;
+    const random = tiedSubmissions[Math.floor(Math.random() * tiedSubmissions.length)];
+    resolveTie(random.id);
   }
 
   async function resetWeek() {
@@ -456,6 +499,62 @@ export default function AdminWeeksPage() {
                   >
                     {deletingWeekId ? "Deleting..." : "Delete week"}
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tie resolution: Random pick or Manual pick */}
+          {tiedSubmissions && tiedSubmissions.length > 0 && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <div className="rounded-xl border border-white/10 bg-[#1a1a2e] p-6 max-w-lg w-full shadow-xl max-h-[90vh] overflow-y-auto">
+                <p className="text-white/90 font-medium mb-1">Voting tie</p>
+                <p className="text-sm text-white/50 mb-4">
+                  Multiple movies have the same number of votes. Random pick or Manual pick?
+                </p>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleRandomPick}
+                      disabled={resolvingTie}
+                      className="flex-1 py-2.5 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {resolvingTie ? "Picking…" : "Random pick"}
+                    </button>
+                    <span className="text-white/30 self-center text-sm">or</span>
+                    <span className="text-white/50 text-sm self-center">choose below (Manual pick)</span>
+                  </div>
+                  <div className="border-t border-white/10 pt-4 space-y-2">
+                    {tiedSubmissions.map((sub) => (
+                      <div
+                        key={sub.id}
+                        className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3"
+                      >
+                        {sub.posterUrl ? (
+                          <img
+                            src={sub.posterUrl}
+                            alt=""
+                            className="w-12 h-[4.5rem] object-cover rounded shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-[4.5rem] rounded bg-white/10 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white/90 truncate">{sub.movieTitle}</p>
+                          <p className="text-[11px] text-white/40">{sub.userName}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => resolveTie(sub.id)}
+                          disabled={resolvingTie}
+                          className="shrink-0 px-3 py-1.5 rounded-lg border border-purple-500/40 bg-purple-500/20 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Select winner
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

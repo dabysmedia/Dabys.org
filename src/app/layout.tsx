@@ -11,6 +11,9 @@ import { PwaRegister } from "@/components/PwaRegister";
 export const metadata: Metadata = {
   title: "Dabys.org",
   description: "Weekly movie submissions, voting, and winners",
+  icons: {
+    icon: "/icon-192.png",
+  },
 };
 
 export const viewport = {
