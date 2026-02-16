@@ -18,7 +18,7 @@ import {
   getPacks,
   getPacksRaw,
   getProfile,
-  getPackPurchasesCountToday,
+  getPackPurchasesInWindow,
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
@@ -357,15 +357,21 @@ export function buyPack(
   }
 
   const effectivePackId = selectedPack?.id ?? "default";
-  const maxPerDay = selectedPack?.maxPurchasesPerDay;
-  if (typeof maxPerDay === "number" && maxPerDay > 0) {
-    const restock =
-      selectedPack?.restockHourUtc != null || selectedPack?.restockMinuteUtc != null
-        ? { restockHourUtc: selectedPack.restockHourUtc, restockMinuteUtc: selectedPack.restockMinuteUtc }
-        : undefined;
-    const purchasesToday = getPackPurchasesCountToday(userId, effectivePackId, restock);
-    if (purchasesToday >= maxPerDay) {
-      return { success: false, error: `Daily limit reached for this pack (${maxPerDay} per day).` };
+  const maxPerWindow = selectedPack?.maxPurchasesPerDay;
+  if (typeof maxPerWindow === "number" && maxPerWindow > 0) {
+    const restockOptions = {
+      restockIntervalHours: selectedPack?.restockIntervalHours,
+      restockHourUtc: selectedPack?.restockHourUtc,
+      restockMinuteUtc: selectedPack?.restockMinuteUtc,
+    };
+    const count = getPackPurchasesInWindow(userId, effectivePackId, restockOptions);
+    if (count >= maxPerWindow) {
+      const intervalHours = selectedPack?.restockIntervalHours;
+      const limitDesc =
+        typeof intervalHours === "number" && intervalHours > 0
+          ? `${maxPerWindow} per ${intervalHours} hour${intervalHours !== 1 ? "s" : ""}`
+          : `${maxPerWindow} per day`;
+      return { success: false, error: `Limit reached for this pack (${limitDesc}).` };
     }
   }
 

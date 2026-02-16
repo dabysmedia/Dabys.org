@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPacks, getPackPurchasesCountToday } from "@/lib/data";
+import { getPacks, getPackPurchasesInWindow } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,13 +8,14 @@ export async function GET(request: Request) {
   const rawPacks = getPacks().filter((p) => p.isActive);
   const packs = userId
     ? rawPacks.map((p) => {
-        const restock =
-          p.restockHourUtc != null || p.restockMinuteUtc != null
-            ? { restockHourUtc: p.restockHourUtc, restockMinuteUtc: p.restockMinuteUtc }
-            : undefined;
+        const restockOptions = {
+          restockIntervalHours: p.restockIntervalHours,
+          restockHourUtc: p.restockHourUtc,
+          restockMinuteUtc: p.restockMinuteUtc,
+        };
         return {
           ...p,
-          purchasesToday: getPackPurchasesCountToday(userId, p.id, restock),
+          purchasesToday: getPackPurchasesInWindow(userId, p.id, restockOptions),
         };
       })
     : rawPacks;

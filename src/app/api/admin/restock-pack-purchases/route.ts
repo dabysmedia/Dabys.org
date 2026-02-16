@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { resetUserPackPurchasesToday } from "@/lib/data";
+import { resetUserPackPurchaseHistory } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -25,6 +25,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const removed = resetUserPackPurchasesToday(userId);
+  const removed = resetUserPackPurchaseHistory(userId);
   return NextResponse.json({ ok: true, removed });
 }

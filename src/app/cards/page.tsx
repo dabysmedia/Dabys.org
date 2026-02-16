@@ -410,6 +410,7 @@ interface Pack {
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
   allowedCardTypes: CardType[];
   maxPurchasesPerDay?: number;
+  restockIntervalHours?: number;
   purchasesToday?: number;
   discounted?: boolean;
   discountPercent?: number;
@@ -2019,7 +2020,11 @@ function CardsContent() {
                             Opening...
                           </>
                         ) : atDailyLimit ? (
-                          <span className="text-white/50">Resets in {midnightCountdown}</span>
+                          <span className="text-white/50">
+                            {typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0
+                              ? "Limit reached (resets in rolling window)"
+                              : `Resets in ${midnightCountdown}`}
+                          </span>
                         ) : poolCount < pack.cardsPerPack ? (
                           "Need more cards in pool"
                         ) : needCredits > 0 ? (

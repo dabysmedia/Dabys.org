@@ -65,6 +65,13 @@ export async function POST(request: Request) {
     ["actor", "director", "character", "scene"].includes(t)
   );
 
+  const rawRestockIntervalHours = body.restockIntervalHours;
+  const parsed = rawRestockIntervalHours === undefined || rawRestockIntervalHours === null || rawRestockIntervalHours === ""
+    ? NaN
+    : parseInt(String(rawRestockIntervalHours), 10);
+  const effectiveRestockIntervalHours =
+    !Number.isFinite(parsed) || parsed < 1 ? undefined : Math.min(8760, parsed);
+
   const restockHourUtc =
     body.restockHourUtc === undefined || body.restockHourUtc === null || body.restockHourUtc === ""
       ? undefined
@@ -103,6 +110,7 @@ export async function POST(request: Request) {
     isActive,
     maxPurchasesPerDay: maxPerDay,
     isFree,
+    restockIntervalHours: effectiveRestockIntervalHours,
     restockHourUtc: restockHourUtc ?? undefined,
     restockMinuteUtc: restockMinuteUtc ?? undefined,
     discounted,
@@ -177,6 +185,18 @@ export async function PATCH(request: Request) {
       : Math.max(0, parseInt(String(body.maxPurchasesPerDay), 10) || 0);
   const maxPerDay = maxPurchasesPerDay === 0 ? undefined : maxPurchasesPerDay;
 
+  const rawRestockIntervalHours = body.restockIntervalHours;
+  const parsedInterval =
+    rawRestockIntervalHours === undefined || rawRestockIntervalHours === null || rawRestockIntervalHours === ""
+      ? undefined
+      : parseInt(String(rawRestockIntervalHours), 10);
+  const effectiveRestockIntervalHours =
+    parsedInterval === undefined
+      ? (existing as { restockIntervalHours?: number }).restockIntervalHours
+      : !Number.isFinite(parsedInterval) || parsedInterval < 1
+        ? undefined
+        : Math.min(8760, parsedInterval);
+
   const restockHourUtc =
     body.restockHourUtc === undefined || body.restockHourUtc === null || body.restockHourUtc === ""
       ? (existing as { restockHourUtc?: number }).restockHourUtc
@@ -221,6 +241,7 @@ export async function PATCH(request: Request) {
     isActive,
     maxPurchasesPerDay: maxPerDay,
     isFree,
+    restockIntervalHours: effectiveRestockIntervalHours,
     restockHourUtc: restockHourUtc ?? undefined,
     restockMinuteUtc: restockMinuteUtc ?? undefined,
     discounted,

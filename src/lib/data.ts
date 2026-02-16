@@ -610,24 +610,43 @@ function getRestockPeriodStartUtc(restockHourUtc?: number, restockMinuteUtc?: nu
   return periodStart.toISOString();
 }
 
-/** Number of times the user has purchased this pack in the current restock period (UTC). */
-export function getPackPurchasesCountToday(
+export interface PackRestockOptions {
+  restockIntervalHours?: number;
+  restockHourUtc?: number;
+  restockMinuteUtc?: number;
+}
+
+/** Number of times the user has purchased this pack in the current window (rolling X hours or daily UTC). Per-user. */
+export function getPackPurchasesInWindow(
   userId: string,
   packId: string,
-  restock?: { restockHourUtc?: number; restockMinuteUtc?: number }
+  options: PackRestockOptions
 ): number {
   const ledger = getCreditLedgerRaw();
-  const periodStart = restock
-    ? getRestockPeriodStartUtc(restock.restockHourUtc, restock.restockMinuteUtc)
-    : new Date().toISOString().slice(0, 10) + "T00:00:00.000Z";
+  const intervalHours = typeof options.restockIntervalHours === "number" && options.restockIntervalHours > 0
+    ? options.restockIntervalHours
+    : undefined;
+  const since =
+    intervalHours != null
+      ? new Date(Date.now() - intervalHours * 60 * 60 * 1000).toISOString()
+      : getRestockPeriodStartUtc(options.restockHourUtc, options.restockMinuteUtc);
   return ledger.filter(
     (e) =>
       e.userId === userId &&
       e.reason === "pack_purchase" &&
       e.metadata &&
       (e.metadata as { packId?: string }).packId === packId &&
-      e.createdAt >= periodStart
+      e.createdAt >= since
   ).length;
+}
+
+/** @deprecated Use getPackPurchasesInWindow. Number of times the user has purchased this pack in the current restock period (UTC day or rolling hours). */
+export function getPackPurchasesCountToday(
+  userId: string,
+  packId: string,
+  restock?: { restockHourUtc?: number; restockMinuteUtc?: number }
+): number {
+  return getPackPurchasesInWindow(userId, packId, restock ?? {});
 }
 
 /** Record a pack purchase: deduct credits if amount > 0, else only add ledger entry (for free packs). */
@@ -643,21 +662,20 @@ export function recordPackPurchase(
   return true;
 }
 
-/** Remove today's pack_purchase ledger entries for this user so they can buy packs again today. Returns number of entries removed. */
-export function resetUserPackPurchasesToday(userId: string): number {
+/** Remove all pack_purchase ledger entries for this user (per-user reset). Returns number of entries removed. */
+export function resetUserPackPurchaseHistory(userId: string): number {
   const ledger = getCreditLedgerRaw();
-  const today = new Date().toISOString().slice(0, 10);
   const filtered = ledger.filter(
-    (e) =>
-      !(
-        e.userId === userId &&
-        e.reason === "pack_purchase" &&
-        e.createdAt.startsWith(today)
-      )
+    (e) => !(e.userId === userId && e.reason === "pack_purchase")
   );
   const removed = ledger.length - filtered.length;
   if (removed > 0) saveCreditLedgerRaw(filtered);
   return removed;
+}
+
+/** @deprecated Use resetUserPackPurchaseHistory. Alias for backward compat. */
+export function resetUserPackPurchasesToday(userId: string): number {
+  return resetUserPackPurchaseHistory(userId);
 }
 
 export function setCredits(userId: string, balance: number): void {
@@ -1682,13 +1700,15 @@ export interface Pack {
   /** Allowed card types for this pack. Empty = all card types. */
   allowedCardTypes: CardType[];
   isActive: boolean;
-  /** Max purchases per user per day (UTC). Omit or 0 = no limit. */
+  /** Max purchases per user per restock window. Omit or 0 = no limit. */
   maxPurchasesPerDay?: number;
   /** If true, pack costs 0 credits. */
   isFree?: boolean;
-  /** Hour (0–23) UTC when the daily limit resets. Omit = midnight. */
+  /** Restock interval in hours: limit is per user per rolling X-hour window. When set, restockHourUtc/restockMinuteUtc are ignored. */
+  restockIntervalHours?: number;
+  /** Hour (0–23) UTC when the daily limit resets. Used only when restockIntervalHours is not set. Omit = midnight. */
   restockHourUtc?: number;
-  /** Minute (0–59) UTC when the daily limit resets. Omit = 0. */
+  /** Minute (0–59) UTC when the daily limit resets. Used only when restockIntervalHours is not set. Omit = 0. */
   restockMinuteUtc?: number;
   /** If true, show a "Sale" label on the pack in the shop. */
   discounted?: boolean;
@@ -1745,6 +1765,10 @@ export function getPacks(): Pack[] {
         ? (p as Pack).maxPurchasesPerDay
         : undefined,
     isFree: !!((p as Pack).isFree),
+    restockIntervalHours:
+      typeof (p as Pack).restockIntervalHours === "number" && (p as Pack).restockIntervalHours! > 0
+        ? (p as Pack).restockIntervalHours
+        : undefined,
     restockHourUtc: typeof (p as Pack).restockHourUtc === "number" ? (p as Pack).restockHourUtc : undefined,
     restockMinuteUtc: typeof (p as Pack).restockMinuteUtc === "number" ? (p as Pack).restockMinuteUtc : undefined,
     discounted: !!((p as Pack).discounted),
@@ -1809,6 +1833,10 @@ export function upsertPack(
         ? (input as Pack).maxPurchasesPerDay
         : undefined,
     isFree: !!((input as Pack).isFree),
+    restockIntervalHours:
+      typeof (input as Pack).restockIntervalHours === "number" && (input as Pack).restockIntervalHours! > 0
+        ? (input as Pack).restockIntervalHours
+        : undefined,
     restockHourUtc: typeof (input as Pack).restockHourUtc === "number" ? (input as Pack).restockHourUtc : undefined,
     restockMinuteUtc: typeof (input as Pack).restockMinuteUtc === "number" ? (input as Pack).restockMinuteUtc : undefined,
     discounted: !!((input as Pack).discounted),

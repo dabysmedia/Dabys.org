@@ -228,7 +228,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)] hidden md:flex"
+          className="fixed left-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
           aria-label="Open quest log"
         >
           <div className="relative">
@@ -254,8 +254,17 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         </button>
       )}
 
+      {open && (
+        <div
+          className="fixed inset-0 z-[45] bg-black/40 backdrop-blur-[2px] md:bg-transparent md:backdrop-blur-none"
+          style={{ top: "var(--header-height)" }}
+          aria-hidden
+          onClick={() => setOpen(false)}
+        />
+      )}
+
       <aside
-        className={`fixed left-0 z-50 w-80 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out hidden md:block ${
+        className={`fixed left-0 z-50 w-80 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ top: "var(--header-height)", height: "calc(100vh - var(--header-height))" }}

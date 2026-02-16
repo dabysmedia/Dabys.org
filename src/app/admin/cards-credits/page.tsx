@@ -284,6 +284,7 @@ export default function AdminCardsCreditsPage() {
     allowedCardTypes: CardType[];
     isActive: boolean;
     maxPurchasesPerDay: string;
+    restockIntervalHours: string;
     restockHourUtc: string;
     restockMinuteUtc: string;
     isFree: boolean;
@@ -300,6 +301,7 @@ export default function AdminCardsCreditsPage() {
     allowedCardTypes: ["actor", "director", "character", "scene"],
     isActive: true,
     maxPurchasesPerDay: "",
+    restockIntervalHours: "",
     restockHourUtc: "0",
     restockMinuteUtc: "0",
     isFree: false,
@@ -627,6 +629,7 @@ export default function AdminCardsCreditsPage() {
       allowedCardTypes: ["actor", "director", "character", "scene"],
       isActive: true,
       maxPurchasesPerDay: "",
+      restockIntervalHours: "",
       restockHourUtc: "0",
       restockMinuteUtc: "0",
       isFree: false,
@@ -650,6 +653,7 @@ export default function AdminCardsCreditsPage() {
       allowedCardTypes: pack.allowedCardTypes,
       isActive: pack.isActive,
       maxPurchasesPerDay: pack.maxPurchasesPerDay != null ? String(pack.maxPurchasesPerDay) : "",
+      restockIntervalHours: pack.restockIntervalHours != null ? String(pack.restockIntervalHours) : "",
       restockHourUtc: pack.restockHourUtc != null ? String(pack.restockHourUtc) : "0",
       restockMinuteUtc: pack.restockMinuteUtc != null ? String(pack.restockMinuteUtc) : "0",
       isFree: !!pack.isFree,
@@ -672,6 +676,7 @@ export default function AdminCardsCreditsPage() {
     const price = parseInt(packForm.price, 10);
     const cardsPerPack = parseInt(packForm.cardsPerPack, 10);
     const maxPurchasesPerDay = packForm.maxPurchasesPerDay.trim() === "" ? undefined : parseInt(packForm.maxPurchasesPerDay, 10);
+    const restockIntervalHours = packForm.restockIntervalHours.trim() === "" ? undefined : Math.max(1, Math.min(8760, parseInt(packForm.restockIntervalHours, 10) || 0));
     const restockHourUtc = packForm.restockHourUtc.trim() === "" ? undefined : Math.min(23, Math.max(0, parseInt(packForm.restockHourUtc, 10) || 0));
     const restockMinuteUtc = packForm.restockMinuteUtc.trim() === "" ? undefined : Math.min(59, Math.max(0, parseInt(packForm.restockMinuteUtc, 10) || 0));
     if (!packForm.isFree && (!Number.isFinite(price) || price < 1)) {
@@ -705,6 +710,7 @@ export default function AdminCardsCreditsPage() {
           ? Math.min(100, Math.max(0, parseInt(packForm.discountPercent, 10) || 0))
           : undefined,
         maxPurchasesPerDay: maxPurchasesPerDay === undefined ? "" : maxPurchasesPerDay,
+        restockIntervalHours: restockIntervalHours ?? "",
         restockHourUtc: restockHourUtc ?? "",
         restockMinuteUtc: restockMinuteUtc ?? "",
         rarityWeights: packForm.useCustomWeights
@@ -1692,7 +1698,7 @@ export default function AdminCardsCreditsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">Max purchases per day</label>
+                  <label className="block text-xs text-white/40 mb-1">Max purchases per window</label>
                   <input
                     type="number"
                     min={0}
@@ -1701,10 +1707,23 @@ export default function AdminCardsCreditsPage() {
                     onChange={(e) => setPackForm((f) => ({ ...f, maxPurchasesPerDay: e.target.value }))}
                     className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30"
                   />
-                  <p className="text-[10px] text-white/40 mt-0.5">Leave empty for no limit. UTC day.</p>
+                  <p className="text-[10px] text-white/40 mt-0.5">Leave empty for no limit.</p>
                 </div>
                 <div>
-                  <label className="block text-xs text-white/40 mb-1">Restock time (UTC)</label>
+                  <label className="block text-xs text-white/40 mb-1">Restock interval (hours)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8760}
+                    placeholder="e.g. 6, 12, 24"
+                    value={packForm.restockIntervalHours}
+                    onChange={(e) => setPackForm((f) => ({ ...f, restockIntervalHours: e.target.value }))}
+                    className="w-28 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30"
+                  />
+                  <p className="text-[10px] text-white/40 mt-0.5">Per-user rolling window (e.g. 6 = limit every 6 hours). Leave empty for daily UTC reset below.</p>
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1">Daily reset time (UTC)</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -1726,7 +1745,7 @@ export default function AdminCardsCreditsPage() {
                       className="w-16 px-2 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
                     />
                   </div>
-                  <p className="text-[10px] text-white/40 mt-0.5">Hour:minute when daily limit resets. Countdown uses this.</p>
+                  <p className="text-[10px] text-white/40 mt-0.5">Used only when restock interval is empty. Hour:minute when daily limit resets.</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -1978,7 +1997,7 @@ export default function AdminCardsCreditsPage() {
                         {pack.isFree ? "" : "credits · "}
                         {pack.cardsPerPack} cards
                         {pack.maxPurchasesPerDay != null && pack.maxPurchasesPerDay > 0 && (
-                          <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/day limit</span></>
+                          <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/{typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0 ? `${pack.restockIntervalHours}h` : "day"} limit</span></>
                         )}
                       </p>
                       <p className="text-[11px] text-white/40 mt-0.5 truncate">
@@ -2673,7 +2692,7 @@ export default function AdminCardsCreditsPage() {
                   disabled={restockingPack}
                   className="px-5 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer"
                 >
-                  {restockingPack ? "Restocking..." : "Restock pack purchases (today)"}
+                  {restockingPack ? "Resetting..." : "Reset pack purchase history (this user)"}
                 </button>
               </div>
             )}
