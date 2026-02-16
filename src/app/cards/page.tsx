@@ -984,7 +984,7 @@ function CardsContent() {
   async function handleAlchemyDisenchant(card: Card) {
     if (!user) return;
     const dust = getDustForRarity(card.rarity);
-    if (!confirm(`Disenchant for ${dust} Stardust? This cannot be undone.`)) return;
+    if (!confirm(`Remove Holo for ${dust} Stardust? The card stays in your collection as a normal card.`)) return;
     setAlchemyError("");
     setAlchemyDisenchantingId(card.id);
     try {
@@ -996,7 +996,7 @@ function CardsContent() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAlchemyErrorFading(false);
-        setAlchemyError(data?.error ?? "Disenchant failed");
+        setAlchemyError(data?.error ?? "Remove Holo failed");
         return;
       }
       playAlchemyDisenchantSuccess();
@@ -1134,7 +1134,7 @@ function CardsContent() {
   async function handleAlchemyDisenchantAll() {
     if (!user || alchemyBenchCards.length === 0) return;
     const totalDust = alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0);
-    if (!confirm(`Disenchant ${alchemyBenchCards.length} Holo(s) for ${totalDust} Stardust? This cannot be undone.`)) return;
+    if (!confirm(`Remove Holo from ${alchemyBenchCards.length} card(s) for ${totalDust} Stardust? Cards stay in your collection as normals.`)) return;
     setAlchemyError("");
     setAlchemyDisenchantingId("_all");
     try {
@@ -1147,7 +1147,7 @@ function CardsContent() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setAlchemyErrorFading(false);
-          setAlchemyError(data?.error ?? "Disenchant failed");
+          setAlchemyError(data?.error ?? "Remove Holo failed");
           return;
         }
       }
@@ -1846,7 +1846,7 @@ function CardsContent() {
             >
               <p className="text-sm font-semibold text-amber-300 mb-2">How the TCG works</p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Earn credits</strong> from Trivia (answer questions about winning movies). <strong className="text-amber-300/95">Buy packs</strong> in the Store to get character cards. Trade up 5 duplicates for a rarer card, or use <strong className="text-amber-300/95">Alchemy</strong> (disenchant Holos for Stardust; Pack-A-Punch normals to Holo) and <strong className="text-amber-300/95">Quicksell</strong> for credits.
+                <strong className="text-amber-300/95">Earn credits</strong> from Trivia (answer questions about winning movies). <strong className="text-amber-300/95">Buy packs</strong> in the Store to get character cards. Trade up 5 duplicates for a rarer card, or use <strong className="text-amber-300/95">Alchemy</strong> (remove Holo from cards for Stardust—card stays as normal; Pack-A-Punch normals to Holo) and <strong className="text-amber-300/95">Quicksell</strong> for credits.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
                 Buy or sell on the <strong className="text-amber-300/95">Marketplace</strong> and <strong className="text-amber-300/95">Trade</strong> with others—a user-driven economy.
@@ -2367,7 +2367,7 @@ function CardsContent() {
 
             {inventorySubTab === "alchemy" && (
               <>
-                {/* Alchemy bench - one slot: Holo → Disenchant, normal → Pack-A-Punch */}
+                {/* Alchemy bench - Holo → remove Holo for Stardust, normal → Pack-A-Punch */}
                 <div className={`rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <h2 className="text-lg font-semibold text-amber-400/90">Alchemy bench</h2>
@@ -2389,7 +2389,7 @@ function CardsContent() {
                     </span>
                   </div>
                   <p className="text-sm text-white/60 mb-4">
-                    Place up to 5 cards from your inventory below. All Holos → disenchant for Stardust. All normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
+                    Place up to 5 cards from your inventory below. Holos → remove Holo for Stardust (card stays as normal). Normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
                   </p>
                   <div className="flex flex-wrap items-center gap-4 mb-4">
                     <div className="flex gap-2">
@@ -2438,14 +2438,14 @@ function CardsContent() {
                     {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
                       <div className="flex flex-col items-start gap-2">
                         <span className="text-xs text-white/50">
-                          Holo → Disenchant all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
+                          Holo → Remove Holo from all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
                         </span>
                         <button
                           onClick={() => handleAlchemyDisenchantAll()}
                           disabled={alchemyDisenchantingId === "_all"}
                           className="px-4 py-2 rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-300 text-sm font-medium hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {alchemyDisenchantingId === "_all" ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin inline-block" /> : "Disenchant all"}
+                          {alchemyDisenchantingId === "_all" ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin inline-block" /> : "Remove Holo from all"}
                         </button>
                       </div>
                     ) : alchemyBenchType === "normal" && alchemyBenchCards.length > 0 ? (
@@ -3618,25 +3618,52 @@ function CardsContent() {
                         }
                         return n;
                       };
+                      const setRarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                       const sets = Array.from(bySet.entries())
-                        .map(([k, entries]) => ({
-                          title: entries[0]?.movieTitle ?? String(k),
-                          entries,
-                          completedCount: discoveredCount(entries),
-                        }))
+                        .map(([k, entries]) => {
+                          const title = entries[0]?.movieTitle ?? String(k);
+                          const sortedEntries = [...entries].sort(
+                            (a, b) => (setRarityOrder[b.rarity] ?? 0) - (setRarityOrder[a.rarity] ?? 0)
+                          );
+                          const winner = winners.find((w) => w.movieTitle === title);
+                          const isComplete = winner ? completedBadgeWinnerIds.has(winner.id) : false;
+                          return {
+                            title,
+                            entries: sortedEntries,
+                            completedCount: discoveredCount(entries),
+                            isComplete,
+                          };
+                        })
                         .sort((a, b) => {
+                          if (a.isComplete !== b.isComplete) return a.isComplete ? -1 : 1;
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
-                      return sets.flatMap((set, setIndex) => [
-                        setIndex > 0 ? (
-                          <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
-                        ) : null,
-                        <div key={`codex-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
-                          {set.title}
-                        </div>,
-                        ...set.entries.map((entry) => renderEntry(entry)),
-                      ]);
+                      return sets.flatMap((set, setIndex) => {
+                        const setWrapperClass = set.isComplete
+                          ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
+                          : "col-span-full";
+                        return [
+                          setIndex > 0 ? (
+                            <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
+                          ) : null,
+                          <div key={`codex-set-wrap-${setIndex}`} className={setWrapperClass}>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span className={`text-sm font-semibold ${set.isComplete ? "text-amber-200" : "text-white/70"}`}>
+                                {set.title}
+                              </span>
+                              {set.isComplete && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                  Complete
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                              {set.entries.map((entry) => renderEntry(entry))}
+                            </div>
+                          </div>,
+                        ];
+                      });
                     }
                     const sorted =
                       codexSort === "name"

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getCardById,
-  removeCard,
+  updateCard,
   addStardust,
   getStardust,
   getListings,
@@ -56,7 +56,10 @@ export async function POST(request: Request) {
   }
 
   const cardRarity = card.rarity;
-  removeCard(cardId);
+  const updated = updateCard(cardId, { isFoil: false });
+  if (!updated) {
+    return NextResponse.json({ error: "Failed to update card" }, { status: 500 });
+  }
   addStardust(userId, amount);
   const balance = getStardust(userId);
 
@@ -64,5 +67,5 @@ export async function POST(request: Request) {
   const { recordQuestProgress } = await import("@/lib/quests");
   recordQuestProgress(userId, "disenchant_holo", { rarity: cardRarity as "uncommon" | "rare" | "epic" | "legendary" });
 
-  return NextResponse.json({ balance, dustReceived: amount });
+  return NextResponse.json({ balance, dustReceived: amount, card: updated });
 }
