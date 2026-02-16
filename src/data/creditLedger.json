@@ -1028,5 +1028,16 @@
       "direction": "received"
     },
     "createdAt": "2026-02-16T08:29:38.534Z"
+  },
+  {
+    "id": "cl-1771231830083-khej8rz",
+    "userId": "2",
+    "amount": 1,
+    "reason": "comment_like",
+    "metadata": {
+      "commentId": "2",
+      "winnerId": "2"
+    },
+    "createdAt": "2026-02-16T08:50:30.083Z"
   }
 ]

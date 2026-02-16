@@ -94,6 +94,14 @@ export default function Header() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminUser, setAdminUser] = useState<{ id: string; name: string } | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const adminFormRef = useRef<HTMLDivElement>(null);
+
+  // When admin panel opens in menu, scroll it into view
+  useEffect(() => {
+    if (adminOpen && adminFormRef.current) {
+      adminFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [adminOpen]);
 
   // Presence / online status
   const { goOffline } = usePresence(user?.id ?? null);
@@ -519,16 +527,9 @@ export default function Header() {
               <div className="min-h-[48px] flex items-center">
                 <FeedbackButton inline />
               </div>
-              <div className="pt-2 border-t border-white/[0.06]">
-                <button
-                  type="button"
-                  onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }}
-                  className="min-h-[48px] w-full flex items-center px-5 py-4 rounded-xl text-left text-base font-medium text-white/50 hover:text-white/70 hover:bg-white/10 transition-colors touch-manipulation"
-                >
-                  Admin Panel
-                </button>
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${adminOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0"}`}>
-                  <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 mt-2">
+              <div className="pt-2 border-t border-white/[0.06]" ref={adminFormRef}>
+                {adminOpen ? (
+                  <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
                     <div className="flex gap-2">
                       <input
                         type="password"
@@ -536,6 +537,7 @@ export default function Header() {
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
                         className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-purple-500/40"
+                        autoFocus
                       />
                       <button
                         type="submit"
@@ -556,8 +558,23 @@ export default function Header() {
                         Enter as {adminUser.name}
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => { setAdminOpen(false); setAdminError(""); setAdminPassword(""); }}
+                      className="mt-2 text-white/40 text-[11px] hover:text-white/60 transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
                   </form>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setAdminOpen(true); setAdminError(""); setAdminPassword(""); }}
+                    className="min-h-[48px] w-full flex items-center px-5 py-4 rounded-xl text-left text-base font-medium text-white/50 hover:text-white/70 hover:bg-white/10 transition-colors touch-manipulation"
+                  >
+                    Admin Panel
+                  </button>
+                )}
               </div>
             </nav>
             <div className="mt-auto p-4 border-t border-white/[0.06] bg-white/[0.02] flex flex-col gap-4">

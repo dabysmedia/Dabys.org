@@ -1306,28 +1306,44 @@ export default function AdminCardsCreditsPage() {
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-white/90 mb-1">Cards & Credits</h1>
-      <p className="text-white/50 text-sm mb-5">
-        Manage user credits, card collections, packs, and the character pool.
-      </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white/90">Cards & Credits</h1>
+          <p className="text-sm text-white/40 mt-0.5">Manage user credits, card collections, packs, and the character pool</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <svg className="w-3.5 h-3.5 text-blue-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+            </svg>
+            <span className="text-xs text-white/50"><span className="text-white/80 font-medium">{pool.length}</span> in pool</span>
+            <span className="text-white/20">|</span>
+            <svg className="w-3.5 h-3.5 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            <span className="text-xs text-white/50"><span className="text-white/80 font-medium">{packs.length}</span> packs</span>
+          </div>
+        </div>
+      </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
               activeTab === tab.id
                 ? tab.id === "danger"
-                  ? "bg-red-500/15 text-red-400 border border-red-500/30"
-                  : "bg-purple-500/15 text-purple-300 border border-purple-500/30"
-                : "bg-white/[0.03] text-white/50 border border-white/[0.06] hover:bg-white/[0.06] hover:text-white/70"
+                  ? "bg-red-500/15 text-red-400 border border-red-500/25 shadow-sm shadow-red-500/5"
+                  : "bg-purple-500/15 text-purple-300 border border-purple-500/25 shadow-sm shadow-purple-500/5"
+                : "text-white/50 border border-transparent hover:bg-white/[0.04] hover:text-white/70"
             }`}
           >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className={`w-4 h-4 flex-shrink-0 ${activeTab === tab.id ? "" : "opacity-50"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
             </svg>
             {tab.label}
@@ -1336,7 +1352,10 @@ export default function AdminCardsCreditsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-red-400 text-sm mb-6">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-400 text-sm flex items-center gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
           {error}
         </div>
       )}
@@ -1344,12 +1363,19 @@ export default function AdminCardsCreditsPage() {
       {/* ═══════════ TAB: USERS ═══════════ */}
       {activeTab === "users" && (
       <>
-      <div className="mb-6">
-        <label className="block text-xs text-white/40 mb-2 uppercase tracking-wider font-medium">Select user</label>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+          </div>
+          <h2 className="text-sm font-semibold text-white/70">Select User</h2>
+        </div>
         <select
           value={selectedUserId}
           onChange={(e) => setSelectedUserId(e.target.value)}
-          className="w-full max-w-xs px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-purple-500/50 cursor-pointer [color-scheme:dark] [&_option]:bg-[#1a1a24] [&_option]:text-white"
+          className="w-full max-w-sm px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-purple-500/50 cursor-pointer [color-scheme:dark] [&_option]:bg-[#1a1a24] [&_option]:text-white"
         >
           <option value="">-- Select user --</option>
           {users.map((u) => (
@@ -1365,27 +1391,75 @@ export default function AdminCardsCreditsPage() {
           <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
         </div>
       ) : selectedUserId && selectedUser ? (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden mb-8">
-          <div className="p-4 border-b border-white/[0.06]">
-            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
-              User: {selectedUser.name}
-            </h2>
-            <p className="text-white/40 text-xs mt-1">
-              Credits {creditBalance} · Stardust {stardustBalance} · {cards.length} cards
-              {userCodex && (
-                <> · Codex: {userCodex.characterIds.length} / {userCodex.holoCharacterIds.length} / {userCodex.altArtCharacterIds.length} / {userCodex.boysCharacterIds.length}</>
-              )}
-            </p>
+        <>
+        {/* User stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-amber-500/[0.04] to-transparent p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/30 text-[10px] uppercase tracking-widest font-medium">Credits</span>
+              <svg className="w-4 h-4 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-2xl font-bold text-amber-300 tabular-nums">{creditBalance.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-purple-500/[0.04] to-transparent p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/30 text-[10px] uppercase tracking-widest font-medium">Stardust</span>
+              <svg className="w-4 h-4 text-purple-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+              </svg>
+            </div>
+            <p className="text-2xl font-bold text-purple-300 tabular-nums">{stardustBalance.toLocaleString()}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-blue-500/[0.04] to-transparent p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/30 text-[10px] uppercase tracking-widest font-medium">Cards</span>
+              <svg className="w-4 h-4 text-blue-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+              </svg>
+            </div>
+            <p className="text-2xl font-bold text-blue-300 tabular-nums">{cards.length}</p>
+          </div>
+          <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-emerald-500/[0.04] to-transparent p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/30 text-[10px] uppercase tracking-widest font-medium">Codex</span>
+              <svg className="w-4 h-4 text-emerald-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              </svg>
+            </div>
+            {userCodex ? (
+              <p className="text-2xl font-bold text-emerald-300 tabular-nums">{userCodex.characterIds.length}<span className="text-sm font-normal text-white/30 ml-1">/{userCodex.holoCharacterIds.length}/{userCodex.altArtCharacterIds.length}/{userCodex.boysCharacterIds.length}</span></p>
+            ) : (
+              <p className="text-lg text-white/30">--</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-indigo-400">{selectedUser.name.charAt(0).toUpperCase()}</span>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white/90">{selectedUser.name}</h2>
+                <p className="text-[11px] text-white/30 font-mono">{selectedUser.id}</p>
+              </div>
+            </div>
           </div>
 
           <section className="border-b border-white/[0.06]">
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, credits: !s.credits }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Credits</span>
-              <span className="text-amber-400 font-medium tabular-nums">{creditBalance}</span>
-              <span className="text-white/30 text-sm">{openUserSection.credits ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, credits: !s.credits }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Credits</span>
+              <span className="text-amber-400 font-semibold tabular-nums text-sm">{creditBalance.toLocaleString()}</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.credits ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.credits && (
-              <div className="px-4 pb-4 pt-0">
+              <div className="px-5 pb-4 pt-1">
                 <form onSubmit={handleSetCredits} className="flex gap-3 flex-wrap items-end">
                   <div>
                     <label className="block text-xs text-white/40 mb-1">Set balance to</label>
@@ -1398,13 +1472,16 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section className="border-b border-white/[0.06]">
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, stardust: !s.stardust }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Stardust</span>
-              <span className="text-amber-200 font-medium tabular-nums">{stardustBalance}</span>
-              <span className="text-white/30 text-sm">{openUserSection.stardust ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, stardust: !s.stardust }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Stardust</span>
+              <span className="text-purple-300 font-semibold tabular-nums text-sm">{stardustBalance.toLocaleString()}</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.stardust ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.stardust && (
-              <div className="px-4 pb-4 pt-0">
+              <div className="px-5 pb-4 pt-1">
                 <form onSubmit={handleSetStardust} className="flex gap-3 flex-wrap items-end">
                   <div>
                     <label className="block text-xs text-white/40 mb-1">Set balance to</label>
@@ -1418,13 +1495,16 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section className="border-b border-white/[0.06]">
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, shop: !s.shop }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Shop</span>
-              <span className="text-white/40 text-sm">Restock pack purchases</span>
-              <span className="text-white/30 text-sm">{openUserSection.shop ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, shop: !s.shop }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-sky-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Shop</span>
+              <span className="text-[11px] text-white/30">Restock pack purchases</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.shop ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.shop && (
-              <div className="px-4 pb-4 pt-0">
+              <div className="px-5 pb-4 pt-1">
                 <p className="text-white/40 text-sm mb-3">Reset this user&apos;s daily pack purchase count so they can buy packs again today.</p>
                 <button type="button" onClick={async () => { if (!selectedUserId || restockingPack) return; setRestockingPack(true); try { const res = await fetch("/api/admin/restock-pack-purchases", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId }) }); const data = await res.json().catch(() => ({})); if (res.ok) { alert(data.removed > 0 ? `Restocked: ${data.removed} purchase(s) cleared for today.` : "No pack purchases today for this user."); } else { alert(data.error || "Failed to restock"); } } finally { setRestockingPack(false); } }} disabled={restockingPack} className="px-5 py-2.5 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer">{restockingPack ? "Resetting..." : "Reset pack purchase history (this user)"}</button>
               </div>
@@ -1432,13 +1512,16 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section className="border-b border-white/[0.06]">
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, trivia: !s.trivia }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Trivia</span>
-              <span className="text-white/40 text-sm">{triviaAttempts.length} completed</span>
-              <span className="text-white/30 text-sm">{openUserSection.trivia ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, trivia: !s.trivia }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Trivia</span>
+              <span className="text-[11px] text-white/40 tabular-nums">{triviaAttempts.length} completed</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.trivia ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.trivia && (
-              <div className="px-4 pb-4 pt-0">
+              <div className="px-5 pb-4 pt-1">
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
                   <button onClick={handleReopenAllTrivia} disabled={reopeningAll} className="px-3 py-1.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-500/80 disabled:opacity-40 cursor-pointer" title="Reopen all trivia for all users">{reopeningAll ? "Reopening All..." : "Reopen All (all users)"}</button>
                 </div>
@@ -1459,13 +1542,16 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section className="border-b border-white/[0.06]">
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, collection: !s.collection }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Collection</span>
-              <span className="text-white/40 text-sm">{cards.length} cards</span>
-              <span className="text-white/30 text-sm">{openUserSection.collection ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, collection: !s.collection }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Collection</span>
+              <span className="text-[11px] text-white/40 tabular-nums">{cards.length} cards</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.collection ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.collection && (
-              <div className="px-4 pb-4 pt-0">
+              <div className="px-5 pb-4 pt-1">
                 <div className="mb-4">
                   <p className="text-xs text-white/40 mb-2">Add card from pool — click a card to add it to this user&apos;s collection.</p>
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={addHolo} onChange={(e) => setAddHolo(e.target.checked)} className="rounded border-white/30 bg-white/5" /><span className="text-sm text-white/60">Add as Holo</span></label>
@@ -1513,10 +1599,13 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section>
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, codex: !s.codex }))} className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03] transition-colors">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">Codex</span>
-              {userCodex ? ( <span className="text-white/40 text-sm">Regular: {userCodex.characterIds.length} · Holo: {userCodex.holoCharacterIds.length} · Alt: {userCodex.altArtCharacterIds.length} · Boys: {userCodex.boysCharacterIds.length}</span> ) : ( <span className="text-white/30 text-sm">—</span> )}
-              <span className="text-white/30 text-sm">{openUserSection.codex ? "▼" : "▶"}</span>
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, codex: !s.codex }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Codex</span>
+              {userCodex ? ( <span className="text-[11px] text-white/40 tabular-nums">{userCodex.characterIds.length} · {userCodex.holoCharacterIds.length} · {userCodex.altArtCharacterIds.length} · {userCodex.boysCharacterIds.length}</span> ) : ( <span className="text-[11px] text-white/30">—</span> )}
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.codex ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.codex && userCodex && selectedUserId && (
               <div className="px-4 pb-4 pt-0 space-y-4">
@@ -1550,8 +1639,18 @@ export default function AdminCardsCreditsPage() {
             {openUserSection.codex && !userCodex && ( <div className="px-4 pb-4 pt-0 text-white/40 text-sm">Loading codex…</div> )}
           </section>
         </div>
+        </>
       ) : (
-        !loading && <p className="text-white/40 text-sm">Select a user to manage their credits and cards.</p>
+        !loading && !selectedUserId && (
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-white/[0.04] flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
+            </div>
+            <p className="text-white/40 text-sm">Select a user above to manage their credits and cards.</p>
+          </div>
+        )
       )}
       </>
       )}
@@ -1559,9 +1658,17 @@ export default function AdminCardsCreditsPage() {
       {/* ═══════════ TAB: PACKS & SHOP ═══════════ */}
       {activeTab === "packs" && (
       <>
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">Manage Packs ({packs.length})</h2>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white/70">Manage Packs</h2>
+              <p className="text-[11px] text-white/30">{packs.length} pack{packs.length !== 1 ? "s" : ""} configured</p>
+            </div>
+          </div>
           {packsLoading && ( <div className="flex items-center gap-2 text-xs text-white/50"><div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />Loading packs...</div> )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1641,12 +1748,19 @@ export default function AdminCardsCreditsPage() {
       </div>
 
       {/* Shop Items — Others */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">Shop Items — Others ({shopItems.length})</h2>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" /></svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white/70">Shop Items — Others</h2>
+              <p className="text-[11px] text-white/30">{shopItems.length} item{shopItems.length !== 1 ? "s" : ""} · Badges, skips, etc.</p>
+            </div>
+          </div>
           {shopItemsLoading && ( <div className="flex items-center gap-2 text-xs text-white/50"><div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />Loading...</div> )}
         </div>
-        <p className="text-white/40 text-sm mb-4">Items shown in the Shop → Others tab (badges, skips). Order matches display order.</p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             {!(showCreateShopItem || editingShopItemId) ? (
@@ -1695,10 +1809,18 @@ export default function AdminCardsCreditsPage() {
       {activeTab === "pool" && (
       <>
       {/* Legendaries in inventory */}
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-6 mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
-          <div><h3 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-1">Legendaries currently in inventory</h3><p className="text-white/40 text-sm">Who has what legendary. Cards not in the character pool can be returned to the pool so they can drop again.</p></div>
-          <button type="button" onClick={() => loadLegendaryInInventory()} disabled={legendaryInInventoryLoading} className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer">{legendaryInInventoryLoading ? "Loading…" : "Refresh"}</button>
+      <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] to-transparent p-5 mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white/70">Legendaries in Inventory</h3>
+              <p className="text-[11px] text-white/40 mt-0.5">Who has what legendary. Cards not in the pool can be returned so they drop again.</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => loadLegendaryInInventory()} disabled={legendaryInInventoryLoading} className="shrink-0 px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-50 cursor-pointer transition-colors">{legendaryInInventoryLoading ? "Loading…" : "Refresh"}</button>
         </div>
         <div className="mt-4">
           {legendaryInInventoryLoading ? ( <p className="text-white/50 text-sm">Loading…</p> ) : legendaryInInventory.length === 0 ? ( <p className="text-white/50 text-sm">No legendary cards in any user&apos;s inventory.</p> ) : (
@@ -1737,8 +1859,18 @@ export default function AdminCardsCreditsPage() {
 
       {/* Pending cards */}
       {Object.keys(pendingByWinner).length > 0 && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4"><h2 className="text-sm font-semibold text-amber-400/90 uppercase tracking-widest">Pending cards</h2><p className="text-xs text-white/40">New winner cards stay here until you push the set to the pool. Then they appear in Manage Card Pool below.</p></div>
+        <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.04] to-transparent p-5 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white/70">Pending Cards</h2>
+                <p className="text-[11px] text-white/40">Push winner cards to the pool when ready</p>
+              </div>
+            </div>
+          </div>
           <div className="space-y-6">
             {Object.entries(pendingByWinner).map(([winnerId, entries]) => { const winner = winners.find((w) => w.id === winnerId); const movieTitle = winner?.movieTitle ?? `Winner #${winnerId}`; return (
                 <div key={winnerId} className="rounded-lg border border-amber-500/15 bg-white/[0.03] overflow-hidden">
@@ -1751,14 +1883,28 @@ export default function AdminCardsCreditsPage() {
       )}
 
       {/* Manage Card Pool */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Manage Card Pool ({pool.length} cards)</h2>
-        <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-4 py-2">
-          <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Drop chance</span>
-          <span className="text-sm text-white/80"><span className="capitalize text-white/60">Legendary</span> <span className="font-medium">1%</span></span>
-          <span className="text-sm text-white/80"><span className="capitalize text-white/60">Epic</span> <span className="font-medium">10%</span></span>
-          <span className="text-sm text-white/80"><span className="capitalize text-white/60">Rare</span> <span className="font-medium">25%</span></span>
-          <span className="text-sm text-white/80"><span className="capitalize text-white/60">Uncommon</span> <span className="font-medium">64%</span></span>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white/70">Manage Card Pool</h2>
+            <p className="text-[11px] text-white/30">{pool.length} cards in pool</p>
+          </div>
+        </div>
+        <div className="mb-5 grid grid-cols-4 gap-2">
+          {[
+            { label: "Legendary", pct: "1%", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+            { label: "Epic", pct: "10%", color: "text-purple-400", bg: "bg-purple-500/10 border-purple-500/20" },
+            { label: "Rare", pct: "25%", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+            { label: "Uncommon", pct: "64%", color: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+          ].map((r) => (
+            <div key={r.label} className={`rounded-lg border px-3 py-2 text-center ${r.bg}`}>
+              <p className={`text-lg font-bold tabular-nums ${r.color}`}>{r.pct}</p>
+              <p className="text-[10px] text-white/40">{r.label}</p>
+            </div>
+          ))}
         </div>
         <div className={showCreateCustomCardForm ? "grid grid-cols-1 lg:grid-cols-2 gap-8" : "grid grid-cols-1 gap-8"}>
           <div className={showCreateCustomCardForm ? "" : "w-full"}>
@@ -1819,9 +1965,16 @@ export default function AdminCardsCreditsPage() {
       {/* ═══════════ TAB: ECONOMY ═══════════ */}
       {activeTab === "economy" && (
       <>
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8">
-        <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Credit Rewards</h2>
-        <p className="text-white/40 text-sm mb-4">Credits awarded for each action. Saved to /data (creditSettings.json).</p>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white/70">Credit Rewards</h2>
+            <p className="text-[11px] text-white/30">Credits awarded for each action</p>
+          </div>
+        </div>
         {creditSettingsLoading ? ( <div className="flex items-center gap-2 text-sm text-white/50"><div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />Loading...</div> ) : (
           <form onSubmit={handleSaveCreditSettings} className="flex flex-wrap gap-6">
             <div><label className="block text-xs text-white/40 mb-1">Submission</label><input type="number" min={0} value={creditSettingsForm.submission} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, submission: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
@@ -1840,8 +1993,11 @@ export default function AdminCardsCreditsPage() {
             <div className="flex items-end"><button type="submit" disabled={savingCreditSettings} className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer">{savingCreditSettings ? "Saving..." : "Save"}</button></div>
           </form>
         )}
-        <div className="border-t border-white/[0.06] pt-4 mt-4">
-          <p className="text-white/40 text-sm mb-3">Add the same amount of credits to every user.</p>
+        <div className="border-t border-white/[0.06] pt-5 mt-5">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-purple-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
+            <h3 className="text-sm font-medium text-white/60">Add Credits to All Users</h3>
+          </div>
           <form onSubmit={handleAddCreditsToAll} className="flex gap-3 flex-wrap items-end">
             <div><label className="block text-xs text-white/40 mb-1">Credits to add</label><input type="number" min={0} value={addAllCreditsInput} onChange={(e) => setAddAllCreditsInput(e.target.value)} className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 w-32" placeholder="0" /></div>
             <button type="submit" disabled={addAllCreditsLoading} className="px-5 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer">{addAllCreditsLoading ? "Adding..." : "Add credits to all users"}</button>
@@ -1854,39 +2010,46 @@ export default function AdminCardsCreditsPage() {
       {/* ═══════════ TAB: DANGER ZONE ═══════════ */}
       {activeTab === "danger" && (
       <>
-      <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6 mb-8">
-        <h2 className="text-sm font-semibold text-red-400/90 uppercase tracking-widest mb-2">Danger zone</h2>
-        <p className="text-white/50 text-sm mb-6">Wipe one user&apos;s inventory or reset all cards, credits, marketplace, and trades (server-wide). Users, weeks, winners, and other content are not affected. Type <strong className="text-white/80">WIPE</strong> to confirm.</p>
-        <div className="space-y-6">
+      <div className="rounded-xl border border-red-500/20 bg-gradient-to-br from-red-500/[0.04] to-transparent p-5 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+          </div>
           <div>
-            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Wipe one user&apos;s inventory</h3>
+            <h2 className="text-sm font-semibold text-red-400/90">Danger Zone</h2>
+            <p className="text-[11px] text-white/40">Destructive actions — type <strong className="text-white/60">WIPE</strong> to confirm</p>
+          </div>
+        </div>
+        <div className="space-y-6">
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-2">Wipe one user&apos;s inventory</h3>
             <form onSubmit={handleWipeUser} className="flex flex-wrap gap-3 items-end">
               <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-red-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"><option value="">-- Select user --</option>{users.map((u) => ( <option key={u.id} value={u.id}>{u.name} ({u.id})</option> ))}</select>
               <input type="text" value={wipeConfirmUser} onChange={(e) => setWipeConfirmUser(e.target.value)} placeholder="Type WIPE to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48" />
               <button type="submit" disabled={!selectedUserId || wipingUser || wipeConfirmUser.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingUser ? "Wiping..." : "Wipe user inventory"}</button>
             </form>
           </div>
-          <div>
-            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Rebuild pool (6 per movie)</h3>
-            <p className="text-white/40 text-sm mb-2">Re-fetches cast from TMDB and rebuilds the character pool. Custom pool entries are preserved. This can change which 6 characters appear per movie.</p>
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-2">Rebuild pool (6 per movie)</h3>
+            <p className="text-[11px] text-white/40 mb-3">Re-fetches cast from TMDB and rebuilds the character pool. Custom entries are preserved.</p>
             {showRebuildConfirm ? (
               <div className="flex flex-wrap items-center gap-2">
-                <input type="text" value={rebuildConfirmInput} onChange={(e) => setRebuildConfirmInput(e.target.value)} placeholder={`Type "${REBUILD_CONFIRM_WORD}" to confirm`} className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs w-48 outline-none focus:border-red-500/40" autoFocus />
-                <button onClick={handleRebuildPool} disabled={rebuildingPool || rebuildConfirmInput.toLowerCase().trim() !== REBUILD_CONFIRM_WORD} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400/90 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40">{rebuildingPool ? "Rebuilding..." : "Confirm rebuild"}</button>
-                <button onClick={() => { setShowRebuildConfirm(false); setRebuildConfirmInput(""); }} disabled={rebuildingPool} className="px-3 py-1.5 rounded-lg border border-white/20 text-white/60 text-xs font-medium hover:bg-white/5 disabled:opacity-40">Cancel</button>
+                <input type="text" value={rebuildConfirmInput} onChange={(e) => setRebuildConfirmInput(e.target.value)} placeholder={`Type "${REBUILD_CONFIRM_WORD}" to confirm`} className="px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm w-48 outline-none focus:border-red-500/40" autoFocus />
+                <button onClick={handleRebuildPool} disabled={rebuildingPool || rebuildConfirmInput.toLowerCase().trim() !== REBUILD_CONFIRM_WORD} className="px-3 py-2 rounded-lg border border-red-500/40 text-red-400/90 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 cursor-pointer">{rebuildingPool ? "Rebuilding..." : "Confirm rebuild"}</button>
+                <button onClick={() => { setShowRebuildConfirm(false); setRebuildConfirmInput(""); }} disabled={rebuildingPool} className="px-3 py-2 rounded-lg border border-white/20 text-white/60 text-sm font-medium hover:bg-white/5 disabled:opacity-40 cursor-pointer">Cancel</button>
               </div>
             ) : (
-              <button onClick={() => setShowRebuildConfirm(true)} disabled={rebuildingPool} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400/90 text-xs font-medium hover:bg-red-500/10 disabled:opacity-40">{rebuildingPool ? "Rebuilding..." : "Rebuild pool (6/movie)"}</button>
+              <button onClick={() => setShowRebuildConfirm(true)} disabled={rebuildingPool} className="px-3 py-2 rounded-lg border border-red-500/40 text-red-400/90 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 cursor-pointer">{rebuildingPool ? "Rebuilding..." : "Rebuild pool (6/movie)"}</button>
             )}
           </div>
-          <div>
-            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Reset codex</h3>
-            <p className="text-white/40 text-sm mb-2">Clears all codex unlocks for all users. Everyone will see the Codex as locked until they upload cards again.</p>
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-2">Reset codex</h3>
+            <p className="text-[11px] text-white/40 mb-3">Clears all codex unlocks for all users. Everyone will see the Codex as locked.</p>
             <button type="button" onClick={handleResetCodex} disabled={resettingCodex} className="px-4 py-2.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-sm font-medium hover:bg-amber-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{resettingCodex ? "Resetting..." : "Reset codex"}</button>
           </div>
-          <div>
-            <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">Reset all inventory (server-wide)</h3>
-            <p className="text-white/40 text-sm mb-2">Clears all cards, credits, credit history, trivia attempts, marketplace listings, and trades. Users, weeks, winners, submissions, ratings, comments, and packs are not touched.</p>
+          <div className="rounded-lg border border-red-500/20 bg-red-500/[0.03] p-4">
+            <h3 className="text-sm font-medium text-red-400/90 mb-2">Reset all inventory (server-wide)</h3>
+            <p className="text-[11px] text-white/40 mb-3">Clears all cards, credits, credit history, trivia attempts, marketplace listings, and trades. Users, weeks, winners, submissions, ratings, comments, and packs are not touched.</p>
             <form onSubmit={handleWipeServer} className="flex flex-wrap gap-3 items-end">
               <input type="text" value={wipeConfirmServer} onChange={(e) => setWipeConfirmServer(e.target.value)} placeholder="Type WIPE to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48" />
               <button type="submit" disabled={wipingServer || wipeConfirmServer.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingServer ? "Resetting..." : "Reset all inventory"}</button>

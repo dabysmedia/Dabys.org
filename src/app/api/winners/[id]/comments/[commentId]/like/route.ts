@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, getCommentLikes, saveCommentLikes, addCredits } from "@/lib/data";
+import { getComments, getCommentLikes, saveCommentLikes, addCredits, hasReceivedCreditsForCommentLike } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -25,7 +25,10 @@ export async function POST(
     likes.splice(existing, 1);
   } else {
     likes.push({ commentId, userId: body.userId });
-    addCredits(body.userId, 1, "comment_like", { commentId, winnerId });
+    // Only award credits the first time this user ever liked this comment (no like/unlike farming)
+    if (!hasReceivedCreditsForCommentLike(body.userId, commentId)) {
+      addCredits(body.userId, 1, "comment_like", { commentId, winnerId });
+    }
   }
   saveCommentLikes(likes);
 

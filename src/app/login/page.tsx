@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import StatusIndicator from "@/components/StatusIndicator";
 import { usePresenceStatus } from "@/hooks/usePresenceStatus";
@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [pinError, setPinError] = useState("");
   const [pinLoading, setPinLoading] = useState(false);
   const [otherUsersOpen, setOtherUsersOpen] = useState(false);
+  const adminFormRef = useRef<HTMLDivElement>(null);
 
   // Cached last-login user (from localStorage); resolved against current user list
   const lastUser = useMemo(() => {
@@ -46,6 +47,13 @@ export default function LoginPage() {
     () => (lastUser ? users.filter((u) => u.id !== lastUser.id) : users),
     [users, lastUser]
   );
+
+  // When admin panel opens, scroll it into view
+  useEffect(() => {
+    if (adminOpen && adminFormRef.current) {
+      adminFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [adminOpen]);
 
   // If already logged in, go straight to home
   useEffect(() => {
@@ -354,24 +362,11 @@ export default function LoginPage() {
           <p className="text-white/25 text-xs">
             Don&apos;t see your name? Contact an admin.
           </p>
-          <button
-            onClick={() => {
-              setAdminOpen(!adminOpen);
-              setAdminError("");
-              setAdminPassword("");
-            }}
-            className="mt-3 text-white/20 text-[11px] hover:text-white/40 transition-colors cursor-pointer"
-          >
-            Admin Access
-          </button>
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              adminOpen ? "max-h-40 opacity-100 mt-4" : "max-h-0 opacity-0"
-            }`}
-          >
+          {adminOpen ? (
+            <div ref={adminFormRef}>
             <form
               onSubmit={handleAdminLogin}
-              className="rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-xl p-4 shadow-xl shadow-black/10"
+              className="mt-3 rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-xl p-4 shadow-xl shadow-black/10"
             >
               <div className="flex gap-2">
                 <input
@@ -380,7 +375,7 @@ export default function LoginPage() {
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   className="flex-1 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2.5 text-sm text-white/80 placeholder-white/30 outline-none focus:border-purple-400/50 transition-colors"
-                  autoFocus={adminOpen}
+                  autoFocus
                 />
                 <button
                   type="submit"
@@ -413,8 +408,31 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminOpen(false);
+                  setAdminError("");
+                  setAdminPassword("");
+                }}
+                className="mt-3 text-white/30 text-[11px] hover:text-white/50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
             </form>
-          </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAdminOpen(true);
+                setAdminError("");
+                setAdminPassword("");
+              }}
+              className="mt-3 text-white/20 text-[11px] hover:text-white/40 transition-colors cursor-pointer"
+            >
+              Admin Access
+            </button>
+          )}
         </div>
       </div>
     </>

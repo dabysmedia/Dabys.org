@@ -13,5 +13,27 @@
     "status": "accepted",
     "id": "trd-1771230565565-89wvoii",
     "createdAt": "2026-02-16T08:29:25.565Z"
+  },
+  {
+    "initiatorUserId": "2",
+    "initiatorName": "Carlos",
+    "counterpartyUserId": "1",
+    "counterpartyName": "Jerry",
+    "offeredCardIds": [
+      "card-1771125501732-a3jy86f",
+      "card-1771125501734-bqd2dfo",
+      "card-1771125501734-4ivfu34",
+      "card-1771125501732-73ndj7n",
+      "card-1771125498479-t0xos1f",
+      "card-1771125498480-4l5n2vy"
+    ],
+    "requestedCardIds": [
+      "card-1771221445467-iqt6tbc"
+    ],
+    "offeredCredits": 0,
+    "requestedCredits": 0,
+    "status": "accepted",
+    "id": "trd-1771231929115-f5yv3sx",
+    "createdAt": "2026-02-16T08:52:09.115Z"
   }
 ]

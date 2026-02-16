@@ -266,7 +266,7 @@
     "acquiredAt": "2026-02-15T03:18:15.235Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-17604-24428",
     "rarity": "uncommon",
     "isFoil": false,
@@ -294,7 +294,7 @@
     "acquiredAt": "2026-02-15T03:18:18.479Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-19540-1858",
     "rarity": "uncommon",
     "isFoil": false,
@@ -336,7 +336,7 @@
     "acquiredAt": "2026-02-15T03:18:18.481Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-1162-111",
     "rarity": "rare",
     "isFoil": false,
@@ -350,7 +350,7 @@
     "acquiredAt": "2026-02-15T03:18:21.732Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-1245-24428",
     "rarity": "rare",
     "isFoil": false,
@@ -364,7 +364,7 @@
     "acquiredAt": "2026-02-15T03:18:21.732Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-19541-1858",
     "rarity": "uncommon",
     "isFoil": false,
@@ -378,7 +378,7 @@
     "acquiredAt": "2026-02-15T03:18:21.734Z"
   },
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-1245-152601",
     "rarity": "rare",
     "isFoil": false,
@@ -434,7 +434,7 @@
     "acquiredAt": "2026-02-15T03:18:28.491Z"
   },
   {
-    "userId": "1",
+    "userId": "2",
     "characterId": "custom-1770869738689-jilnomh",
     "rarity": "epic",
     "isFoil": false,

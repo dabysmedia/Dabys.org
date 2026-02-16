@@ -517,6 +517,20 @@ export function hasReceivedCreditsForWeek(userId: string, reason: string, weekId
   );
 }
 
+/** Returns true if user has already received credits for liking this comment (prevents like/unlike farming). */
+export function hasReceivedCreditsForCommentLike(userId: string, commentId: string): boolean {
+  const ledger = getCreditLedgerRaw();
+  return ledger.some(
+    (e) =>
+      e.userId === userId &&
+      e.reason === "comment_like" &&
+      e.amount > 0 &&
+      e.metadata &&
+      typeof e.metadata.commentId === "string" &&
+      e.metadata.commentId === commentId
+  );
+}
+
 export function addCredits(
   userId: string,
   amount: number,

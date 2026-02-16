@@ -3544,53 +3544,49 @@ function CardsContent() {
                             </div>
                           </div>
                         ) : (
-                          /* Trade window — Steam/WoW style */
-                          <div className="border-t border-white/10">
-                            <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/10">
+                          /* Expanded trade view */
+                          <div>
+                            <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/[0.08]">
                               <span className="text-sm font-medium text-white/90">Trade with {t.counterpartyName || "Unknown"}</span>
-                              <button onClick={() => setExpandedSentTradeId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Close">×</button>
+                              <button onClick={() => setExpandedSentTradeId(null)} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 cursor-pointer transition-colors" aria-label="Close">&times;</button>
                             </div>
-                            <div className="grid grid-cols-2 gap-0 min-h-[200px]">
-                              <div className="p-4 border-r border-white/10 bg-black/20 flex flex-col">
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] min-h-[180px]">
+                              {/* You give */}
+                              <div className="p-4 bg-black/15 flex flex-col">
                                 <div className="flex items-center gap-2 mb-3">
-                                  {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{user.name?.charAt(0) || "?"}</div>)}
-                                  <span className="text-xs font-medium text-white/80">You give</span>
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
+                                  {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{user.name?.charAt(0) || "?"}</div>)}
+                                  <span className="text-[11px] font-semibold text-red-400/70 uppercase tracking-widest">You give</span>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
-                                  {t.offeredCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
-                                      <div className="relative flex-1 min-h-0">
-                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
-                                      </div>
-                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
-                                    </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.offeredCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
                                   ))}
                                 </div>
-                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
+                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
                               </div>
-                              <div className="p-4 bg-black/20 flex flex-col">
+                              {/* Divider */}
+                              <div className="hidden sm:flex flex-col items-center justify-center px-3 bg-black/20">
+                                <svg className="w-5 h-5 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+                              </div>
+                              {/* You receive */}
+                              <div className="p-4 bg-black/15 flex flex-col border-t sm:border-t-0 border-white/[0.06]">
                                 <div className="flex items-center gap-2 mb-3">
-                                  {t.counterpartyUserId && (userAvatarMap[t.counterpartyUserId] ? <img src={userAvatarMap[t.counterpartyUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.counterpartyName || "?")[0]}</div>)}
-                                  <span className="text-xs font-medium text-white/80">You receive</span>
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
+                                  {t.counterpartyUserId && (userAvatarMap[t.counterpartyUserId] ? <img src={userAvatarMap[t.counterpartyUserId]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{(t.counterpartyName || "?")[0]}</div>)}
+                                  <span className="text-[11px] font-semibold text-green-400/70 uppercase tracking-widest">You receive</span>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
-                                  {t.requestedCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
-                                      <div className="relative flex-1 min-h-0">
-                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
-                                      </div>
-                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
-                                    </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.requestedCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
                                   ))}
                                 </div>
-                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
+                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
                               </div>
                             </div>
-                            <div className="px-4 py-3 bg-black/30 border-t border-white/10 flex flex-wrap gap-2">
-                              <button onClick={() => setExpandedSentTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/70 text-sm hover:bg-white/10 cursor-pointer">Collapse</button>
-                              <button onClick={() => handleCancelTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "Cancelling..." : "Cancel offer"}</button>
+                            <div className="px-4 py-3 bg-black/25 border-t border-white/[0.08] flex flex-wrap gap-2">
+                              <button onClick={() => setExpandedSentTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/60 text-sm hover:bg-white/[0.08] cursor-pointer transition-colors">Collapse</button>
+                              <button onClick={() => handleCancelTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/25 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer transition-colors">{tradeActionId === t.id ? "Cancelling..." : "Cancel offer"}</button>
                             </div>
                           </div>
                         )}
@@ -3661,58 +3657,57 @@ function CardsContent() {
                             </button>
                           </div>
                         ) : (
-                          /* Trade window — Steam/WoW style (incoming) */
-                          <div className="border-t border-white/10">
-                            <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border-b border-white/10">
-                              <span className="text-sm font-medium text-white/90">{t.initiatorName || "Unknown"} wants to trade</span>
-                              <button onClick={() => setExpandedReceivedTradeId(null)} className="p-1.5 rounded text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Close">×</button>
+                          /* Expanded received trade view */
+                          <div>
+                            <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/[0.08]">
+                              <div className="flex items-center gap-2">
+                                <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80 shrink-0">
+                                  {t.initiatorUserId && (userAvatarMap[t.initiatorUserId] ? <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{(t.initiatorName || "?")[0]}</div>)}
+                                  <span className="text-sm font-medium text-white/90">{t.initiatorName || "Unknown"}</span>
+                                </Link>
+                                {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                <span className="text-white/30 text-xs">wants to trade</span>
+                              </div>
+                              <button onClick={() => setExpandedReceivedTradeId(null)} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 cursor-pointer transition-colors" aria-label="Close">&times;</button>
                             </div>
-                            <div className="grid grid-cols-2 gap-0 min-h-[200px]">
-                              <div className="p-4 border-r border-white/10 bg-black/20 flex flex-col">
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] min-h-[180px]">
+                              {/* They give (you get) */}
+                              <div className="p-4 bg-black/15 flex flex-col">
                                 <div className="flex items-center gap-2 mb-3">
-                                  <Link href={`/profile/${t.initiatorUserId}`} className="flex items-center gap-2 hover:opacity-80 shrink-0">
-                                    {t.initiatorUserId && (userAvatarMap[t.initiatorUserId] ? <img src={userAvatarMap[t.initiatorUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{(t.initiatorName || "?")[0]}</div>)}
-                                    <span className="text-xs font-medium text-white/80 truncate">They give</span>
-                                  </Link>
-                                  {t.initiatorDisplayedBadge && <BadgePill movieTitle={t.initiatorDisplayedBadge.movieTitle} isHolo={t.initiatorDisplayedBadge.isHolo} />}
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
+                                  <span className="text-[11px] font-semibold text-green-400/70 uppercase tracking-widest">You receive</span>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
-                                  {t.offeredCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
-                                      <div className="relative flex-1 min-h-0">
-                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
-                                      </div>
-                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
-                                    </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.offeredCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
                                   ))}
                                 </div>
-                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
+                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
                               </div>
-                              <div className="p-4 bg-black/20 flex flex-col">
+                              {/* Divider */}
+                              <div className="hidden sm:flex flex-col items-center justify-center px-3 bg-black/20">
+                                <svg className="w-5 h-5 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+                              </div>
+                              {/* You give */}
+                              <div className="p-4 bg-black/15 flex flex-col border-t sm:border-t-0 border-white/[0.06]">
                                 <div className="flex items-center gap-2 mb-3">
-                                  {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{user.name?.charAt(0) || "?"}</div>)}
-                                  <span className="text-xs font-medium text-white/80">You give</span>
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
+                                  <span className="text-[11px] font-semibold text-red-400/70 uppercase tracking-widest">You give</span>
                                 </div>
-                                <div className="grid grid-cols-4 gap-2 flex-1 content-start">
-                                  {t.requestedCards.slice(0, 8).map((c) => (
-                                    <div key={c.id} className="relative aspect-[2/3] max-w-[72px] rounded-lg overflow-hidden bg-white/5 border border-white/10 ring-1 ring-white/5 flex flex-col">
-                                      <div className="relative flex-1 min-h-0">
-                                        {c.isFoil && (<span className="absolute top-0.5 right-0.5 px-1 py-0.5 rounded text-[8px] font-bold text-white z-10" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981)", boxShadow: "0 0 6px rgba(255,255,255,0.5)" }}>HOLO</span>)}
-                                        {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{c.actorName?.[0]}</div>}
-                                      </div>
-                                      <span className={`absolute bottom-0 left-0 right-0 px-1 py-0.5 text-[9px] font-medium uppercase text-center truncate ${RARITY_BADGE[c.rarity] ?? "text-white/60"}`} style={{ textShadow: "0 0 2px rgba(0,0,0,0.8)" }}>{c.rarity}</span>
-                                    </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.requestedCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
                                   ))}
                                 </div>
-                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-2 pt-2 border-t border-white/10"><span className="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
+                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
                               </div>
                             </div>
-                            <div className="px-4 py-3 bg-black/30 border-t border-white/10 flex flex-wrap gap-2">
-                              <button onClick={() => setExpandedReceivedTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/70 text-sm hover:bg-white/10 cursor-pointer">Collapse</button>
-                              <button onClick={() => handleAcceptTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm hover:bg-green-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "..." : "Accept"}</button>
-                              <button onClick={() => openEditTrade(t)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer">Edit trade</button>
-                              <button onClick={() => handleDenyTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">Decline</button>
+                            <div className="px-4 py-3 bg-black/25 border-t border-white/[0.08] flex flex-wrap items-center gap-2">
+                              <button onClick={() => setExpandedReceivedTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/60 text-sm hover:bg-white/[0.08] cursor-pointer transition-colors">Collapse</button>
+                              <div className="flex-1" />
+                              <button onClick={() => handleDenyTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/25 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer transition-colors">Decline</button>
+                              <button onClick={() => openEditTrade(t)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-400 text-sm hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer transition-colors">Counter</button>
+                              <button onClick={() => handleAcceptTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/15 text-green-400 text-sm font-medium hover:bg-green-500/25 disabled:opacity-40 cursor-pointer transition-colors">{tradeActionId === t.id ? "..." : "Accept"}</button>
                             </div>
                           </div>
                         )}
@@ -4695,181 +4690,34 @@ function CardsContent() {
         {showTradeModal && (
           <>
             <div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
               onClick={() => !tradeLoading && setShowTradeModal(false)}
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-6xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col"
+              className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-[#0c0c18]/95 backdrop-blur-2xl shadow-[0_8px_48px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${tradeStep === 1 ? "max-w-3xl max-h-[70vh]" : "max-w-[90rem] h-[min(85vh,820px)]"}`}
               role="dialog"
               aria-label="Start trade"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative p-6 flex flex-col flex-1 min-h-0 overflow-auto">
-                <h3 className="text-lg font-bold text-white/90 mb-4 shrink-0 pr-10">
-                  Start Trade
-                  {tradeStep === 1 && " — Select user"}
-                  {tradeStep === 2 && " — Your offer"}
-                  {tradeStep === 3 && " — Request from them"}
-                </h3>
-
-                {tradeStep === 1 && (
-                  <div className="space-y-4">
-                    <p className="text-white/50 text-sm">Choose a user to trade with.</p>
-                    {tradeUsers.length === 0 ? (
-                      <p className="text-white/40 text-sm">No other users yet.</p>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {tradeUsers.map((u) => (
-                          <button
-                            key={u.id}
-                            onClick={() => {
-                              setTradeCounterparty(u);
-                              setTradeStep(2);
-                            }}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md hover:border-amber-500/40 hover:bg-amber-500/10 transition-colors cursor-pointer text-left"
-                          >
-                            {u.avatarUrl ? (
-                              <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                                {u.name.charAt(0)}
-                              </div>
-                            )}
-                            <span className="text-sm font-medium text-white/90 truncate">{u.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {tradeStep === 2 && (
-                  <div className="space-y-4">
-                    <p className="text-white/50 text-sm">
-                      Select cards and/or credits to offer. (Cards listed on marketplace cannot be traded.)
-                    </p>
-                    {availableForOffer.length === 0 ? (
-                      <p className="text-white/40 text-sm">No cards available to offer.</p>
-                    ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto scrollbar-autocomplete">
-                        {availableForOffer.map((c) => {
-                          const selected = tradeOfferedIds.has(c.id!);
-                          return (
-                            <button
-                              key={c.id}
-                              onClick={() => toggleTradeOffer(c.id!)}
-                              className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${
-                                selected ? "ring-amber-400 ring-offset-2 ring-offset-[var(--background)]" : "ring-transparent hover:ring-white/40"
-                              }`}
-                            >
-                              <CardDisplay card={c} />
-                              {selected && (
-                                <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">✓</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3">
-                      <label className="text-sm text-sky-300 font-medium">Add credits:</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={creditBalance}
-                        value={tradeOfferedCredits || ""}
-                        onChange={(e) => {
-                          const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                          setTradeOfferedCredits(isNaN(v) ? 0 : Math.max(0, v));
-                        }}
-                        placeholder="0"
-                        className="w-24 px-3 py-2 rounded-xl bg-sky-400/10 border border-sky-400/30 text-sky-300 text-sm outline-none focus:border-sky-400/50 placeholder-sky-300/40"
-                      />
-                      <span className="text-xs text-sky-300/60">(balance: {creditBalance})</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setTradeStep(1)}
-                        className="px-4 py-2 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.1] hover:border-white/20 cursor-pointer"
-                      >
-                        Back
-                      </button>
-                      <button
-                        onClick={() => (tradeOfferedIds.size > 0 || tradeOfferedCredits > 0) && setTradeStep(3)}
-                        disabled={tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0}
-                        className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {tradeStep === 3 && (
-                  <div className="space-y-4">
-                    <p className="text-white/50 text-sm">
-                      Select cards and/or credits you want from {tradeCounterparty?.name}.
-                    </p>
-                    {availableToRequest.length === 0 ? (
-                      <p className="text-white/40 text-sm">{tradeCounterparty?.name} has no cards available to request.</p>
-                    ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 max-h-96 overflow-y-auto scrollbar-autocomplete">
-                        {availableToRequest.map((c) => {
-                          const selected = tradeRequestedIds.has(c.id!);
-                          return (
-                            <button
-                              key={c.id}
-                              onClick={() => toggleTradeRequest(c.id!)}
-                              className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${
-                                selected ? "ring-amber-400 ring-offset-2 ring-offset-[var(--background)]" : "ring-transparent hover:ring-white/40"
-                              }`}
-                            >
-                              <CardDisplay card={c} />
-                              {selected && (
-                                <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-500 text-black text-xs font-bold flex items-center justify-center">✓</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-3">
-                      <label className="text-sm text-sky-300 font-medium">Request credits:</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={tradeRequestedCredits || ""}
-                        onChange={(e) => {
-                          const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
-                          setTradeRequestedCredits(isNaN(v) ? 0 : Math.max(0, v));
-                        }}
-                        placeholder="0"
-                        className="w-24 px-3 py-2 rounded-xl bg-sky-400/10 border border-sky-400/30 text-sky-300 text-sm outline-none focus:border-sky-400/50 placeholder-sky-300/40"
-                      />
-                    </div>
-                    {tradeError && <p className="text-red-400 text-sm">{tradeError}</p>}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setTradeStep(2)}
-                        className="px-4 py-2 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-md text-white/70 hover:bg-white/[0.1] hover:border-white/20 cursor-pointer"
-                      >
-                        Back
-                      </button>
-                      <button
-                        onClick={() => handleSendTrade()}
-                        disabled={tradeLoading || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
-                        className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
-                      >
-                        {tradeLoading ? "Sending..." : "Send Offer"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/30 shrink-0">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-white/90">
+                    {tradeStep === 1 ? "Start Trade" : `Trading with ${tradeCounterparty?.name}`}
+                  </h3>
+                  {tradeStep >= 2 && tradeCounterparty && (
+                    <button
+                      onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); }}
+                      className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 cursor-pointer transition-colors"
+                    >
+                      Change user
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => !tradeLoading && setShowTradeModal(false)}
-                  className="absolute top-4 right-4 p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer"
+                  className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer transition-colors"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -4877,6 +4725,239 @@ function CardsContent() {
                   </svg>
                 </button>
               </div>
+
+              {/* Step 1: User picker */}
+              {tradeStep === 1 && (
+                <div className="p-6 overflow-auto flex-1">
+                  <p className="text-white/50 text-sm mb-4">Choose a user to trade with.</p>
+                  {tradeUsers.length === 0 ? (
+                    <p className="text-white/40 text-sm">No other users yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {tradeUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          onClick={() => { setTradeCounterparty(u); setTradeStep(2); }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.12] bg-white/[0.04] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all cursor-pointer text-left group"
+                        >
+                          {u.avatarUrl ? (
+                            <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10 group-hover:border-amber-500/30 transition-colors" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                              {u.name.charAt(0)}
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-white/90 truncate">{u.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2+: Unified 3-column trading view */}
+              {tradeStep >= 2 && (
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px_1fr] overflow-hidden">
+
+                    {/* Left: Your inventory */}
+                    <div className="flex flex-col min-h-0 lg:border-r border-white/[0.08] order-2 lg:order-1">
+                      <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
+                        <div className="flex items-center gap-2">
+                          {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{user.name?.charAt(0) || "?"}</div>)}
+                          <h4 className="text-sm font-semibold text-white/70">Your Collection</h4>
+                        </div>
+                        <p className="text-[11px] text-white/25 mt-1">{availableForOffer.length} cards &mdash; click to add to trade</p>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
+                        {availableForOffer.length === 0 ? (
+                          <p className="text-white/25 text-xs text-center py-8">No cards available to offer.</p>
+                        ) : (
+                          <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+                            {availableForOffer.map((c) => {
+                              const selected = tradeOfferedIds.has(c.id!);
+                              return (
+                                <button
+                                  key={c.id}
+                                  onClick={() => toggleTradeOffer(c.id!)}
+                                  className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-red-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
+                                >
+                                  <CardDisplay card={c} compact />
+                                  {selected && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                                      <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Center: The Trade */}
+                    <div className="flex flex-col min-h-0 bg-black/20 overflow-hidden order-1 lg:order-2 border-b lg:border-b-0 border-white/[0.08]">
+                      <div className="px-4 py-3 border-b border-white/[0.08] bg-gradient-to-r from-red-500/[0.04] via-amber-500/[0.08] to-green-500/[0.04] shrink-0 text-center">
+                        <h4 className="text-sm font-bold text-amber-400/90 tracking-wide uppercase">The Trade</h4>
+                      </div>
+                      <div className="flex-1 overflow-y-auto">
+                        {/* You Give */}
+                        <div className="p-4 border-b border-white/[0.05]">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
+                            <h5 className="text-[11px] font-semibold text-red-400/80 uppercase tracking-widest">You Give</h5>
+                          </div>
+                          <div className="min-h-[90px] rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.015] p-2">
+                            {(() => {
+                              const offeredCards = availableForOffer.filter(c => tradeOfferedIds.has(c.id!));
+                              return offeredCards.length > 0 ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {offeredCards.map((c) => (
+                                    <button
+                                      key={c.id}
+                                      onClick={() => toggleTradeOffer(c.id!)}
+                                      className="relative rounded-xl overflow-hidden ring-1 ring-red-500/20 hover:ring-red-400/50 transition-all cursor-pointer group"
+                                    >
+                                      <CardDisplay card={c} compact />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                                        <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center h-full min-h-[70px]">
+                                  <p className="text-white/15 text-xs text-center">Click cards from your collection</p>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-[11px] text-amber-400/50 font-medium shrink-0">Credits:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              max={creditBalance}
+                              value={tradeOfferedCredits || ""}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                                setTradeOfferedCredits(isNaN(v) ? 0 : Math.max(0, v));
+                              }}
+                              placeholder="0"
+                              className="w-20 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-xs outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors"
+                            />
+                            <span className="text-[10px] text-white/20">/ {creditBalance}</span>
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-3 px-4 py-2 bg-black/10">
+                          <div className="flex-1 h-px bg-gradient-to-r from-red-500/15 to-transparent" />
+                          <svg className="w-4 h-4 text-white/15 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+                          <div className="flex-1 h-px bg-gradient-to-l from-green-500/15 to-transparent" />
+                        </div>
+
+                        {/* You Get */}
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
+                            <h5 className="text-[11px] font-semibold text-green-400/80 uppercase tracking-widest">You Get</h5>
+                          </div>
+                          <div className="min-h-[90px] rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.015] p-2">
+                            {(() => {
+                              const requestedCards = availableToRequest.filter(c => tradeRequestedIds.has(c.id!));
+                              return requestedCards.length > 0 ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {requestedCards.map((c) => (
+                                    <button
+                                      key={c.id}
+                                      onClick={() => toggleTradeRequest(c.id!)}
+                                      className="relative rounded-xl overflow-hidden ring-1 ring-green-500/20 hover:ring-green-400/50 transition-all cursor-pointer group"
+                                    >
+                                      <CardDisplay card={c} compact />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                                        <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center h-full min-h-[70px]">
+                                  <p className="text-white/15 text-xs text-center">Click cards from their collection</p>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-[11px] text-amber-400/50 font-medium shrink-0">Credits:</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={tradeRequestedCredits || ""}
+                              onChange={(e) => {
+                                const v = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+                                setTradeRequestedCredits(isNaN(v) ? 0 : Math.max(0, v));
+                              }}
+                              placeholder="0"
+                              className="w-20 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-xs outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Send button */}
+                      <div className="px-4 py-3.5 border-t border-white/[0.08] bg-black/30 shrink-0">
+                        {tradeError && <p className="text-red-400 text-xs mb-2">{tradeError}</p>}
+                        <button
+                          onClick={() => handleSendTrade()}
+                          disabled={tradeLoading || (tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0) || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
+                          className="w-full px-4 py-2.5 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-amber-600/15 text-amber-400 font-semibold text-sm hover:border-amber-500/50 hover:from-amber-500/25 hover:to-amber-600/25 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all"
+                        >
+                          {tradeLoading ? "Sending..." : editingTradeId ? "Send Counter-Offer" : "Send Trade Offer"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Right: Their inventory */}
+                    <div className="flex flex-col min-h-0 lg:border-l border-white/[0.08] order-3 lg:order-3">
+                      <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
+                        <div className="flex items-center gap-2">
+                          {tradeCounterparty && (userAvatarMap[tradeCounterparty.id] ? <img src={userAvatarMap[tradeCounterparty.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{(tradeCounterparty?.name || "?")[0]}</div>)}
+                          <h4 className="text-sm font-semibold text-white/70">{tradeCounterparty?.name}&apos;s Collection</h4>
+                        </div>
+                        <p className="text-[11px] text-white/25 mt-1">{availableToRequest.length} cards &mdash; click to add to trade</p>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
+                        {availableToRequest.length === 0 ? (
+                          <p className="text-white/25 text-xs text-center py-8">{tradeCounterparty?.name} has no cards available.</p>
+                        ) : (
+                          <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+                            {availableToRequest.map((c) => {
+                              const selected = tradeRequestedIds.has(c.id!);
+                              return (
+                                <button
+                                  key={c.id}
+                                  onClick={() => toggleTradeRequest(c.id!)}
+                                  className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-green-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
+                                >
+                                  <CardDisplay card={c} compact />
+                                  {selected && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                                      <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
