@@ -2318,6 +2318,8 @@ export type NotificationType =
   | "trade_received"
   | "trade_accepted"
   | "trade_denied"
+  | "feedback_accepted"
+  | "credits_awarded"
   | "new_set_added"
   | "free_packs_restock"
   | "legendary_pull"
