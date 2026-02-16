@@ -1831,7 +1831,7 @@ function CardsContent() {
                 Buy or sell on the <strong className="text-amber-300/95">Marketplace</strong> and <strong className="text-amber-300/95">Trade</strong> with others—a user-driven economy.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Codex</strong>: Upload cards from inventory to discover them (card leaves collection; legendaries re-enter pool). Complete each set (6 cards per movie) to earn <strong className="text-amber-300/95">badges</strong> for your profile.
+                <strong className="text-amber-300/95">Codex</strong>: Upload cards from inventory to discover them (card leaves collection; legendaries re-enter pool). Complete each set (discover all cards for a movie) to earn <strong className="text-amber-300/95">badges</strong> for your profile.
               </p>
               <p className="text-xs text-white/50 leading-relaxed">
                 New cards are added weekly from winning movies.
@@ -3607,6 +3607,9 @@ function CardsContent() {
                         setIndex > 0 ? (
                           <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
+                        <div key={`codex-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
+                          {set.title}
+                        </div>,
                         ...set.entries.map((entry) => renderEntry(entry)),
                       ]);
                     }
@@ -3724,6 +3727,9 @@ function CardsContent() {
                         setIndex > 0 ? (
                           <div key={`holo-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
+                        <div key={`holo-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
+                          {set.title}
+                        </div>,
                         ...set.entries.map((entry) => renderEntry(entry)),
                       ]);
                     }
@@ -3855,6 +3861,9 @@ function CardsContent() {
                         setIndex > 0 ? (
                           <div key={`altarts-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
+                        <div key={`altarts-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
+                          {set.title}
+                        </div>,
                         ...set.entries.map((entry) => renderEntry(entry)),
                       ]);
                     }
@@ -3986,6 +3995,9 @@ function CardsContent() {
                         setIndex > 0 ? (
                           <div key={`boys-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
+                        <div key={`boys-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
+                          {set.title}
+                        </div>,
                         ...set.entries.map((entry) => renderEntry(entry)),
                       ]);
                     }
@@ -4042,7 +4054,7 @@ function CardsContent() {
             {codexSubTab === "badges" && (
           <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
             <p className="text-white/50 text-sm mb-6">
-              Collect achievements by completing each set in the Codex (discover all 6 cards for a movie).
+              Collect achievements by completing each set in the Codex (discover all cards for a movie).
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {winners.map((w) => {

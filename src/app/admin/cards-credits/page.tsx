@@ -273,6 +273,8 @@ export default function AdminCardsCreditsPage() {
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
+  const [addAllCreditsInput, setAddAllCreditsInput] = useState("");
+  const [addAllCreditsLoading, setAddAllCreditsLoading] = useState(false);
   const [packForm, setPackForm] = useState<{
     name: string;
     imageUrl: string;
@@ -946,6 +948,42 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
+  async function handleAddCreditsToAll(e: React.FormEvent) {
+    e.preventDefault();
+    if (addAllCreditsLoading) return;
+    const val = parseInt(addAllCreditsInput, 10);
+    if (isNaN(val) || val < 0) {
+      setError("Enter a valid non-negative number");
+      return;
+    }
+    setAddAllCreditsLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/credits/add-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: val }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (selectedUserId) {
+          const balRes = await fetch(`/api/credits?userId=${encodeURIComponent(selectedUserId)}`);
+          if (balRes.ok) {
+            const d = await balRes.json();
+            setCreditBalance(typeof d?.balance === "number" ? d.balance : 0);
+          }
+        }
+        setAddAllCreditsInput("");
+      } else {
+        setError(data.error || "Failed to add credits to all users");
+      }
+    } catch {
+      setError("Failed to add credits to all users");
+    } finally {
+      setAddAllCreditsLoading(false);
+    }
+  }
+
   async function handleSetCredits(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedUserId || savingCredits) return;
@@ -1515,6 +1553,29 @@ export default function AdminCardsCreditsPage() {
             </div>
           </form>
         )}
+        <div className="border-t border-white/[0.06] pt-4 mt-4">
+          <p className="text-white/40 text-sm mb-3">Add the same amount of credits to every user.</p>
+          <form onSubmit={handleAddCreditsToAll} className="flex gap-3 flex-wrap items-end">
+            <div>
+              <label className="block text-xs text-white/40 mb-1">Credits to add</label>
+              <input
+                type="number"
+                min={0}
+                value={addAllCreditsInput}
+                onChange={(e) => setAddAllCreditsInput(e.target.value)}
+                className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 w-32"
+                placeholder="0"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={addAllCreditsLoading}
+              className="px-5 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer"
+            >
+              {addAllCreditsLoading ? "Adding..." : "Add credits to all users"}
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Manage Card Pool */}

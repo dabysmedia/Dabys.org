@@ -860,7 +860,7 @@ export default function WinnerDetailPage() {
               <>
                 <p className="text-sm text-white/50 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
                   {winnerCollection.completed ? (
-                    <span className="text-amber-400 font-medium">Complete! All 6 collected.</span>
+                    <span className="text-amber-400 font-medium">Complete! All {winnerCollection.poolEntries.length} collected.</span>
                   ) : (
                     <>Discovered {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length}</>
                   )}

@@ -625,11 +625,9 @@ export function tradeUp(
   return { success: true, card: newCard };
 }
 
-/** Character pool entries for a movie (tmdbId). Up to 6. */
+/** Character pool entries for a movie (tmdbId). Returns all entries so sets with more than 6 cards and newly added cards are fully represented. */
 export function getPoolEntriesForMovie(tmdbId: number): CharacterPortrayal[] {
-  return getCharacterPool()
-    .filter((c) => c.movieTmdbId === tmdbId && c.profilePath?.trim())
-    .slice(0, 6);
+  return getCharacterPool().filter((c) => c.movieTmdbId === tmdbId && c.profilePath?.trim());
 }
 
 /** Distinct characterIds the user owns for a given movie. */
@@ -663,12 +661,12 @@ export function getUserCodexCharacterIdsForMovie(userId: string, tmdbId: number)
   return result;
 }
 
-/** True if user has discovered all 6 slots for the winner's movie in the codex (badge = codex completion). */
+/** True if user has discovered all slots for the winner's movie in the codex (badge = codex completion). Works for sets of any size. */
 export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
-  if (pool.length < 6) return false;
+  if (pool.length === 0) return false;
   const discovered = getUserCodexCharacterIdsForMovie(userId, winner.tmdbId);
   const required = new Set(pool.map((c) => c.altArtOfCharacterId ?? c.characterId));
   for (const id of required) {
@@ -677,12 +675,12 @@ export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   return true;
 }
 
-/** True if user owns all 6 pool characterIds for the winner's movie, each as foil. */
+/** True if user owns all pool characterIds for the winner's movie, each as foil. Works for sets of any size. */
 export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
-  if (pool.length < 6) return false;
+  if (pool.length === 0) return false;
   const ownedFoil = getUserCollectedFoilCharacterIdsForMovie(userId, winner.tmdbId);
   const required = new Set(pool.map((c) => c.characterId));
   for (const id of required) {
@@ -691,13 +689,13 @@ export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean
   return true;
 }
 
-/** Winner IDs for which the user has collected all 6 cards. */
+/** Winner IDs for which the user has collected the full set (all codex slots for that movie). */
 export function getCompletedWinnerIds(userId: string): string[] {
   const winners = getWinners().filter((w) => w.tmdbId);
   return winners.filter((w) => hasCompletedMovie(userId, w.id)).map((w) => w.id);
 }
 
-/** Winner IDs for which the user has collected all 6 cards in foil (Holo set). */
+/** Winner IDs for which the user has collected the full set in foil (Holo set). */
 export function getCompletedHoloWinnerIds(userId: string): string[] {
   const winners = getWinners().filter((w) => w.tmdbId);
   return winners.filter((w) => hasCompletedMovieHolo(userId, w.id)).map((w) => w.id);

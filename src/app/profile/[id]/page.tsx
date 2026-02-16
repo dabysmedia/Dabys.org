@@ -27,6 +27,7 @@ interface FeaturedCard {
   id: string;
   rarity: string;
   isFoil: boolean;
+  isAltArt?: boolean;
   actorName: string;
   characterName: string;
   movieTitle: string;
@@ -971,7 +972,7 @@ export default function ProfilePage() {
           <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium mb-4">Achievements</h3>
           {completedBadges.length === 0 ? (
             <p className="text-sm text-white/40">
-              No badges yet. Complete card sets in the Codex (discover all 6 cards for a movie) or buy badges in the Shop.
+              No badges yet. Complete card sets in the Codex (discover all cards for a movie) or buy badges in the Shop.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">

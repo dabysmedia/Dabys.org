@@ -10,6 +10,8 @@ import {
   getWeeks,
   getWatchlist,
   getCodexUnlockedCharacterIds,
+  getCodexUnlockedHoloCharacterIds,
+  getCodexUnlockedAltArtCharacterIds,
   getCharacterPool,
 } from "@/lib/data";
 import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
@@ -198,32 +200,120 @@ export async function GET(
 
   const watchlist = getWatchlist(id);
 
-  // Codex cards: discovered entries from character pool (not inventory)
-  const codexCharacterIds = getCodexUnlockedCharacterIds(id);
+  // Codex cards: discovered entries (regular, holo, alt-art) for picker and featured resolution
+  const regularIds = getCodexUnlockedCharacterIds(id);
+  const holoIds = getCodexUnlockedHoloCharacterIds(id);
+  const altArtIds = getCodexUnlockedAltArtCharacterIds(id);
   const pool = getCharacterPool();
   const poolById = new Map(pool.map((e) => [e.characterId, e]));
-  const codexCharacterIdsSet = new Set(codexCharacterIds);
-  const codexCards = codexCharacterIds
-    .map((charId) => poolById.get(charId))
-    .filter((e): e is NonNullable<typeof e> => e != null)
-    .map((e) => ({
-      id: e.characterId,
-      rarity: e.rarity,
-      isFoil: false,
-      actorName: e.actorName ?? "",
-      characterName: e.characterName ?? "",
-      movieTitle: e.movieTitle ?? "",
-      profilePath: e.profilePath ?? "",
-      cardType: e.cardType,
-    }));
 
-  // Featured cards: subset of codex by profile.featuredCardIds (codex character IDs), order preserved, max 6
-  const featuredIds = (profile.featuredCardIds ?? []).filter((charId) => codexCharacterIdsSet.has(charId)).slice(0, 6);
-  const featuredCards = featuredIds
-    .map((charId) => poolById.get(charId))
-    .filter((e): e is NonNullable<typeof e> => e != null)
-    .map((e) => ({
-      id: e.characterId,
+  type CodexCardItem = {
+    id: string;
+    rarity: string;
+    isFoil: boolean;
+    isAltArt?: boolean;
+    actorName: string;
+    characterName: string;
+    movieTitle: string;
+    profilePath: string;
+    cardType?: string;
+  };
+
+  const codexCards: CodexCardItem[] = [];
+  const validFeaturedIds = new Set<string>();
+
+  for (const charId of regularIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      codexCards.push({
+        id: e.characterId,
+        rarity: e.rarity,
+        isFoil: false,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+      validFeaturedIds.add(e.characterId);
+    }
+  }
+  for (const charId of holoIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      const slotId = `holo:${e.characterId}`;
+      codexCards.push({
+        id: slotId,
+        rarity: e.rarity,
+        isFoil: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+      validFeaturedIds.add(slotId);
+    }
+  }
+  for (const charId of altArtIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      const slotId = `altart:${e.characterId}`;
+      codexCards.push({
+        id: slotId,
+        rarity: e.rarity,
+        isFoil: false,
+        isAltArt: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+      validFeaturedIds.add(slotId);
+    }
+  }
+
+  // Featured cards: resolve profile.featuredCardIds (plain charId = regular, holo:charId = holo, altart:charId = alt-art), order preserved, max 6
+  const featuredIds = (profile.featuredCardIds ?? [])
+    .filter((slotId) => validFeaturedIds.has(slotId))
+    .slice(0, 6);
+  const featuredCards: CodexCardItem[] = featuredIds.map((slotId) => {
+    if (slotId.startsWith("holo:")) {
+      const charId = slotId.slice(5);
+      const e = poolById.get(charId);
+      if (!e) return null;
+      return {
+        id: slotId,
+        rarity: e.rarity,
+        isFoil: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      };
+    }
+    if (slotId.startsWith("altart:")) {
+      const charId = slotId.slice(7);
+      const e = poolById.get(charId);
+      if (!e) return null;
+      return {
+        id: slotId,
+        rarity: e.rarity,
+        isFoil: false,
+        isAltArt: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      };
+    }
+    const e = poolById.get(slotId);
+    if (!e) return null;
+    return {
+      id: slotId,
       rarity: e.rarity,
       isFoil: false,
       actorName: e.actorName ?? "",
@@ -231,7 +321,8 @@ export async function GET(
       movieTitle: e.movieTitle ?? "",
       profilePath: e.profilePath ?? "",
       cardType: e.cardType,
-    }));
+    };
+  }).filter((e): e is CodexCardItem => e != null);
 
   // Completed badges (winner-based + Holo) + purchased movie badges + standalone purchased badges
   const completedWinnerIds = getCompletedWinnerIds(id);

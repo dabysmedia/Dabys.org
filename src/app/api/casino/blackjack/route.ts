@@ -229,6 +229,8 @@ export async function POST(request: Request) {
         result,
         payout,
       });
+    } else if (result === "push") {
+      addCredits(userId, session.bet, "casino_blackjack_push", { bet: session.bet });
     }
     removeBlackjackSession(userId);
 
@@ -240,9 +242,9 @@ export async function POST(request: Request) {
       playerValue: playerVal,
       dealerValue: dealerVal,
       result,
-      payout,
+      payout: result === "push" ? session.bet : payout,
       newBalance: getCredits(userId),
-      netChange: payout - session.bet,
+      netChange: result === "push" ? 0 : payout - session.bet,
     });
   }
 
