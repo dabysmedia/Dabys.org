@@ -408,6 +408,12 @@ export interface CreditSettings {
   votesReceivedPerVote: number;
   rating: number;
   comment: number;
+  /** Quicksell (vendor) credits per rarity. Legendary is always 0 (not vendorable). */
+  quicksellUncommon: number;
+  quicksellRare: number;
+  quicksellEpic: number;
+  /** Credits given when epic→legendary trade-up fails (67% chance). */
+  tradeUpLegendaryFailureCredits: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -417,6 +423,10 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   votesReceivedPerVote: 50,
   rating: 25,
   comment: 25,
+  quicksellUncommon: 5,
+  quicksellRare: 20,
+  quicksellEpic: 80,
+  tradeUpLegendaryFailureCredits: 100,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -429,6 +439,10 @@ function getCreditSettingsRaw(): CreditSettings {
       votesReceivedPerVote: typeof raw.votesReceivedPerVote === "number" ? raw.votesReceivedPerVote : DEFAULT_CREDIT_SETTINGS.votesReceivedPerVote,
       rating: typeof raw.rating === "number" ? raw.rating : DEFAULT_CREDIT_SETTINGS.rating,
       comment: typeof raw.comment === "number" ? raw.comment : DEFAULT_CREDIT_SETTINGS.comment,
+      quicksellUncommon: typeof raw.quicksellUncommon === "number" ? raw.quicksellUncommon : DEFAULT_CREDIT_SETTINGS.quicksellUncommon,
+      quicksellRare: typeof raw.quicksellRare === "number" ? raw.quicksellRare : DEFAULT_CREDIT_SETTINGS.quicksellRare,
+      quicksellEpic: typeof raw.quicksellEpic === "number" ? raw.quicksellEpic : DEFAULT_CREDIT_SETTINGS.quicksellEpic,
+      tradeUpLegendaryFailureCredits: typeof raw.tradeUpLegendaryFailureCredits === "number" ? raw.tradeUpLegendaryFailureCredits : DEFAULT_CREDIT_SETTINGS.tradeUpLegendaryFailureCredits,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };

@@ -85,20 +85,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-70851-9353",
-    "rarity": "legendary",
-    "isFoil": false,
-    "actorName": "Jack Black",
-    "characterName": "Nacho",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771124956878-dnur8oo",
-    "acquiredAt": "2026-02-15T03:09:16.878Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-10959-1858",
     "rarity": "legendary",
     "isFoil": false,
@@ -603,20 +589,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-57415-9353",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "César Barrón",
-    "characterName": "Ramses",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "/api/uploads/1770878289605-xrroo6.jpg",
-    "cardType": "actor",
-    "id": "card-1771125510870-diz0g9u",
-    "acquiredAt": "2026-02-15T03:18:30.870Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1245-152601",
     "rarity": "rare",
     "isFoil": false,
@@ -645,17 +617,17 @@
   },
   {
     "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
     "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
     "cardType": "actor",
-    "id": "card-1771125510872-c1ooz73",
-    "acquiredAt": "2026-02-15T03:18:30.872Z"
+    "id": "card-1771125510873-e5g6qbp",
+    "acquiredAt": "2026-02-15T03:18:30.873Z"
   },
   {
     "userId": "2",
@@ -668,7 +640,49 @@
     "movieTmdbId": 111,
     "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
     "cardType": "actor",
-    "id": "card-1771125510873-e5g6qbp",
-    "acquiredAt": "2026-02-15T03:18:30.873Z"
+    "id": "card-1771200013132-c5uydwo",
+    "acquiredAt": "2026-02-16T00:00:13.132Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1245-24428",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Natasha Romanoff / Black Widow",
+    "movieTitle": "The Avengers",
+    "movieTmdbId": 24428,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "cardType": "actor",
+    "id": "card-1771200013133-0860d6m",
+    "acquiredAt": "2026-02-16T00:00:13.133Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1245-152601",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Samantha (voice)",
+    "movieTitle": "Her",
+    "movieTmdbId": 152601,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "cardType": "actor",
+    "id": "card-1771200013134-h84ipif",
+    "acquiredAt": "2026-02-16T00:00:13.134Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1245-24428",
+    "rarity": "rare",
+    "isFoil": false,
+    "actorName": "Scarlett Johansson",
+    "characterName": "Natasha Romanoff / Black Widow",
+    "movieTitle": "The Avengers",
+    "movieTmdbId": 24428,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
+    "cardType": "actor",
+    "id": "card-1771200075143-w2y8sq3",
+    "acquiredAt": "2026-02-16T00:01:15.143Z"
   }
 ]

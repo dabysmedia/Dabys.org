@@ -8,6 +8,7 @@ import {
   deductCredits,
   getCredits,
   addCredits,
+  getCreditSettings,
   getOwnedLegendarySlotIds,
   migrateCommonToUncommon,
   getCards,
@@ -585,9 +586,9 @@ export function tradeUp(
 
   if (giveCredits) {
     for (const c of selected) removeCard(c.id);
-    const CREDITS_REWARD = 100;
-    addCredits(userId, CREDITS_REWARD, "trade_up_epic", { source: "epic_trade_up" });
-    return { success: true, credits: CREDITS_REWARD };
+    const credits = getCreditSettings().tradeUpLegendaryFailureCredits;
+    addCredits(userId, credits, "trade_up_epic", { source: "epic_trade_up" });
+    return { success: true, credits };
   }
 
   const pool = getCharacterPool()

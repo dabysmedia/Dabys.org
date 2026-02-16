@@ -55,9 +55,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const cardRarity = card.rarity;
   removeCard(cardId);
   addStardust(userId, amount);
   const balance = getStardust(userId);
+
+  // Track quest progress: disenchant_holo
+  const { recordQuestProgress } = await import("@/lib/quests");
+  recordQuestProgress(userId, "disenchant_holo", { rarity: cardRarity as "uncommon" | "rare" | "epic" | "legendary" });
 
   return NextResponse.json({ balance, dustReceived: amount });
 }

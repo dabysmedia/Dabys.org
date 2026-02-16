@@ -54,3 +54,6 @@ src/data/characterPool.json
 src/data/packs.json
 .cursor/debug.log
 src/data/winners.json
+src/data/creditSettings.json
+src/data/dailyQuests.json
+src/data/questSettings.json

@@ -113,6 +113,10 @@ export async function POST(request: Request) {
     addCodexUnlockBoys(userId, characterId);
   }
 
+  // Track quest progress: upload_codex
+  const { recordQuestProgress } = await import("@/lib/quests");
+  recordQuestProgress(userId, "upload_codex");
+
   return NextResponse.json({
     ok: true,
     characterId,

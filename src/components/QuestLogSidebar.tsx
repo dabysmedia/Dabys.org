@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 const TCG_TRACKED_KEY = "tcg-tracked-winner-ids";
@@ -14,14 +14,44 @@ interface PinnedProgressItem {
   entries: { characterName: string; actorName: string; owned: boolean }[];
 }
 
+interface DailyQuestInstance {
+  questType: string;
+  rarity?: string;
+  completed: boolean;
+  claimed: boolean;
+  reward: number;
+  rewardType: string;
+  label: string;
+  description: string;
+}
+
 interface QuestLogSidebarProps {
   currentUserId: string;
 }
+
+const RARITY_COLORS: Record<string, string> = {
+  uncommon: "text-green-400",
+  rare: "text-blue-400",
+  epic: "text-purple-400",
+  legendary: "text-amber-400",
+};
+
+const RARITY_BG: Record<string, string> = {
+  uncommon: "bg-green-400/10 border-green-400/20",
+  rare: "bg-blue-400/10 border-blue-400/20",
+  epic: "bg-purple-400/10 border-purple-400/20",
+  legendary: "bg-amber-400/10 border-amber-400/20",
+};
 
 export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [open, setOpen] = useState(false);
   const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
   const [pinnedProgress, setPinnedProgress] = useState<PinnedProgressItem[]>([]);
+  const [dailyQuests, setDailyQuests] = useState<DailyQuestInstance[]>([]);
+  const [questDate, setQuestDate] = useState<string>("");
+  const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
+  const [claimingAll, setClaimingAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
 
   // Sync tracked IDs from localStorage (same key as cards page)
   useEffect(() => {
@@ -96,11 +126,101 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     };
   }, [currentUserId, trackedWinnerIds]);
 
+  // Fetch daily quests
+  const fetchQuests = useCallback(() => {
+    if (!currentUserId) return;
+    fetch(`/api/quests?userId=${encodeURIComponent(currentUserId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.quests) {
+          setDailyQuests(data.quests);
+          setQuestDate(data.date || "");
+        }
+      })
+      .catch(() => {});
+  }, [currentUserId]);
+
+  // When quest log is first opened, complete the daily login quest (server no-ops if already completed)
+  useEffect(() => {
+    if (!open || !currentUserId) return;
+    fetch("/api/quests/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: currentUserId, questType: "login" }),
+    })
+      .then(() => fetchQuests())
+      .catch(() => {});
+  }, [open, currentUserId, fetchQuests]);
+
+  useEffect(() => {
+    fetchQuests();
+    // Poll every 10 seconds for live updates
+    const interval = setInterval(fetchQuests, 10000);
+    // Also refresh on window focus
+    const onFocus = () => fetchQuests();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [fetchQuests]);
+
   function unpinWinner(winnerId: string) {
     const next = trackedWinnerIds.filter((id) => id !== winnerId);
     setTrackedWinnerIds(next);
     localStorage.setItem(TCG_TRACKED_KEY, JSON.stringify(next));
   }
+
+  async function claimReward(questIndex: number) {
+    setClaimingIndex(questIndex);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, questIndex }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchQuests();
+        const delta = (data.reward ?? 0) + (data.allCompleteBonus ?? 0);
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingIndex(null);
+    }
+  }
+
+  async function claimAllRewards() {
+    setClaimingAll(true);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, claimAll: true }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchQuests();
+        const delta = (data.totalReward ?? 0) + (data.allCompleteBonus ?? 0);
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingAll(false);
+    }
+  }
+
+  const completedCount = dailyQuests.filter((q) => q.completed).length;
+  const totalCount = dailyQuests.length;
+  const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length;
+  const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
   return (
     <>
@@ -111,33 +231,41 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
           className="fixed left-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)] hidden md:flex"
           aria-label="Open quest log"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            />
-          </svg>
+          <div className="relative">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            {claimableCount > 0 && (
+              <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-black flex items-center justify-center animate-pulse">
+                {claimableCount}
+              </span>
+            )}
+          </div>
         </button>
       )}
 
       <aside
-        className={`fixed left-0 z-50 w-72 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out hidden md:block ${
+        className={`fixed left-0 z-50 w-80 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out hidden md:block ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ top: "var(--header-height)", height: "calc(100vh - var(--header-height))" }}
         aria-label="Quest log"
       >
         <div className="flex flex-col h-full">
+          {/* Header */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
             <h2 className="text-sm font-semibold text-white/70 uppercase tracking-widest">
-              Quest log
+              Quest Log
             </h2>
             <button
               type="button"
@@ -156,74 +284,250 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
               </svg>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-autocomplete py-2">
-            {pinnedProgress.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-white/40 text-center">No quests yet.</p>
-            ) : (
-              <ul className="space-y-0.5">
-                {pinnedProgress.map((p) => (
-                  <li key={p.winnerId} className="group relative">
-                    <Link
-                      href={`/winners/${p.winnerId}`}
-                      className="flex flex-col gap-0.5 px-4 py-3 hover:bg-white/[0.04] transition-colors"
-                    >
-                      <span className="text-sm font-medium text-white/80 truncate">
-                        {p.movieTitle || "Movie"}
+
+          {/* Tabs */}
+          <div className="flex border-b border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setActiveTab("quests")}
+              className={`flex-1 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
+                activeTab === "quests"
+                  ? "text-amber-400 border-b-2 border-amber-400/60"
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Daily Quests
+              {claimableCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
+                  {claimableCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("collection")}
+              className={`flex-1 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors cursor-pointer ${
+                activeTab === "collection"
+                  ? "text-purple-400 border-b-2 border-purple-400/60"
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Collection
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto scrollbar-autocomplete">
+            {/* ─── DAILY QUESTS TAB ─── */}
+            {activeTab === "quests" && (
+              <div className="py-3">
+                {/* Progress summary */}
+                {dailyQuests.length > 0 && (
+                  <div className="px-4 mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] text-white/40 uppercase tracking-wider">
+                        {questDate ? `${questDate}` : "Today"}
                       </span>
-                      <span
-                        className={`text-xs ${p.completed ? "text-amber-400" : "text-white/50"}`}
-                      >
-                        {p.completed ? "✓ Complete" : `${p.owned}/${p.total} cards`}
+                      <span className="text-[10px] text-white/50">
+                        {completedCount}/{totalCount} complete
                       </span>
-                    </Link>
-                    {p.entries.length > 0 && (
-                      <div className="px-4 pb-2 pt-0 max-h-0 overflow-hidden group-hover:max-h-40 group-hover:overflow-y-auto transition-[max-height] duration-200 ease-out">
-                        <ul className="space-y-1 border-t border-white/10 pt-2 mt-0">
-                          {p.entries.map((e, i) => (
-                            <li key={i} className="flex items-center gap-1.5 text-[10px]">
-                              <span
-                                className={e.owned ? "text-amber-400" : "text-white/30"}
-                                aria-hidden
-                              >
-                                {e.owned ? "✓" : "—"}
-                              </span>
-                              <span
-                                className={`truncate flex-1 ${e.owned ? "text-white/70" : "text-white/40"}`}
-                              >
-                                {e.characterName}
-                                {e.actorName ? ` (${e.actorName})` : ""}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                        style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Claim All button */}
+                {claimableCount > 1 && (
+                  <div className="px-4 mb-2">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        unpinWinner(p.winnerId);
-                      }}
-                      className="absolute top-2 right-4 w-6 h-6 rounded flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove from quest log"
+                      onClick={claimAllRewards}
+                      disabled={claimingAll}
+                      className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-400/20 border border-amber-400/30 text-amber-400 text-xs font-medium hover:from-amber-500/30 hover:to-amber-400/30 transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
+                      {claimingAll ? (
+                        <span className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                      ) : (
+                        `Claim All (${claimableCount} rewards)`
+                      )}
                     </button>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                )}
+
+                {dailyQuests.length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-white/40 text-center">
+                    Loading quests...
+                  </p>
+                ) : (
+                  <ul className="space-y-1 px-2">
+                    {dailyQuests.map((quest, idx) => {
+                      const isClaimable = quest.completed && !quest.claimed;
+                      const isClaiming = claimingIndex === idx;
+
+                      return (
+                        <li
+                          key={idx}
+                          className={`relative rounded-xl border transition-all duration-200 ${
+                            quest.claimed
+                              ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                              : isClaimable
+                              ? "border-amber-400/20 bg-amber-400/[0.04]"
+                              : "border-white/[0.06] bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 px-3 py-2.5">
+                            {/* Status icon */}
+                            <div className="flex-shrink-0 mt-0.5">
+                              {quest.claimed ? (
+                                <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                                  <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                              ) : quest.completed ? (
+                                <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center animate-pulse">
+                                  <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
+                                  </svg>
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border border-white/10 bg-white/[0.03]" />
+                              )}
+                            </div>
+
+                            {/* Quest info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-medium truncate ${quest.claimed ? "text-white/40 line-through" : quest.completed ? "text-white/90" : "text-white/70"}`}>
+                                  {quest.label}
+                                </span>
+                              </div>
+                              {quest.rarity && (
+                                <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded border mt-1 inline-block ${RARITY_BG[quest.rarity] || ""} ${RARITY_COLORS[quest.rarity] || "text-white/50"}`}>
+                                  {quest.rarity.charAt(0).toUpperCase() + quest.rarity.slice(1)}
+                                </span>
+                              )}
+                              <p className="text-[10px] text-white/35 mt-0.5 truncate">{quest.description}</p>
+                            </div>
+
+                            {/* Reward / Claim button */}
+                            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                              <span className="text-[10px] text-amber-400/80 font-medium whitespace-nowrap">
+                                +{quest.reward} {quest.rewardType === "stardust" ? "SD" : "cr"}
+                              </span>
+                              {isClaimable && (
+                                <button
+                                  type="button"
+                                  onClick={() => claimReward(idx)}
+                                  disabled={isClaiming}
+                                  className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-400 text-[10px] font-semibold hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                >
+                                  {isClaiming ? (
+                                    <span className="inline-block w-2.5 h-2.5 border border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                                  ) : (
+                                    "Claim"
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {/* All quests done message */}
+                {allClaimed && dailyQuests.length > 0 && (
+                  <div className="px-4 py-4 text-center">
+                    <p className="text-xs text-green-400/70">All daily quests completed!</p>
+                    <p className="text-[10px] text-amber-400/60 mt-1">Completion bonus awarded</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">New quests at midnight UTC</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─── COLLECTION TAB ─── */}
+            {activeTab === "collection" && (
+              <div className="py-2">
+                {pinnedProgress.length === 0 ? (
+                  <p className="px-4 py-6 text-sm text-white/40 text-center">
+                    No collection quests pinned.
+                    <br />
+                    <span className="text-[10px] text-white/25">Pin movies from the winners page to track here.</span>
+                  </p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {pinnedProgress.map((p) => (
+                      <li key={p.winnerId} className="group relative">
+                        <Link
+                          href={`/winners/${p.winnerId}`}
+                          className="flex flex-col gap-0.5 px-4 py-3 hover:bg-white/[0.04] transition-colors"
+                        >
+                          <span className="text-sm font-medium text-white/80 truncate">
+                            {p.movieTitle || "Movie"}
+                          </span>
+                          <span
+                            className={`text-xs ${p.completed ? "text-amber-400" : "text-white/50"}`}
+                          >
+                            {p.completed ? "Complete" : `${p.owned}/${p.total} cards`}
+                          </span>
+                        </Link>
+                        {p.entries.length > 0 && (
+                          <div className="px-4 pb-2 pt-0 max-h-0 overflow-hidden group-hover:max-h-40 group-hover:overflow-y-auto transition-[max-height] duration-200 ease-out">
+                            <ul className="space-y-1 border-t border-white/10 pt-2 mt-0">
+                              {p.entries.map((e, i) => (
+                                <li key={i} className="flex items-center gap-1.5 text-[10px]">
+                                  <span
+                                    className={e.owned ? "text-amber-400" : "text-white/30"}
+                                    aria-hidden
+                                  >
+                                    {e.owned ? "+" : "-"}
+                                  </span>
+                                  <span
+                                    className={`truncate flex-1 ${e.owned ? "text-white/70" : "text-white/40"}`}
+                                  >
+                                    {e.characterName}
+                                    {e.actorName ? ` (${e.actorName})` : ""}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            unpinWinner(p.winnerId);
+                          }}
+                          className="absolute top-2 right-4 w-6 h-6 rounded flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove from quest log"
+                        >
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </div>
         </div>

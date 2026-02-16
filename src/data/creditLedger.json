@@ -260,5 +260,77 @@
       "weekId": "10"
     },
     "createdAt": "2026-02-15T19:11:18.243Z"
+  },
+  {
+    "id": "cl-1771198534970-62oeuqw",
+    "userId": "2",
+    "amount": 250,
+    "reason": "trade_up_epic",
+    "metadata": {
+      "source": "epic_trade_up"
+    },
+    "createdAt": "2026-02-15T23:35:34.970Z"
+  },
+  {
+    "id": "cl-1771198698504-f9a0mxf",
+    "userId": "2",
+    "amount": 100,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771125510872-c1ooz73"
+      ]
+    },
+    "createdAt": "2026-02-15T23:38:18.504Z"
+  },
+  {
+    "id": "cl-1771200009296-ng4hc8q",
+    "userId": "2",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-16T00:00:09.296Z"
+  },
+  {
+    "id": "cl-1771200013123-c8oy5em",
+    "userId": "2",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-16T00:00:13.123Z"
+  },
+  {
+    "id": "cl-1771200030143-wgcnjtb",
+    "userId": "2",
+    "amount": 80,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "claimedCount": 2
+    },
+    "createdAt": "2026-02-16T00:00:30.142Z"
+  },
+  {
+    "id": "cl-1771200084837-q2zoilo",
+    "userId": "2",
+    "amount": 65,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "claimedCount": 2
+    },
+    "createdAt": "2026-02-16T00:01:24.837Z"
+  },
+  {
+    "id": "cl-1771200102821-cj7i2rb",
+    "userId": "2",
+    "amount": 30,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "questIndex": 3
+    },
+    "createdAt": "2026-02-16T00:01:42.821Z"
   }
 ]

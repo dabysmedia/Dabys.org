@@ -1,0 +1,20 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { resetAllDailyQuests } from "@/lib/quests";
+
+async function requireAdmin() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("dabys_admin");
+  if (session?.value !== "authenticated") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
+export async function POST() {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
+  resetAllDailyQuests();
+  return NextResponse.json({ success: true });
+}

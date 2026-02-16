@@ -82,6 +82,12 @@ export default function LoginPage() {
     const toStore = { id: user.id, name: user.name };
     localStorage.setItem("dabys_user", JSON.stringify(toStore));
     localStorage.setItem(LAST_LOGIN_KEY, JSON.stringify(toStore));
+    // Track daily quest: login
+    fetch("/api/quests/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.id, questType: "login" }),
+    }).catch(() => {});
     router.replace("/");
   }
 

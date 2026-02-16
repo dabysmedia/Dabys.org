@@ -52,5 +52,9 @@ export async function POST(request: Request) {
     );
   }
 
+  // Track quest progress: marketplace_request
+  const { recordQuestProgress } = await import("@/lib/quests");
+  recordQuestProgress(body.userId, "marketplace_request");
+
   return NextResponse.json({ order: result.order });
 }

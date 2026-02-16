@@ -2,6 +2,11 @@
   "submission": 50,
   "vote": 50,
   "submissionWin": 250,
+  "votesReceivedPerVote": 50,
   "rating": 25,
-  "comment": 25
+  "comment": 25,
+  "quicksellUncommon": 5,
+  "quicksellRare": 20,
+  "quicksellEpic": 100,
+  "tradeUpLegendaryFailureCredits": 250
 }
