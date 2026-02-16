@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getFeedback, deleteFeedback, addCredits, getCreditSettings } from "@/lib/data";
+import { getFeedback, deleteFeedback, addCredits, getCreditSettings, addNotification } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -30,6 +30,12 @@ export async function PATCH(
     const amount = getCreditSettings().feedbackAccepted;
     if (amount > 0) {
       addCredits(entry.userId, amount, "feedback_accepted", { feedbackId: id });
+      addNotification({
+        type: "feedback_accepted",
+        targetUserId: entry.userId,
+        message: `Your feedback was accepted. You received ${amount} credits.`,
+        meta: { feedbackId: id, amount },
+      });
     }
   }
   const ok = deleteFeedback(id);

@@ -44,6 +44,16 @@ const TYPE_CONFIG: Record<
   trade_received: { icon: "📩", accent: "#f59e0b", label: "Trade Offer" },
   trade_accepted: { icon: "✅", accent: "#10b981", label: "Trade Accepted" },
   trade_denied: { icon: "❌", accent: "#ef4444", label: "Trade Denied" },
+  feedback_accepted: {
+    icon: "✨",
+    accent: "#10b981",
+    label: "Feedback Accepted",
+  },
+  credits_awarded: {
+    icon: "💰",
+    accent: "#3b82f6",
+    label: "Credits Awarded",
+  },
   new_set_added: { icon: "🃏", accent: "#8b5cf6", label: "New Set" },
   free_packs_restock: {
     icon: "🎁",
@@ -59,6 +69,8 @@ const PERSONAL_TYPES = new Set([
   "trade_received",
   "trade_accepted",
   "trade_denied",
+  "feedback_accepted",
+  "credits_awarded",
   "free_packs_restock",
 ]);
 
