@@ -640,6 +640,30 @@ export function getPackPurchasesInWindow(
   ).length;
 }
 
+/** Oldest pack_purchase createdAt in the current rolling window (for interval restock). Returns ISO string or null. */
+export function getPackOldestPurchaseInWindow(
+  userId: string,
+  packId: string,
+  options: PackRestockOptions
+): string | null {
+  const intervalHours = typeof options.restockIntervalHours === "number" && options.restockIntervalHours > 0
+    ? options.restockIntervalHours
+    : undefined;
+  if (intervalHours == null) return null;
+  const ledger = getCreditLedgerRaw();
+  const since = new Date(Date.now() - intervalHours * 60 * 60 * 1000).toISOString();
+  const entries = ledger.filter(
+    (e) =>
+      e.userId === userId &&
+      e.reason === "pack_purchase" &&
+      e.metadata &&
+      (e.metadata as { packId?: string }).packId === packId &&
+      e.createdAt >= since
+  );
+  if (entries.length === 0) return null;
+  return entries.reduce((min, e) => (e.createdAt < min ? e.createdAt : min), entries[0].createdAt);
+}
+
 /** @deprecated Use getPackPurchasesInWindow. Number of times the user has purchased this pack in the current restock period (UTC day or rolling hours). */
 export function getPackPurchasesCountToday(
   userId: string,

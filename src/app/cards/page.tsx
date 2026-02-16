@@ -412,8 +412,21 @@ interface Pack {
   maxPurchasesPerDay?: number;
   restockIntervalHours?: number;
   purchasesToday?: number;
+  nextRestockAt?: string;
   discounted?: boolean;
   discountPercent?: number;
+}
+
+function formatRestockCountdown(nextRestockAt: string, now: number): string {
+  const end = new Date(nextRestockAt).getTime();
+  const left = Math.max(0, end - now);
+  if (left <= 0) return "Resets soon";
+  const h = Math.floor(left / (60 * 60 * 1000));
+  const m = Math.floor((left % (60 * 60 * 1000)) / (60 * 1000));
+  const s = Math.floor((left % (60 * 1000)) / 1000);
+  if (h > 0) return `Resets in ${h}h ${m}m`;
+  if (m > 0) return `Resets in ${m}m ${s}s`;
+  return `Resets in ${s}s`;
 }
 
 interface ShopItem {
@@ -583,6 +596,13 @@ function CardsContent() {
       (p.purchasesToday ?? 0) >= p.maxPurchasesPerDay
   );
   const midnightCountdown = useMidnightUTCCountdown(tab === "store" && hasSoldOutPack);
+  const [restockCountdownNow, setRestockCountdownNow] = useState(() => Date.now());
+  const hasIntervalRestock = packs.some((p) => p.nextRestockAt != null);
+  useEffect(() => {
+    if (tab !== "store" || !hasIntervalRestock) return;
+    const t = setInterval(() => setRestockCountdownNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [tab, hasIntervalRestock]);
 
   function setPAPFailureErrorAndFade(message: string) {
     if (alchemyErrorClearTimeoutRef.current) {
@@ -2021,8 +2041,8 @@ function CardsContent() {
                           </>
                         ) : atDailyLimit ? (
                           <span className="text-white/50">
-                            {typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0
-                              ? "Limit reached (resets in rolling window)"
+                            {pack.nextRestockAt
+                              ? formatRestockCountdown(pack.nextRestockAt, restockCountdownNow)
                               : `Resets in ${midnightCountdown}`}
                           </span>
                         ) : poolCount < pack.cardsPerPack ? (
@@ -4062,15 +4082,23 @@ function CardsContent() {
               Collect achievements by completing each set in the Codex (discover all cards for a movie).
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {winners.map((w) => {
+              {[...winners]
+                .sort((a, b) => {
+                  const aDone = completedBadgeWinnerIds.has(a.id);
+                  const bDone = completedBadgeWinnerIds.has(b.id);
+                  if (aDone && !bDone) return -1;
+                  if (!aDone && bDone) return 1;
+                  return 0;
+                })
+                .map((w) => {
                 const collected = completedBadgeWinnerIds.has(w.id);
                 return (
                   <Link
                     key={w.id}
                     href={`/winners/${w.id}`}
-                    className={`block rounded-xl overflow-hidden border transition-all hover:ring-2 hover:ring-amber-400/40 ${
+                    className={`block rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${
                       collected
-                        ? "border-amber-500/40 bg-amber-500/10"
+                        ? "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30"
                         : "border-white/10 bg-white/[0.04]"
                     }`}
                     style={{ aspectRatio: "1" }}
@@ -4107,9 +4135,14 @@ function CardsContent() {
                         </span>
                       )}
                       {collected && (
-                        <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center" aria-hidden>
-                          <svg className="w-3 h-3 text-amber-950" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                        </span>
+                        <>
+                          <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center" aria-hidden>
+                            <svg className="w-3 h-3 text-amber-950" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          </span>
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm" aria-hidden>
+                            Complete
+                          </span>
+                        </>
                       )}
                     </div>
                   </Link>
