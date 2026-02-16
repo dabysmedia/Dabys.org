@@ -101,14 +101,16 @@
   {
     "id": "8",
     "weekId": "10",
-    "movieTitle": "Bosomy Tae-hee",
-    "posterUrl": "https://image.tmdb.org/t/p/w500/aKoGgpKn6N04kWQp03LSAweN3dn.jpg",
-    "letterboxdUrl": "https://letterboxd.com/film/bosomy-tae-hee-2020/",
+    "movieTitle": "The Housemaid",
+    "posterUrl": "https://image.tmdb.org/t/p/w500/mJGFduBPAzTKzOeCeTjBBOxnalB.jpg",
+    "letterboxdUrl": "https://letterboxd.com/film/the-housemaid-2025/",
     "submittedBy": "Alex",
-    "publishedAt": "2026-02-15T19:11:18.242Z",
-    "tmdbId": 679057,
-    "year": "2020",
-    "overview": "Cha-wook and Min-joo are about to get married. Cha-wook proposes a couple trip to Yong-woo’s wife who is his junior at work. Ji-yeon doesn’t like uncomfortable trips but Yong-woo’s boss forced her. The trip has been decided and Cha-wook plans to stay with Ji-yeon, who he’s been eyeing. Min-joo is forced to join. On the day of the trip, Min-joo finally tells everything to Ji-yeon and Ji-yeon decides to use Cha-wook.",
-    "backdropUrl": "https://image.tmdb.org/t/p/w1280/v7eMYrYpcTJORioMKMgjnzyewWH.jpg"
+    "publishedAt": "2026-02-15T00:00:00.000Z",
+    "tmdbId": 1368166,
+    "year": "2025",
+    "overview": "Trying to escape her past, Millie Calloway accepts a job as a live-in housemaid for the wealthy Nina and Andrew Winchester. But what begins as a dream job quickly unravels into something far more dangerous—a sexy, seductive game of secrets, scandal, and power.",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tNONILTe9OJz574KZWaLze4v6RC.jpg",
+    "trailerUrl": "https://www.youtube.com/embed/BqWH0KDqm3U",
+    "runtime": 131
   }
 ]

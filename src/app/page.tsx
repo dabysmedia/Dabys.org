@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BadgePill } from "@/components/BadgePill";
+import { ThemeWheelSection } from "@/components/ThemeWheelSection";
 
 interface User { id: string; name: string; }
 interface Week { id: string; theme: string; phase: string; startedAt: string; }
@@ -938,6 +939,13 @@ export default function HomePage() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* Theme Wheel — only visible when winner is published */}
+            {phase === "winner_published" && user && (
+              <div className="mt-8">
+                <ThemeWheelSection user={user} />
               </div>
             )}
           </div>

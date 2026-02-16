@@ -1,1 +1,76 @@
-{}
+{
+  "8": [
+    {
+      "characterId": "actor-115440-1368166",
+      "tmdbPersonId": 115440,
+      "actorName": "Sydney Sweeney",
+      "characterName": "Millie Calloway",
+      "profilePath": "https://image.tmdb.org/t/p/w500/qYiaSl0Eb7G3VaxOg8PxExCFwon.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 40.207,
+      "rarity": "legendary",
+      "cardType": "actor"
+    },
+    {
+      "characterId": "actor-71070-1368166",
+      "tmdbPersonId": 71070,
+      "actorName": "Amanda Seyfried",
+      "characterName": "Nina Winchester",
+      "profilePath": "https://image.tmdb.org/t/p/w500/gtBUIpZ3dvLpOMIVORxE6sHSyZj.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 10.5336,
+      "rarity": "uncommon",
+      "cardType": "actor"
+    },
+    {
+      "characterId": "actor-1855143-1368166",
+      "tmdbPersonId": 1855143,
+      "actorName": "Brandon Sklenar",
+      "characterName": "Andrew Winchester",
+      "profilePath": "https://image.tmdb.org/t/p/w500/1f1NMi0IYL5p1BHVyV9IoYcwzJt.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 9.1535,
+      "rarity": "uncommon",
+      "cardType": "actor"
+    },
+    {
+      "characterId": "actor-2349355-1368166",
+      "tmdbPersonId": 2349355,
+      "actorName": "Michele Morrone",
+      "characterName": "Enzo",
+      "profilePath": "https://image.tmdb.org/t/p/w500/saKjzGAuw8Fiutlv9LweLjAti0Z.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 8.4702,
+      "rarity": "uncommon",
+      "cardType": "actor"
+    },
+    {
+      "characterId": "actor-4342318-1368166",
+      "tmdbPersonId": 4342318,
+      "actorName": "Indiana Elle",
+      "characterName": "Cece Winchester",
+      "profilePath": "https://image.tmdb.org/t/p/w500/d9Bk6BWiPmWIx1Ssx36GqReFjQJ.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 3.5341,
+      "rarity": "uncommon",
+      "cardType": "actor"
+    },
+    {
+      "characterId": "actor-2035942-1368166",
+      "tmdbPersonId": 2035942,
+      "actorName": "Sarah Cooper",
+      "characterName": "Pam",
+      "profilePath": "https://image.tmdb.org/t/p/w500/85Ys0z9F6LCi0ZloiW2X6WHbZ1i.jpg",
+      "movieTmdbId": 1368166,
+      "movieTitle": "The Housemaid",
+      "popularity": 0.9961,
+      "rarity": "uncommon",
+      "cardType": "actor"
+    }
+  ]
+}

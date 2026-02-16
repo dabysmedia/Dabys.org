@@ -26,8 +26,13 @@ const SLOT_COLORS = [
 ];
 
 const CARD_GAP = 8;
-// Left buffer repeats so centering winner 0 doesn't use positive offset (no missing tile on left)
-const BUFFER_REPEATS = 4;
+const LOOP_CYCLES = 4; // Rendered cycles — strip loops seamlessly via modulo
+
+function wrapOffset(offset: number, cycleWidth: number): number {
+  if (cycleWidth <= 0) return offset;
+  const w = offset % cycleWidth;
+  return w > 0 ? w - cycleWidth : w;
+}
 
 // Card size from viewport; min 118px so "Comedy"/"Animation" don't truncate
 function getCardMetrics(viewportWidth: number) {
@@ -159,16 +164,16 @@ export default function WheelPage() {
     return () => ro.disconnect();
   }, []);
 
-  // Smooth scroll to center winner (for manual sets — short glide). Use buffer so offset <= 0.
+  // Smooth scroll to center winner (for manual sets — short glide). Loop strip.
   const scrollToWinner = useCallback((entries: string[], winnerIndex: number) => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     const { step, width } = cardMetricsRef.current;
     const n = entries.length;
     const vw = getViewportWidth();
-    const logicalIndex = BUFFER_REPEATS * n + winnerIndex;
-    const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
-    const stripWidth = (BUFFER_REPEATS + 12) * n * step;
-    const targetOffset = Math.max(-(stripWidth - vw), Math.min(0, raw));
+    const cycleWidth = n * step;
+    const centerX = vw / 2 - width / 2;
+    const rawTarget = -(winnerIndex * step) + centerX;
+    const targetOffset = wrapOffset(rawTarget, cycleWidth);
     const start = offsetRef.current;
     const duration = 2000;
     const startTime = performance.now();
@@ -178,8 +183,9 @@ export default function WheelPage() {
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
       const current = start + (targetOffset - start) * eased;
-      offsetRef.current = current;
-      setStripOffset(current);
+      const wrapped = wrapOffset(current, cycleWidth);
+      offsetRef.current = wrapped;
+      setStripOffset(wrapped);
       if (progress < 1) animFrameRef.current = requestAnimationFrame(animate);
       else {
         playReveal();
@@ -195,7 +201,7 @@ export default function WheelPage() {
     animFrameRef.current = requestAnimationFrame(animate);
   }, [getViewportWidth]);
 
-  // Case-style spin: strip scrolls then eases to stop with winner centered
+  // Case-style spin: strip scrolls with seamless loop, eases to stop with winner centered
   const playSpin = useCallback((
     entries: string[],
     winnerIndex: number,
@@ -208,9 +214,10 @@ export default function WheelPage() {
     const { step, width } = cardMetricsRef.current;
     const n = entries.length;
     const vw = getViewportWidth();
+    const cycleWidth = n * step;
+    const centerX = vw / 2 - width / 2;
     const totalCards = (fullSpins + 1) * n + winnerIndex;
-    const startOffset = 0;
-    const endOffset = -(totalCards * step) + (vw / 2 - width / 2);
+    const endOffset = -(totalCards * step) + centerX;
     const start = offsetRef.current;
     const startTime = performance.now() - timeOffset;
 
@@ -219,8 +226,9 @@ export default function WheelPage() {
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
       const current = start + (endOffset - start) * eased;
-      offsetRef.current = current;
-      setStripOffset(current);
+      const wrapped = wrapOffset(current, cycleWidth);
+      offsetRef.current = wrapped;
+      setStripOffset(wrapped);
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
@@ -232,8 +240,9 @@ export default function WheelPage() {
     setSpinning(true);
     setShowResult(false);
     setResult(null);
-    offsetRef.current = startOffset;
-    setStripOffset(startOffset);
+    const startWrapped = wrapOffset(0, cycleWidth);
+    offsetRef.current = startWrapped;
+    setStripOffset(startWrapped);
     animFrameRef.current = requestAnimationFrame(animate);
   }, [getViewportWidth]);
 
@@ -264,10 +273,10 @@ export default function WheelPage() {
                 const vw = viewportRef.current.clientWidth;
                 const { step, width } = cardMetricsRef.current;
                 const n = data.entries.length;
-                const logicalIndex = BUFFER_REPEATS * n + data.winnerIndex;
-                const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
-                const stripWidth = (BUFFER_REPEATS + 12) * n * step;
-                const snap = Math.max(-(stripWidth - vw), Math.min(0, raw));
+                const cycleWidth = n * step;
+                const centerX = vw / 2 - width / 2;
+                const raw = -(data.winnerIndex * step) + centerX;
+                const snap = wrapOffset(raw, cycleWidth);
                 offsetRef.current = snap;
                 setStripOffset(snap);
               }
@@ -279,10 +288,10 @@ export default function WheelPage() {
               const vw = viewportRef.current.clientWidth;
               const { step, width } = cardMetricsRef.current;
               const n = data.entries.length;
-              const logicalIndex = BUFFER_REPEATS * n + data.winnerIndex;
-              const raw = -(logicalIndex * step) + (vw / 2 - width / 2);
-              const stripWidth = (BUFFER_REPEATS + 12) * n * step;
-              const snap = Math.max(-(stripWidth - vw), Math.min(0, raw));
+              const cycleWidth = n * step;
+              const centerX = vw / 2 - width / 2;
+              const raw = -(data.winnerIndex * step) + centerX;
+              const snap = wrapOffset(raw, cycleWidth);
               offsetRef.current = snap;
               setStripOffset(snap);
             }
@@ -379,8 +388,7 @@ export default function WheelPage() {
     };
   }, [wheel, spinning, playSpin, scrollToWinner]);
 
-  // Repeats: buffer (left) + main; centering uses buffer so offset stays <= 0 (no empty left)
-  const stripRepeats = wheel && wheel.entries.length > 0 ? BUFFER_REPEATS + 12 : 0;
+  const stripRepeats = wheel && wheel.entries.length > 0 ? LOOP_CYCLES : 0;
   const stripEntries = wheel ? Array.from({ length: stripRepeats }, () => wheel.entries).flat() : [];
   const n = wheel?.entries.length ?? 0;
 
@@ -394,10 +402,10 @@ export default function WheelPage() {
     }
     const vw = viewportRef.current.clientWidth;
     const { step, width } = cardMetrics;
-    const logicalIndex = BUFFER_REPEATS * n + wheel.winnerIndex;
-    const rawSnap = -(logicalIndex * step) + (vw / 2 - width / 2);
-    const stripWidth = stripRepeats * n * step;
-    const snap = Math.max(-(stripWidth - vw), Math.min(0, rawSnap));
+    const cycleWidth = n * step;
+    const centerX = vw / 2 - width / 2;
+    const rawSnap = -(wheel.winnerIndex * step) + centerX;
+    const snap = wrapOffset(rawSnap, cycleWidth);
     offsetRef.current = snap;
     setStripOffset(snap);
   }, [wheel?.lastResult, wheel?.winnerIndex, spinning, cardMetrics, n, stripRepeats]);

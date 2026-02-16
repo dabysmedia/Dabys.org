@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import StatusIndicator from "@/components/StatusIndicator";
+import { usePresence } from "@/hooks/usePresence";
+import { usePresenceStatus } from "@/hooks/usePresenceStatus";
 
 // Web Audio API — credit gain chime (no assets)
 let creditsAudioContext: AudioContext | null = null;
@@ -91,6 +94,10 @@ export default function Header() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminUser, setAdminUser] = useState<{ id: string; name: string } | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Presence / online status
+  const { goOffline } = usePresence(user?.id ?? null);
+  const { getStatus } = usePresenceStatus();
 
   const refreshCredits = (delta?: number) => {
     const cached = localStorage.getItem("dabys_user");
@@ -227,6 +234,7 @@ export default function Header() {
   }, [user?.id]);
 
   const logout = () => {
+    goOffline();
     localStorage.removeItem("dabys_user");
     router.replace("/login");
   };
@@ -288,7 +296,6 @@ export default function Header() {
     );
   }
 
-  const isWheel = pathname === "/wheel";
   const isStats = pathname === "/stats";
   const isCards = pathname === "/cards";
   const isCasino = pathname === "/casino";
@@ -328,17 +335,20 @@ export default function Header() {
       onClick={isNarrow ? closeMenu : undefined}
       className="flex items-center gap-3 hover:opacity-80 transition-opacity"
     >
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20"
-        />
-      ) : (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <div className="relative">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20"
+          />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-purple-500/20">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <StatusIndicator status={getStatus(user.id)} size="sm" />
+      </div>
       <span className="text-white/70 text-sm font-medium">{user.name}</span>
     </Link>
   );
@@ -376,17 +386,20 @@ export default function Header() {
       onClick={closeMenu}
       className="flex items-center gap-4 min-h-[48px] py-3 hover:opacity-80 transition-opacity touch-manipulation"
     >
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt=""
-          className="w-10 h-10 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-purple-500/20">
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <div className="relative">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="w-10 h-10 rounded-full object-cover border border-white/10 shadow-lg shadow-purple-500/20"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-purple-500/20">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <StatusIndicator status={getStatus(user.id)} size="sm" />
+      </div>
       <span className="text-white/70 text-base font-medium">{user.name}</span>
     </Link>
   );
@@ -424,7 +437,6 @@ export default function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-5 sm:gap-6">
-              <NavLink href="/wheel" label="Wheel" active={isWheel} />
               <NavLink href="/stats" label="Stats" active={isStats} />
               <NavLink href="/casino" label="Casino" active={isCasino} />
               <NavLink href="/cards" label="TCG" active={isCards} dot={hasIncomingTrade} />
@@ -480,13 +492,6 @@ export default function Header() {
               </button>
             </div>
             <nav className="flex flex-col gap-2 p-4 overflow-y-auto">
-              <Link
-                href="/wheel"
-                onClick={closeMenu}
-                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isWheel ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
-              >
-                Wheel
-              </Link>
               <Link
                 href="/stats"
                 onClick={closeMenu}

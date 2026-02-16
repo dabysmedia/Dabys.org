@@ -10,16 +10,6 @@ function getScrollKey(pathname: string): string {
   return `${SCROLL_KEY_PREFIX}${pathname || "/"}`;
 }
 
-function saveScrollPosition(pathname: string): void {
-  if (typeof window === "undefined") return;
-  const y = window.scrollY ?? document.documentElement.scrollTop ?? 0;
-  try {
-    sessionStorage.setItem(getScrollKey(pathname), String(y));
-  } catch {
-    /* ignore */
-  }
-}
-
 function getSavedScrollPosition(pathname: string): number | null {
   if (typeof window === "undefined") return null;
   try {
@@ -32,9 +22,20 @@ function getSavedScrollPosition(pathname: string): number | null {
   }
 }
 
+const RESTORE_GRACE_MS = 400;
+
 export function ScrollRestoration() {
   const pathname = usePathname();
   const prevPathnameRef = useRef<string | null>(null);
+  const lastScrollByPathRef = useRef<Record<string, number>>({});
+  const restoreTimeByPathRef = useRef<Record<string, number>>({});
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    if (typeof history !== "undefined" && "scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+  }, []);
 
   // Restore scroll position when navigating to a page
   useLayoutEffect(() => {
@@ -43,29 +44,62 @@ export function ScrollRestoration() {
     prevPathnameRef.current = current;
 
     if (prev !== null && prev !== current) {
-      saveScrollPosition(prev);
+      const y = lastScrollByPathRef.current[prev];
+      if (typeof y === "number" && y >= 0) {
+        try {
+          sessionStorage.setItem(getScrollKey(prev), String(y));
+        } catch {
+          /* ignore */
+        }
+      }
     }
 
     const saved = getSavedScrollPosition(current);
     if (saved !== null) {
-      const id = requestAnimationFrame(() => {
-        window.scrollTo(0, saved);
+      restoreTimeByPathRef.current[current] = Date.now();
+      const apply = () => window.scrollTo(0, saved);
+      document.body.classList.add("dabys-scroll-restoring");
+      apply();
+      let raf2: number | undefined;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const raf1 = requestAnimationFrame(() => {
+        apply();
+        raf2 = requestAnimationFrame(() => {
+          document.body.classList.remove("dabys-scroll-restoring");
+          apply();
+          timeoutId = setTimeout(() => {
+            apply();
+          }, 50);
+        });
       });
-      return () => cancelAnimationFrame(id);
+      return () => {
+        document.body.classList.remove("dabys-scroll-restoring");
+        cancelAnimationFrame(raf1);
+        if (raf2 !== undefined) cancelAnimationFrame(raf2);
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+      };
     }
   }, [pathname]);
 
-  // Save scroll position while scrolling (throttled)
+  // Track scroll per pathname and persist (throttled); skip persisting right after restore so we don't save "bottom"
   useEffect(() => {
     const current = pathname ?? "/";
 
     let throttleId: ReturnType<typeof setTimeout> | null = null;
 
     function onScroll() {
+      const y = window.scrollY ?? document.documentElement.scrollTop ?? 0;
+      lastScrollByPathRef.current[current] = y;
+      const lastRestore = restoreTimeByPathRef.current[current];
+      if (lastRestore != null && Date.now() - lastRestore < RESTORE_GRACE_MS) return;
       if (throttleId !== null) return;
       throttleId = setTimeout(() => {
         throttleId = null;
-        saveScrollPosition(current);
+        try {
+          sessionStorage.setItem(getScrollKey(current), String(lastScrollByPathRef.current[current] ?? 0));
+        } catch {
+          /* ignore */
+        }
       }, SAVE_THROTTLE_MS);
     }
 

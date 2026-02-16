@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { FriendsSidebar } from "./FriendsSidebar";
 import { QuestLogSidebar } from "./QuestLogSidebar";
 
@@ -10,6 +11,7 @@ interface User {
 }
 
 export function AppWithFriends({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -21,10 +23,12 @@ export function AppWithFriends({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const isAdmin = pathname?.startsWith("/admin");
+
   return (
     <>
       {children}
-      {user && (
+      {user && !isAdmin && (
         <>
           <QuestLogSidebar currentUserId={user.id} />
           <FriendsSidebar currentUserId={user.id} />

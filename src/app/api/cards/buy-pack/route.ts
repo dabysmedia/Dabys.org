@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { buyPack } from "@/lib/cards";
-import { getPacks } from "@/lib/data";
+import { buyPack, getCompletedWinnerIds } from "@/lib/cards";
+import { getPacks, getUsers, getWinners, addActivity } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 
 export async function POST(request: Request) {
@@ -14,6 +14,9 @@ export async function POST(request: Request) {
   if (!packId) {
     return NextResponse.json({ error: "packId is required" }, { status: 400 });
   }
+
+  // Snapshot completed sets BEFORE opening the pack
+  const completedBefore = new Set(getCompletedWinnerIds(body.userId));
 
   const result = buyPack(body.userId, packId);
   if (!result.success) {
@@ -33,6 +36,41 @@ export async function POST(request: Request) {
   if (result.cards) {
     for (const card of result.cards) {
       recordQuestProgress(body.userId, "find_rarity_in_pack", { rarity: card.rarity });
+    }
+  }
+
+  // --- Activity logging ---
+  const users = getUsers();
+  const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
+
+  if (result.cards) {
+    // Log legendary pulls
+    for (const card of result.cards) {
+      if (card.rarity === "legendary") {
+        addActivity({
+          type: "legendary_pull",
+          userId: body.userId,
+          userName,
+          message: `pulled a Legendary — ${card.characterName || card.actorName}`,
+          meta: { cardId: card.id, characterName: card.characterName, actorName: card.actorName, movieTitle: card.movieTitle },
+        });
+      }
+    }
+
+    // Check for newly completed sets
+    const completedAfter = getCompletedWinnerIds(body.userId);
+    const winners = getWinners();
+    for (const winnerId of completedAfter) {
+      if (!completedBefore.has(winnerId)) {
+        const winner = winners.find((w) => w.id === winnerId);
+        addActivity({
+          type: "set_complete",
+          userId: body.userId,
+          userName,
+          message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          meta: { winnerId, movieTitle: winner?.movieTitle },
+        });
+      }
     }
   }
 

@@ -41,5 +41,16 @@
       "year": "2022",
       "letterboxdUrl": "https://letterboxd.com/film/the-batman-2022/"
     }
+  },
+  {
+    "userId": "3",
+    "avatarUrl": "",
+    "bannerUrl": "",
+    "bio": "",
+    "skipsUsed": 1,
+    "bonusSkips": 0,
+    "featuredCardIds": [],
+    "purchasedBadgeWinnerIds": [],
+    "purchasedBadges": []
   }
 ]

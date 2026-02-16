@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tradeUp } from "@/lib/cards";
-import { getCardById } from "@/lib/data";
+import { getCardById, getUsers, addActivity } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import type { Rarity } from "@/lib/quests";
 
@@ -32,6 +32,19 @@ export async function POST(request: Request) {
 
   // Track quest progress: trade_up with the input rarity
   recordQuestProgress(body.userId, "trade_up", { rarity: inputRarity });
+
+  // Log legendary pulls from trade-up
+  if (result.card && result.card.rarity === "legendary") {
+    const users = getUsers();
+    const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
+    addActivity({
+      type: "legendary_pull",
+      userId: body.userId,
+      userName,
+      message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
+      meta: { cardId: result.card.id, characterName: result.card.characterName, actorName: result.card.actorName, movieTitle: result.card.movieTitle },
+    });
+  }
 
   return NextResponse.json(
     result.credits != null ? { credits: result.credits } : { card: result.card }

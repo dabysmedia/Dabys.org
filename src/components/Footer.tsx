@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 const DEFAULT_ADMIN_NAMES = ["jerry", "carlos"];
 
 export function Footer() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/admin")) return null;
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");

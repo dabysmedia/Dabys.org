@@ -4,16 +4,15 @@
     "Comedy",
     "Action",
     "Sci-Fi",
-    "Thriller",
     "2000's"
   ],
-  "lastResult": "Thriller",
-  "lastSpunAt": "2026-02-12T00:16:16.904Z",
+  "lastResult": "Sci-Fi",
+  "lastSpunAt": "2026-02-16T08:28:55.450Z",
   "spinning": false,
-  "spinStartedAt": null,
-  "winnerIndex": 4,
-  "fullSpins": null,
-  "duration": null,
-  "lastConfirmedResult": "Thriller",
-  "lastConfirmedAt": "2026-02-12T00:16:24.756Z"
+  "spinStartedAt": "2026-02-16T08:28:55.450Z",
+  "winnerIndex": 3,
+  "fullSpins": 19,
+  "duration": 10000,
+  "lastConfirmedResult": null,
+  "lastConfirmedAt": null
 }

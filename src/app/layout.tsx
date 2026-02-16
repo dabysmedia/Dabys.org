@@ -7,6 +7,7 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import Header from "@/components/Header";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { PwaRegister } from "@/components/PwaRegister";
+import { ActivityToast } from "@/components/ActivityToast";
 
 export const metadata: Metadata = {
   title: "Dabys.org",
@@ -45,6 +46,7 @@ export default function RootLayout({
           {children}
           <Footer />
           <FeedbackButton />
+          <ActivityToast />
         </AppWithFriends>
       </body>
     </html>

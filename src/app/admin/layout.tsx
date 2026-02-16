@@ -293,7 +293,7 @@ export default function AdminLayout({
         </header>
       )}
 
-      {/* Sidebar: full-screen drawer on mobile, sticky on desktop so it scrolls with the page */}
+      {/* Sidebar: full-screen drawer on mobile, fixed full-height on desktop */}
       {isNarrow && mobileMenuOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
@@ -305,25 +305,25 @@ export default function AdminLayout({
         className={
           isNarrow
             ? "flex flex-col flex-1 min-h-0"
-            : "md:flex md:flex-row md:min-h-screen flex-1 min-h-0 md:overflow-y-auto"
+            : "flex flex-row flex-1 min-h-0 md:min-h-screen"
         }
       >
         <aside
-          className={`relative z-10 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl transition-transform duration-200 ease-out flex flex-col ${
+          className={`z-10 border-r border-white/[0.06] bg-white/[0.02] backdrop-blur-xl transition-transform duration-200 ease-out flex flex-col ${
             isNarrow
               ? `fixed top-0 left-0 bottom-0 z-50 w-[min(100%,20rem)] shadow-xl ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`
-              : "w-64 flex-shrink-0 md:sticky md:top-0 md:self-start md:h-screen md:min-h-0"
+              : "w-64 flex-shrink-0 sticky top-0 h-screen self-start"
           }`}
         >
           {sidebarContent}
         </aside>
 
-        {/* Main content: fixed fill below header on mobile; scrolls with page on desktop */}
+        {/* Main content: fixed fill below header on mobile; flows after sidebar on desktop */}
         <main
           className={
             isNarrow
               ? "fixed left-0 right-0 top-12 bottom-0 z-10 flex flex-col min-h-0 overflow-hidden"
-              : "relative z-10 flex-1 min-w-0 md:min-h-screen"
+              : "relative z-10 flex-1 min-w-0 min-h-0 md:min-h-screen overflow-auto"
           }
         >
           <div className={isNarrow ? "flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8" : "w-full max-w-5xl mx-auto px-3 py-4 md:px-8 md:py-8 overflow-x-hidden"}>

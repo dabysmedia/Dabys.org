@@ -20,6 +20,12 @@ body {
   min-height: 100vh;
 }
 
+/* Hide content for one frame during scroll restore to prevent wrong-position flash */
+body.dabys-scroll-restoring {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Dark dropdown options for readability in dark theme */
 select option {
   background: #1a1a24;
@@ -483,4 +489,39 @@ select option {
 }
 .codex-inspect-exit {
   animation: codex-inspect-exit 0.2s ease-in forwards;
+}
+
+/* ── Presence status pulse (online green dot) ─────────── */
+@keyframes status-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(52, 211, 153, 0);
+  }
+}
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* ── Activity toast notifications ─────────────────────── */
+@keyframes activityToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes activityToastOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.92);
+  }
 }

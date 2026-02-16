@@ -504,9 +504,6 @@ function CardsContent() {
   const [expandedReceivedTradeId, setExpandedReceivedTradeId] = useState<string | null>(null);
   const [expandedSentTradeId, setExpandedSentTradeId] = useState<string | null>(null);
   const [userAvatarMap, setUserAvatarMap] = useState<Record<string, string>>({});
-  const [badgeLossWarnings, setBadgeLossWarnings] = useState<{ movieTitle: string; isHolo: boolean }[] | null>(null);
-  const [badgeLossOnConfirm, setBadgeLossOnConfirm] = useState<(() => void | Promise<void>) | null>(null);
-  const [badgeLossIsListing, setBadgeLossIsListing] = useState(false);
   const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
   const [stardust, setStardust] = useState(0);
   const [alchemyDisenchantingId, setAlchemyDisenchantingId] = useState<string | null>(null);
@@ -880,7 +877,34 @@ function CardsContent() {
       setTab("inventory");
       setInventorySubTab("quicksell");
     }
-  }, [searchParams]);
+
+    // Deep-link: open trade modal pre-selecting a counterparty
+    const tradeWithId = searchParams.get("tradeWith");
+    if (tradeWithId && user) {
+      setTab("trade");
+      setEditingTradeId(null);
+      setShowTradeModal(true);
+      setTradeStep(1);
+      setTradeOfferedIds(new Set());
+      setTradeRequestedIds(new Set());
+      setTradeOfferedCredits(0);
+      setTradeRequestedCredits(0);
+      setCounterpartyCards([]);
+      setTradeError("");
+      fetch("/api/users?includeProfile=1")
+        .then((r) => r.json())
+        .then((data: UserWithAvatar[]) => {
+          const others = data.filter((u) => u.id !== user.id);
+          setTradeUsers(others);
+          const target = others.find((u) => u.id === tradeWithId);
+          if (target) {
+            setTradeCounterparty(target);
+            setTradeStep(2);
+          }
+        })
+        .catch(() => setTradeUsers([]));
+    }
+  }, [searchParams, user?.id]);
 
   // Restore last selected tab when returning to TCG page
   useEffect(() => {
@@ -1343,35 +1367,6 @@ function CardsContent() {
       }
     } finally {
       setAlchemyPunchingId(null);
-    }
-  }
-
-  async function checkBadgeLossThen(
-    cardIds: string[],
-    action: () => void | Promise<void>,
-    options?: { isListing?: boolean }
-  ) {
-    if (!user || cardIds.length === 0) {
-      await action();
-      return;
-    }
-    const res = await fetch("/api/cards/would-lose-badges", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, cardIds }),
-    });
-    const data = await res.json().catch(() => ({}));
-    const badges: { movieTitle: string; isHolo: boolean }[] = data.badges || [];
-    if (badges.length > 0) {
-      setBadgeLossWarnings(badges);
-      setBadgeLossIsListing(!!options?.isListing);
-      setBadgeLossOnConfirm(() => async () => {
-        await action();
-        setBadgeLossWarnings(null);
-        setBadgeLossOnConfirm(null);
-      });
-    } else {
-      await action();
     }
   }
 
@@ -2515,7 +2510,7 @@ function CardsContent() {
                 </div>
                 {/* Submit button */}
                 <button
-                  onClick={() => checkBadgeLossThen(tradeUpCardIds, handleTradeUp)}
+                  onClick={() => handleTradeUp()}
                   disabled={!canTradeUp || tradingUp}
                   className={`ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                     canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.2)]" : ""
@@ -2767,6 +2762,45 @@ function CardsContent() {
               </div>
             ) : (() => {
               const filtered = filteredInventoryCards;
+
+              /* ── Stacking: group identical cards ── */
+              const stackKeyFn = (c: Card) =>
+                `${c.characterId ?? ""}\x00${c.rarity}\x00${c.isFoil ? "f" : "n"}\x00${c.cardType ?? "actor"}`;
+
+              type DisplayItem =
+                | { kind: "single"; card: Card }
+                | { kind: "stack"; stackKey: string; cards: Card[] };
+
+              function buildDisplayItems(cardList: Card[]): DisplayItem[] {
+                const listedIds = new Set(Array.from(myListedCardIds));
+                const groups = new Map<string, Card[]>();
+                const groupPositions = new Map<string, number>();
+                const result: (DisplayItem | null)[] = [];
+
+                for (const c of cardList) {
+                  if (listedIds.has(c.id!)) {
+                    result.push({ kind: "single", card: c });
+                  } else {
+                    const k = stackKeyFn(c);
+                    if (!groups.has(k)) {
+                      groups.set(k, []);
+                      groupPositions.set(k, result.length);
+                      result.push(null);
+                    }
+                    groups.get(k)!.push(c);
+                  }
+                }
+
+                for (const [k, cards] of groups) {
+                  const idx = groupPositions.get(k)!;
+                  result[idx] = cards.length === 1
+                    ? { kind: "single", card: cards[0] }
+                    : { kind: "stack", stackKey: k, cards };
+                }
+                return result as DisplayItem[];
+              }
+
+              /* ── Single card renderer (unchanged logic) ── */
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
@@ -2833,6 +2867,133 @@ function CardsContent() {
                   </div>
                 );
               };
+
+              /* ── Stack renderer: cascade visual + count ── */
+              const renderStackGroup = (stackKey: string, stackCards: Card[]) => {
+                const benchIdsSet = new Set([
+                  ...tradeUpCardIds,
+                  ...alchemyBenchCardIds,
+                  ...quicksellBenchCardIds,
+                ]);
+                const freeCards = stackCards.filter(c => !benchIdsSet.has(c.id!));
+                const freeCount = freeCards.length;
+
+                if (freeCount === 0) return null;
+
+                const front = freeCards[0];
+                const totalCascadeLayers = Math.min(stackCards.length - 1, 3);
+                const cascadeLayers = Math.min(freeCount - 1, 3);
+
+                const findEligible = (): Card | null => {
+                  for (const c of stackCards) {
+                    if (myListedCardIds.has(c.id!)) continue;
+                    if (inventorySubTab === "alchemy") {
+                      if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return c;
+                    } else if (inventorySubTab === "quicksell") {
+                      if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return c;
+                    } else {
+                      if (c.rarity !== "legendary" && !tradeUpCardIds.includes(c.id!) && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (c.rarity === tradeUpCards[0]?.rarity && (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")))) return c;
+                    }
+                  }
+                  return null;
+                };
+
+                const eligible = findEligible();
+                const canAct = eligible !== null;
+                const isIneligible = (() => {
+                  if (inventorySubTab === "tradeup") return tradeUpCardIds.length > 0 && !canAct;
+                  if (inventorySubTab === "alchemy") return alchemyBenchCardIds.length > 0 && !canAct;
+                  if (inventorySubTab === "quicksell") return quicksellBenchCardIds.length > 0 && !canAct;
+                  return false;
+                })();
+                const anyNew = freeCards.some((c) => c.acquiredAt && (Date.now() - new Date(c.acquiredAt).getTime() < NEW_CARD_DAYS_MS) && c.id && !seenCardIds.has(c.id));
+
+                const handleStackClick = () => {
+                  if (!eligible) {
+                    if (front.rarity === "legendary" && inventorySubTab === "tradeup") {
+                      setLegendaryBlockShown(true);
+                      setTimeout(() => setLegendaryBlockShown(false), 2500);
+                    }
+                    return;
+                  }
+                  if (inventorySubTab === "alchemy") addToAlchemyBench(eligible.id!);
+                  else if (inventorySubTab === "quicksell") addToQuicksellBench(eligible.id!);
+                  else addToTradeUpSlot(eligible.id!);
+                };
+
+                const handleMouseEnter = () => {
+                  for (const c of freeCards) {
+                    const isNew = c.acquiredAt && (Date.now() - new Date(c.acquiredAt).getTime() < NEW_CARD_DAYS_MS);
+                    if (isNew && c.id && !seenCardIds.has(c.id)) markCardSeen(c.id);
+                  }
+                };
+
+                const cascadeOffset = totalCascadeLayers * 3;
+
+                return (
+                  <div
+                    key={stackKey}
+                    className={`relative group/card transition-all duration-200 ${
+                      canAct ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                    } ${front.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${isIneligible ? "opacity-40 grayscale" : ""}`}
+                    style={{ marginBottom: cascadeOffset, marginRight: cascadeOffset }}
+                    onClick={handleStackClick}
+                    onMouseEnter={handleMouseEnter}
+                  >
+                    {/* Cascade shadow layers */}
+                    {Array.from({ length: cascadeLayers }, (_, i) => {
+                      const layer = cascadeLayers - i;
+                      const offset = layer * 3;
+                      const opacity = 0.02 + (i * 0.01);
+                      const borderOpacity = 0.04 + (i * 0.015);
+                      return (
+                        <div
+                          key={i}
+                          className="absolute inset-0 rounded-xl"
+                          style={{
+                            transform: `translate(${offset}px, ${offset}px)`,
+                            background: `rgba(255,255,255,${opacity})`,
+                            border: `1px solid rgba(255,255,255,${borderOpacity})`,
+                            zIndex: i,
+                          }}
+                        />
+                      );
+                    })}
+
+                    {/* Front card */}
+                    <div
+                      className={`relative ${canAct ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}`}
+                      style={{ zIndex: cascadeLayers + 1 }}
+                    >
+                      <CardDisplay card={{ ...front, isAltArt: isAltArtCard(front) }} inCodex={isCardSlotAlreadyInCodex(front)} />
+                    </div>
+
+                    {/* New card dot */}
+                    {anyNew && (
+                      <span
+                        className="absolute top-1 left-1 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                        style={{ zIndex: cascadeLayers + 2 }}
+                        aria-label="New card"
+                      />
+                    )}
+
+                    {/* Stack count badge */}
+                    <div
+                      className="absolute flex items-center justify-center rounded-full bg-black/70 border border-white/20 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                      style={{ top: -8, right: -8 + cascadeOffset, minWidth: 24, height: 24, padding: '0 6px', zIndex: cascadeLayers + 3 }}
+                    >
+                      <span className="text-[11px] font-bold text-white/90 tabular-nums">×{freeCount}</span>
+                    </div>
+                  </div>
+                );
+              };
+
+              /* ── Render a display item (single or stack) ── */
+              const renderDisplayItem = (item: DisplayItem) => {
+                if (item.kind === "stack") return renderStackGroup(item.stackKey, item.cards);
+                return renderCard(item.card);
+              };
+
               const gridClasses = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
               if (filterSort === "type") {
                 const byType = filtered.reduce((acc, c) => {
@@ -2848,7 +3009,7 @@ function CardsContent() {
                       <div key={typeLabel}>
                         <h3 className="text-sm font-medium text-white/70 mb-3">{typeLabel} ({byType[typeLabel].length})</h3>
                         <div className={gridClasses}>
-                          {byType[typeLabel].map(renderCard)}
+                          {buildDisplayItems(byType[typeLabel]).map(renderDisplayItem)}
                         </div>
                       </div>
                     ))}
@@ -2868,7 +3029,7 @@ function CardsContent() {
                       <div key={movieTitle}>
                         <h3 className="text-sm font-medium text-white/70 mb-3">{movieTitle}</h3>
                         <div className={gridClasses}>
-                          {movieCards.map(renderCard)}
+                          {buildDisplayItems(movieCards).map(renderDisplayItem)}
                         </div>
                       </div>
                     ))}
@@ -2877,7 +3038,7 @@ function CardsContent() {
               }
               return (
                 <div className={gridClasses}>
-                  {filtered.map(renderCard)}
+                  {buildDisplayItems(filtered).map(renderDisplayItem)}
                 </div>
               );
             })()}
@@ -3048,7 +3209,7 @@ function CardsContent() {
                             Cancel
                           </button>
                           <button
-                            onClick={() => selectedCard && checkBadgeLossThen([selectedCard.id], handleListCard, { isListing: true })}
+                            onClick={() => selectedCard && handleListCard()}
                             disabled={listing || !listPrice || parseInt(listPrice, 10) < 1}
                             className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer"
                           >
@@ -3549,7 +3710,7 @@ function CardsContent() {
                             </div>
                             <div className="px-4 py-3 bg-black/30 border-t border-white/10 flex flex-wrap gap-2">
                               <button onClick={() => setExpandedReceivedTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/70 text-sm hover:bg-white/10 cursor-pointer">Collapse</button>
-                              <button onClick={() => checkBadgeLossThen(t.requestedCardIds, () => handleAcceptTrade(t.id))} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm hover:bg-green-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "..." : "Accept"}</button>
+                              <button onClick={() => handleAcceptTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-green-500/30 bg-green-500/10 text-green-400 text-sm hover:bg-green-500/15 disabled:opacity-40 cursor-pointer">{tradeActionId === t.id ? "..." : "Accept"}</button>
                               <button onClick={() => openEditTrade(t)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-sm hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer">Edit trade</button>
                               <button onClick={() => handleDenyTrade(t.id)} disabled={tradeActionId === t.id} className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-sm hover:bg-red-500/15 disabled:opacity-40 cursor-pointer">Decline</button>
                             </div>
@@ -4696,7 +4857,7 @@ function CardsContent() {
                         Back
                       </button>
                       <button
-                        onClick={() => checkBadgeLossThen(Array.from(tradeOfferedIds), handleSendTrade)}
+                        onClick={() => handleSendTrade()}
                         disabled={tradeLoading || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
                         className="px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 cursor-pointer"
                       >
@@ -4720,53 +4881,6 @@ function CardsContent() {
           </>
         )}
 
-        {/* Badge loss confirmation modal — frosted glass, red accents */}
-        {badgeLossWarnings != null && badgeLossWarnings.length > 0 && (
-          <>
-            <div
-              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md"
-              onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
-              aria-hidden
-            />
-            <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-red-500/40 bg-white/[0.06] backdrop-blur-xl shadow-2xl shadow-red-950/30 overflow-hidden"
-              role="dialog"
-              aria-label="Badge loss warning"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6">
-                <h3 className="text-lg font-bold text-red-400 mb-2">Lose badge(s)?</h3>
-                <p className="text-sm text-white/60 mb-4">
-                  {badgeLossIsListing
-                    ? "If this card sells, you will lose the following badge(s):"
-                    : "This action will cause you to lose the following badge(s):"}
-                </p>
-                <ul className="space-y-1.5 mb-6">
-                  {badgeLossWarnings.map((b, i) => (
-                    <li key={i} className="text-sm text-white/80 flex items-center gap-2">
-                      {b.isHolo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Holo</span>}
-                      {b.movieTitle}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setBadgeLossWarnings(null); setBadgeLossOnConfirm(null); }}
-                    className="flex-1 px-4 py-2 rounded-lg border border-white/20 bg-white/[0.06] text-white/80 hover:bg-white/[0.08] cursor-pointer backdrop-blur-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => { await badgeLossOnConfirm?.(); }}
-                    className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-500 border border-red-500/30 cursor-pointer shadow-lg shadow-red-950/40"
-                  >
-                    Continue anyway
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
           </div>
       </main>
       </div>

@@ -1,0 +1,15 @@
+[
+  {
+    "type": "trade_complete",
+    "userId": "1",
+    "userName": "Jerry",
+    "message": "completed a trade with Carlos (1 card)",
+    "meta": {
+      "tradeId": "trd-1771230565565-89wvoii",
+      "counterpartyName": "Carlos",
+      "counterpartyUserId": "2"
+    },
+    "id": "act_1771230578534_0wazr4",
+    "timestamp": "2026-02-16T08:29:38.534Z"
+  }
+]

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import StatusIndicator from "@/components/StatusIndicator";
+import { usePresenceStatus } from "@/hooks/usePresenceStatus";
 
 const LAST_LOGIN_KEY = "dabys_last_login";
 
@@ -14,6 +16,7 @@ interface User {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { getStatus } = usePresenceStatus();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -189,19 +192,22 @@ export default function LoginPage() {
             : "border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/15 px-4 py-3"
           }`}
       >
-        {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.name}
-            className={`flex-shrink-0 rounded-full object-cover border-2 border-white/20 transition-colors ${isPrimary ? "w-14 h-14 group-hover:border-purple-400/50" : "w-9 h-9 group-hover:border-white/30"}`}
-          />
-        ) : (
-          <div
-            className={`flex-shrink-0 rounded-full bg-gradient-to-br from-purple-500/90 to-indigo-600/90 flex items-center justify-center text-white font-bold border-2 border-white/20 ${isPrimary ? "w-14 h-14 text-xl group-hover:border-purple-400/50" : "w-9 h-9 text-sm group-hover:border-white/30"}`}
-          >
-            {user.name.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <div className="relative flex-shrink-0">
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.name}
+              className={`rounded-full object-cover border-2 border-white/20 transition-colors ${isPrimary ? "w-14 h-14 group-hover:border-purple-400/50" : "w-9 h-9 group-hover:border-white/30"}`}
+            />
+          ) : (
+            <div
+              className={`rounded-full bg-gradient-to-br from-purple-500/90 to-indigo-600/90 flex items-center justify-center text-white font-bold border-2 border-white/20 ${isPrimary ? "w-14 h-14 text-xl group-hover:border-purple-400/50" : "w-9 h-9 text-sm group-hover:border-white/30"}`}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <StatusIndicator status={getStatus(user.id)} size="sm" />
+        </div>
         <div className="flex-1 text-left min-w-0">
           {isPrimary ? (
             <p className="text-white/95 font-semibold text-lg truncate group-hover:text-white">

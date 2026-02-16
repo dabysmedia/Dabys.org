@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   // Pick a random winner and generate deterministic animation params
   const winnerIndex = Math.floor(Math.random() * wheel.entries.length);
   const winner = wheel.entries[winnerIndex];
-  const fullSpins = 5 + Math.floor(Math.random() * 4); // 5-8 full spins (integer for consistency)
-  const duration = 6000; // Fixed 6s for all clients to stay in sync
+  const fullSpins = 14 + Math.floor(Math.random() * 6); // 14-19 full spins for faster rate
+  const duration = 10000; // 10s total — longer duration, higher spin rate
 
   wheel.spinning = true;
   wheel.spinStartedAt = new Date().toISOString();

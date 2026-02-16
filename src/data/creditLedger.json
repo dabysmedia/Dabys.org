@@ -996,5 +996,37 @@
       "payout": 20
     },
     "createdAt": "2026-02-16T00:43:08.111Z"
+  },
+  {
+    "id": "cl-1771227634286-wpkd1ei",
+    "userId": "2",
+    "amount": 95,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "claimedCount": 3
+    },
+    "createdAt": "2026-02-16T07:40:34.286Z"
+  },
+  {
+    "id": "cl-1771230578533-g7ccisb",
+    "userId": "1",
+    "amount": -23,
+    "reason": "trade",
+    "metadata": {
+      "tradeId": "trd-1771230565565-89wvoii",
+      "direction": "offered"
+    },
+    "createdAt": "2026-02-16T08:29:38.533Z"
+  },
+  {
+    "id": "cl-1771230578534-v7obgvf",
+    "userId": "2",
+    "amount": 23,
+    "reason": "trade",
+    "metadata": {
+      "tradeId": "trd-1771230565565-89wvoii",
+      "direction": "received"
+    },
+    "createdAt": "2026-02-16T08:29:38.534Z"
   }
 ]

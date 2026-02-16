@@ -473,7 +473,7 @@ export interface CreditLedgerEntry {
   createdAt: string;
 }
 
-function getCreditsRaw(): UserCredit[] {
+export function getCreditsRaw(): UserCredit[] {
   try {
     return readJson<UserCredit[]>("credits.json");
   } catch {
@@ -485,7 +485,7 @@ function saveCreditsRaw(credits: UserCredit[]) {
   writeJson("credits.json", credits);
 }
 
-function getCreditLedgerRaw(): CreditLedgerEntry[] {
+export function getCreditLedgerRaw(): CreditLedgerEntry[] {
   try {
     return readJson<CreditLedgerEntry[]>("creditLedger.json");
   } catch {
@@ -731,7 +731,7 @@ export interface StardustEntry {
   updatedAt: string;
 }
 
-function getStardustRaw(): StardustEntry[] {
+export function getStardustRaw(): StardustEntry[] {
   try {
     return readJson<StardustEntry[]>("stardust.json");
   } catch {
@@ -855,7 +855,7 @@ export function migrateCommonToUncommon(): void {
   }
 }
 
-function getCardsRaw(): Card[] {
+export function getCardsRaw(): Card[] {
   try {
     return readJson<Card[]>("cards.json");
   } catch {
@@ -2098,4 +2098,133 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
 
 export function getWipeConfirmWord(): string {
   return WIPE_CONFIRM_WORD;
+}
+
+// ──── Presence / Online Status ─────────────────────────
+export interface PresenceEntry {
+  userId: string;
+  /** ISO timestamp of last heartbeat */
+  lastSeen: string;
+  /** Whether the user explicitly marked themselves as idle (no interaction for 15 min) */
+  idle: boolean;
+}
+
+export function getPresenceRaw(): PresenceEntry[] {
+  try {
+    return readJson<PresenceEntry[]>("presence.json");
+  } catch {
+    return [];
+  }
+}
+
+export function savePresenceRaw(entries: PresenceEntry[]) {
+  writeJson("presence.json", entries);
+}
+
+/**
+ * Update a single user's presence heartbeat.
+ * Creates or updates the entry for this userId.
+ */
+export function upsertPresence(userId: string, idle: boolean): PresenceEntry {
+  const entries = getPresenceRaw();
+  const now = new Date().toISOString();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const entry: PresenceEntry = { userId, lastSeen: now, idle };
+  if (idx >= 0) {
+    entries[idx] = entry;
+  } else {
+    entries.push(entry);
+  }
+  savePresenceRaw(entries);
+  return entry;
+}
+
+/**
+ * Remove a user's presence (on logout / explicit disconnect).
+ */
+export function removePresence(userId: string) {
+  savePresenceRaw(getPresenceRaw().filter((e) => e.userId !== userId));
+}
+
+export type OnlineStatus = "online" | "away" | "offline";
+
+// ──── Activity Feed ─────────────────────────────────────
+export type ActivityType =
+  | "legendary_pull"
+  | "set_complete"
+  | "trade_complete"
+  | "market_sale"
+  | "market_order_filled";
+
+export interface ActivityEntry {
+  id: string;
+  type: ActivityType;
+  /** ISO timestamp */
+  timestamp: string;
+  /** User who triggered the activity */
+  userId: string;
+  userName: string;
+  /** Human-readable message */
+  message: string;
+  /** Extra context (card name, rarity, movie title, etc.) */
+  meta?: Record<string, unknown>;
+}
+
+const MAX_ACTIVITY_ENTRIES = 100;
+
+export function getActivity(): ActivityEntry[] {
+  try {
+    return readJson<ActivityEntry[]>("activity.json");
+  } catch {
+    return [];
+  }
+}
+
+export function getActivitySince(since: string): ActivityEntry[] {
+  const entries = getActivity();
+  const sinceMs = new Date(since).getTime();
+  return entries.filter((e) => new Date(e.timestamp).getTime() > sinceMs);
+}
+
+export function addActivity(
+  entry: Omit<ActivityEntry, "id" | "timestamp">
+): ActivityEntry {
+  const entries = getActivity();
+  const full: ActivityEntry = {
+    ...entry,
+    id: `act_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+  };
+  entries.push(full);
+  // Keep only the latest entries
+  const trimmed = entries.slice(-MAX_ACTIVITY_ENTRIES);
+  writeJson("activity.json", trimmed);
+  return full;
+}
+
+/**
+ * Derive status from a presence entry.
+ * - online: heartbeat within 60s and not idle
+ * - away:   heartbeat within 60s but idle, OR heartbeat 60s-5min old
+ * - offline: heartbeat older than 5 min or missing
+ */
+export function deriveStatus(entry: PresenceEntry | undefined): OnlineStatus {
+  if (!entry) return "offline";
+  const age = Date.now() - new Date(entry.lastSeen).getTime();
+  if (age > 5 * 60_000) return "offline";
+  if (age > 60_000) return "away";
+  if (entry.idle) return "away";
+  return "online";
+}
+
+/**
+ * Get a map of userId → status for all known users.
+ */
+export function getAllPresenceStatuses(): Record<string, OnlineStatus> {
+  const entries = getPresenceRaw();
+  const result: Record<string, OnlineStatus> = {};
+  for (const e of entries) {
+    result[e.userId] = deriveStatus(e);
+  }
+  return result;
 }

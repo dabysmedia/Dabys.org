@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 const TCG_TRACKED_KEY = "tcg-tracked-winner-ids";
+const HOVER_SLEEP_KEY = "dabys-sidebar-hover-sleep";
 
 interface PinnedProgressItem {
   winnerId: string;
@@ -43,8 +44,18 @@ const RARITY_BG: Record<string, string> = {
   legendary: "bg-amber-400/10 border-amber-400/20",
 };
 
+function readHoverSleep(): boolean {
+  try {
+    return localStorage.getItem(HOVER_SLEEP_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [open, setOpen] = useState(false);
+  const [hoverMode, setHoverMode] = useState(false);
+  const [sleep, setSleep] = useState(readHoverSleep);
   const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
   const [pinnedProgress, setPinnedProgress] = useState<PinnedProgressItem[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuestInstance[]>([]);
@@ -53,7 +64,14 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [claimingAll, setClaimingAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
 
-  // Sync tracked IDs from localStorage (same key as cards page)
+  // Sync sleep preference from other sidebar (or same) when toggled
+  useEffect(() => {
+    const onSleepChange = () => setSleep(readHoverSleep);
+    window.addEventListener("dabys-sidebar-sleep-change", onSleepChange);
+    return () => window.removeEventListener("dabys-sidebar-sleep-change", onSleepChange);
+  }, []);
+
+  // Sync tracked IDs from localStorage (same key as winners page)
   useEffect(() => {
     const read = () => {
       try {
@@ -67,9 +85,11 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     read();
     window.addEventListener("storage", read);
     window.addEventListener("focus", read);
+    window.addEventListener("dabys-quest-collection-update", read);
     return () => {
       window.removeEventListener("storage", read);
       window.removeEventListener("focus", read);
+      window.removeEventListener("dabys-quest-collection-update", read);
     };
   }, []);
 
@@ -177,6 +197,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     const next = trackedWinnerIds.filter((id) => id !== winnerId);
     setTrackedWinnerIds(next);
     localStorage.setItem(TCG_TRACKED_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("dabys-quest-collection-update"));
   }
 
   async function claimReward(questIndex: number) {
@@ -230,55 +251,103 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
+  function openByHover() {
+    if (!sleep) {
+      setOpen(true);
+      setHoverMode(true);
+    }
+  }
+
+  function openByClick() {
+    setOpen(true);
+    setHoverMode(false);
+  }
+
+  function handleMouseLeave() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f7f2eb56-19f7-42ad-9389-2b8c37b5549',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuestLogSidebar.tsx:handleMouseLeave',message:'handleMouseLeave fired',data:{hoverMode,willClose:hoverMode},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (hoverMode) {
+      setOpen(false);
+      setHoverMode(false);
+    }
+  }
+
+  function toggleSleep() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f7f2eb56-19f7-42ad-9389-2b8c37b5549',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuestLogSidebar.tsx:toggleSleep',message:'toggleSleep called',data:{sleep,next:!sleep},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    const next = !sleep;
+    setSleep(next);
+    localStorage.setItem(HOVER_SLEEP_KEY, String(next));
+    window.dispatchEvent(new CustomEvent("dabys-sidebar-sleep-change"));
+  }
+
   return (
     <>
-      {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-40 w-10 h-24 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
-          aria-label="Open quest log"
-        >
-          <div className="relative">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-            {claimableCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-black flex items-center justify-center animate-pulse">
-                {claimableCount}
-              </span>
-            )}
-          </div>
-        </button>
-      )}
-
-      {open && (
+      {/* Overlay — only when opened by click, not hover */}
+      {open && !hoverMode && (
         <div
           className="fixed inset-0 z-[45] bg-black/40 backdrop-blur-[2px] md:bg-transparent md:backdrop-blur-none"
           style={{ top: "var(--header-height)" }}
           aria-hidden
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/f7f2eb56-19f7-42ad-9389-2b8c37b5549',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuestLogSidebar.tsx:overlay-click',message:'Overlay clicked (closing sidebar)',data:{open,hoverMode},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            setOpen(false);
+          }}
         />
       )}
 
-      <aside
-        className={`fixed left-0 z-50 w-80 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-        style={{ top: "var(--header-height)", height: "calc(100vh - var(--header-height))" }}
-        aria-label="Quest log"
+      {/* Hover zone — tab + sidebar; z-50 so it sits above overlay (z-45) and receives clicks */}
+      <div
+        className="fixed left-0 z-50 flex flex-col overflow-hidden transition-[width] duration-200 ease-out"
+        style={{
+          top: "var(--header-height)",
+          height: "calc(100vh - var(--header-height))",
+          width: open ? "20rem" : "2.5rem",
+        }}
+        onMouseLeave={handleMouseLeave}
       >
-        <div className="flex flex-col h-full">
+        {!open && (
+          <button
+            type="button"
+            onClick={openByClick}
+            onMouseEnter={() => !open && openByHover()}
+            className="absolute left-0 top-[22%] -translate-y-1/2 w-10 h-24 flex items-center justify-center rounded-r-xl border border-l-0 border-white/10 bg-white/[0.03] backdrop-blur-xl text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-all cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.08)]"
+            aria-label="Open quest log"
+          >
+            <div className="relative">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                />
+              </svg>
+              {claimableCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-black flex items-center justify-center animate-pulse">
+                  {claimableCount}
+                </span>
+              )}
+            </div>
+          </button>
+        )}
+
+        <aside
+          className={`absolute left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw] border-r border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] transition-transform duration-200 ease-out ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
+          aria-label="Quest log"
+        >
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
             <h2 className="text-sm font-semibold text-white/70 uppercase tracking-widest">
@@ -286,7 +355,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
             </h2>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); setHoverMode(false); }}
               className="p-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors cursor-pointer"
               aria-label="Close quest log"
             >
@@ -547,8 +616,32 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
               </div>
             )}
           </div>
+
+          {/* Toggle mouseover — disable hover-to-expand when checked */}
+          <div
+            className="flex-shrink-0 px-3 py-2 border-t border-white/[0.06]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sleep}
+              onClick={toggleSleep}
+              className="flex items-center gap-2 cursor-pointer text-white/40 hover:text-white/60 transition-colors select-none text-[10px] uppercase tracking-wider bg-transparent border-0 p-0"
+            >
+              <span
+                className={`inline-block h-3 w-5 shrink-0 rounded-full border transition-colors ${
+                  sleep
+                    ? "border-purple-500/40 bg-purple-500/30"
+                    : "border-white/20 bg-white/5"
+                }`}
+              />
+              Toggle mouseover
+            </button>
+          </div>
         </div>
       </aside>
+      </div>
     </>
   );
 }
