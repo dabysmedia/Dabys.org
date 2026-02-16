@@ -324,7 +324,7 @@ export async function GET(
         cardType: e.cardType,
       };
     })
-    .filter((e): e is CodexCardItem => e != null) as CodexCardItem[];
+    .filter((e) => e != null) as CodexCardItem[];
 
   // Completed badges (winner-based + Holo) + purchased movie badges + standalone purchased badges
   const completedWinnerIds = getCompletedWinnerIds(id);
