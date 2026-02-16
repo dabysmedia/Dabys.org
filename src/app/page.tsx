@@ -84,10 +84,14 @@ export default function HomePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [weekRes, winnersRes] = await Promise.all([
-        fetch("/api/weeks/current"),
-        fetch("/api/winners"),
-      ]);
+      const cachedWeekId = (() => { try { return sessionStorage.getItem("dabys_current_week_id"); } catch { return null; } })();
+
+      const weekPromise = fetch("/api/weeks/current");
+      const winnersPromise = fetch("/api/winners");
+      const specSubsPromise = cachedWeekId ? fetch(`/api/submissions?weekId=${cachedWeekId}`) : null;
+      const specVotesPromise = cachedWeekId ? fetch(`/api/votes?weekId=${cachedWeekId}`) : null;
+
+      const [weekRes, winnersRes] = await Promise.all([weekPromise, winnersPromise]);
 
       const winnersData: Winner[] = winnersRes.ok ? await winnersRes.json() : [];
       setWinners(winnersData);
@@ -95,16 +99,27 @@ export default function HomePage() {
       if (!weekRes.ok) { setWeek(null); setDataLoaded(true); return; }
       const weekData: Week = await weekRes.json();
       setWeek(weekData);
+      try { sessionStorage.setItem("dabys_current_week_id", weekData.id); } catch {}
 
-      const [subsRes, votesRes] = await Promise.all([
-        fetch(`/api/submissions?weekId=${weekData.id}`),
-        fetch(`/api/votes?weekId=${weekData.id}`),
-      ]);
+      let subsData: Submission[] = [];
+      let votesData: Vote[] = [];
 
-      setSubmissions(subsRes.ok ? await subsRes.json() : []);
-      setVotes(votesRes.ok ? await votesRes.json() : []);
+      if (cachedWeekId && cachedWeekId === weekData.id && specSubsPromise && specVotesPromise) {
+        const [subsRes, votesRes] = await Promise.all([specSubsPromise, specVotesPromise]);
+        subsData = subsRes.ok ? await subsRes.json() : [];
+        votesData = votesRes.ok ? await votesRes.json() : [];
+      } else {
+        const [subsRes, votesRes] = await Promise.all([
+          fetch(`/api/submissions?weekId=${weekData.id}`),
+          fetch(`/api/votes?weekId=${weekData.id}`),
+        ]);
+        subsData = subsRes.ok ? await subsRes.json() : [];
+        votesData = votesRes.ok ? await votesRes.json() : [];
+      }
 
-      // Find this week's winner if published
+      setSubmissions(subsData);
+      setVotes(votesData);
+
       if (weekData.phase === "winner_published") {
         const wk = winnersData.find((w) => w.weekId === weekData.id);
         setThisWeekWinner(wk || null);

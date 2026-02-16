@@ -34,16 +34,19 @@ function getSavedScrollPosition(pathname: string): number | null {
 
 export function ScrollRestoration() {
   const pathname = usePathname();
-  const pathnameRef = useRef<string | null>(null);
+  const prevPathnameRef = useRef<string | null>(null);
 
-  // Only restore scroll on the main page
+  // Restore scroll position when navigating to a page
   useLayoutEffect(() => {
     const current = pathname ?? "/";
-    pathnameRef.current = current;
+    const prev = prevPathnameRef.current;
+    prevPathnameRef.current = current;
 
-    if (current !== "/") return;
+    if (prev !== null && prev !== current) {
+      saveScrollPosition(prev);
+    }
 
-    const saved = getSavedScrollPosition("/");
+    const saved = getSavedScrollPosition(current);
     if (saved !== null) {
       const id = requestAnimationFrame(() => {
         window.scrollTo(0, saved);
@@ -52,10 +55,9 @@ export function ScrollRestoration() {
     }
   }, [pathname]);
 
-  // Only save scroll position on the main page (throttled)
+  // Save scroll position while scrolling (throttled)
   useEffect(() => {
     const current = pathname ?? "/";
-    if (current !== "/") return;
 
     let throttleId: ReturnType<typeof setTimeout> | null = null;
 
@@ -63,7 +65,7 @@ export function ScrollRestoration() {
       if (throttleId !== null) return;
       throttleId = setTimeout(() => {
         throttleId = null;
-        saveScrollPosition("/");
+        saveScrollPosition(current);
       }, SAVE_THROTTLE_MS);
     }
 

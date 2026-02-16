@@ -298,11 +298,11 @@ export default function WheelPage() {
     init();
   }, [playSpin]);
 
-  // Poll for new spins (every 1.5s)
+  // Poll for new spins (every 1.5s), paused when tab hidden
   useEffect(() => {
     if (!wheel) return;
 
-    const interval = setInterval(async () => {
+    const pollFn = async () => {
       try {
         const res = await fetch("/api/wheel", { cache: "no-store" });
         if (!res.ok) return;
@@ -361,9 +361,22 @@ export default function WheelPage() {
           setWheel(data);
         }
       } catch { /* ignore */ }
-    }, 1500);
+    };
 
-    return () => clearInterval(interval);
+    let interval = setInterval(pollFn, 1500);
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        pollFn();
+        interval = setInterval(pollFn, 1500);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [wheel, spinning, playSpin, scrollToWinner]);
 
   // Repeats: buffer (left) + main; centering uses buffer so offset stays <= 0 (no empty left)

@@ -154,14 +154,22 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
 
   useEffect(() => {
     fetchQuests();
-    // Poll every 10 seconds for live updates
-    const interval = setInterval(fetchQuests, 10000);
-    // Also refresh on window focus
+    let interval = setInterval(fetchQuests, 30000);
     const onFocus = () => fetchQuests();
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        fetchQuests();
+        interval = setInterval(fetchQuests, 30000);
+      }
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchQuests]);
 

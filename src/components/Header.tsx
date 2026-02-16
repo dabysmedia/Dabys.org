@@ -196,8 +196,10 @@ export default function Header() {
       fetch(`/api/trades?userId=${encodeURIComponent(user.id)}&status=pending`)
         .then((r) => (r.ok ? r.json() : []))
         .then((data: { counterpartyUserId?: string }[]) => {
-          const incoming = Array.isArray(data) && data.some((t) => t.counterpartyUserId === user.id);
-          setHasIncomingTrade(!!incoming);
+          const arr = Array.isArray(data) ? data : [];
+          const incoming = arr.some((t) => t.counterpartyUserId === user.id);
+          setHasIncomingTrade(incoming);
+          window.dispatchEvent(new CustomEvent("dabys-trades-poll", { detail: { pending: arr } }));
         })
         .catch(() => setHasIncomingTrade(false));
     };
@@ -206,10 +208,20 @@ export default function Header() {
       if (detail && typeof detail.hasIncoming === "boolean") setHasIncomingTrade(detail.hasIncoming);
     };
     check();
-    const id = setInterval(check, 20000);
+    let id = setInterval(check, 20000);
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(id);
+      } else {
+        check();
+        id = setInterval(check, 20000);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("dabys-incoming-trades", onIncomingTrades);
     return () => {
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("dabys-incoming-trades", onIncomingTrades);
     };
   }, [user?.id]);

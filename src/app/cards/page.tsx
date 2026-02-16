@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CardDisplay } from "@/components/CardDisplay";
@@ -566,6 +566,7 @@ function CardsContent() {
   const codexLoadingAudioRef = useRef<HTMLAudioElement | null>(null);
   const codexSkipRequestedRef = useRef(false);
   const codexAnimationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tabScrollPositions = useRef<Record<string, number>>({});
 
   const SEEN_CARDS_KEY = "dabys-seen-cards";
   const NEW_CARD_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -621,9 +622,9 @@ function CardsContent() {
     }, 4500);
   }
 
-  const myListedCardIds = new Set(
+  const myListedCardIds = useMemo(() => new Set(
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
-  );
+  ), [listings, user?.id]);
 
   const loadData = useCallback(async () => {
     const cached = localStorage.getItem("dabys_user");
@@ -737,6 +738,122 @@ function CardsContent() {
     }
   }, []);
 
+  const getUserId = useCallback((): string | null => {
+    try {
+      const cached = localStorage.getItem("dabys_user");
+      if (!cached) return null;
+      return (JSON.parse(cached) as User).id;
+    } catch { return null; }
+  }, []);
+
+  const refreshCredits = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const res = await fetch(`/api/credits?userId=${encodeURIComponent(uid)}`);
+    if (res.ok) { const d = await res.json(); if (typeof d?.balance === "number") setCreditBalance(d.balance); }
+  }, [getUserId]);
+
+  const refreshCards = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const res = await fetch(`/api/cards?userId=${encodeURIComponent(uid)}`);
+    if (res.ok) setCards(await res.json());
+  }, [getUserId]);
+
+  const refreshStardust = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const res = await fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(uid)}`);
+    if (res.ok) {
+      const d = await res.json();
+      const newBalance = typeof d?.balance === "number" ? d.balance : 0;
+      const prev = stardustPrevRef.current;
+      stardustPrevRef.current = newBalance;
+      setStardust(newBalance);
+      if (stardustInitializedRef.current) {
+        const delta = newBalance - prev;
+        if (delta !== 0) {
+          stardustAnimTimeoutRef.current && clearTimeout(stardustAnimTimeoutRef.current);
+          setStardustDelta(delta);
+          setStardustAnimClass(delta > 0 ? "stardust-animate-add" : "stardust-animate-subtract");
+          stardustAnimTimeoutRef.current = setTimeout(() => {
+            setStardustDelta(null);
+            setStardustAnimClass("");
+            stardustAnimTimeoutRef.current = null;
+          }, 900);
+        }
+      }
+      stardustInitializedRef.current = true;
+    }
+  }, [getUserId]);
+
+  const refreshTrades = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const [tradesRes, acceptedTradesRes] = await Promise.all([
+      fetch(`/api/trades?userId=${encodeURIComponent(uid)}&status=pending`),
+      fetch(`/api/trades?userId=${encodeURIComponent(uid)}&status=accepted`),
+    ]);
+    if (tradesRes.ok) setTrades(await tradesRes.json());
+    if (acceptedTradesRes.ok) {
+      const acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
+      const sentAcceptedIds = new Set(
+        (acceptedList || []).filter((t) => t.initiatorUserId === uid).map((t) => t.id)
+      );
+      if (!acceptedSentPollInitializedRef.current) {
+        acceptedSentPollInitializedRef.current = true;
+        acceptedSentTradeIdsRef.current = sentAcceptedIds;
+      } else {
+        const prevIds = acceptedSentTradeIdsRef.current;
+        const hasNewAccepted = [...sentAcceptedIds].some((id) => !prevIds.has(id));
+        if (hasNewAccepted) playTradeAcceptSound();
+        acceptedSentTradeIdsRef.current = sentAcceptedIds;
+      }
+    }
+  }, [getUserId]);
+
+  const refreshMarketplace = useCallback(async () => {
+    const res = await fetch("/api/marketplace");
+    if (res.ok) setListings(await res.json());
+  }, []);
+
+  const refreshMarketplaceOrders = useCallback(async () => {
+    const res = await fetch("/api/marketplace/orders");
+    if (res.ok) setBuyOrders(await res.json());
+  }, []);
+
+  const refreshPacks = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const res = await fetch(`/api/cards/packs?userId=${encodeURIComponent(uid)}`);
+    if (res.ok) { const d = await res.json(); setPacks(d.packs || []); }
+  }, [getUserId]);
+
+  const refreshCodex = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const [codexRes, badgeProgressRes] = await Promise.all([
+      fetch(`/api/cards/codex?userId=${encodeURIComponent(uid)}`),
+      fetch(`/api/cards/badge-progress?userId=${encodeURIComponent(uid)}`),
+    ]);
+    if (codexRes.ok) {
+      const d = await codexRes.json();
+      setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
+      setDiscoveredHoloCharacterIds(new Set(Array.isArray(d.holoCharacterIds) ? d.holoCharacterIds : []));
+      setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
+      setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
+    }
+    if (badgeProgressRes.ok) {
+      const d = await badgeProgressRes.json();
+      setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
+    }
+  }, [getUserId]);
+
+  const refreshShop = useCallback(async () => {
+    const res = await fetch("/api/shop/items");
+    if (res.ok) { const d = await res.json(); setShopItems(d.items ?? []); }
+  }, []);
+
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) {
@@ -790,10 +907,10 @@ function CardsContent() {
   }, [tab]);
 
   useEffect(() => {
-    const handler = () => loadData();
+    const handler = () => { refreshCredits(); };
     window.addEventListener("dabys-credits-refresh", handler);
     return () => window.removeEventListener("dabys-credits-refresh", handler);
-  }, [loadData]);
+  }, [refreshCredits]);
 
   // Keep incoming-trade refs in sync and notify header (red dot); sound only on accept
   useEffect(() => {
@@ -810,16 +927,16 @@ function CardsContent() {
     window.dispatchEvent(new CustomEvent("dabys-incoming-trades", { detail: { hasIncoming: incoming.length > 0 } }));
   }, [trades, user]);
 
-  // Live-update trades (poll every 20s); also check if a sent offer was accepted
+  // Listen for trade poll events from Header (single source of polling) and also poll accepted trades
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) return;
     const u = JSON.parse(cached) as { id: string };
-    const fetchTrades = () => {
-      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`)
-        .then((r) => (r.ok ? r.json() : []))
-        .then((data) => setTrades(Array.isArray(data) ? data : []))
-        .catch(() => {});
+    const onTradesPoll = (e: Event) => {
+      const detail = (e as CustomEvent<{ pending: TradeOfferEnriched[] }>).detail;
+      if (detail?.pending) setTrades(Array.isArray(detail.pending) ? detail.pending : []);
+    };
+    const checkAccepted = () => {
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=accepted`)
         .then((r) => (r.ok ? r.json() : []))
         .then((data: TradeOfferEnriched[]) => {
@@ -837,8 +954,23 @@ function CardsContent() {
         })
         .catch(() => {});
     };
-    const id = setInterval(fetchTrades, 20000);
-    return () => clearInterval(id);
+    checkAccepted();
+    let id = setInterval(checkAccepted, 20000);
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearInterval(id);
+      } else {
+        checkAccepted();
+        id = setInterval(checkAccepted, 20000);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("dabys-trades-poll", onTradesPoll);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("dabys-trades-poll", onTradesPoll);
+    };
   }, []);
 
   useEffect(() => {
@@ -939,7 +1071,7 @@ function CardsContent() {
           setTradeUpResultCredits(data.credits);
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: data.credits } }));
         }
-        await loadData();
+        await Promise.all([refreshCards(), refreshCredits(), refreshStardust()]);
       } else {
         alert(data.error || "Trade up failed");
       }
@@ -1003,7 +1135,7 @@ function CardsContent() {
       setAlchemySuccessFlash(true);
       setTimeout(() => setAlchemySuccessFlash(false), 500);
       setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
-      await loadData();
+      await Promise.all([refreshCards(), refreshStardust()]);
     } finally {
       setAlchemyDisenchantingId(null);
     }
@@ -1038,12 +1170,12 @@ function CardsContent() {
         setTimeout(() => {
           setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
           setAlchemyPunchHoloCardIds([]);
-          loadData();
+          Promise.all([refreshCards(), refreshStardust()]);
         }, 1100);
       } else {
         setAlchemyPunchFailedCardIds([card.id]);
         setPAPFailureErrorAndFade("Pack-A-Punch failed — Stardust consumed. Try again!");
-        await loadData();
+        await Promise.all([refreshCards(), refreshStardust()]);
         setTimeout(() => setAlchemyPunchFailedCardIds([]), 900);
       }
     } finally {
@@ -1125,7 +1257,7 @@ function CardsContent() {
       setQuicksellBenchSlots([null, null, null, null, null]);
       const received = typeof data?.creditsReceived === "number" ? data.creditsReceived : totalCr;
       window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: received } }));
-      await loadData();
+      await Promise.all([refreshCards(), refreshCredits()]);
     } finally {
       setQuicksellVendingId(null);
     }
@@ -1155,7 +1287,7 @@ function CardsContent() {
       setAlchemySuccessFlash(true);
       setTimeout(() => setAlchemySuccessFlash(false), 500);
       setAlchemyBenchSlots([null, null, null, null, null]);
-      await loadData();
+      await Promise.all([refreshCards(), refreshStardust()]);
     } finally {
       setAlchemyDisenchantingId(null);
     }
@@ -1185,7 +1317,7 @@ function CardsContent() {
         if (!res.ok) {
           setAlchemyErrorFading(false);
           setAlchemyError(data?.error ?? "Pack-A-Punch failed");
-          await loadData();
+          await Promise.all([refreshCards(), refreshStardust()]);
           return;
         }
         if (data.success) succeededIds.push(card.id);
@@ -1197,7 +1329,7 @@ function CardsContent() {
         setTimeout(() => {
           setAlchemyBenchSlots((prev) => prev.map((id) => (id != null && succeededIds.includes(id) ? null : id)));
           setAlchemyPunchHoloCardIds([]);
-          loadData();
+          Promise.all([refreshCards(), refreshStardust()]);
         }, 1200);
       }
       const failedCount = failedIds.length;
@@ -1207,7 +1339,7 @@ function CardsContent() {
         setTimeout(() => setAlchemyPunchFailedCardIds([]), 900);
       }
       if (succeededIds.length === 0 || failedCount > 0) {
-        await loadData();
+        await Promise.all([refreshCards(), refreshStardust()]);
       }
     } finally {
       setAlchemyPunchingId(null);
@@ -1261,7 +1393,7 @@ function CardsContent() {
       const data = await res.json();
       if (res.ok && data.cards) {
         setNewCards(data.cards);
-        await loadData();
+        await Promise.all([refreshCards(), refreshCredits(), refreshPacks()]);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -effectivePrice } }));
       } else {
         alert(data.error || "Failed to buy pack");
@@ -1409,7 +1541,7 @@ function CardsContent() {
     setCodexUploadProgress(0);
     setCodexUploadSelectedIds(new Set());
     setShowCodexUploadModal(false);
-    await loadData();
+    await Promise.all([refreshCards(), refreshCodex()]);
   }
 
   function toggleCodexUploadSelection(cardId: string) {
@@ -1434,7 +1566,7 @@ function CardsContent() {
       if (res.ok && data.ok) {
         if (typeof data.balance === "number") setCreditBalance(data.balance);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
-        await loadData();
+        await Promise.all([refreshCredits(), refreshShop()]);
       } else {
         alert(data.error || "Purchase failed");
       }
@@ -1457,7 +1589,7 @@ function CardsContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        await loadData();
+        await Promise.all([refreshCards(), refreshCredits(), refreshMarketplace()]);
         const delta = listing ? -listing.askingPrice : undefined;
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
       } else {
@@ -1477,7 +1609,7 @@ function CardsContent() {
       const res = await fetch(`/api/marketplace/list/${listingId}?userId=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
       });
-      if (res.ok) await loadData();
+      if (res.ok) await refreshMarketplace();
       else {
         const data = await res.json();
         alert(data.error || "Failed to delist");
@@ -1512,7 +1644,7 @@ function CardsContent() {
         setShowOrderModal(false);
         setSelectedOrderCharacter(null);
         setOrderOfferPrice("");
-        await loadData();
+        await refreshMarketplaceOrders();
       } else {
         alert(data.error || "Failed to create order");
       }
@@ -1534,7 +1666,7 @@ function CardsContent() {
       });
       const data = await res.json();
       if (res.ok) {
-        await loadData();
+        await Promise.all([refreshCards(), refreshCredits(), refreshMarketplace(), refreshMarketplaceOrders()]);
         playTradeAcceptSound();
       } else {
         alert(data.error || "Failed to fulfill order");
@@ -1553,7 +1685,7 @@ function CardsContent() {
       const res = await fetch(`/api/marketplace/orders/${orderId}?userId=${encodeURIComponent(user.id)}`, {
         method: "DELETE",
       });
-      if (res.ok) await loadData();
+      if (res.ok) await refreshMarketplaceOrders();
       else {
         const data = await res.json();
         alert(data.error || "Failed to cancel order");
@@ -1584,7 +1716,7 @@ function CardsContent() {
         setShowListModal(false);
         setSelectedCard(null);
         setListPrice("");
-        await loadData();
+        await Promise.all([refreshCards(), refreshMarketplace()]);
       } else {
         alert(data.error || "Failed to list");
       }
@@ -1636,16 +1768,16 @@ function CardsContent() {
       .catch(() => setCounterpartyCards([]));
   }, [showTradeModal, tradeCounterparty?.id]);
 
-  const pendingTradeOfferedIds = new Set(
+  const pendingTradeOfferedIds = useMemo(() => new Set(
     trades.filter((t) => t.initiatorUserId === user?.id && t.status === "pending").flatMap((t) => t.offeredCardIds)
-  );
-  const availableForOffer = cards.filter(
+  ), [trades, user?.id]);
+  const availableForOffer = useMemo(() => cards.filter(
     (c) => !myListedCardIds.has(c.id!) && !pendingTradeOfferedIds.has(c.id!)
-  );
-  const counterpartyListedIds = new Set(
+  ), [cards, myListedCardIds, pendingTradeOfferedIds]);
+  const counterpartyListedIds = useMemo(() => new Set(
     listings.filter((l) => l.sellerUserId === tradeCounterparty?.id).map((l) => l.cardId)
-  );
-  const availableToRequest = counterpartyCards.filter((c) => !counterpartyListedIds.has(c.id!));
+  ), [listings, tradeCounterparty?.id]);
+  const availableToRequest = useMemo(() => counterpartyCards.filter((c) => !counterpartyListedIds.has(c.id!)), [counterpartyCards, counterpartyListedIds]);
 
   function toggleTradeOffer(cardId: string) {
     setTradeOfferedIds((prev) => {
@@ -1703,7 +1835,7 @@ function CardsContent() {
           }).catch(() => {});
           setEditingTradeId(null);
         }
-        await loadData();
+        await refreshTrades();
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
         setTradeError(data.error || "Failed to send offer");
@@ -1730,7 +1862,7 @@ function CardsContent() {
         setTradeFeedback("accepted");
         setExpandedReceivedTradeId(null);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
-        await loadData();
+        await Promise.all([refreshCards(), refreshCredits(), refreshTrades()]);
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
         alert(data.error || "Failed to accept");
@@ -1756,7 +1888,7 @@ function CardsContent() {
         playTradeDenySound();
         setTradeFeedback("denied");
         setExpandedReceivedTradeId(null);
-        await loadData();
+        await refreshTrades();
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
         alert(data.error || "Failed to deny");
@@ -1778,7 +1910,7 @@ function CardsContent() {
         body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
-      if (res.ok) await loadData();
+      if (res.ok) await refreshTrades();
       else alert(data.error || "Failed to cancel");
     } catch {
       alert("Failed to cancel trade");
@@ -1787,11 +1919,43 @@ function CardsContent() {
     }
   }
 
-  const sentTrades = trades.filter((t) => t.initiatorUserId === user?.id);
-  const receivedTrades = trades.filter((t) => t.counterpartyUserId === user?.id);
+  const sentTrades = useMemo(() => trades.filter((t) => t.initiatorUserId === user?.id), [trades, user?.id]);
+  const receivedTrades = useMemo(() => trades.filter((t) => t.counterpartyUserId === user?.id), [trades, user?.id]);
 
-  const listedCardIds = new Set(listings.map((l) => l.cardId));
-  const availableToList = cards.filter((c) => !listedCardIds.has(c.id));
+  const listedCardIds = useMemo(() => new Set(listings.map((l) => l.cardId)), [listings]);
+  const availableToList = useMemo(() => cards.filter((c) => !listedCardIds.has(c.id)), [cards, listedCardIds]);
+
+  const filteredInventoryCards = useMemo(() => {
+    const cardTypeKey = (c: Card) => (c.cardType ?? "actor") as string;
+    return cards
+      .filter((c) => filterCardType === "all" || (filterCardType === "actor" && cardTypeKey(c) !== "character") || (filterCardType === "character" && cardTypeKey(c) === "character"))
+      .filter((c) => !filterRarity || c.rarity === filterRarity)
+      .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
+      .sort((a, b) => {
+        const typeOrder = (t: string) => (t === "character" ? 1 : 0);
+        const secondary = () => {
+          if (filterSort === "recent" || filterSort === "type") {
+            const at = new Date(a.acquiredAt ?? 0).getTime();
+            const bt = new Date(b.acquiredAt ?? 0).getTime();
+            return bt - at;
+          }
+          if (filterSort === "name") {
+            return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+          }
+          if (filterSort === "movie") {
+            const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
+            return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
+          }
+          return 0;
+        };
+        if (filterSort === "type") {
+          const ta = typeOrder(cardTypeKey(a));
+          const tb = typeOrder(cardTypeKey(b));
+          return ta !== tb ? ta - tb : secondary();
+        }
+        return secondary();
+      });
+  }, [cards, filterCardType, filterRarity, filterFoil, filterSort]);
 
   if (loading || !user) {
     return (
@@ -1876,7 +2040,13 @@ function CardsContent() {
             {tabs.map((t) => (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => {
+                  tabScrollPositions.current[tab] = window.scrollY;
+                  setTab(t.key);
+                  requestAnimationFrame(() => {
+                    window.scrollTo(0, tabScrollPositions.current[t.key] ?? 0);
+                  });
+                }}
                 className={`flex-1 min-w-[calc(50%-4px)] sm:min-w-0 sm:flex-none min-h-[48px] sm:min-h-[44px] px-4 py-3.5 sm:py-3 rounded-xl sm:rounded-none text-base sm:text-sm font-medium transition-all cursor-pointer relative touch-manipulation ${
                   tab === t.key
                     ? "bg-purple-500/20 text-amber-400 ring-2 ring-amber-400/50 sm:ring-0 sm:bg-transparent sm:border-b-2 sm:border-amber-400 sm:-mb-px"
@@ -2596,38 +2766,7 @@ function CardsContent() {
                 <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
               </div>
             ) : (() => {
-              const cardTypeKey = (c: Card) => (c.cardType ?? "actor") as string;
-              const filtered = cards
-                .filter((c) => filterCardType === "all" || (filterCardType === "actor" && cardTypeKey(c) !== "character") || (filterCardType === "character" && cardTypeKey(c) === "character"))
-                .filter((c) => !filterRarity || c.rarity === filterRarity)
-                .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
-                .sort((a, b) => {
-                  const typeOrder = (t: string) => (t === "character" ? 1 : 0);
-                  const secondary = () => {
-                    if (filterSort === "recent" || filterSort === "type") {
-                      const at = new Date(a.acquiredAt ?? 0).getTime();
-                      const bt = new Date(b.acquiredAt ?? 0).getTime();
-                      return bt - at;
-                    }
-                    if (filterSort === "name") {
-                      return (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                    }
-                    if (filterSort === "movie") {
-                      const m = (a.movieTitle || "").localeCompare(b.movieTitle || "", undefined, { sensitivity: "base" });
-                      return m !== 0 ? m : (a.actorName || "").localeCompare(b.actorName || "", undefined, { sensitivity: "base" });
-                    }
-                    return 0;
-                  };
-                  if (filterSort === "type") {
-                    const ta = typeOrder(cardTypeKey(a));
-                    const tb = typeOrder(cardTypeKey(b));
-                    return ta !== tb ? ta - tb : secondary();
-                  }
-                  if (filterSort === "recent") return secondary();
-                  if (filterSort === "name") return secondary();
-                  if (filterSort === "movie") return secondary();
-                  return 0;
-                });
+              const filtered = filteredInventoryCards;
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
@@ -2697,7 +2836,7 @@ function CardsContent() {
               const gridClasses = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
               if (filterSort === "type") {
                 const byType = filtered.reduce((acc, c) => {
-                  const t = cardTypeKey(c) === "character" ? "Boys" : "Actor";
+                  const t = (c.cardType ?? "actor") === "character" ? "Boys" : "Actor";
                   if (!acc[t]) acc[t] = [];
                   acc[t].push(c);
                   return acc;
