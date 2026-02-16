@@ -58,6 +58,8 @@ export interface QuestSettings {
   dailyQuestCount: number;
   /** Bonus credits awarded once when all daily quests are completed and claimed. */
   allQuestsCompleteBonus: number;
+  /** Hour of the day (0-23 UTC) when daily quests reset. Defaults to 0 (midnight UTC). */
+  resetHourUTC: number;
   questDefinitions: Record<QuestType, QuestDefinition>;
 }
 
@@ -88,6 +90,7 @@ type DailyQuestsStore = Record<string, Record<string, UserDailyQuests>>;
 const DEFAULT_SETTINGS: QuestSettings = {
   dailyQuestCount: 6,
   allQuestsCompleteBonus: 50,
+  resetHourUTC: 0,
   questDefinitions: {
     login: { label: "Daily Login", description: "Log in today", reward: 25, rewardType: "credits", alwaysActive: true },
     open_pack: { label: "Open a Pack", description: "Open any pack (except free packs)", reward: 30, rewardType: "credits", alwaysActive: true },
@@ -107,6 +110,7 @@ export function getQuestSettings(): QuestSettings {
     return {
       dailyQuestCount: typeof raw.dailyQuestCount === "number" ? raw.dailyQuestCount : DEFAULT_SETTINGS.dailyQuestCount,
       allQuestsCompleteBonus: typeof raw.allQuestsCompleteBonus === "number" ? Math.max(0, raw.allQuestsCompleteBonus) : DEFAULT_SETTINGS.allQuestsCompleteBonus,
+      resetHourUTC: typeof raw.resetHourUTC === "number" ? Math.max(0, Math.min(23, Math.floor(raw.resetHourUTC))) : DEFAULT_SETTINGS.resetHourUTC,
       questDefinitions: {
         ...DEFAULT_SETTINGS.questDefinitions,
         ...(raw.questDefinitions ?? {}),
@@ -140,8 +144,18 @@ export function resetAllDailyQuests(): void {
   writeJson("dailyQuests.json", {});
 }
 
+/**
+ * Returns the current "quest day" as YYYY-MM-DD.
+ * If the reset hour is e.g. 6, then between 00:00-05:59 UTC the quest day
+ * is still "yesterday" — quests haven't reset yet.
+ */
 function getTodayDateStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  const { resetHourUTC } = getQuestSettings();
+  const now = new Date();
+  if (now.getUTCHours() < resetHourUTC) {
+    now.setUTCDate(now.getUTCDate() - 1);
+  }
+  return now.toISOString().slice(0, 10);
 }
 
 // ──── Random rarity picker ──────────────────────────────

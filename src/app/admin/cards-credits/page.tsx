@@ -259,6 +259,8 @@ export default function AdminCardsCreditsPage() {
     quicksellRare: number;
     quicksellEpic: number;
     tradeUpLegendaryFailureCredits: number;
+    feedbackAccepted: number;
+    setCompletionReward: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -271,6 +273,8 @@ export default function AdminCardsCreditsPage() {
     quicksellRare: "20",
     quicksellEpic: "80",
     tradeUpLegendaryFailureCredits: "100",
+    feedbackAccepted: "10",
+    setCompletionReward: "1000",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
@@ -410,6 +414,8 @@ export default function AdminCardsCreditsPage() {
           quicksellRare: String(d.quicksellRare ?? 20),
           quicksellEpic: String(d.quicksellEpic ?? 80),
           tradeUpLegendaryFailureCredits: String(d.tradeUpLegendaryFailureCredits ?? 100),
+          feedbackAccepted: String(d.feedbackAccepted ?? 10),
+          setCompletionReward: String(d.setCompletionReward ?? 1000),
         });
       }
     } catch {
@@ -762,6 +768,8 @@ export default function AdminCardsCreditsPage() {
         quicksellRare: parseInt(creditSettingsForm.quicksellRare, 10) ?? 0,
         quicksellEpic: parseInt(creditSettingsForm.quicksellEpic, 10) ?? 0,
         tradeUpLegendaryFailureCredits: parseInt(creditSettingsForm.tradeUpLegendaryFailureCredits, 10) ?? 0,
+        feedbackAccepted: parseInt(creditSettingsForm.feedbackAccepted, 10) ?? 0,
+        setCompletionReward: parseInt(creditSettingsForm.setCompletionReward, 10) ?? 0,
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -1983,6 +1991,8 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1" title="Per vote received, when winner is published (non-winners only)">Votes received</label><input type="number" min={0} value={creditSettingsForm.votesReceivedPerVote} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, votesReceivedPerVote: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr/vote</span></div>
             <div><label className="block text-xs text-white/40 mb-1">Rating a movie</label><input type="number" min={0} value={creditSettingsForm.rating} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, rating: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1">Leaving a comment</label><input type="number" min={0} value={creditSettingsForm.comment} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, comment: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When feedback is accepted in admin panel">Feedback accepted</label><input type="number" min={0} value={creditSettingsForm.feedbackAccepted} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, feedbackAccepted: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes a set (all cards for a movie) and claims the quest">Set completion</label><input type="number" min={0} value={creditSettingsForm.setCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, setCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
               <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>

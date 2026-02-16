@@ -13,7 +13,7 @@ interface FeedbackEntry {
 export default function AdminFeedbackPage() {
   const [entries, setEntries] = useState<FeedbackEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -33,17 +33,39 @@ export default function AdminFeedbackPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    setDeletingId(id);
+  async function handleAccept(id: string) {
+    setActioningId(id);
     try {
-      const res = await fetch(`/api/admin/feedback/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "accept" }),
+      });
       if (res.ok) {
         setEntries((prev) => prev.filter((e) => e.id !== id));
       }
     } catch {
       // ignore
     } finally {
-      setDeletingId(null);
+      setActioningId(null);
+    }
+  }
+
+  async function handleDeny(id: string) {
+    setActioningId(id);
+    try {
+      const res = await fetch(`/api/admin/feedback/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deny" }),
+      });
+      if (res.ok) {
+        setEntries((prev) => prev.filter((e) => e.id !== id));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setActioningId(null);
     }
   }
 
@@ -84,14 +106,25 @@ export default function AdminFeedbackPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <p className="text-white/90 text-sm whitespace-pre-wrap flex-1">{entry.message}</p>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(entry.id)}
-                  disabled={deletingId === entry.id}
-                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs text-red-400/90 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/30 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {deletingId === entry.id ? "…" : "Delete"}
-                </button>
+                <div className="shrink-0 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAccept(entry.id)}
+                    disabled={actioningId === entry.id}
+                    title={entry.userId?.trim() ? "Accept and award credits to user" : "Accept (anonymous — no credits awarded)"}
+                    className="px-3 py-1.5 rounded-lg text-xs text-green-400/90 hover:bg-green-500/10 border border-green-500/20 hover:border-green-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {actioningId === entry.id ? "…" : "Accept"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeny(entry.id)}
+                    disabled={actioningId === entry.id}
+                    className="px-3 py-1.5 rounded-lg text-xs text-red-400/90 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {actioningId === entry.id ? "…" : "Deny"}
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/40">
                 <span>{formatDate(entry.createdAt)}</span>

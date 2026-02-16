@@ -525,3 +525,33 @@ select option {
     transform: translateX(-24px) scale(0.92);
   }
 }
+
+/* ── Notification center ─────────────────────────────── */
+@keyframes notificationPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.notification-panel-in {
+  animation: notificationPanelIn 0.2s ease-out;
+}
+
+@keyframes notificationBadgePop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.notification-badge-pop {
+  animation: notificationBadgePop 0.35s ease-out;
+}

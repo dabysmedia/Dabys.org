@@ -414,6 +414,10 @@ export interface CreditSettings {
   quicksellEpic: number;
   /** Credits given when epic→legendary trade-up fails (67% chance). */
   tradeUpLegendaryFailureCredits: number;
+  /** Credits given when feedback is accepted in the admin panel. */
+  feedbackAccepted: number;
+  /** Credits awarded when a player completes a set (collects all cards for a movie) and claims the quest. */
+  setCompletionReward: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -427,6 +431,8 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   quicksellRare: 20,
   quicksellEpic: 80,
   tradeUpLegendaryFailureCredits: 100,
+  feedbackAccepted: 10,
+  setCompletionReward: 1000,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -443,6 +449,8 @@ function getCreditSettingsRaw(): CreditSettings {
       quicksellRare: typeof raw.quicksellRare === "number" ? raw.quicksellRare : DEFAULT_CREDIT_SETTINGS.quicksellRare,
       quicksellEpic: typeof raw.quicksellEpic === "number" ? raw.quicksellEpic : DEFAULT_CREDIT_SETTINGS.quicksellEpic,
       tradeUpLegendaryFailureCredits: typeof raw.tradeUpLegendaryFailureCredits === "number" ? raw.tradeUpLegendaryFailureCredits : DEFAULT_CREDIT_SETTINGS.tradeUpLegendaryFailureCredits,
+      feedbackAccepted: typeof raw.feedbackAccepted === "number" ? raw.feedbackAccepted : DEFAULT_CREDIT_SETTINGS.feedbackAccepted,
+      setCompletionReward: typeof raw.setCompletionReward === "number" ? raw.setCompletionReward : DEFAULT_CREDIT_SETTINGS.setCompletionReward,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };
@@ -1560,6 +1568,65 @@ export function deleteFeedback(id: string): boolean {
   return true;
 }
 
+// ──── Set completion quests (one per winner, claimable once) ───
+export interface SetCompletionQuest {
+  winnerId: string;
+  movieTitle: string;
+  reward: number;
+  claimed: boolean;
+  completedAt: string;
+}
+
+type SetCompletionQuestsStore = Record<string, SetCompletionQuest[]>;
+
+function getSetCompletionQuestsRaw(): SetCompletionQuestsStore {
+  try {
+    return readJson<SetCompletionQuestsStore>("setCompletionQuests.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveSetCompletionQuestsRaw(store: SetCompletionQuestsStore) {
+  writeJson("setCompletionQuests.json", store);
+}
+
+/** Add a set completion quest for the user if they don't already have one for this winner. Returns true if added. */
+export function addSetCompletionQuest(userId: string, winnerId: string, movieTitle: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  if (userQuests.some((q) => q.winnerId === winnerId)) return false;
+  const reward = getCreditSettings().setCompletionReward;
+  userQuests.push({
+    winnerId,
+    movieTitle,
+    reward,
+    claimed: false,
+    completedAt: new Date().toISOString(),
+  });
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
+export function getSetCompletionQuests(userId: string): SetCompletionQuest[] {
+  const store = getSetCompletionQuestsRaw();
+  return store[userId] ?? [];
+}
+
+/** Claim a set completion quest. Returns reward amount or 0 if not claimable. */
+export function claimSetCompletionQuest(userId: string, winnerId: string): number {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed);
+  if (idx < 0) return 0;
+  const quest = userQuests[idx];
+  quest.claimed = true;
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return quest.reward;
+}
+
 // ──── Marketplace (listings) ─────────────────────────────
 export interface Listing {
   id: string;
@@ -2241,4 +2308,147 @@ export function getAllPresenceStatuses(): Record<string, OnlineStatus> {
     result[e.userId] = deriveStatus(e);
   }
   return result;
+}
+
+// ──── Notifications ──────────────────────────────────────
+export type NotificationType =
+  | "marketplace_sold"
+  | "buy_order_filled"
+  | "comment_reply"
+  | "trade_received"
+  | "trade_accepted"
+  | "trade_denied"
+  | "new_set_added"
+  | "free_packs_restock"
+  | "legendary_pull"
+  | "set_complete"
+  | "trade_complete"
+  | "market_sale"
+  | "market_order_filled";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  /** ISO timestamp */
+  timestamp: string;
+  /**
+   * The user who should see this notification.
+   * Use "__global__" for notifications everyone should see.
+   */
+  targetUserId: string;
+  /** Human-readable message */
+  message: string;
+  /** The user who triggered the notification (for display) */
+  actorUserId?: string;
+  actorName?: string;
+  /** Extra context */
+  meta?: Record<string, unknown>;
+  /** Per-user read tracking stored separately */
+}
+
+const MAX_NOTIFICATIONS = 200;
+
+export function getNotifications(): Notification[] {
+  try {
+    return readJson<Notification[]>("notifications.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveNotifications(notifications: Notification[]) {
+  writeJson("notifications.json", notifications);
+}
+
+/**
+ * Get notifications for a specific user: their personal ones + global ones.
+ * Sorted newest-first.
+ */
+export function getNotificationsForUser(userId: string): Notification[] {
+  const all = getNotifications();
+  return all
+    .filter((n) => n.targetUserId === userId || n.targetUserId === "__global__")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+/**
+ * Add a notification (personal or global).
+ */
+export function addNotification(
+  entry: Omit<Notification, "id" | "timestamp">
+): Notification {
+  const notifications = getNotifications();
+  const full: Notification = {
+    ...entry,
+    id: `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+  };
+  notifications.push(full);
+  const trimmed = notifications.slice(-MAX_NOTIFICATIONS);
+  saveNotifications(trimmed);
+  return full;
+}
+
+/**
+ * Add a notification to every user.
+ * Creates one __global__ entry that all users see.
+ */
+export function addGlobalNotification(
+  entry: Omit<Notification, "id" | "timestamp" | "targetUserId">
+): Notification {
+  return addNotification({ ...entry, targetUserId: "__global__" });
+}
+
+// ──── Notification Read Tracking ─────────────────────────
+export interface NotificationReadState {
+  userId: string;
+  /** ISO timestamp – notifications on or before this time are "read" */
+  readUpTo: string;
+}
+
+export function getNotificationReadStates(): NotificationReadState[] {
+  try {
+    return readJson<NotificationReadState[]>("notificationReads.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveNotificationReadStates(states: NotificationReadState[]) {
+  writeJson("notificationReads.json", states);
+}
+
+/**
+ * Mark all notifications as read for a user (up to now).
+ */
+export function markNotificationsRead(userId: string): void {
+  const states = getNotificationReadStates();
+  const idx = states.findIndex((s) => s.userId === userId);
+  const now = new Date().toISOString();
+  if (idx >= 0) {
+    states[idx].readUpTo = now;
+  } else {
+    states.push({ userId, readUpTo: now });
+  }
+  saveNotificationReadStates(states);
+}
+
+/**
+ * Get the "read up to" timestamp for a user.
+ */
+export function getReadUpTo(userId: string): string | null {
+  const states = getNotificationReadStates();
+  const entry = states.find((s) => s.userId === userId);
+  return entry?.readUpTo ?? null;
+}
+
+/**
+ * Count unread notifications for a user.
+ */
+export function getUnreadNotificationCount(userId: string): number {
+  const readUpTo = getReadUpTo(userId);
+  const notifications = getNotificationsForUser(userId);
+  if (!readUpTo) return notifications.length;
+  const readMs = new Date(readUpTo).getTime();
+  return notifications.filter((n) => new Date(n.timestamp).getTime() > readMs).length;
 }

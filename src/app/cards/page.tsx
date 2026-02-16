@@ -1504,6 +1504,7 @@ function CardsContent() {
           else if (variant === "altart") setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
+          if (data.setCompleted) window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
         /* skip failed */
@@ -2299,6 +2300,15 @@ function CardsContent() {
                 <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center p-3 pt-[calc(var(--header-height)+0.5rem)] sm:pt-4 sm:px-4 sm:p-4">
                   <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[calc(100dvh-var(--header-height)-1rem)] sm:max-h-none rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col">
                     <div className="relative flex-shrink-0">
+                    {/* Mobile: sticky close X so you can always dismiss */}
+                    <button
+                      type="button"
+                      aria-label="Close"
+                      onClick={() => { setNewCards(null); setRevealCount(0); }}
+                      className="sm:hidden absolute top-0 right-0 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/15 active:bg-white/20 touch-manipulation select-none"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                     <h2 className="text-base sm:text-lg font-semibold text-white/90 mb-3 sm:mb-4 text-center">
                       You got
                     </h2>
@@ -2321,13 +2331,14 @@ function CardsContent() {
                         );
                       })}
                     </div>
-                    <div className="mt-4 sm:mt-6 flex justify-center flex-shrink-0">
+                    <div className="mt-4 sm:mt-6 flex justify-center flex-shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:pt-4 max-sm:pb-[env(safe-area-inset-bottom,0)] max-sm:bg-gradient-to-t from-[rgba(0,0,0,0.4)] to-transparent max-sm:-mx-4 max-sm:-mb-4 max-sm:px-4 max-sm:rounded-b-2xl">
                       <button
+                        type="button"
                         onClick={() => {
                           setNewCards(null);
                           setRevealCount(0);
                         }}
-                        className="px-5 py-2.5 rounded-xl border border-white/25 bg-white/[0.06] text-sm font-medium text-white/85 hover:bg-white/[0.1] hover:text-white transition-colors cursor-pointer"
+                        className="w-full max-w-[280px] sm:w-auto min-h-[48px] sm:min-h-0 px-6 sm:px-5 py-3 sm:py-2.5 rounded-xl border border-white/25 bg-white/[0.06] text-base sm:text-sm font-medium text-white/85 hover:bg-white/[0.1] hover:text-white active:bg-white/[0.12] transition-colors cursor-pointer touch-manipulation select-none"
                       >
                         Close
                       </button>

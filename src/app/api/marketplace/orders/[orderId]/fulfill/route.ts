@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { fulfillBuyOrder } from "@/lib/marketplace";
 import { getCompletedWinnerIds } from "@/lib/cards";
-import { getUsers, getBuyOrder, getCardById, getWinners, addActivity } from "@/lib/data";
+import { getUsers, getBuyOrder, getCardById, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -49,6 +49,25 @@ export async function POST(
       },
     });
 
+    // Personal notification to the requester
+    addNotification({
+      type: "buy_order_filled",
+      targetUserId: order.requesterUserId,
+      message: `filled your buy order for ${card.characterName || card.actorName}${order.offerPrice > 0 ? ` (${order.offerPrice}¢)` : ""}`,
+      actorUserId: body.userId,
+      actorName: fulfillerName,
+      meta: { orderId, cardId: body.cardId, price: order.offerPrice },
+    });
+
+    // Global notification for order fill
+    addGlobalNotification({
+      type: "market_order_filled",
+      message: `filled ${requesterName}'s buy order for ${card.characterName || card.actorName}${order.offerPrice > 0 ? ` (${order.offerPrice}¢)` : ""}`,
+      actorUserId: body.userId,
+      actorName: fulfillerName,
+      meta: { orderId, cardId: body.cardId },
+    });
+
     // Check for newly completed sets for the requester
     const completedAfter = getCompletedWinnerIds(order.requesterUserId);
     const winners = getWinners();
@@ -60,6 +79,13 @@ export async function POST(
           userId: order.requesterUserId,
           userName: requesterName,
           message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          meta: { winnerId, movieTitle: winner?.movieTitle },
+        });
+        addGlobalNotification({
+          type: "set_complete",
+          message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          actorUserId: order.requesterUserId,
+          actorName: requesterName,
           meta: { winnerId, movieTitle: winner?.movieTitle },
         });
       }

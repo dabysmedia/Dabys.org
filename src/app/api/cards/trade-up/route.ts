@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tradeUp } from "@/lib/cards";
-import { getCardById, getUsers, addActivity } from "@/lib/data";
+import { getCardById, getUsers, addActivity, addGlobalNotification } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import type { Rarity } from "@/lib/quests";
 
@@ -43,6 +43,13 @@ export async function POST(request: Request) {
       userName,
       message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
       meta: { cardId: result.card.id, characterName: result.card.characterName, actorName: result.card.actorName, movieTitle: result.card.movieTitle },
+    });
+    addGlobalNotification({
+      type: "legendary_pull",
+      message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
+      actorUserId: body.userId,
+      actorName: userName,
+      meta: { cardId: result.card.id, characterName: result.card.characterName, movieTitle: result.card.movieTitle },
     });
   }
 

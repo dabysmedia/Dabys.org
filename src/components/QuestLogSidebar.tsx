@@ -26,6 +26,14 @@ interface DailyQuestInstance {
   description: string;
 }
 
+interface SetCompletionQuest {
+  winnerId: string;
+  movieTitle: string;
+  reward: number;
+  claimed: boolean;
+  completedAt: string;
+}
+
 interface QuestLogSidebarProps {
   currentUserId: string;
 }
@@ -59,9 +67,12 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
   const [pinnedProgress, setPinnedProgress] = useState<PinnedProgressItem[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuestInstance[]>([]);
+  const [setCompletionQuests, setSetCompletionQuests] = useState<SetCompletionQuest[]>([]);
   const [questDate, setQuestDate] = useState<string>("");
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
+  const [claimingSetCompletionWinnerId, setClaimingSetCompletionWinnerId] = useState<string | null>(null);
   const [claimingAll, setClaimingAll] = useState(false);
+  const [resetHourUTC, setResetHourUTC] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
 
   // Sync sleep preference from other sidebar (or same) when toggled
@@ -152,13 +163,20 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     fetch(`/api/quests?userId=${encodeURIComponent(currentUserId)}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.quests) {
-          setDailyQuests(data.quests);
-          setQuestDate(data.date || "");
-        }
+        if (data.quests) setDailyQuests(data.quests);
+        if (data.date) setQuestDate(data.date);
+        if (typeof data.resetHourUTC === "number") setResetHourUTC(data.resetHourUTC);
+        setSetCompletionQuests(Array.isArray(data.setCompletionQuests) ? data.setCompletionQuests : []);
       })
       .catch(() => {});
   }, [currentUserId]);
+
+  // Refetch when a set is completed (e.g. from codex upload)
+  useEffect(() => {
+    const onQuestsRefresh = () => fetchQuests();
+    window.addEventListener("dabys-quests-refresh", onQuestsRefresh);
+    return () => window.removeEventListener("dabys-quests-refresh", onQuestsRefresh);
+  }, [fetchQuests]);
 
   // When quest log is first opened, complete the daily login quest (server no-ops if already completed)
   useEffect(() => {
@@ -223,6 +241,29 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     }
   }
 
+  async function claimSetCompletion(winnerId: string) {
+    setClaimingSetCompletionWinnerId(winnerId);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, claimSetCompletion: true, winnerId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchQuests();
+        const delta = data.reward ?? 0;
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingSetCompletionWinnerId(null);
+    }
+  }
+
   async function claimAllRewards() {
     setClaimingAll(true);
     try {
@@ -248,7 +289,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
 
   const completedCount = dailyQuests.filter((q) => q.completed).length;
   const totalCount = dailyQuests.length;
-  const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length;
+  const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
+  const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length + setCompletionClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
   function openByHover() {
@@ -406,6 +448,56 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
             {/* ─── DAILY QUESTS TAB ─── */}
             {activeTab === "quests" && (
               <div className="py-3">
+                {/* Set completion quests */}
+                {setCompletionQuests.length > 0 && (
+                  <div className="px-4 mb-4">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider">Set complete</span>
+                    <ul className="mt-2 space-y-1">
+                      {setCompletionQuests.map((q) => {
+                        const isClaimable = !q.claimed;
+                        const isClaiming = claimingSetCompletionWinnerId === q.winnerId;
+                        return (
+                          <li
+                            key={q.winnerId}
+                            className={`rounded-xl border transition-all ${
+                              q.claimed
+                                ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                : "border-emerald-500/20 bg-emerald-500/[0.04]"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 px-3 py-2.5">
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
+                                  Complete: {q.movieTitle}
+                                </span>
+                                <p className="text-[10px] text-white/35 mt-0.5">Collected all cards for this movie</p>
+                              </div>
+                              <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                <span className="text-[10px] text-amber-400/80 font-medium whitespace-nowrap">
+                                  +{q.reward} cr
+                                </span>
+                                {isClaimable && (
+                                  <button
+                                    type="button"
+                                    onClick={() => claimSetCompletion(q.winnerId)}
+                                    disabled={isClaiming}
+                                    className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-400 text-[10px] font-semibold hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    {isClaiming ? (
+                                      <span className="inline-block w-2.5 h-2.5 border border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                                    ) : (
+                                      "Claim"
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
                 {/* Progress summary */}
                 {dailyQuests.length > 0 && (
                   <div className="px-4 mb-3">
@@ -532,7 +624,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                   <div className="px-4 py-4 text-center">
                     <p className="text-xs text-green-400/70">All daily quests completed!</p>
                     <p className="text-[10px] text-amber-400/60 mt-1">Completion bonus awarded</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">New quests at midnight UTC</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">New quests at {String(resetHourUTC).padStart(2, "0")}:00 UTC</p>
                   </div>
                 )}
               </div>

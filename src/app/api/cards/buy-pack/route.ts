@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buyPack, getCompletedWinnerIds } from "@/lib/cards";
-import { getPacks, getUsers, getWinners, addActivity } from "@/lib/data";
+import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 
 export async function POST(request: Request) {
@@ -54,6 +54,13 @@ export async function POST(request: Request) {
           message: `pulled a Legendary — ${card.characterName || card.actorName}`,
           meta: { cardId: card.id, characterName: card.characterName, actorName: card.actorName, movieTitle: card.movieTitle },
         });
+        addGlobalNotification({
+          type: "legendary_pull",
+          message: `pulled a Legendary — ${card.characterName || card.actorName}`,
+          actorUserId: body.userId,
+          actorName: userName,
+          meta: { cardId: card.id, characterName: card.characterName, movieTitle: card.movieTitle },
+        });
       }
     }
 
@@ -68,6 +75,13 @@ export async function POST(request: Request) {
           userId: body.userId,
           userName,
           message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          meta: { winnerId, movieTitle: winner?.movieTitle },
+        });
+        addGlobalNotification({
+          type: "set_complete",
+          message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          actorUserId: body.userId,
+          actorName: userName,
           meta: { winnerId, movieTitle: winner?.movieTitle },
         });
       }

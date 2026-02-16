@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getUserDailyQuests } from "@/lib/quests";
+import { getUserDailyQuests, getQuestSettings } from "@/lib/quests";
+import { getSetCompletionQuests } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,7 +10,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  // Quests are stored per-user; this returns only this user's daily quests
   const dailyQuests = getUserDailyQuests(userId);
-  return NextResponse.json(dailyQuests);
+  const setCompletionQuests = getSetCompletionQuests(userId);
+  const { resetHourUTC } = getQuestSettings();
+  return NextResponse.json({
+    ...dailyQuests,
+    setCompletionQuests,
+    resetHourUTC,
+  });
 }

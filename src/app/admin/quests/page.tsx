@@ -14,6 +14,7 @@ interface QuestDefinition {
 interface QuestSettings {
   dailyQuestCount: number;
   allQuestsCompleteBonus: number;
+  resetHourUTC: number;
   questDefinitions: Record<string, QuestDefinition>;
 }
 
@@ -222,6 +223,28 @@ export default function AdminQuestsPage() {
             />
             <span className="text-xs text-white/30">
               Awarded once when all daily quests are completed and claimed
+            </span>
+          </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="text-sm text-white/60">Daily reset time (UTC):</label>
+            <select
+              value={typeof settings.resetHourUTC === "number" ? settings.resetHourUTC : 0}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  resetHourUTC: parseInt(e.target.value) || 0,
+                })
+              }
+              className="w-36 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 transition-colors cursor-pointer"
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>
+                  {String(h).padStart(2, "0")}:00 UTC
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-white/30">
+              New quests are generated after this hour each day
             </span>
           </div>
         </div>

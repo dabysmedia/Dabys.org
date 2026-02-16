@@ -1039,5 +1039,45 @@
       "winnerId": "2"
     },
     "createdAt": "2026-02-16T08:50:30.083Z"
+  },
+  {
+    "id": "cl-1771273742628-w5e2cx9",
+    "userId": "1",
+    "amount": 0,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771000454277-lsrtxlr"
+    },
+    "createdAt": "2026-02-16T20:29:02.627Z"
+  },
+  {
+    "id": "cl-1771273748049-fntzh9e",
+    "userId": "1",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-16T20:29:08.048Z"
+  },
+  {
+    "id": "cl-1771273751266-clc9imf",
+    "userId": "1",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-16T20:29:11.266Z"
+  },
+  {
+    "id": "cl-1771274023462-8u1v607",
+    "userId": "1",
+    "amount": 10,
+    "reason": "feedback_accepted",
+    "metadata": {
+      "feedbackId": "fb-1771273833709-7p0dghh"
+    },
+    "createdAt": "2026-02-16T20:33:43.462Z"
   }
 ]

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buyListing } from "@/lib/marketplace";
 import { getCompletedWinnerIds } from "@/lib/cards";
-import { getUsers, getListing, getWinners, addActivity } from "@/lib/data";
+import { getUsers, getListing, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -44,6 +44,25 @@ export async function POST(request: Request) {
       },
     });
 
+    // Personal notification to the seller
+    addNotification({
+      type: "marketplace_sold",
+      targetUserId: listing.sellerUserId,
+      message: `bought your ${result.card.characterName || result.card.actorName} for ${listing.askingPrice}¢`,
+      actorUserId: body.userId,
+      actorName: buyerName,
+      meta: { cardId: result.card.id, price: listing.askingPrice },
+    });
+
+    // Global notification for marketplace sale
+    addGlobalNotification({
+      type: "market_sale",
+      message: `sold ${result.card.characterName || result.card.actorName} to ${buyerName} for ${listing.askingPrice}¢`,
+      actorUserId: listing.sellerUserId,
+      actorName: sellerName,
+      meta: { cardId: result.card.id, price: listing.askingPrice },
+    });
+
     // Check for newly completed sets
     const completedAfter = getCompletedWinnerIds(body.userId);
     const winners = getWinners();
@@ -55,6 +74,13 @@ export async function POST(request: Request) {
           userId: body.userId,
           userName: buyerName,
           message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          meta: { winnerId, movieTitle: winner?.movieTitle },
+        });
+        addGlobalNotification({
+          type: "set_complete",
+          message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+          actorUserId: body.userId,
+          actorName: buyerName,
           meta: { winnerId, movieTitle: winner?.movieTitle },
         });
       }

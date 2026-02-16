@@ -12,7 +12,10 @@ import {
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
+  getWinners,
+  addSetCompletionQuest,
 } from "@/lib/data";
+import { hasCompletedMovie } from "@/lib/cards";
 
 /** Upload a card to the codex: removes it from your collection and unlocks that slot. Legendaries re-enter the pool.
  * Main codex: you can upload both regular and holo per character (two slots).
@@ -117,10 +120,22 @@ export async function POST(request: Request) {
   const { recordQuestProgress } = await import("@/lib/quests");
   recordQuestProgress(userId, "upload_codex");
 
+  // Check if this upload completed a set — if so, add a claimable quest
+  let setCompleted: { winnerId: string; movieTitle: string } | undefined;
+  const tmdbId = card.movieTmdbId;
+  if (tmdbId) {
+    const winner = getWinners().find((w) => w.tmdbId === tmdbId);
+    if (winner && hasCompletedMovie(userId, winner.id)) {
+      const added = addSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
+      if (added) setCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     characterId,
     isFoil: card.isFoil ?? false,
     variant: isMain ? (card.isFoil ? "holo" : "regular") : isAltArt ? "altart" : "boys",
+    ...(setCompleted && { setCompleted }),
   });
 }

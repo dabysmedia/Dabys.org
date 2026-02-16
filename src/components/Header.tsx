@@ -7,6 +7,7 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import StatusIndicator from "@/components/StatusIndicator";
 import { usePresence } from "@/hooks/usePresence";
 import { usePresenceStatus } from "@/hooks/usePresenceStatus";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 // Web Audio API — credit gain chime (no assets)
 let creditsAudioContext: AudioContext | null = null;
@@ -432,6 +433,7 @@ export default function Header() {
           {isNarrow ? (
             <div className="flex items-center gap-2">
               {creditsBlock}
+              <NotificationCenter />
               <button
                 type="button"
                 onClick={() => setMenuOpen(true)}
@@ -448,6 +450,7 @@ export default function Header() {
               <NavLink href="/stats" label="Stats" active={isStats} />
               <NavLink href="/casino" label="Casino" active={isCasino} />
               <NavLink href="/cards" label="TCG" active={isCards} dot={hasIncomingTrade} />
+              <NotificationCenter />
               {creditsBlock}
               {profileBlock}
               <button

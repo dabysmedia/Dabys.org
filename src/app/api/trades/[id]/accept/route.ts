@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { acceptTrade } from "@/lib/trades";
-import { getTradeById, getUsers, getWinners, addActivity } from "@/lib/data";
+import { getTradeById, getUsers, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
 import { getCompletedWinnerIds } from "@/lib/cards";
 import { recordQuestProgress } from "@/lib/quests";
 
@@ -50,6 +50,25 @@ export async function POST(
       meta: { tradeId, counterpartyName, counterpartyUserId: trade.counterpartyUserId },
     });
 
+    // Personal notification to the trade initiator
+    addNotification({
+      type: "trade_accepted",
+      targetUserId: trade.initiatorUserId,
+      message: `accepted your trade offer (${totalCards} card${totalCards !== 1 ? "s" : ""})`,
+      actorUserId: trade.counterpartyUserId,
+      actorName: counterpartyName,
+      meta: { tradeId },
+    });
+
+    // Global notification for trade complete
+    addGlobalNotification({
+      type: "trade_complete",
+      message: `completed a trade with ${counterpartyName} (${totalCards} card${totalCards !== 1 ? "s" : ""})`,
+      actorUserId: trade.initiatorUserId,
+      actorName: initiatorName,
+      meta: { tradeId },
+    });
+
     // Check for newly completed sets for both parties
     const winners = getWinners();
     for (const [userId, userName, before] of [
@@ -65,6 +84,13 @@ export async function POST(
             userId,
             userName,
             message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+            meta: { winnerId, movieTitle: winner?.movieTitle },
+          });
+          addGlobalNotification({
+            type: "set_complete",
+            message: `completed the ${winner?.movieTitle || "a movie"} set!`,
+            actorUserId: userId,
+            actorName: userName,
             meta: { winnerId, movieTitle: winner?.movieTitle },
           });
         }

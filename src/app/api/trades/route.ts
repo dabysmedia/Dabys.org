@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTradesForUser, getCardById } from "@/lib/data";
+import { getTradesForUser, getCardById, addNotification } from "@/lib/data";
 import { createTrade } from "@/lib/trades";
 import { getDisplayedBadgeForUser } from "@/lib/cards";
 
@@ -72,6 +72,17 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  // Notify the counterparty about the incoming trade
+  const cardCount = offered.length + requested.length;
+  addNotification({
+    type: "trade_received",
+    targetUserId: counterpartyUserId,
+    message: `sent you a trade offer (${cardCount} card${cardCount !== 1 ? "s" : ""})`,
+    actorUserId: initiatorUserId,
+    actorName: initiatorName,
+    meta: { tradeId: result.trade?.id },
+  });
 
   return NextResponse.json({ trade: result.trade }, { status: 201 });
 }

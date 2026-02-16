@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits, getCreditSettings } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits, getCreditSettings, addNotification } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -40,6 +40,22 @@ export async function POST(
 
   comments.push(newComment);
   saveComments(comments);
+
+  // Notify parent comment author when someone replies
+  if (parentId) {
+    const parentComment = comments.find((c) => c.id === parentId);
+    if (parentComment && parentComment.userId !== body.userId) {
+      const snippet = (body.text || "").slice(0, 60) + ((body.text || "").length > 60 ? "…" : "");
+      addNotification({
+        type: "comment_reply",
+        targetUserId: parentComment.userId,
+        message: `replied to your comment${snippet ? `: "${snippet}"` : ""}`,
+        actorUserId: body.userId,
+        actorName: body.userName,
+        meta: { winnerId, commentId: newId, parentId },
+      });
+    }
+  }
 
   // Credits only for first comment per user per movie
   const existingCount = comments.filter((c) => c.winnerId === winnerId && c.userId === body.userId).length;
