@@ -48,6 +48,7 @@ interface Pack {
   isActive: boolean;
   maxPurchasesPerDay?: number;
   isFree?: boolean;
+  restockIntervalHours?: number;
   restockHourUtc?: number;
   restockMinuteUtc?: number;
   discounted?: boolean;
