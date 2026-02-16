@@ -14,6 +14,7 @@ import {
   getListings,
   getBuyOrders,
   getFeedback,
+  getActivity,
 } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export async function GET() {
   const listings = getListings();
   const buyOrders = getBuyOrders();
   const feedback = getFeedback();
+  const activity = getActivity();
 
   // ── Economy overview ──────────────────────────────────
   const totalCredits = creditsAll.reduce((sum, c) => sum + c.balance, 0);
@@ -168,6 +170,41 @@ export async function GET() {
     });
   }
 
+  // ── Legendary timeline ────────────────────────────────
+  // Combine legendary cards (by acquiredAt) and legendary_pull activity entries
+  const legendaryCards = cards
+    .filter((c) => c.rarity === "legendary")
+    .map((c) => {
+      const owner = users.find((u) => u.id === c.userId);
+      return {
+        type: "card" as const,
+        cardId: c.id,
+        userId: c.userId,
+        userName: owner?.name ?? `User ${c.userId}`,
+        actorName: c.actorName,
+        characterName: c.characterName,
+        movieTitle: c.movieTitle,
+        isFoil: c.isFoil,
+        profilePath: c.profilePath,
+        timestamp: c.acquiredAt,
+      };
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  // Also grab legendary_pull activity entries for extra context
+  const legendaryPulls = activity
+    .filter((a) => a.type === "legendary_pull")
+    .map((a) => ({
+      type: "activity" as const,
+      activityId: a.id,
+      userId: a.userId,
+      userName: a.userName,
+      message: a.message,
+      meta: a.meta,
+      timestamp: a.timestamp,
+    }))
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
   return NextResponse.json({
     economy: {
       totalCredits,
@@ -214,5 +251,7 @@ export async function GET() {
       pendingFeedback: feedback.length,
     },
     recentTransactions,
+    legendaryTimeline: legendaryCards,
+    legendaryPulls,
   });
 }

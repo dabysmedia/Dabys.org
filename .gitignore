@@ -59,3 +59,4 @@ src/data/dailyQuests.json
 src/data/questSettings.json
 src/data/codexUnlocks.json
 src/data/holoCodexUnlocks.json
+src/data/presence.json

@@ -55,6 +55,80 @@ interface DashboardData {
     reason: string;
     createdAt: string;
   }[];
+  legendaryTimeline: {
+    type: "card";
+    cardId: string;
+    userId: string;
+    userName: string;
+    actorName: string;
+    characterName: string;
+    movieTitle: string;
+    isFoil: boolean;
+    profilePath: string;
+    timestamp: string;
+  }[];
+  legendaryPulls: {
+    type: "activity";
+    activityId: string;
+    userId: string;
+    userName: string;
+    message: string;
+    meta?: Record<string, unknown>;
+    timestamp: string;
+  }[];
+}
+
+interface UserDetailData {
+  user: {
+    id: string;
+    name: string;
+    status: "online" | "away" | "offline";
+    balance: number;
+    stardust: number;
+  };
+  cards: {
+    total: number;
+    foilCount: number;
+    rarityBreakdown: Record<string, number>;
+    legendaryCards: {
+      id: string;
+      characterId: string;
+      actorName: string;
+      characterName: string;
+      movieTitle: string;
+      isFoil: boolean;
+      acquiredAt: string;
+      profilePath: string;
+    }[];
+  };
+  economy: {
+    earned24h: number;
+    spent24h: number;
+    net24h: number;
+    earned7d: number;
+    spent7d: number;
+    net7d: number;
+    trend: "gaining" | "losing" | "stable";
+    ratePerDay: number;
+    dailyNet: { date: string; earned: number; spent: number; net: number }[];
+    reasonBreakdown24h: Record<string, { earned: number; spent: number; count: number }>;
+  };
+  recentTransactions: {
+    id: string;
+    amount: number;
+    reason: string;
+    createdAt: string;
+  }[];
+  activity: {
+    id: string;
+    type: string;
+    timestamp: string;
+    userId: string;
+    userName: string;
+    message: string;
+    meta?: Record<string, unknown>;
+  }[];
+  totalTransactions: number;
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -175,6 +249,517 @@ function TrendBadge({ trend, netFlow }: { trend: string; netFlow: number }) {
   );
 }
 
+/* ─── User Detail Modal ──────────────────────────────────────────── */
+
+function UserDetailModal({
+  userId,
+  onClose,
+}: {
+  userId: string;
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<UserDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/admin/user-detail?userId=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((d) => setDetail(d))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const chartMax = useMemo(() => {
+    if (!detail) return 1;
+    return Math.max(
+      ...detail.economy.dailyNet.map((d) => Math.max(d.earned, d.spent)),
+      1
+    );
+  }, [detail]);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        className="fixed inset-4 sm:inset-8 md:inset-12 z-50 rounded-2xl border border-white/[0.08] bg-[#0f0f14] shadow-2xl overflow-hidden flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-label="User detail"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-white/[0.06] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            {detail && (
+              <>
+                <div
+                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                    detail.user.status === "online"
+                      ? "bg-emerald-400"
+                      : detail.user.status === "away"
+                        ? "bg-amber-400"
+                        : "bg-white/20"
+                  }`}
+                />
+                <div>
+                  <h2 className="text-lg font-bold text-white/90">
+                    {detail.user.name}
+                  </h2>
+                  <p className="text-xs text-white/40">
+                    User ID: {detail.user.id} &middot;{" "}
+                    {detail.totalTransactions} total transactions
+                  </p>
+                </div>
+              </>
+            )}
+            {loading && (
+              <h2 className="text-lg font-bold text-white/90">Loading...</h2>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar min-h-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="w-10 h-10 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+            </div>
+          ) : !detail ? (
+            <p className="text-white/50 text-sm py-8">
+              Failed to load user data.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {/* ── Top stat cards ── */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-amber-500/[0.04] to-transparent p-4">
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest font-medium mb-1">
+                    Balance
+                  </p>
+                  <p className="text-2xl font-bold text-amber-300 tabular-nums">
+                    {formatNum(detail.user.balance)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-purple-500/[0.04] to-transparent p-4">
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest font-medium mb-1">
+                    Stardust
+                  </p>
+                  <p className="text-2xl font-bold text-purple-300 tabular-nums">
+                    {formatNum(detail.user.stardust)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-blue-500/[0.04] to-transparent p-4">
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest font-medium mb-1">
+                    Cards
+                  </p>
+                  <p className="text-2xl font-bold text-blue-300 tabular-nums">
+                    {formatNum(detail.cards.total)}
+                  </p>
+                  <p className="text-[10px] text-white/25 mt-0.5">
+                    {detail.cards.foilCount} foils
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.06] bg-gradient-to-br from-emerald-500/[0.04] to-transparent p-4">
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest font-medium mb-1">
+                    Credit Trend
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {detail.economy.trend === "gaining" && (
+                      <span className="inline-flex items-center gap-1 text-emerald-400">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
+                          />
+                        </svg>
+                        <span className="text-lg font-bold">Gaining</span>
+                      </span>
+                    )}
+                    {detail.economy.trend === "losing" && (
+                      <span className="inline-flex items-center gap-1 text-red-400">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.5 4.5l15 15m0 0V8.25m0 11.25H8.25"
+                          />
+                        </svg>
+                        <span className="text-lg font-bold">Losing</span>
+                      </span>
+                    )}
+                    {detail.economy.trend === "stable" && (
+                      <span className="inline-flex items-center gap-1 text-white/40">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19.5 12h-15"
+                          />
+                        </svg>
+                        <span className="text-lg font-bold">Stable</span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-white/25 mt-0.5">
+                    {detail.economy.ratePerDay >= 0 ? "+" : ""}
+                    {formatNum(detail.economy.ratePerDay)} / active day
+                  </p>
+                </div>
+              </div>
+
+              {/* ── 24h Summary + 7d Chart ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {/* 24h summary */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">
+                    Last 24 Hours
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wide">
+                        Earned
+                      </p>
+                      <p className="text-lg font-semibold text-emerald-400 tabular-nums">
+                        +{formatNum(detail.economy.earned24h)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wide">
+                        Spent
+                      </p>
+                      <p className="text-lg font-semibold text-red-400 tabular-nums">
+                        -{formatNum(detail.economy.spent24h)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wide">
+                        Net
+                      </p>
+                      <p
+                        className={`text-lg font-semibold tabular-nums ${
+                          detail.economy.net24h > 0
+                            ? "text-emerald-400"
+                            : detail.economy.net24h < 0
+                              ? "text-red-400"
+                              : "text-white/40"
+                        }`}
+                      >
+                        {detail.economy.net24h > 0 ? "+" : ""}
+                        {formatNum(detail.economy.net24h)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 24h breakdown by reason */}
+                  {Object.keys(detail.economy.reasonBreakdown24h).length >
+                    0 && (
+                    <div className="mt-4 pt-3 border-t border-white/[0.06]">
+                      <p className="text-[10px] text-white/30 uppercase tracking-wide mb-2">
+                        Breakdown
+                      </p>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                        {Object.entries(detail.economy.reasonBreakdown24h)
+                          .sort((a, b) => b[1].count - a[1].count)
+                          .map(([reason, { earned, spent, count }]) => (
+                            <div
+                              key={reason}
+                              className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-white/60 truncate">
+                                  {REASON_LABELS[reason] || reason}
+                                </p>
+                                <p className="text-[10px] text-white/20">
+                                  {count} txns
+                                </p>
+                              </div>
+                              <div className="text-right flex-shrink-0 ml-2">
+                                {earned > 0 && (
+                                  <span className="text-[11px] text-emerald-400/80">
+                                    +{formatNum(earned)}
+                                  </span>
+                                )}
+                                {earned > 0 && spent > 0 && (
+                                  <span className="text-white/15 mx-1">
+                                    /
+                                  </span>
+                                )}
+                                {spent > 0 && (
+                                  <span className="text-[11px] text-red-400/70">
+                                    -{formatNum(spent)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 7d chart */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-white/70">
+                      7-Day Credit Flow
+                    </h3>
+                    <div className="flex gap-3 text-[10px]">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-sm bg-emerald-500/60" />{" "}
+                        Earned
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-sm bg-red-400/50" />{" "}
+                        Spent
+                      </span>
+                    </div>
+                  </div>
+                  <MiniBarChart
+                    data={detail.economy.dailyNet}
+                    maxVal={chartMax}
+                  />
+                  <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-white/[0.06]">
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase">
+                        Earned (7d)
+                      </p>
+                      <p className="text-sm font-semibold text-emerald-400/70 tabular-nums">
+                        +{formatNum(detail.economy.earned7d)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase">
+                        Spent (7d)
+                      </p>
+                      <p className="text-sm font-semibold text-red-400/70 tabular-nums">
+                        -{formatNum(detail.economy.spent7d)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase">
+                        Net (7d)
+                      </p>
+                      <p
+                        className={`text-sm font-semibold tabular-nums ${
+                          detail.economy.net7d > 0
+                            ? "text-emerald-400/70"
+                            : detail.economy.net7d < 0
+                              ? "text-red-400/70"
+                              : "text-white/30"
+                        }`}
+                      >
+                        {detail.economy.net7d > 0 ? "+" : ""}
+                        {formatNum(detail.economy.net7d)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Card rarity + Legendaries ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {/* Card breakdown */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">
+                    Card Collection
+                  </h3>
+                  <div className="space-y-2.5">
+                    {["legendary", "epic", "rare", "uncommon"].map((rarity) => {
+                      const count =
+                        detail.cards.rarityBreakdown[rarity] || 0;
+                      const pct =
+                        detail.cards.total > 0
+                          ? (count / detail.cards.total) * 100
+                          : 0;
+                      return (
+                        <div key={rarity}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span
+                              className={`text-xs font-medium capitalize ${RARITY_COLORS[rarity] || "text-white/60"}`}
+                            >
+                              {rarity}
+                            </span>
+                            <span className="text-[11px] text-white/40 tabular-nums">
+                              {count}
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                rarity === "legendary"
+                                  ? "bg-amber-400/60"
+                                  : rarity === "epic"
+                                    ? "bg-purple-400/60"
+                                    : rarity === "rare"
+                                      ? "bg-blue-400/60"
+                                      : "bg-green-400/60"
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Legendary cards */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                  <h3 className="text-sm font-semibold text-white/70 mb-3">
+                    <span className="text-amber-400">Legendary</span> Cards
+                  </h3>
+                  {detail.cards.legendaryCards.length === 0 ? (
+                    <p className="text-white/30 text-sm">
+                      No legendaries yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                      {detail.cards.legendaryCards.map((card) => (
+                        <div
+                          key={card.id}
+                          className="flex items-center gap-3 py-2 px-2 rounded-lg bg-amber-500/[0.03] border border-amber-500/[0.08]"
+                        >
+                          {card.profilePath && (
+                            <img
+                              src={card.profilePath}
+                              alt={card.actorName}
+                              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-amber-300 truncate">
+                              {card.characterName}
+                            </p>
+                            <p className="text-[10px] text-white/30 truncate">
+                              {card.actorName} &middot; {card.movieTitle}
+                              {card.isFoil && (
+                                <span className="ml-1 text-cyan-400">
+                                  FOIL
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[10px] text-white/25">
+                              {timeAgo(card.acquiredAt)}
+                            </p>
+                            <p className="text-[9px] text-white/15">
+                              {new Date(card.acquiredAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Recent transactions ── */}
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+                <h3 className="text-sm font-semibold text-white/70 mb-3">
+                  Recent Transactions
+                  <span className="text-white/25 font-normal text-xs ml-2">
+                    (last 50)
+                  </span>
+                </h3>
+                <div className="space-y-0 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  {detail.recentTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0"
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          tx.amount > 0
+                            ? "bg-emerald-500/10 text-emerald-400"
+                            : tx.amount < 0
+                              ? "bg-red-500/10 text-red-400"
+                              : "bg-white/5 text-white/30"
+                        }`}
+                      >
+                        {tx.amount > 0 ? "+" : tx.amount < 0 ? "−" : "="}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] text-white/40">
+                          {REASON_LABELS[tx.reason] || tx.reason}
+                        </span>
+                        <br />
+                        <span className="text-[10px] text-white/20">
+                          {timeAgo(tx.createdAt)}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold tabular-nums flex-shrink-0 ${
+                          tx.amount > 0
+                            ? "text-emerald-400"
+                            : tx.amount < 0
+                              ? "text-red-400"
+                              : "text-white/30"
+                        }`}
+                      >
+                        {tx.amount > 0 ? "+" : ""}
+                        {formatNum(tx.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  {detail.recentTransactions.length === 0 && (
+                    <p className="text-white/30 text-sm py-2">
+                      No transactions.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ─── Main dashboard ─────────────────────────────────────────────── */
 
 type TransactionRow = {
@@ -193,6 +778,7 @@ export default function AdminDashboard() {
   const [transactionsHistory, setTransactionsHistory] = useState<TransactionRow[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsTotal, setTransactionsTotal] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/dashboard")
@@ -388,7 +974,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <a
-                href="/admin/weeks"
+                href="/admin/movie-night"
                 className="mt-4 block text-center text-xs text-purple-400 hover:text-purple-300 transition-colors"
               >
                 Manage Week →
@@ -480,11 +1066,16 @@ export default function AdminDashboard() {
           <p className="text-[10px] text-white/30 uppercase tracking-wide mb-2">Top Balances</p>
           <div className="space-y-1.5 mb-4">
             {data.economy.userCredits.slice(0, 5).map((u, i) => (
-              <div key={u.userId} className="flex items-center gap-2">
+              <button
+                key={u.userId}
+                type="button"
+                onClick={() => setSelectedUserId(u.userId)}
+                className="flex items-center gap-2 w-full text-left hover:bg-white/[0.04] rounded-md px-1 py-0.5 -mx-1 transition-colors cursor-pointer group"
+              >
                 <span className="w-4 text-[10px] text-white/25 text-right tabular-nums">{i + 1}</span>
-                <span className="flex-1 text-xs text-white/70 truncate">{u.name}</span>
+                <span className="flex-1 text-xs text-white/70 truncate group-hover:text-white/90 transition-colors">{u.name}</span>
                 <span className="text-xs text-amber-400/80 font-medium tabular-nums">{formatNum(u.balance)}</span>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -492,11 +1083,16 @@ export default function AdminDashboard() {
           <p className="text-[10px] text-white/30 uppercase tracking-wide mb-2">Most Cards</p>
           <div className="space-y-1.5">
             {data.cards.userCards.slice(0, 5).map((u, i) => (
-              <div key={u.userId} className="flex items-center gap-2">
+              <button
+                key={u.userId}
+                type="button"
+                onClick={() => setSelectedUserId(u.userId)}
+                className="flex items-center gap-2 w-full text-left hover:bg-white/[0.04] rounded-md px-1 py-0.5 -mx-1 transition-colors cursor-pointer group"
+              >
                 <span className="w-4 text-[10px] text-white/25 text-right tabular-nums">{i + 1}</span>
-                <span className="flex-1 text-xs text-white/70 truncate">{u.name}</span>
+                <span className="flex-1 text-xs text-white/70 truncate group-hover:text-white/90 transition-colors">{u.name}</span>
                 <span className="text-xs text-blue-400/80 font-medium tabular-nums">{formatNum(u.count)}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -554,7 +1150,13 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-white/80 truncate">{tx.userName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserId(tx.userId)}
+                      className="text-xs font-medium text-white/80 truncate hover:text-purple-400 transition-colors cursor-pointer"
+                    >
+                      {tx.userName}
+                    </button>
                     <span className="text-[10px] text-white/25">{REASON_LABELS[tx.reason] || tx.reason}</span>
                   </div>
                   <span className="text-[10px] text-white/20">{timeAgo(tx.createdAt)}</span>
@@ -570,18 +1172,104 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* ─── Legendary Timeline ──────────────────────────────────── */}
+      {data.legendaryTimeline.length > 0 && (
+        <div className="rounded-xl border border-amber-500/[0.12] bg-gradient-to-br from-amber-500/[0.03] to-transparent p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+            <h2 className="text-sm font-semibold text-amber-300">Legendary Timeline</h2>
+            <span className="text-[10px] text-white/25 ml-auto">{data.legendaryTimeline.length} total</span>
+          </div>
+          <div className="space-y-0 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+            {data.legendaryTimeline.map((leg) => (
+              <div
+                key={leg.cardId}
+                className="flex items-center gap-3 py-2.5 border-b border-amber-500/[0.06] last:border-0"
+              >
+                {leg.profilePath && (
+                  <img
+                    src={leg.profilePath}
+                    alt={leg.actorName}
+                    className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-amber-500/20"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-amber-300 truncate">
+                      {leg.characterName}
+                    </span>
+                    {leg.isFoil && (
+                      <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        FOIL
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-white/30 truncate">
+                    {leg.actorName} &middot; {leg.movieTitle}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUserId(leg.userId)}
+                    className="text-xs text-white/60 hover:text-purple-400 transition-colors cursor-pointer"
+                  >
+                    {leg.userName}
+                  </button>
+                  <p className="text-[10px] text-white/20">
+                    {new Date(leg.timestamp).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── User Lookup ───────────────────────────────────────── */}
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <h2 className="text-sm font-semibold text-white/70 mb-3">User Lookup</h2>
+        <p className="text-[10px] text-white/30 mb-3">Click any user to view their detailed activity, credit trends, and legendary cards.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {data.economy.userCredits.map((u) => (
+            <button
+              key={u.userId}
+              type="button"
+              onClick={() => setSelectedUserId(u.userId)}
+              className="flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.06] hover:border-white/[0.12] transition-all cursor-pointer group"
+            >
+              <div className="w-7 h-7 rounded-md bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-purple-400">
+                  {u.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-xs font-medium text-white/70 truncate group-hover:text-white/90 transition-colors">
+                  {u.name}
+                </p>
+                <p className="text-[10px] text-amber-400/60 tabular-nums">{formatNum(u.balance)}c</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ─── Quick actions ─────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-semibold text-white/70 mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {[
-            { href: "/admin/weeks", label: "Weeks & Phases", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z", iconCls: "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20" },
+            { href: "/admin/movie-night", label: "Movie Night", icon: "M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375", iconCls: "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20" },
             { href: "/admin/users", label: "Users", icon: "M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z", iconCls: "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20" },
-            { href: "/admin/submissions", label: "Submissions", icon: "M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375", iconCls: "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20" },
-            { href: "/admin/winners", label: "Winners", icon: "M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172", iconCls: "bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20" },
             { href: "/admin/cards-credits", label: "Cards & Credits", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z", iconCls: "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20" },
-            { href: "/admin/votes", label: "Votes", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z", iconCls: "bg-sky-500/10 text-sky-400 group-hover:bg-sky-500/20" },
-            { href: "/admin/wheel", label: "Theme Wheel", icon: "M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z", iconCls: "bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20" },
             { href: "/admin/feedback", label: `Feedback${data.site.pendingFeedback > 0 ? ` (${data.site.pendingFeedback})` : ""}`, icon: "M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z", iconCls: "bg-pink-500/10 text-pink-400 group-hover:bg-pink-500/20" },
           ].map((action) => (
             <a
@@ -603,6 +1291,14 @@ export default function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* User detail modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          userId={selectedUserId}
+          onClose={() => setSelectedUserId(null)}
+        />
+      )}
 
       {/* Transaction history modal */}
       {showTransactionsModal && (
@@ -696,7 +1392,16 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-medium text-white/85 truncate">{tx.userName}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setShowTransactionsModal(false);
+                                        setSelectedUserId(tx.userId);
+                                      }}
+                                      className="text-sm font-medium text-white/85 truncate hover:text-purple-400 transition-colors cursor-pointer"
+                                    >
+                                      {tx.userName}
+                                    </button>
                                     <span className="text-[11px] text-white/35">{REASON_LABELS[tx.reason] || tx.reason}</span>
                                   </div>
                                   <span className="text-[11px] text-white/25">

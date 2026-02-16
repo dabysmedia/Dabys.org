@@ -8,6 +8,13 @@ import {
   getUsers,
   getProfiles,
   computeDabysScorePct,
+  getCreditsRaw,
+  getCardsRaw,
+  getCodexPoolEntries,
+  getCodexUnlockedCharacterIds,
+  getCodexUnlockedHoloCharacterIds,
+  getCreditLedgerRaw,
+  getTradesRaw,
 } from "@/lib/data";
 
 export async function GET() {
@@ -19,14 +26,130 @@ export async function GET() {
   const users = getUsers();
   const profiles = getProfiles();
 
-  // Totals
+  // ─── Totals ───
   const totalWeeks = weeks.length;
   const totalSubmissions = submissions.length;
   const totalWinners = winners.length;
   const totalRatings = ratings.length;
   const totalComments = comments.length;
 
-  // Most submitted movie (by tmdbId or movieTitle)
+  // ─── Credit ledger analysis ───
+  const ledger = getCreditLedgerRaw();
+
+  // Packs opened per user
+  const packsOpenedByUser = new Map<string, number>();
+  let totalPacksOpened = 0;
+  for (const e of ledger) {
+    if (e.reason === "pack_purchase") {
+      packsOpenedByUser.set(e.userId, (packsOpenedByUser.get(e.userId) || 0) + 1);
+      totalPacksOpened++;
+    }
+  }
+  const packAddicts = Array.from(packsOpenedByUser.entries())
+    .map(([userId, count]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: count };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Daily quest rewards per user
+  const questsByUser = new Map<string, number>();
+  let totalQuestsCompleted = 0;
+  for (const e of ledger) {
+    if (e.reason === "daily_quest_reward") {
+      questsByUser.set(e.userId, (questsByUser.get(e.userId) || 0) + 1);
+      totalQuestsCompleted++;
+    }
+  }
+  const biggestQuesters = Array.from(questsByUser.entries())
+    .map(([userId, count]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: count };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Casino stats per user (blackjack + slots)
+  const casinoByUser = new Map<string, { hands: number; wagered: number; netPnl: number }>();
+  let totalCasinoHands = 0;
+  for (const e of ledger) {
+    if (e.reason === "casino_blackjack" || e.reason === "casino_slots") {
+      const cur = casinoByUser.get(e.userId) || { hands: 0, wagered: 0, netPnl: 0 };
+      cur.hands += 1;
+      cur.wagered += Math.abs(e.amount);
+      cur.netPnl += e.amount; // negative = loss (bet placed)
+      casinoByUser.set(e.userId, cur);
+      totalCasinoHands++;
+    } else if (
+      e.reason === "casino_blackjack_win" ||
+      e.reason === "casino_blackjack_push"
+    ) {
+      const cur = casinoByUser.get(e.userId) || { hands: 0, wagered: 0, netPnl: 0 };
+      cur.netPnl += e.amount; // positive = winnings returned
+      casinoByUser.set(e.userId, cur);
+    }
+  }
+  const highRollers = Array.from(casinoByUser.entries())
+    .map(([userId, stats]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: stats.wagered, hands: stats.hands, netPnl: stats.netPnl };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Failed legendary trade-ups (trade_up_epic gives credits = fail, no entry = success since card goes to inventory)
+  let legendaryTradeUpsFailed = 0;
+  const tradeUpFailsByUser = new Map<string, number>();
+  for (const e of ledger) {
+    if (e.reason === "trade_up_epic") {
+      legendaryTradeUpsFailed++;
+      tradeUpFailsByUser.set(e.userId, (tradeUpFailsByUser.get(e.userId) || 0) + 1);
+    }
+  }
+
+  // Quicksell stats per user
+  const quicksellByUser = new Map<string, { count: number; earned: number }>();
+  let totalQuicksells = 0;
+  for (const e of ledger) {
+    if (e.reason === "quicksell") {
+      const cur = quicksellByUser.get(e.userId) || { count: 0, earned: 0 };
+      const cardCount = Array.isArray(e.metadata?.cardIds) ? (e.metadata.cardIds as string[]).length : 1;
+      cur.count += cardCount;
+      cur.earned += e.amount;
+      quicksellByUser.set(e.userId, cur);
+      totalQuicksells += cardCount;
+    }
+  }
+
+  // Total credits spent (all negative ledger entries)
+  let totalCreditsSpent = 0;
+  let totalCreditsEarnedServer = 0;
+  for (const e of ledger) {
+    if (e.amount < 0) totalCreditsSpent += Math.abs(e.amount);
+    if (e.amount > 0) totalCreditsEarnedServer += e.amount;
+  }
+
+  // ─── Trade stats ───
+  const allTrades = getTradesRaw();
+  const acceptedTrades = allTrades.filter((t) => t.status === "accepted");
+  const totalTradesCompleted = acceptedTrades.length;
+  const tradesByUser = new Map<string, number>();
+  for (const t of acceptedTrades) {
+    tradesByUser.set(t.initiatorUserId, (tradesByUser.get(t.initiatorUserId) || 0) + 1);
+    tradesByUser.set(t.counterpartyUserId, (tradesByUser.get(t.counterpartyUserId) || 0) + 1);
+  }
+  const tradeDealers = Array.from(tradesByUser.entries())
+    .map(([userId, count]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: count };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // ─── Movie night stats (existing) ───
+
+  // Most submitted movie
   const movieCount = new Map<string, { count: number; movieTitle: string; posterUrl: string; year?: string }>();
   for (const s of submissions) {
     const key = s.tmdbId != null ? `tmdb:${s.tmdbId}` : `title:${s.movieTitle.trim().toLowerCase()}`;
@@ -34,12 +157,7 @@ export async function GET() {
     if (existing) {
       existing.count += 1;
     } else {
-      movieCount.set(key, {
-        count: 1,
-        movieTitle: s.movieTitle,
-        posterUrl: s.posterUrl || "",
-        year: s.year,
-      });
+      movieCount.set(key, { count: 1, movieTitle: s.movieTitle, posterUrl: s.posterUrl || "", year: s.year });
     }
   }
   let mostSubmittedMovie: { movieTitle: string; posterUrl: string; year?: string; count: number } | null = null;
@@ -51,7 +169,7 @@ export async function GET() {
     }
   }
 
-  // Top submitters (userName -> count)
+  // Top submitters
   const submitCountByUser = new Map<string, number>();
   for (const s of submissions) {
     submitCountByUser.set(s.userName, (submitCountByUser.get(s.userName) || 0) + 1);
@@ -59,9 +177,9 @@ export async function GET() {
   const topSubmitters = Array.from(submitCountByUser.entries())
     .map(([userName, count]) => ({ userName, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+    .slice(0, 10);
 
-  // Win leaders (submittedBy -> count)
+  // Win leaders
   const winCountByUser = new Map<string, number>();
   for (const w of winners) {
     if (w.submittedBy) {
@@ -71,9 +189,9 @@ export async function GET() {
   const winLeaders = Array.from(winCountByUser.entries())
     .map(([userName, count]) => ({ userName, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+    .slice(0, 10);
 
-  // Biggest skippers (profiles sorted by skipsUsed desc, join with users for name)
+  // Biggest skippers
   const biggestSkippers = profiles
     .filter((p) => (p.skipsUsed ?? 0) > 0)
     .map((p) => {
@@ -81,9 +199,9 @@ export async function GET() {
       return { userName: user?.name ?? p.userId, skipsUsed: p.skipsUsed ?? 0 };
     })
     .sort((a, b) => b.skipsUsed - a.skipsUsed)
-    .slice(0, 5);
+    .slice(0, 10);
 
-  // Best rated winner (avg stars, at least 1 rating)
+  // Best rated winner
   const ratingByWinner = new Map<string, { sum: number; count: number }>();
   for (const r of ratings) {
     const cur = ratingByWinner.get(r.winnerId) || { sum: 0, count: 0 };
@@ -102,32 +220,20 @@ export async function GET() {
       if (winner) {
         const winnerRatings = ratings.filter((r) => r.winnerId === winnerId);
         const dabysScorePct = computeDabysScorePct(winnerRatings);
-        bestRatedWinner = {
-          winnerId,
-          movieTitle: winner.movieTitle,
-          posterUrl: winner.posterUrl || "",
-          avgStars: Math.round(avg * 10) / 10,
-          ratingCount: count,
-          dabysScorePct,
-        };
+        bestRatedWinner = { winnerId, movieTitle: winner.movieTitle, posterUrl: winner.posterUrl || "", avgStars: Math.round(avg * 10) / 10, ratingCount: count, dabysScorePct };
       }
     }
   }
 
-  // Longest movie (winners with runtime, pick max)
+  // Longest movie
   const withRuntime = winners.filter((w) => w.runtime != null && w.runtime > 0);
   let longestWinner: { winnerId: string; movieTitle: string; posterUrl: string; runtimeMinutes: number } | null = null;
   if (withRuntime.length > 0) {
     const longest = withRuntime.reduce((a, b) => (a.runtime! > b.runtime! ? a : b));
-    longestWinner = {
-      winnerId: longest.id,
-      movieTitle: longest.movieTitle,
-      posterUrl: longest.posterUrl || "",
-      runtimeMinutes: longest.runtime!,
-    };
+    longestWinner = { winnerId: longest.id, movieTitle: longest.movieTitle, posterUrl: longest.posterUrl || "", runtimeMinutes: longest.runtime! };
   }
 
-  // Most popular decade (from winning films' release year)
+  // Winners by decade
   const decadeCount = new Map<string, number>();
   for (const w of winners) {
     const y = w.year ? parseInt(w.year, 10) : NaN;
@@ -138,7 +244,93 @@ export async function GET() {
     .map(([decade, count]) => ({ decade, count }))
     .sort((a, b) => b.count - a.count);
 
+  // ─── TCG leaderboard data ───
+
+  // Credits
+  const creditsData = getCreditsRaw();
+  const cashflowKings = creditsData
+    .map((c) => {
+      const user = users.find((u) => u.id === c.userId);
+      return { userName: user?.name ?? c.userId, value: c.balance };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Card data
+  const allCards = getCardsRaw();
+
+  // Legendary Collectors
+  const legendaryByUser = new Map<string, number>();
+  for (const card of allCards) {
+    if (card.rarity === "legendary") {
+      legendaryByUser.set(card.userId, (legendaryByUser.get(card.userId) || 0) + 1);
+    }
+  }
+  const legendaryCollectors = Array.from(legendaryByUser.entries())
+    .map(([userId, count]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: count };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Card Collectors
+  const cardsByUser = new Map<string, number>();
+  for (const card of allCards) {
+    cardsByUser.set(card.userId, (cardsByUser.get(card.userId) || 0) + 1);
+  }
+  const cardCollectors = Array.from(cardsByUser.entries())
+    .map(([userId, count]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: count };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Codex Completion
+  const codexPool = getCodexPoolEntries();
+  const totalCodexEntries = codexPool.length;
+  const codexCompletion = users
+    .map((u) => {
+      const unlocked = getCodexUnlockedCharacterIds(u.id);
+      const holoUnlocked = getCodexUnlockedHoloCharacterIds(u.id);
+      return {
+        userName: u.name,
+        unlocked: unlocked.length,
+        holoUnlocked: holoUnlocked.length,
+        total: totalCodexEntries,
+        pct: totalCodexEntries > 0 ? Math.round((unlocked.length / totalCodexEntries) * 100) : 0,
+      };
+    })
+    .filter((e) => e.unlocked > 0)
+    .sort((a, b) => b.unlocked - a.unlocked)
+    .slice(0, 10);
+
+  // Lifetime credits earned per user
+  const totalEarnedByUser = new Map<string, number>();
+  for (const entry of ledger) {
+    if (entry.amount > 0) {
+      totalEarnedByUser.set(entry.userId, (totalEarnedByUser.get(entry.userId) || 0) + entry.amount);
+    }
+  }
+  const totalCreditsEarned = Array.from(totalEarnedByUser.entries())
+    .map(([userId, total]) => {
+      const user = users.find((u) => u.id === userId);
+      return { userName: user?.name ?? userId, value: total };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  // Rarity breakdown
+  const rarityBreakdown = { uncommon: 0, rare: 0, epic: 0, legendary: 0 };
+  for (const card of allCards) {
+    if (card.rarity in rarityBreakdown) {
+      rarityBreakdown[card.rarity as keyof typeof rarityBreakdown] += 1;
+    }
+  }
+
   return NextResponse.json({
+    // Movie night
     totalWeeks,
     totalSubmissions,
     totalWinners,
@@ -151,5 +343,31 @@ export async function GET() {
     bestRatedWinner,
     longestWinner,
     winnersByDecade,
+    // TCG leaderboards
+    cashflowKings,
+    legendaryCollectors,
+    cardCollectors,
+    codexCompletion,
+    totalCreditsEarned,
+    packAddicts,
+    biggestQuesters,
+    highRollers,
+    tradeDealers,
+    // Card census
+    rarityBreakdown,
+    totalCards: allCards.length,
+    totalCodexEntries,
+    // Server-wide stats
+    serverStats: {
+      totalPacksOpened,
+      totalCardsUnpacked: totalPacksOpened * 5,
+      legendaryTradeUpsFailed,
+      totalTradesCompleted,
+      totalQuestsCompleted,
+      totalCasinoHands,
+      totalCreditsSpent,
+      totalCreditsEarnedServer,
+      totalQuicksells,
+    },
   });
 }

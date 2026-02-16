@@ -1678,7 +1678,7 @@ export interface TradeOffer {
   createdAt: string;
 }
 
-function getTradesRaw(): TradeOffer[] {
+export function getTradesRaw(): TradeOffer[] {
   try {
     return readJson<TradeOffer[]>("trades.json");
   } catch {
