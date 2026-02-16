@@ -848,25 +848,38 @@ export default function WinnerDetailPage() {
           </div>
         </div>
 
-        {/* ─── Card set ─── */}
+        {/* ─── Codex set ─── */}
         {winner.tmdbId && winnerCollection && (
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
-            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
-              Card set
-            </h3>
+          <div
+            className={`rounded-2xl border backdrop-blur-xl p-6 mb-8 ${
+              winnerCollection.completed
+                ? "border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25"
+                : "border-white/[0.08] bg-white/[0.03]"
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <h3 className={`text-sm font-semibold uppercase tracking-widest ${winnerCollection.completed ? "text-amber-200" : "text-white/60"}`}>
+                Codex set
+              </h3>
+              {winnerCollection.completed && (
+                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                  Complete
+                </span>
+              )}
+            </div>
             {winnerCollection.poolEntries.length === 0 ? (
               <p className="text-sm text-white/40">No cards for this movie yet. Build the character pool to unlock.</p>
             ) : (
               <>
                 <p className="text-sm text-white/50 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
                   {winnerCollection.completed ? (
-                    <span className="text-amber-400 font-medium">Complete! All {winnerCollection.poolEntries.length} collected.</span>
+                    <span className="text-amber-400 font-medium">All {winnerCollection.poolEntries.length} discovered in Codex.</span>
                   ) : (
-                    <>Discovered {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length}</>
+                    <>Discovered {winnerCollection.ownedCharacterIds.length} of {winnerCollection.poolEntries.length} in Codex</>
                   )}
                   {" · "}
                   <Link href="/cards" className="text-amber-400/80 hover:text-amber-400 transition-colors">
-                    Buy packs to collect
+                    TCG → upload cards to Codex
                   </Link>
                   {" · "}
                   <button
@@ -879,45 +892,47 @@ export default function WinnerDetailPage() {
                     {isTracked ? "Untrack" : "Track"}
                   </button>
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                  {winnerCollection.poolEntries.map((entry) => {
-                    const owned = winnerCollection.ownedCharacterIds.includes(entry.characterId);
-                    const cardIdx = winnerCollection.ownedCharacterIds.indexOf(entry.characterId);
-                    const card = cardIdx >= 0 ? winnerCollection.ownedCards[cardIdx] : undefined;
-                    return (
-                      <div key={entry.characterId} className="relative">
-                        {owned && card ? (
-                          <div className="w-full max-w-[100px] mx-auto">
-                            <CardDisplay card={card} />
-                          </div>
-                        ) : (
-                          <Link href="/cards" className="block w-full max-w-[100px] mx-auto group/placeholder">
-                            <div className="card-premium-glow rounded-xl overflow-hidden aspect-[2/3] border border-white/[0.08] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-200 group-hover/placeholder:shadow-[0_12px_40px_rgba(0,0,0,0.4)] group-hover/placeholder:-translate-y-0.5"
-                              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)" }}
-                            >
-                              <div className="relative w-full h-full">
-                                <img
-                                  src={entry.profilePath}
-                                  alt=""
-                                  className="absolute inset-[-15%] w-[130%] h-[130%] object-cover object-center blur-md scale-110 grayscale opacity-50"
-                                />
-                                <div className="absolute inset-0 card-art-bleed" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/[0.06] backdrop-blur-xl">
-                                  <svg className="w-8 h-8 text-white/30 group-hover/placeholder:text-amber-400/50 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                  </svg>
-                                  <span className="text-[10px] font-medium text-amber-400/80 group-hover/placeholder:text-amber-400 transition-colors">
-                                    Collect to reveal
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        )}
-                      </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {(() => {
+                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                    const sortedEntries = [...winnerCollection.poolEntries].sort(
+                      (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
                     );
-                  })}
+                    return sortedEntries.map((entry) => {
+                      const discovered = winnerCollection.ownedCharacterIds.includes(entry.characterId);
+                      if (!discovered) {
+                        return (
+                          <div
+                            key={entry.characterId}
+                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            style={{ aspectRatio: "2 / 3.35" }}
+                          >
+                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                              <span className="text-xs font-medium">?</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const codexCard = {
+                        id: entry.characterId,
+                        rarity: entry.rarity,
+                        isFoil: false,
+                        actorName: entry.actorName ?? "",
+                        characterName: entry.characterName ?? "",
+                        movieTitle: entry.movieTitle ?? "",
+                        profilePath: entry.profilePath ?? "",
+                        cardType: (entry as { cardType?: string }).cardType,
+                      };
+                      return (
+                        <div key={entry.characterId} className="rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 transition-shadow max-w-[140px] mx-auto w-full">
+                          <CardDisplay card={codexCard} />
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </>
             )}
