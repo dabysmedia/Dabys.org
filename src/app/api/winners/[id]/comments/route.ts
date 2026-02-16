@@ -41,8 +41,14 @@ export async function POST(
   comments.push(newComment);
   saveComments(comments);
 
-  const { comment: amount } = getCreditSettings();
-  addCredits(body.userId, amount, "comment", { commentId: newId, winnerId });
+  // Credits only for first comment per user per movie
+  const existingCount = comments.filter((c) => c.winnerId === winnerId && c.userId === body.userId).length;
+  if (existingCount === 1) {
+    const { comment: amount } = getCreditSettings();
+    if (amount > 0) {
+      addCredits(body.userId, amount, "comment", { commentId: newId, winnerId });
+    }
+  }
 
   return NextResponse.json(newComment, { status: 201 });
 }
