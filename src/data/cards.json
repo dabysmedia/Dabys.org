@@ -1,20 +1,6 @@
 [
   {
     "userId": "2",
-    "characterId": "actor-73457-152601",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Chris Pratt",
-    "characterName": "Paul",
-    "movieTitle": "Her",
-    "movieTmdbId": 152601,
-    "profilePath": "https://image.tmdb.org/t/p/w500/cRH6HPAQ98PlOwwEvhYO4CM9lwu.jpg",
-    "cardType": "actor",
-    "id": "card-1771124930745-5izbiaw",
-    "acquiredAt": "2026-02-15T03:08:50.745Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-8930-809",
     "rarity": "uncommon",
     "isFoil": false,
@@ -127,20 +113,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-1245-24428",
-    "rarity": "rare",
-    "isFoil": true,
-    "actorName": "Scarlett Johansson",
-    "characterName": "Natasha Romanoff / Black Widow",
-    "movieTitle": "The Avengers",
-    "movieTmdbId": 24428,
-    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
-    "cardType": "actor",
-    "id": "card-1771124960448-c9k3qnc",
-    "acquiredAt": "2026-02-15T03:09:20.448Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1162-111",
     "rarity": "rare",
     "isFoil": false,
@@ -152,20 +124,6 @@
     "cardType": "actor",
     "id": "card-1771124960449-1kqqs76",
     "acquiredAt": "2026-02-15T03:09:20.449Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-73421-152601",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Joaquin Phoenix",
-    "characterName": "Theodore",
-    "movieTitle": "Her",
-    "movieTmdbId": 152601,
-    "profilePath": "https://image.tmdb.org/t/p/w500/u38k3hQBDwNX0VA22aQceDp9Iyv.jpg",
-    "cardType": "actor",
-    "id": "card-1771124960450-028g93i",
-    "acquiredAt": "2026-02-15T03:09:20.450Z"
   },
   {
     "userId": "2",
@@ -407,20 +365,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-19540-1858",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Peter Cullen",
-    "characterName": "Optimus Prime (voice)",
-    "movieTitle": "Transformers",
-    "movieTmdbId": 1858,
-    "profilePath": "https://image.tmdb.org/t/p/w500/9Snf4fBUkk5MrAjqtNtgZRJYJbj.jpg",
-    "cardType": "actor",
-    "id": "card-1771125501733-wf6rdtw",
-    "acquiredAt": "2026-02-15T03:18:21.733Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-19541-1858",
     "rarity": "uncommon",
     "isFoil": false,
@@ -449,20 +393,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-17604-24428",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Jeremy Renner",
-    "characterName": "Clint Barton / Hawkeye",
-    "movieTitle": "The Avengers",
-    "movieTmdbId": 24428,
-    "profilePath": "https://image.tmdb.org/t/p/w500/yB84D1neTYXfWBaV0QOE9RF2VCu.jpg",
-    "cardType": "actor",
-    "id": "card-1771125505037-06i4j86",
-    "acquiredAt": "2026-02-15T03:18:25.037Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1162-111",
     "rarity": "rare",
     "isFoil": false,
@@ -474,20 +404,6 @@
     "cardType": "actor",
     "id": "card-1771125505037-r7rwbvb",
     "acquiredAt": "2026-02-15T03:18:25.037Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771125505038-z5nw4st",
-    "acquiredAt": "2026-02-15T03:18:25.038Z"
   },
   {
     "userId": "2",
@@ -547,20 +463,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-57409-9353",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Ana de la Reguera",
-    "characterName": "Sister Encarnación",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/hE8W86SKgIzoVsukTnL0VeGeYwB.jpg",
-    "cardType": "actor",
-    "id": "card-1771125508493-us5d8g9",
-    "acquiredAt": "2026-02-15T03:18:28.493Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1245-152601",
     "rarity": "rare",
     "isFoil": false,
@@ -571,20 +473,6 @@
     "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
     "cardType": "actor",
     "id": "card-1771125508494-t0kvjkw",
-    "acquiredAt": "2026-02-15T03:18:28.494Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-16828-24428",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "Chris Evans",
-    "characterName": "Steve Rogers / Captain America",
-    "movieTitle": "The Avengers",
-    "movieTmdbId": 24428,
-    "profilePath": "https://image.tmdb.org/t/p/w500/3bOGNsHlrswhyW79uvIHH1V43JI.jpg",
-    "cardType": "actor",
-    "id": "card-1771125508494-uik5d7r",
     "acquiredAt": "2026-02-15T03:18:28.494Z"
   },
   {
@@ -656,33 +544,5 @@
     "cardType": "actor",
     "id": "card-1771200013133-0860d6m",
     "acquiredAt": "2026-02-16T00:00:13.133Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-1245-152601",
-    "rarity": "rare",
-    "isFoil": false,
-    "actorName": "Scarlett Johansson",
-    "characterName": "Samantha (voice)",
-    "movieTitle": "Her",
-    "movieTmdbId": 152601,
-    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
-    "cardType": "actor",
-    "id": "card-1771200013134-h84ipif",
-    "acquiredAt": "2026-02-16T00:00:13.134Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "actor-1245-24428",
-    "rarity": "rare",
-    "isFoil": false,
-    "actorName": "Scarlett Johansson",
-    "characterName": "Natasha Romanoff / Black Widow",
-    "movieTitle": "The Avengers",
-    "movieTmdbId": 24428,
-    "profilePath": "https://image.tmdb.org/t/p/w500/mjReG6rR7NPMEIWb1T4YWtV11ty.jpg",
-    "cardType": "actor",
-    "id": "card-1771200075143-w2y8sq3",
-    "acquiredAt": "2026-02-16T00:01:15.143Z"
   }
 ]

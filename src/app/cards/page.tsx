@@ -1273,12 +1273,37 @@ function CardsContent() {
     return (entry?.altArtOfCharacterId ?? null) != null;
   }
 
+  /** Unique key for the codex slot this card would fill (one upload per slot). */
+  function getCodexSlotKey(card: { characterId?: string | null; isFoil?: boolean }): string | null {
+    if (!card.characterId) return null;
+    const entry = poolEntries.find((e) => e.characterId === card.characterId);
+    if (!entry) return null;
+    const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
+    const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
+    const isMain = !isAltArt && !isBoys;
+    if (isMain) return card.isFoil ? `holo:${card.characterId}` : `regular:${card.characterId}`;
+    if (isAltArt) return `altart:${card.characterId}`;
+    if (isBoys) return `boys:${card.characterId}`;
+    return null;
+  }
+
   async function handleCodexUploadSelected() {
     if (!user || codexUploadSelectedIds.size === 0) return;
-    const list = [...codexUploadSelectedIds].filter((cardId) => {
+    const eligible = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
       return c && c.characterId != null && !isCardSlotAlreadyInCodex(c);
     });
+    // One card per codex slot — never upload duplicates (e.g. multiple copies of same character regular).
+    const seenSlots = new Set<string>();
+    const list: string[] = [];
+    for (const cardId of eligible) {
+      const c = cards.find((x) => x.id === cardId)!;
+      const key = getCodexSlotKey(c);
+      if (key && !seenSlots.has(key)) {
+        seenSlots.add(key);
+        list.push(cardId);
+      }
+    }
     if (list.length === 0) return;
     codexSkipRequestedRef.current = false;
     setCodexUploading(true);
@@ -4195,10 +4220,37 @@ function CardsContent() {
                   </>
                 )}
               </div>
-              <div className="px-6 py-4 border-t border-white/10 shrink-0 flex items-center justify-between gap-4">
-                <span className="text-sm text-white/50">
-                  {codexUploadSelectedIds.size} selected
-                </span>
+              <div className="px-6 py-4 border-t border-white/10 shrink-0 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white/50">
+                    {codexUploadSelectedIds.size} selected
+                  </span>
+                  {(() => {
+                    const eligibleCards = cards.filter(
+                      (c) => c.id != null && !myListedCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c)
+                    );
+                    const onePerSlot: string[] = [];
+                    const seenSlots = new Set<string>();
+                    for (const c of eligibleCards) {
+                      const key = getCodexSlotKey(c);
+                      if (key && !seenSlots.has(key)) {
+                        seenSlots.add(key);
+                        onePerSlot.push(c.id!);
+                      }
+                    }
+                    const eligibleCount = onePerSlot.length;
+                    if (eligibleCount === 0 || codexUploading) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setCodexUploadSelectedIds(new Set(onePerSlot))}
+                        className="text-sm text-cyan-400 hover:text-cyan-300 font-medium cursor-pointer"
+                      >
+                        Add all {eligibleCount} eligible
+                      </button>
+                    );
+                  })()}
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"

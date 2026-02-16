@@ -57,3 +57,5 @@ src/data/winners.json
 src/data/creditSettings.json
 src/data/dailyQuests.json
 src/data/questSettings.json
+src/data/codexUnlocks.json
+src/data/holoCodexUnlocks.json
