@@ -69,6 +69,8 @@ function NavLink({
 
 const MOBILE_BREAKPOINT_PX = 768;
 
+const DEFAULT_ADMIN_NAMES = ["jerry", "carlos"];
+
 const isAppRoute = (path: string | null) =>
   path !== "/login" && path !== null && !path.startsWith("/admin");
 
@@ -83,6 +85,11 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
   const [hasIncomingTrade, setHasIncomingTrade] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminUser, setAdminUser] = useState<{ id: string; name: string } | null>(null);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshCredits = (delta?: number) => {
@@ -156,6 +163,21 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (!isNarrow) return;
+    try {
+      const raw = localStorage.getItem("dabys_user");
+      if (raw) {
+        const u = JSON.parse(raw) as { id?: string; name?: string };
+        if (u?.id && u?.name && DEFAULT_ADMIN_NAMES.includes(u.name.trim().toLowerCase()))
+          setAdminUser({ id: u.id, name: u.name });
+        else setAdminUser(null);
+      } else setAdminUser(null);
+    } catch {
+      setAdminUser(null);
+    }
+  }, [isNarrow, menuOpen]);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -196,6 +218,50 @@ export default function Header() {
     localStorage.removeItem("dabys_user");
     router.replace("/login");
   };
+
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      if (res.ok) {
+        closeMenu();
+        router.push("/admin");
+      } else {
+        setAdminError("Wrong password");
+        setAdminPassword("");
+      }
+    } catch {
+      setAdminError("Something went wrong");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleAdminLoginAsUser(userId: string) {
+    setAdminError("");
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        closeMenu();
+        router.push("/admin");
+      } else setAdminError("Could not sign in as admin");
+    } catch {
+      setAdminError("Something went wrong");
+    } finally {
+      setAdminLoading(false);
+    }
+  }
 
   // Don't render header on login or admin (layout still mounts us; we stay static elsewhere)
   if (!isAppRoute(pathname)) return null;
@@ -435,6 +501,46 @@ export default function Header() {
               </Link>
               <div className="min-h-[48px] flex items-center">
                 <FeedbackButton inline />
+              </div>
+              <div className="pt-2 border-t border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }}
+                  className="min-h-[48px] w-full flex items-center px-5 py-4 rounded-xl text-left text-base font-medium text-white/50 hover:text-white/70 hover:bg-white/10 transition-colors touch-manipulation"
+                >
+                  Admin Panel
+                </button>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${adminOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0"}`}>
+                  <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 mt-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="Password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder-white/20 outline-none focus:border-purple-500/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={adminLoading || !adminPassword}
+                        className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {adminLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Go"}
+                      </button>
+                    </div>
+                    {adminError && <p className="text-red-400/80 text-xs mt-2">{adminError}</p>}
+                    {adminUser && (
+                      <button
+                        type="button"
+                        onClick={() => handleAdminLoginAsUser(adminUser.id)}
+                        disabled={adminLoading}
+                        className="mt-2 w-full px-3 py-1.5 rounded-lg border border-white/20 text-white/60 text-xs hover:bg-white/10 disabled:opacity-50 cursor-pointer"
+                      >
+                        Enter as {adminUser.name}
+                      </button>
+                    )}
+                  </form>
+                </div>
               </div>
             </nav>
             <div className="mt-auto p-4 border-t border-white/[0.06] bg-white/[0.02] flex flex-col gap-4">

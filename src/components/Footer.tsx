@@ -70,14 +70,15 @@ export function Footer() {
   return (
     <footer className="relative z-10 border-t border-white/[0.04] mt-16">
       <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col items-center gap-4">
-        <button
-          onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }}
-          className="text-white/10 text-[11px] hover:text-white/30 transition-colors cursor-pointer"
-        >
-          Admin Panel
-        </button>
+        <div className="max-md:hidden flex flex-col items-center gap-4 w-full">
+          <button
+            onClick={() => { setAdminOpen(!adminOpen); setAdminError(""); setAdminPassword(""); }}
+            className="text-white/10 text-[11px] hover:text-white/30 transition-colors cursor-pointer"
+          >
+            Admin Panel
+          </button>
 
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out w-full max-w-xs ${adminOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out w-full max-w-xs ${adminOpen ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
           <form onSubmit={handleAdminLogin} className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-3">
             <div className="flex gap-2">
               <input
@@ -107,6 +108,7 @@ export function Footer() {
               </button>
             )}
           </form>
+          </div>
         </div>
 
         <p className="text-white/8 text-[10px] tracking-widest uppercase">Dabys Media Group</p>
