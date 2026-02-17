@@ -1235,12 +1235,12 @@ function CardsContent() {
 
   const RARITY_ORDER = ["uncommon", "rare", "epic"] as const;
 
-  function getTradeUpEligible(codexOnly: boolean) {
+  function getTradeUpEligible(codexOnly: boolean, cardPool: Card[] = cards) {
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     const firstCard = filled[0] ? cards.find((c) => c.id === filled[0]) : null;
     const targetRarity = firstCard?.rarity;
     const targetCardType = firstCard ? (firstCard.cardType ?? "actor") : null;
-    return cards.filter((c) =>
+    return cardPool.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
       c.rarity !== "legendary" &&
@@ -1270,7 +1270,7 @@ function CardsContent() {
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.length >= 4) return false;
     const slotsNeeded = 4 - filled.length;
-    const eligible = getTradeUpEligible(true);
+    const eligible = getTradeUpEligible(true, filteredInventoryCards);
     if (filled.length > 0) return eligible.length >= slotsNeeded;
     return findBestGroup(eligible, 4).length >= 4;
   }
@@ -1279,7 +1279,7 @@ function CardsContent() {
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.length >= 4) return;
     const slotsNeeded = 4 - filled.length;
-    const eligible = getTradeUpEligible(true);
+    const eligible = getTradeUpEligible(true, filteredInventoryCards);
     let toAdd: Card[];
     if (filled.length > 0) {
       if (eligible.length < slotsNeeded) return;
@@ -1325,7 +1325,7 @@ function CardsContent() {
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.length >= 4) return;
     const slotsNeeded = 4 - filled.length;
-    const eligible = getTradeUpEligible(false);
+    const eligible = getTradeUpEligible(false, filteredInventoryCards);
     let toAdd: Card[];
     if (filled.length > 0) {
       const firstCard = cards.find((c) => c.id === filled[0]);
@@ -1355,7 +1355,7 @@ function CardsContent() {
 
   const legendaryRerollCardIds = legendaryRerollSlots.filter((id): id is string => id != null);
   const legendaryRerollCards = cards.filter((c) => c.id && legendaryRerollCardIds.includes(c.id));
-  const showLegendaryReroll = currentRarity === "epic" || legendaryRerollCardIds.length > 0 || legendaryBlockShown;
+  const showLegendaryReroll = legendaryRerollCardIds.length > 0 || legendaryBlockShown;
   const canLegendaryReroll =
     legendaryRerollCardIds.length === 2 &&
     legendaryRerollCards.length === 2 &&
@@ -1531,7 +1531,7 @@ function CardsContent() {
     const filled = quicksellBenchSlots.filter((id): id is string => id != null);
     if (filled.length >= 5) return false;
     const slotsNeeded = 5 - filled.length;
-    const eligible = cards.filter((c) =>
+    const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
       c.rarity !== "legendary" &&
@@ -1544,7 +1544,7 @@ function CardsContent() {
   function autoFillQuicksell() {
     const filled = quicksellBenchSlots.filter((id): id is string => id != null);
     if (filled.length >= 5) return;
-    const eligible = cards.filter((c) =>
+    const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
       c.rarity !== "legendary" &&
@@ -1565,7 +1565,7 @@ function CardsContent() {
   function fillQuicksellWithCodexd() {
     const filled = quicksellBenchSlots.filter((id): id is string => id != null);
     if (filled.length >= 5) return;
-    const eligible = cards.filter((c) =>
+    const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
       c.rarity !== "legendary" &&
@@ -2724,7 +2724,7 @@ function CardsContent() {
           <div>
             {/* Browser-style sub-tabs: Trade up | Alchemy */}
             <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
-              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
+              <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg rounded-tl-none rounded-tr-none border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
                 type="button"
                 onClick={() => {
@@ -2783,8 +2783,17 @@ function CardsContent() {
                   <div className="flex flex-col items-center gap-4">
                     {tradeUpResult ? (
                       <>
-                        <div className="w-36 mx-auto">
-                          <CardDisplay card={tradeUpResult} />
+                        <div className="w-36 mx-auto relative">
+                          <div className={tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`))) ? "tracked-card-found" : ""}>
+                            <CardDisplay card={tradeUpResult} />
+                            {tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`))) && (
+                              <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2 pointer-events-none">
+                                <span className="px-2.5 py-1 rounded-lg bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(245,158,11,0.6)] animate-pulse">
+                                  Tracked
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <p className="text-sm text-white/60 text-center capitalize">
                           {tradeUpResult.rarity} card
@@ -2817,6 +2826,8 @@ function CardsContent() {
                 <span className="text-sm font-medium text-amber-300">Legendaries go in the Legendary Reroll below</span>
               </div>
             )}
+            {!showLegendaryReroll && (
+            <>
             {/* Trade Up - frosted glass section */}
             <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
@@ -2828,7 +2839,8 @@ function CardsContent() {
                   {tradeUpAutofillError}
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-4 mb-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                 {/* Input slots - 4 cards */}
                 <div className="flex gap-2">
                   {tradeUpSlots.map((cardId, i) => {
@@ -2892,7 +2904,8 @@ function CardsContent() {
                     <span className="text-[10px] text-white/40 text-center px-1">?</span>
                   )}
                 </div>
-                <div className="ml-auto flex items-center">
+                </div>
+                <div className="w-[180px] shrink-0 flex items-center justify-end">
                   {canTradeUp ? (
                     <button
                       onClick={() => handleTradeUp()}
@@ -2928,10 +2941,12 @@ function CardsContent() {
                 </div>
               </div>
             </div>
+            </>
+            )}
 
-            {/* Legendary Reroll — only shown when epic trade-up (legendary output) or when user has cards in reroll slots */}
+            {/* Legendary Reroll — shown when user has cards in reroll slots or clicked a legendary (replaces trade-up window) */}
             {showLegendaryReroll && (
-            <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
+            <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-1">Legendary Reroll</h2>
               <p className="text-sm text-white/60 mb-4">
                 Sacrifice 2 legendary cards to reroll into a different legendary character.
@@ -3060,7 +3075,8 @@ function CardsContent() {
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards from your inventory below. Holos → remove Holo for Stardust (card stays as normal). Normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
                   </p>
-                  <div className="flex flex-wrap items-center gap-4 mb-4">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                     <div className="flex gap-2">
                       {alchemyBenchSlots.map((cardId, i) => {
                         const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
@@ -3104,35 +3120,38 @@ function CardsContent() {
                         );
                       })}
                     </div>
-                    {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
-                      <div className="flex flex-col items-start gap-2">
-                        <span className="text-xs text-white/50">
-                          Holo → Remove Holo from all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
-                        </span>
-                        <button
-                          onClick={() => handleAlchemyDisenchantAll()}
-                          disabled={alchemyDisenchantingId === "_all"}
-                          className="px-4 py-2 rounded-lg border border-amber-500/40 bg-amber-500/15 text-amber-300 text-sm font-medium hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {alchemyDisenchantingId === "_all" ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin inline-block" /> : "Remove Holo from all"}
-                        </button>
-                      </div>
-                    ) : alchemyBenchType === "normal" && alchemyBenchCards.length > 0 ? (
-                      <div className="flex flex-col items-start gap-2">
-                        <span className="text-xs text-white/50">
-                          Normal → Pack-A-Punch all ({alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)} Stardust)
-                        </span>
-                        <button
-                          onClick={() => handleAlchemyPackAPunchAll()}
-                          disabled={alchemyPunchingId === "_all" || stardust < alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)}
-                          className="px-4 py-2 rounded-lg border border-purple-500/40 bg-purple-500/15 text-purple-300 text-sm font-medium hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {alchemyPunchingId === "_all" ? <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin inline-block" /> : "Pack-A-Punch all"}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-white/40">Add cards from your inventory below. Holos or normals only (same type).</span>
-                    )}
+                    </div>
+                    <div className="w-[180px] shrink-0 flex flex-col items-end justify-center gap-2">
+                      {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
+                        <>
+                          <span className="text-xs text-white/50 text-right">
+                            Holo → Remove Holo from all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
+                          </span>
+                          <button
+                            onClick={() => handleAlchemyDisenchantAll()}
+                            disabled={alchemyDisenchantingId === "_all"}
+                            className="px-5 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/15 text-amber-300 font-semibold hover:bg-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {alchemyDisenchantingId === "_all" ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin inline-block" /> : "Remove Holo from all"}
+                          </button>
+                        </>
+                      ) : alchemyBenchType === "normal" && alchemyBenchCards.length > 0 ? (
+                        <>
+                          <span className="text-xs text-white/50 text-right">
+                            Normal → Pack-A-Punch all ({alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)} Stardust)
+                          </span>
+                          <button
+                            onClick={() => handleAlchemyPackAPunchAll()}
+                            disabled={alchemyPunchingId === "_all" || stardust < alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)}
+                            className="px-5 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/15 text-purple-300 font-semibold hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {alchemyPunchingId === "_all" ? <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin inline-block" /> : "Pack-A-Punch all"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-white/40 text-right">Add cards from inventory below. Holos or normals only (same type).</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {alchemyError && (
@@ -3152,7 +3171,8 @@ function CardsContent() {
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
                   </p>
-                  <div className="flex flex-wrap items-center gap-4 mb-4">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                     <div className="flex gap-2">
                       {quicksellBenchSlots.map((cardId, i) => {
                         const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
@@ -3189,10 +3209,11 @@ function CardsContent() {
                         );
                       })}
                     </div>
-                    <div className="flex flex-col items-start gap-2 min-w-[140px]">
+                    </div>
+                    <div className="w-[180px] shrink-0 flex flex-col items-end justify-center gap-2">
                       {quicksellBenchCards.length > 0 ? (
                         <>
-                          <span className="text-xs text-white/50">
+                          <span className="text-xs text-white/50 text-right">
                             Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0)} credits
                           </span>
                           <button
@@ -3205,7 +3226,7 @@ function CardsContent() {
                         </>
                       ) : (
                         <>
-                          <span className="text-xs text-white/50">Add cards from inventory below.</span>
+                          <span className="text-xs text-white/50 text-right">Add cards from inventory below.</span>
                           {canCodexdFillQuicksell() ? (
                             <button
                               onClick={fillQuicksellWithCodexd}
@@ -3359,7 +3380,7 @@ function CardsContent() {
                 };
                 const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddReroll && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
                 const isOnBench = (inSlots && inventorySubTab === "tradeup") || (inRerollSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
-                const isTrackedCard = card.characterId && trackedCharacterIds.has(card.characterId);
+                const isTrackedCard = card.characterId && (trackedCharacterIds.has(card.characterId) || ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)));
                 return (
                   <div
                     key={card.id}
@@ -3500,7 +3521,7 @@ function CardsContent() {
                       style={{ zIndex: cascadeLayers + 1 }}
                     >
                       {(() => {
-                        const isTrackedFront = front.characterId && trackedCharacterIds.has(front.characterId);
+                        const isTrackedFront = front.characterId && (trackedCharacterIds.has(front.characterId) || ((front.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${front.characterId}`)));
                         return (
                           <div className={`relative rounded-xl ${isTrackedFront ? "ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]" : ""}`}>
                             {isTrackedFront && (
