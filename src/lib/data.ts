@@ -1587,6 +1587,8 @@ export interface SetCompletionQuest {
   completedAt: string;
   /** When true, this quest is for completing the holo upgrade of the entire set. */
   isHolo?: boolean;
+  /** When false, the set was already complete before this quest was added; claim awards 0. Default true. */
+  firstCompletion?: boolean;
 }
 
 type SetCompletionQuestsStore = Record<string, SetCompletionQuest[]>;
@@ -1615,6 +1617,7 @@ export function addSetCompletionQuest(userId: string, winnerId: string, movieTit
     reward,
     claimed: false,
     completedAt: new Date().toISOString(),
+    firstCompletion: true,
   });
   store[userId] = userQuests;
   saveSetCompletionQuestsRaw(store);
@@ -1626,17 +1629,18 @@ export function getSetCompletionQuests(userId: string): SetCompletionQuest[] {
   return store[userId] ?? [];
 }
 
-/** Claim a set completion quest. Returns reward amount or 0 if not claimable. */
-export function claimSetCompletionQuest(userId: string, winnerId: string): number {
+/** Claim a set completion quest. Returns { reward, didClaim }. Reward is 0 if not first completion. */
+export function claimSetCompletionQuest(userId: string, winnerId: string): { reward: number; didClaim: boolean } {
   const store = getSetCompletionQuestsRaw();
   const userQuests = store[userId] ?? [];
   const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && !q.isHolo);
-  if (idx < 0) return 0;
+  if (idx < 0) return { reward: 0, didClaim: false };
   const quest = userQuests[idx];
   quest.claimed = true;
   store[userId] = userQuests;
   saveSetCompletionQuestsRaw(store);
-  return quest.reward;
+  const reward = quest.firstCompletion === false ? 0 : quest.reward;
+  return { reward, didClaim: true };
 }
 
 /** Add a holo set completion quest for the user if they don't already have one for this winner. Returns true if added. */
@@ -1652,23 +1656,25 @@ export function addHoloSetCompletionQuest(userId: string, winnerId: string, movi
     claimed: false,
     completedAt: new Date().toISOString(),
     isHolo: true,
+    firstCompletion: true,
   });
   store[userId] = userQuests;
   saveSetCompletionQuestsRaw(store);
   return true;
 }
 
-/** Claim a holo set completion quest. Returns reward amount or 0 if not claimable. */
-export function claimHoloSetCompletionQuest(userId: string, winnerId: string): number {
+/** Claim a holo set completion quest. Returns { reward, didClaim }. Reward is 0 if not first completion. */
+export function claimHoloSetCompletionQuest(userId: string, winnerId: string): { reward: number; didClaim: boolean } {
   const store = getSetCompletionQuestsRaw();
   const userQuests = store[userId] ?? [];
   const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && q.isHolo === true);
-  if (idx < 0) return 0;
+  if (idx < 0) return { reward: 0, didClaim: false };
   const quest = userQuests[idx];
   quest.claimed = true;
   store[userId] = userQuests;
   saveSetCompletionQuestsRaw(store);
-  return quest.reward;
+  const reward = quest.firstCompletion === false ? 0 : quest.reward;
+  return { reward, didClaim: true };
 }
 
 // ──── Marketplace (listings) ─────────────────────────────

@@ -38,5 +38,19 @@
     },
     "id": "act_1771312295472_3760ao",
     "timestamp": "2026-02-17T07:11:35.472Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "rerolled a Legendary — Manny Ray",
+    "meta": {
+      "cardId": "card-1771316421900-4zadt52",
+      "characterName": "Manny Ray",
+      "actorName": "Steven Bauer",
+      "movieTitle": "Scarface"
+    },
+    "id": "act_1771316421901_tcty8k",
+    "timestamp": "2026-02-17T08:20:21.901Z"
   }
 ]

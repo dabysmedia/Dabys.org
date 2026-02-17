@@ -34,6 +34,8 @@ interface SetCompletionQuest {
   claimed: boolean;
   completedAt: string;
   isHolo?: boolean;
+  /** When false, set was already complete before this quest was added; claim awards 0. */
+  firstCompletion?: boolean;
 }
 
 interface QuestLogSidebarProps {
@@ -340,7 +342,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const completedCount = dailyQuests.filter((q) => q.completed).length;
   const totalCount = dailyQuests.length;
   const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
-  const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length + setCompletionClaimable;
+  const dailyClaimable = dailyQuests.filter((q) => q.completed && !q.claimed).length;
+  const claimableCount = dailyClaimable + setCompletionClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
   const rerollsRemaining = Math.max(0, 1 - rerollsUsed);
 
@@ -492,9 +495,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
               }`}
             >
               Daily Quests
-              {claimableCount > 0 && (
+              {dailyClaimable > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
-                  {claimableCount}
+                  {dailyClaimable}
                 </span>
               )}
             </button>
@@ -508,6 +511,11 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
               }`}
             >
               Collection
+              {setCompletionClaimable > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-500/20 text-purple-400 text-[9px] font-bold">
+                  {setCompletionClaimable}
+                </span>
+              )}
             </button>
           </div>
 
@@ -515,67 +523,6 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
             {/* ─── DAILY QUESTS TAB ─── */}
             {activeTab === "quests" && (
               <div className="py-3">
-                {/* Set completion quests */}
-                {setCompletionQuests.length > 0 && (
-                  <div className="px-4 mb-4">
-                    <span className="text-[10px] text-white/40 uppercase tracking-wider">Set complete</span>
-                    <ul className="mt-2 space-y-1">
-                      {setCompletionQuests.map((q) => {
-                        const isHolo = q.isHolo === true;
-                        const isClaimable = !q.claimed;
-                        const isClaiming = isHolo
-                          ? claimingHoloSetCompletionWinnerId === q.winnerId
-                          : claimingSetCompletionWinnerId === q.winnerId;
-                        return (
-                          <li
-                            key={`${q.winnerId}-${isHolo ? "holo" : "reg"}`}
-                            className={`rounded-xl border transition-all ${
-                              q.claimed
-                                ? "border-white/[0.04] bg-white/[0.01] opacity-60"
-                                : isHolo
-                                  ? "border-indigo-400/30 bg-indigo-500/[0.06]"
-                                  : "border-emerald-500/20 bg-emerald-500/[0.04]"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3 px-3 py-2.5">
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
-                                  {isHolo ? "Holo Complete" : "Complete"}: {q.movieTitle}
-                                </span>
-                                <p className="text-[10px] text-white/35 mt-0.5">
-                                  {isHolo ? "Upgraded all codex slots to holo" : "Collected all cards for this movie"}
-                                </p>
-                              </div>
-                              <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                                <span className={`text-[10px] font-medium whitespace-nowrap ${isHolo ? "text-indigo-300/80" : "text-amber-400/80"}`}>
-                                  +{q.reward} cr
-                                </span>
-                                {isClaimable && (
-                                  <button
-                                    type="button"
-                                    onClick={() => isHolo ? claimHoloSetCompletion(q.winnerId) : claimSetCompletion(q.winnerId)}
-                                    disabled={isClaiming}
-                                    className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50 ${
-                                      isHolo
-                                        ? "bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/30"
-                                        : "bg-amber-500/20 border border-amber-400/30 text-amber-400 hover:bg-amber-500/30"
-                                    }`}
-                                  >
-                                    {isClaiming ? (
-                                      <span className={`inline-block w-2.5 h-2.5 border rounded-full animate-spin ${isHolo ? "border-indigo-400/30 border-t-indigo-400" : "border-amber-400/30 border-t-amber-400"}`} />
-                                    ) : (
-                                      "Claim"
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
                 {/* Progress summary + countdown */}
                 {dailyQuests.length > 0 && (
                   <div className="px-4 mb-3">
@@ -604,8 +551,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                   </div>
                 )}
 
-                {/* Claim All button */}
-                {claimableCount > 1 && (
+                {/* Claim All button (daily quests only; set completion is in Collection tab) */}
+                {dailyClaimable > 1 && (
                   <div className="px-4 mb-2">
                     <button
                       type="button"
@@ -616,7 +563,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                       {claimingAll ? (
                         <span className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
                       ) : (
-                        `Claim All (${claimableCount} rewards)`
+                        `Claim All (${dailyClaimable} rewards)`
                       )}
                     </button>
                   </div>
@@ -731,6 +678,68 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
             {/* ─── COLLECTION TAB ─── */}
             {activeTab === "collection" && (
               <div className="py-2">
+                {/* Set completion quests (first completion only gets reward) */}
+                {setCompletionQuests.length > 0 && (
+                  <div className="px-4 mb-4">
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider">Set complete</span>
+                    <ul className="mt-2 space-y-1">
+                      {setCompletionQuests.map((q) => {
+                        const isHolo = q.isHolo === true;
+                        const isClaimable = !q.claimed;
+                        const isClaiming = isHolo
+                          ? claimingHoloSetCompletionWinnerId === q.winnerId
+                          : claimingSetCompletionWinnerId === q.winnerId;
+                        const effectiveReward = q.firstCompletion !== false ? q.reward : 0;
+                        return (
+                          <li
+                            key={`${q.winnerId}-${isHolo ? "holo" : "reg"}`}
+                            className={`rounded-xl border transition-all ${
+                              q.claimed
+                                ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                : isHolo
+                                  ? "border-indigo-400/30 bg-indigo-500/[0.06]"
+                                  : "border-emerald-500/20 bg-emerald-500/[0.04]"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 px-3 py-2.5">
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
+                                  {isHolo ? "Holo Complete" : "Complete"}: {q.movieTitle}
+                                </span>
+                                <p className="text-[10px] text-white/35 mt-0.5">
+                                  {isHolo ? "Upgraded all codex slots to holo" : "Collected all cards for this movie"}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                <span className={`text-[10px] font-medium whitespace-nowrap ${isHolo ? "text-indigo-300/80" : "text-amber-400/80"}`}>
+                                  +{effectiveReward} cr
+                                </span>
+                                {isClaimable && (
+                                  <button
+                                    type="button"
+                                    onClick={() => isHolo ? claimHoloSetCompletion(q.winnerId) : claimSetCompletion(q.winnerId)}
+                                    disabled={isClaiming}
+                                    className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50 ${
+                                      isHolo
+                                        ? "bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/30"
+                                        : "bg-amber-500/20 border border-amber-400/30 text-amber-400 hover:bg-amber-500/30"
+                                    }`}
+                                  >
+                                    {isClaiming ? (
+                                      <span className={`inline-block w-2.5 h-2.5 border rounded-full animate-spin ${isHolo ? "border-indigo-400/30 border-t-indigo-400" : "border-amber-400/30 border-t-amber-400"}`} />
+                                    ) : (
+                                      "Claim"
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
                 {pinnedProgress.length === 0 ? (
                   <p className="px-4 py-6 text-sm text-white/40 text-center">
                     No collection quests pinned.

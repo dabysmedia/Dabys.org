@@ -2773,11 +2773,21 @@ function CardsContent() {
             {inventorySubTab === "tradeup" && (
             <>
             {(tradeUpResult || tradeUpResultCredits != null) && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setTradeUpResult(null);
+                    setTradeUpResultCredits(null);
+                  }
+                }}
+                role="presentation"
+              >
                 <div
                   className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
                     tradeUpResultFading ? "opacity-0" : "opacity-100"
                   }`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <h2 className="text-center text-lg font-semibold text-amber-400/90 mb-4">Trade Up Result</h2>
                   <div className="flex flex-col items-center gap-4">
@@ -3016,11 +3026,24 @@ function CardsContent() {
 
             {/* Legendary Reroll Result Modal */}
             {legendaryRerollResult && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setLegendaryRerollResultFading(true);
+                    setTimeout(() => {
+                      setLegendaryRerollResult(null);
+                      setLegendaryRerollResultFading(false);
+                    }, 500);
+                  }
+                }}
+                role="presentation"
+              >
                 <div
                   className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
                     legendaryRerollResultFading ? "opacity-0" : "opacity-100"
                   }`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <h2 className="text-center text-lg font-semibold text-amber-400/90 mb-4">Legendary Reroll</h2>
                   <div className="flex flex-col items-center gap-4">

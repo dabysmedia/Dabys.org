@@ -267,30 +267,16 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-70851-9353",
+    "characterId": "actor-1159-111",
     "rarity": "legendary",
     "isFoil": false,
-    "actorName": "Jack Black",
-    "characterName": "Nacho",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
+    "actorName": "Steven Bauer",
+    "characterName": "Manny Ray",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mI3kSjx9M3FKmyXR3Loqn8rpoFM.jpg",
     "cardType": "actor",
-    "id": "card-1771304017763-605j4uh",
-    "acquiredAt": "2026-02-17T04:53:37.763Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1770993986099-ha56a75",
-    "rarity": "legendary",
-    "isFoil": false,
-    "actorName": "Jack Black",
-    "characterName": "Suited Nacho",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "/api/uploads/1770993932519-n8cbjy.jpg",
-    "cardType": "actor",
-    "id": "card-1771312295471-qkkrwru",
-    "acquiredAt": "2026-02-17T07:11:35.471Z"
+    "id": "card-1771316421900-4zadt52",
+    "acquiredAt": "2026-02-17T08:20:21.900Z"
   }
 ]

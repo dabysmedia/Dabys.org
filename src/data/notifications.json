@@ -12,5 +12,19 @@
     "targetUserId": "__global__",
     "id": "ntf_1771312295472_s2m6qd",
     "timestamp": "2026-02-17T07:11:35.472Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "rerolled a Legendary — Manny Ray",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771316421900-4zadt52",
+      "characterName": "Manny Ray",
+      "movieTitle": "Scarface"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771316421901_1fqfm6",
+    "timestamp": "2026-02-17T08:20:21.901Z"
   }
 ]

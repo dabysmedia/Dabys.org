@@ -16,21 +16,25 @@ export async function POST(request: Request) {
   }
 
   if (claimHoloSetCompletion && winnerId) {
-    const reward = claimHoloSetCompletionQuest(userId, winnerId);
-    if (reward <= 0) {
+    const result = claimHoloSetCompletionQuest(userId, winnerId);
+    if (!result.didClaim) {
       return NextResponse.json({ error: "Quest not found or already claimed" }, { status: 400 });
     }
-    addCredits(userId, reward, "holo_set_completion_quest", { winnerId });
-    return NextResponse.json({ success: true, reward, type: "holo_set_completion" });
+    if (result.reward > 0) {
+      addCredits(userId, result.reward, "holo_set_completion_quest", { winnerId });
+    }
+    return NextResponse.json({ success: true, reward: result.reward, type: "holo_set_completion" });
   }
 
   if (claimSetCompletion && winnerId) {
-    const reward = claimSetCompletionQuest(userId, winnerId);
-    if (reward <= 0) {
+    const result = claimSetCompletionQuest(userId, winnerId);
+    if (!result.didClaim) {
       return NextResponse.json({ error: "Quest not found or already claimed" }, { status: 400 });
     }
-    addCredits(userId, reward, "set_completion_quest", { winnerId });
-    return NextResponse.json({ success: true, reward, type: "set_completion" });
+    if (result.reward > 0) {
+      addCredits(userId, result.reward, "set_completion_quest", { winnerId });
+    }
+    return NextResponse.json({ success: true, reward: result.reward, type: "set_completion" });
   }
 
   if (claimAll) {
