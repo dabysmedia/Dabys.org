@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "type": "legendary_pull",
+    "message": "rerolled a Legendary — Suited Nacho",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771312295471-qkkrwru",
+      "characterName": "Suited Nacho",
+      "movieTitle": "Nacho Libre"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771312295472_s2m6qd",
+    "timestamp": "2026-02-17T07:11:35.472Z"
+  }
+]

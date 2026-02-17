@@ -519,6 +519,10 @@ function CardsContent() {
   const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
   const [tradeUpResultCredits, setTradeUpResultCredits] = useState<number | null>(null);
   const [tradeUpResultFading, setTradeUpResultFading] = useState(false);
+  const [legendaryRerollSlots, setLegendaryRerollSlots] = useState<(string | null)[]>([null, null]);
+  const [legendaryRerolling, setLegendaryRerolling] = useState(false);
+  const [legendaryRerollResult, setLegendaryRerollResult] = useState<Card | null>(null);
+  const [legendaryRerollResultFading, setLegendaryRerollResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
@@ -613,6 +617,16 @@ function CardsContent() {
       } else if (next.size < MAX_TRACKED) {
         next.add(characterId);
       }
+      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  function untrackCharacterId(characterId: string) {
+    setTrackedCharacterIds((prev) => {
+      if (!prev.has(characterId)) return prev;
+      const next = new Set(prev);
+      next.delete(characterId);
       localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
       return next;
     });
@@ -1339,6 +1353,63 @@ function CardsContent() {
     });
   }
 
+  const legendaryRerollCardIds = legendaryRerollSlots.filter((id): id is string => id != null);
+  const legendaryRerollCards = cards.filter((c) => c.id && legendaryRerollCardIds.includes(c.id));
+  const showLegendaryReroll = currentRarity === "epic" || legendaryRerollCardIds.length > 0 || legendaryBlockShown;
+  const canLegendaryReroll =
+    legendaryRerollCardIds.length === 2 &&
+    legendaryRerollCards.length === 2 &&
+    legendaryRerollCards.every((c) => c.rarity === "legendary") &&
+    legendaryRerollCards.every((c) => (c.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
+
+  function addToLegendaryReroll(cardId: string) {
+    if (myListedCardIds.has(cardId)) return;
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || card.rarity !== "legendary") return;
+    const filled = legendaryRerollSlots.filter((id): id is string => id != null);
+    if (filled.includes(cardId)) return;
+    if (filled.length >= 2) return;
+    const firstCard = filled[0] ? cards.find((c) => c.id === filled[0]) : null;
+    if (firstCard && (card.cardType ?? "actor") !== (firstCard.cardType ?? "actor")) return;
+    playTradeUpAdd();
+    setLegendaryRerollSlots((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((id) => id == null);
+      if (idx >= 0) next[idx] = cardId;
+      return next;
+    });
+  }
+
+  function removeFromLegendaryReroll(cardId: string) {
+    setLegendaryRerollSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  async function handleLegendaryReroll() {
+    if (!user || !canLegendaryReroll || legendaryRerolling) return;
+    playTradeUpSubmit();
+    setLegendaryRerolling(true);
+    try {
+      const res = await fetch("/api/cards/legendary-reroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardIds: legendaryRerollCardIds }),
+      });
+      const data = await res.json();
+      if (res.ok && data.card) {
+        playTradeUpReveal();
+        setLegendaryRerollSlots([null, null]);
+        setLegendaryRerollResult(data.card);
+        await Promise.all([refreshCards(), refreshCredits(), refreshStardust()]);
+      } else {
+        alert(data.error || "Legendary reroll failed");
+      }
+    } catch {
+      alert("Legendary reroll failed");
+    } finally {
+      setLegendaryRerolling(false);
+    }
+  }
+
   function getDustForRarity(rarity: string): number {
     return DISENCHANT_DUST[rarity] ?? 0;
   }
@@ -1791,6 +1862,8 @@ function CardsContent() {
           else if (variant === "altart") setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
+          untrackCharacterId(data.characterId);
+          if (variant === "boys") untrackCharacterId(`boys:${data.characterId}`);
           if (data.setCompleted || data.holoSetCompleted) window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
@@ -2736,12 +2809,12 @@ function CardsContent() {
                 </div>
               </div>
             )}
-            {legendaryBlockShown && (
-              <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border-2 border-red-500/60 bg-red-500/15 px-4 py-3 backdrop-blur-sm">
-                <svg className="h-6 w-6 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            {showLegendaryReroll && legendaryBlockShown && (
+              <div className="mb-6 flex items-center justify-center gap-2 rounded-xl border-2 border-amber-500/60 bg-amber-500/15 px-4 py-3 backdrop-blur-sm">
+                <svg className="h-6 w-6 shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-sm font-medium text-red-400">Legendary cards cannot be traded up</span>
+                <span className="text-sm font-medium text-amber-300">Legendaries go in the Legendary Reroll below</span>
               </div>
             )}
             {/* Trade Up - frosted glass section */}
@@ -2856,6 +2929,109 @@ function CardsContent() {
                 )}
               </div>
             </div>
+
+            {/* Legendary Reroll — only shown when epic trade-up (legendary output) or when user has cards in reroll slots */}
+            {showLegendaryReroll && (
+            <div className="rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
+              <h2 className="text-lg font-semibold text-amber-400/90 mb-1">Legendary Reroll</h2>
+              <p className="text-sm text-white/60 mb-4">
+                Sacrifice 2 legendary cards to reroll into a different legendary character.
+              </p>
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <div className="flex gap-2">
+                  {legendaryRerollSlots.map((cardId, i) => {
+                    const slotCard = cardId ? cards.find((x) => x.id === cardId) : null;
+                    return (
+                      <div
+                        key={`reroll-${cardId ?? "empty"}-${i}`}
+                        className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                          cardId
+                            ? `group ${SLOT_FILLED_STYLE.legendary} tradeup-slot-pop`
+                            : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
+                        }`}
+                        onClick={() => cardId && removeFromLegendaryReroll(cardId)}
+                      >
+                        {cardId && slotCard ? (
+                          <div className="w-full h-full relative bg-black/20 transition-all duration-200 group-hover:opacity-60 group-hover:grayscale">
+                            {slotCard.profilePath ? (
+                              <img src={slotCard.profilePath} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                                {(slotCard.actorName || "?")[0]}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-white/40 text-center px-1">Empty</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">
+                  →
+                </div>
+                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                  canLegendaryReroll ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : "bg-white/[0.04] border-amber-500/40"
+                }`}>
+                  {canLegendaryReroll ? (
+                    <span className="text-xs text-amber-400 font-medium text-center px-1">1 Legendary</span>
+                  ) : (
+                    <span className="text-[10px] text-white/40 text-center px-1">?</span>
+                  )}
+                </div>
+                {canLegendaryReroll && (
+                  <button
+                    onClick={() => handleLegendaryReroll()}
+                    disabled={legendaryRerolling}
+                    className="ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
+                  >
+                    {legendaryRerolling ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Rerolling...
+                      </span>
+                    ) : (
+                      "Reroll"
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+            )}
+
+            {/* Legendary Reroll Result Modal */}
+            {legendaryRerollResult && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div
+                  className={`w-full max-w-sm rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 transition-opacity duration-500 tradeup-result-in ${
+                    legendaryRerollResultFading ? "opacity-0" : "opacity-100"
+                  }`}
+                >
+                  <h2 className="text-center text-lg font-semibold text-amber-400/90 mb-4">Legendary Reroll</h2>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-36 mx-auto">
+                      <CardDisplay card={legendaryRerollResult} />
+                    </div>
+                    <p className="text-sm text-white/60 text-center capitalize">
+                      {legendaryRerollResult.rarity} card
+                    </p>
+                    <button
+                      onClick={() => {
+                        setLegendaryRerollResultFading(true);
+                        setTimeout(() => {
+                          setLegendaryRerollResult(null);
+                          setLegendaryRerollResultFading(false);
+                        }, 500);
+                      }}
+                      className="px-4 py-2 rounded-lg border border-white/20 text-amber-400/90 text-sm font-medium hover:bg-white/[0.06] hover:border-amber-400/50 transition-colors cursor-pointer"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             </>
             )}
 
@@ -3151,12 +3327,14 @@ function CardsContent() {
               /* ── Single card renderer (unchanged logic) ── */
               const renderCard = (card: Card) => {
                 const inSlots = tradeUpCardIds.includes(card.id!);
+                const inRerollSlots = legendaryRerollCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
                 const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
                 const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
+                const canAddReroll = inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
                 const canAddAlchemy = inventorySubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
                 const canAddQuicksell = inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
-                const ineligibleTradeUp = tradeUpCardIds.length > 0 && !canAddTradeUp && !inSlots && inventorySubTab === "tradeup";
+                const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && inventorySubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
                 const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
@@ -3173,15 +3351,13 @@ function CardsContent() {
                     if (canAddQuicksell && card.id) addToQuicksellBench(card.id);
                     return;
                   }
+                  if (inRerollSlots && card.id) { removeFromLegendaryReroll(card.id); return; }
+                  if (canAddReroll && card.id) { addToLegendaryReroll(card.id); return; }
                   if (inSlots && card.id) { removeFromTradeUpSlot(card.id); return; }
                   if (canAddTradeUp && card.id) addToTradeUpSlot(card.id!);
-                  else if (card.rarity === "legendary") {
-                    setLegendaryBlockShown(true);
-                    setTimeout(() => setLegendaryBlockShown(false), 2500);
-                  }
                 };
-                const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
-                const isOnBench = (inSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
+                const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddReroll && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
+                const isOnBench = (inSlots && inventorySubTab === "tradeup") || (inRerollSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
                 const isTrackedCard = card.characterId && trackedCharacterIds.has(card.characterId);
                 return (
                   <div
@@ -3231,6 +3407,7 @@ function CardsContent() {
               const renderStackGroup = (stackKey: string, stackCards: Card[]) => {
                 const benchIdsSet = new Set([
                   ...tradeUpCardIds,
+                  ...legendaryRerollCardIds,
                   ...alchemyBenchCardIds,
                   ...quicksellBenchCardIds,
                 ]);
@@ -3243,24 +3420,25 @@ function CardsContent() {
                 const totalCascadeLayers = Math.min(stackCards.length - 1, 3);
                 const cascadeLayers = Math.min(freeCount - 1, 3);
 
-                const findEligible = (): Card | null => {
+                const findEligible = (): { card: Card; target: "tradeup" | "reroll" | "alchemy" | "quicksell" } | null => {
                   for (const c of stackCards) {
                     if (myListedCardIds.has(c.id!)) continue;
                     if (inventorySubTab === "alchemy") {
-                      if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return c;
+                      if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
                     } else if (inventorySubTab === "quicksell") {
-                      if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return c;
+                      if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return { card: c, target: "quicksell" };
                     } else {
-                      if (c.rarity !== "legendary" && !tradeUpCardIds.includes(c.id!) && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (c.rarity === tradeUpCards[0]?.rarity && (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")))) return c;
+                      if (c.rarity === "legendary" && !legendaryRerollCardIds.includes(c.id!) && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (c.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"))) return { card: c, target: "reroll" };
+                      if (c.rarity !== "legendary" && !tradeUpCardIds.includes(c.id!) && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (c.rarity === tradeUpCards[0]?.rarity && (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")))) return { card: c, target: "tradeup" };
                     }
                   }
                   return null;
                 };
 
-                const eligible = findEligible();
-                const canAct = eligible !== null;
+                const eligibleResult = findEligible();
+                const canAct = eligibleResult !== null;
                 const isIneligible = (() => {
-                  if (inventorySubTab === "tradeup") return tradeUpCardIds.length > 0 && !canAct;
+                  if (inventorySubTab === "tradeup") return (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0) && !canAct;
                   if (inventorySubTab === "alchemy") return alchemyBenchCardIds.length > 0 && !canAct;
                   if (inventorySubTab === "quicksell") return quicksellBenchCardIds.length > 0 && !canAct;
                   return false;
@@ -3268,15 +3446,11 @@ function CardsContent() {
                 const anyNew = freeCards.some((c) => c.acquiredAt && (Date.now() - new Date(c.acquiredAt).getTime() < NEW_CARD_DAYS_MS) && c.id && !seenCardIds.has(c.id));
 
                 const handleStackClick = () => {
-                  if (!eligible) {
-                    if (front.rarity === "legendary" && inventorySubTab === "tradeup") {
-                      setLegendaryBlockShown(true);
-                      setTimeout(() => setLegendaryBlockShown(false), 2500);
-                    }
-                    return;
-                  }
-                  if (inventorySubTab === "alchemy") addToAlchemyBench(eligible.id!);
-                  else if (inventorySubTab === "quicksell") addToQuicksellBench(eligible.id!);
+                  if (!eligibleResult) return;
+                  const { card: eligible, target } = eligibleResult;
+                  if (target === "alchemy") addToAlchemyBench(eligible.id!);
+                  else if (target === "quicksell") addToQuicksellBench(eligible.id!);
+                  else if (target === "reroll") addToLegendaryReroll(eligible.id!);
                   else addToTradeUpSlot(eligible.id!);
                 };
 
@@ -3294,7 +3468,7 @@ function CardsContent() {
                     key={stackKey}
                     className={`relative transition-opacity duration-200 ${
                       canAct ? "cursor-pointer" : ""
-                    } ${front.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${isIneligible ? "opacity-40 grayscale" : ""}`}
+                    } ${isIneligible ? "opacity-40 grayscale" : ""}`}
                     style={{ marginBottom: cascadeOffset, marginRight: cascadeOffset }}
                     onClick={handleStackClick}
                     onMouseEnter={handleMouseEnter}

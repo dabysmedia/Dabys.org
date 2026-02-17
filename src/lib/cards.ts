@@ -631,6 +631,70 @@ export function tradeUp(
   return { success: true, card: newCard };
 }
 
+/** Legendary reroll: consume 2 legendaries, reroll into a different legendary character. */
+export function legendaryReroll(
+  userId: string,
+  cardIds: string[]
+): { success: boolean; card?: ReturnType<typeof addCard>; error?: string } {
+  if (!Array.isArray(cardIds) || cardIds.length !== 2) {
+    return { success: false, error: "Select exactly 2 legendary cards" };
+  }
+  const uniqueIds = [...new Set(cardIds)];
+  if (uniqueIds.length !== 2) return { success: false, error: "Select 2 different cards" };
+
+  const listedCardIds = new Set(getListings().map((l) => l.cardId));
+
+  const selected: ReturnType<typeof getCards> = [];
+  for (const id of uniqueIds) {
+    const card = getCardById(id);
+    if (!card || card.userId !== userId) return { success: false, error: "You don't own one or more of these cards" };
+    if (listedCardIds.has(id)) return { success: false, error: "Cannot reroll cards listed on the marketplace" };
+    if (card.rarity !== "legendary") return { success: false, error: "Both cards must be legendary" };
+    selected.push(card);
+  }
+
+  const cardTypes = selected.map((c) => (c.cardType ?? "actor") as NonNullable<typeof c.cardType>);
+  const inputCardType = cardTypes[0];
+  if (cardTypes.some((t) => t !== inputCardType))
+    return { success: false, error: "Cannot mix Boys and actor cards" };
+
+  const pool = getCharacterPool()
+    .filter((c) => c.profilePath?.trim())
+    .filter((c) => (c.cardType ?? "actor") === inputCardType);
+  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
+  const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
+  const inputCharacterIds = new Set(selected.map((c) => c.characterId));
+  let subset = pool
+    .filter((c) => norm(c.rarity) === "legendary")
+    .filter((c) => !ownedLegendarySlotIds.has(c.altArtOfCharacterId ?? c.characterId))
+    .filter((c) => !inputCharacterIds.has(c.characterId));
+
+  if (subset.length === 0) {
+    subset = pool
+      .filter((c) => norm(c.rarity) === "legendary")
+      .filter((c) => !inputCharacterIds.has(c.characterId));
+  }
+  if (subset.length === 0) return { success: false, error: "No other legendary cards available in the pool" };
+
+  for (const c of selected) removeCard(c.id);
+  const char = subset[Math.floor(Math.random() * subset.length)];
+  const isFoil = Math.random() < FOIL_CHANCE;
+  const newCard = addCard({
+    userId,
+    characterId: char.characterId,
+    rarity: char.rarity,
+    isFoil,
+    actorName: char.actorName,
+    characterName: char.characterName,
+    movieTitle: char.movieTitle,
+    movieTmdbId: char.movieTmdbId,
+    profilePath: char.profilePath,
+    cardType: char.cardType ?? "actor",
+  });
+
+  return { success: true, card: newCard };
+}
+
 /** Character pool entries for a movie (tmdbId). Returns all entries so sets with more than 6 cards and newly added cards are fully represented. */
 export function getPoolEntriesForMovie(tmdbId: number): CharacterPortrayal[] {
   return getCharacterPool().filter((c) => c.movieTmdbId === tmdbId && c.profilePath?.trim());

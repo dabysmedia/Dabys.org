@@ -24,5 +24,19 @@
     },
     "id": "act_1771231946029_5mpbmx",
     "timestamp": "2026-02-16T08:52:26.029Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "rerolled a Legendary — Suited Nacho",
+    "meta": {
+      "cardId": "card-1771312295471-qkkrwru",
+      "characterName": "Suited Nacho",
+      "actorName": "Jack Black",
+      "movieTitle": "Nacho Libre"
+    },
+    "id": "act_1771312295472_3760ao",
+    "timestamp": "2026-02-17T07:11:35.472Z"
   }
 ]

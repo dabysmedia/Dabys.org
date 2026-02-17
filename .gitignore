@@ -65,3 +65,5 @@ src/data/altArtCodexUnlocks.json
 src/data/blackjackSessions.json
 src/data/holoCodexUnlocks.json
 src/data/presence.json
+src/data/notifications.json
+src/data/activity.json
