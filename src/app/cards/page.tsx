@@ -4126,14 +4126,14 @@ function CardsContent() {
                             tabIndex={0}
                             onClick={() => setInspectedCodexCard(v.codexCard)}
                             onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
-                            className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
+                            className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
                             onMouseEnter={clearNewDot}
                             aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}`}
                           >
                             {isNewlyUploaded && (
                               <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
                             )}
-                            <CardDisplay card={v.codexCard} />
+                            <CardDisplay card={v.codexCard} selectable />
                           </div>
                         );
                       }
@@ -4183,7 +4183,7 @@ function CardsContent() {
                               key={v.poolEntry.characterId}
                               role="button"
                               tabIndex={0}
-                              className="rounded-xl overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none"
+                              className="cursor-pointer focus:outline-none"
                               style={{
                                 position: idx === 0 ? "relative" : "absolute",
                                 top: 0,
@@ -4198,7 +4198,7 @@ function CardsContent() {
                               onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
                               aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}${v.isAlt ? " (Alt-Art)" : ""}`}
                             >
-                              <CardDisplay card={v.codexCard} />
+                              <CardDisplay card={v.codexCard} selectable />
                             </div>
                           ))}
 
@@ -4509,14 +4509,14 @@ function CardsContent() {
                           tabIndex={0}
                           onClick={() => setInspectedCodexCard(codexCard)}
                           onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
-                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
+                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
                           onMouseEnter={clearNewDot}
                           aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
                         >
                           {isNewlyUploaded && (
                             <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
                           )}
-                          <CardDisplay card={codexCard} />
+                          <CardDisplay card={codexCard} selectable />
                         </div>
                       );
                     };
