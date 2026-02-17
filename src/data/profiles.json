@@ -4,7 +4,9 @@
     "avatarUrl": "/uploads/1770775722063-8mpxoy.jpg",
     "bannerUrl": "/uploads/1770776789479-lnlll7.jpg",
     "bio": "",
-    "featuredCardIds": [],
+    "featuredCardIds": [
+      "altart:custom-1770993986099-ha56a75"
+    ],
     "bonusSkips": 0,
     "purchasedBadgeWinnerIds": [],
     "purchasedBadges": [
@@ -13,7 +15,6 @@
         "name": "MR MONEYBAGS"
       }
     ],
-    "displayedBadgeWinnerId": "1",
     "favoriteMovieTmdbId": 9353,
     "favoriteMovieSnapshot": {
       "title": "Nacho Libre",

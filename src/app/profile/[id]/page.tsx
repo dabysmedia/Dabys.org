@@ -208,6 +208,8 @@ export default function ProfilePage() {
   const [showCodexModal, setShowCodexModal] = useState(false);
   type CodexViewSortKey = "set" | "name" | "rarity";
   const [codexViewSort, setCodexViewSort] = useState<CodexViewSortKey>("set");
+  type CodexViewSubTab = "codex" | "holo" | "boys" | "badges";
+  const [codexViewSubTab, setCodexViewSubTab] = useState<CodexViewSubTab>("codex");
 
   // Feature cards (pick from codex, max 6) — edit state
   const [showFeaturedCardsModal, setShowFeaturedCardsModal] = useState(false);
@@ -1561,92 +1563,142 @@ export default function ProfilePage() {
             aria-label="View codex"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 flex-wrap gap-3">
+            {/* Header: title | sort (right) + close */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0 gap-3">
               <h3 className="text-lg font-bold text-white/90">{user.name}&apos;s codex</h3>
-              <div className="flex items-center gap-2">
-                {(["set", "name", "rarity"] as const).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setCodexViewSort(key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      codexViewSort === key
-                        ? "bg-sky-500/20 border border-sky-400/50 text-sky-300"
-                        : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
-                    }`}
-                  >
-                    {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 ml-auto">
+                {codexViewSubTab !== "badges" && (
+                  <>
+                    {(["set", "name", "rarity"] as const).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCodexViewSort(key)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                          codexViewSort === key
+                            ? "bg-sky-500/20 border border-sky-400/50 text-sky-300"
+                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                        }`}
+                      >
+                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                      </button>
+                    ))}
+                  </>
+                )}
                 <button
                   onClick={() => setShowCodexModal(false)}
-                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             </div>
+
+            {/* Sub-tabs */}
+            <div className="px-6 pt-3 pb-0 shrink-0">
+              <div className="flex gap-1 border-b border-white/[0.08]">
+                {([
+                  { key: "codex" as const, label: "Codex" },
+                  { key: "holo" as const, label: "Holo Cards" },
+                  { key: "boys" as const, label: "Boys" },
+                  { key: "badges" as const, label: "Badges" },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setCodexViewSubTab(tab.key)}
+                    className={`px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                      codexViewSubTab === tab.key
+                        ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                        : "text-white/35 hover:text-white/55"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab content */}
             <div className="p-6 overflow-y-auto flex-1 min-h-0">
-              {codexCards.length === 0 ? (
-                <p className="text-sm text-white/40 text-center py-8">No cards discovered in this codex.</p>
-              ) : (() => {
-                const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
-                if (codexViewSort === "set") {
-                  const bySet = new Map<string, FeaturedCard[]>();
-                  for (const card of codexCards) {
-                    const key = card.movieTitle || "Unknown";
-                    if (!bySet.has(key)) bySet.set(key, []);
-                    bySet.get(key)!.push(card);
-                  }
-                  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
-                  const sets = Array.from(bySet.entries())
-                    .map(([title, cards]) => ({
-                      title,
-                      cards: [...cards].sort(
-                        (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
-                      ),
-                    }))
-                    .sort((a, b) => {
-                      if (a.cards.length !== b.cards.length) return b.cards.length - a.cards.length;
-                      return a.title.localeCompare(b.title);
-                    });
-                  return (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                      {sets.flatMap((set, setIndex) => [
-                        setIndex > 0 ? (
-                          <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-2 mb-2 pt-2" aria-hidden />
-                        ) : null,
-                        <div key={`codex-set-${setIndex}`} className="col-span-full text-xs font-medium text-white/40 uppercase tracking-wider mb-1">
-                          {set.title}
-                        </div>,
-                        ...set.cards.map((card) => (
-                          <div key={card.id} className="w-full max-w-[140px] mx-auto">
-                            <CardDisplay card={card} />
-                          </div>
-                        )),
-                      ])}
-                    </div>
-                  );
+              {/* Codex tab — regular + alt-art actor cards */}
+              {codexViewSubTab === "codex" && (() => {
+                const filtered = codexCards.filter((c) => !c.isFoil && (c.cardType ?? "actor") !== "character");
+                if (filtered.length === 0) {
+                  return <p className="text-sm text-white/40 text-center py-8">No cards discovered in this codex.</p>;
                 }
-                const sorted =
-                  codexViewSort === "name"
-                    ? [...codexCards].sort((a, b) =>
-                        (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
-                      )
-                    : [...codexCards].sort(
-                        (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
-                      );
-                return (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                    {sorted.map((card) => (
-                      <div key={card.id} className="w-full max-w-[140px] mx-auto">
-                        <CardDisplay card={card} />
-                      </div>
-                    ))}
-                  </div>
-                );
+                return renderCodexCardGrid(filtered, codexViewSort);
               })()}
+
+              {/* Holo tab — foil cards only */}
+              {codexViewSubTab === "holo" && (() => {
+                const filtered = codexCards.filter((c) => c.isFoil);
+                if (filtered.length === 0) {
+                  return <p className="text-sm text-white/40 text-center py-8">No holo cards discovered.</p>;
+                }
+                return renderCodexCardGrid(filtered, codexViewSort);
+              })()}
+
+              {/* Boys tab — character-type cards */}
+              {codexViewSubTab === "boys" && (() => {
+                const filtered = codexCards.filter((c) => (c.cardType ?? "actor") === "character");
+                if (filtered.length === 0) {
+                  return <p className="text-sm text-white/40 text-center py-8">No boys discovered.</p>;
+                }
+                return renderCodexCardGrid(filtered, codexViewSort);
+              })()}
+
+              {/* Badges tab */}
+              {codexViewSubTab === "badges" && (
+                completedBadges.length === 0 ? (
+                  <p className="text-sm text-white/40 text-center py-8">No badges earned yet.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {completedBadges.map((b) => {
+                      const isWinner = !!(b as CompletedBadge).winnerId;
+                      const imageUrl = isWinner ? ((b as CompletedBadge).posterUrl ?? "") : ((b as CompletedBadge).imageUrl ?? "");
+                      const key = isWinner ? `w-${(b as CompletedBadge).winnerId}` : `s-${(b as CompletedBadge).shopItemId}`;
+                      return (
+                        <div
+                          key={key}
+                          className="rounded-xl overflow-hidden border border-amber-500/30 bg-amber-500/5 transition-all hover:ring-2 hover:ring-amber-400/40"
+                          style={{ aspectRatio: "1" }}
+                        >
+                          <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+                            {imageUrl ? (
+                              <>
+                                <img src={imageUrl} alt="" className="w-full h-full object-cover absolute inset-0" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                              </>
+                            ) : (
+                              <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
+                                <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                              </div>
+                            )}
+                            <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                              {b.movieTitle || (b as CompletedBadge).name || "Badge"}
+                            </span>
+                            {b.isHolo && (
+                              <span
+                                className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
+                                style={{
+                                  background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                                  boxShadow: "0 0 6px rgba(255,255,255,0.5)",
+                                }}
+                              >
+                                HOLO
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
             </div>
           </div>
         </>
@@ -1874,6 +1926,68 @@ function StatCard({
         <span className="text-[11px] uppercase tracking-widest text-white/35 font-medium">{label}</span>
       </div>
       <p className={`font-bold text-white/80 ${small ? "text-sm truncate" : "text-xl"}`}>{value}</p>
+    </div>
+  );
+}
+
+function renderCodexCardGrid(
+  cards: FeaturedCard[],
+  sortKey: "set" | "name" | "rarity",
+) {
+  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+
+  if (sortKey === "set") {
+    const bySet = new Map<string, FeaturedCard[]>();
+    for (const card of cards) {
+      const key = card.movieTitle || "Unknown";
+      if (!bySet.has(key)) bySet.set(key, []);
+      bySet.get(key)!.push(card);
+    }
+    const sets = Array.from(bySet.entries())
+      .map(([title, setCards]) => ({
+        title,
+        cards: [...setCards].sort(
+          (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+        ),
+      }))
+      .sort((a, b) => {
+        if (a.cards.length !== b.cards.length) return b.cards.length - a.cards.length;
+        return a.title.localeCompare(b.title);
+      });
+    return (
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        {sets.flatMap((set, setIndex) => [
+          setIndex > 0 ? (
+            <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-2 mb-2 pt-2" aria-hidden />
+          ) : null,
+          <div key={`codex-set-${setIndex}`} className="col-span-full text-xs font-medium text-white/40 uppercase tracking-wider mb-1">
+            {set.title}
+          </div>,
+          ...set.cards.map((card) => (
+            <div key={card.id} className="w-full max-w-[140px] mx-auto">
+              <CardDisplay card={card} />
+            </div>
+          )),
+        ])}
+      </div>
+    );
+  }
+
+  const sorted =
+    sortKey === "name"
+      ? [...cards].sort((a, b) =>
+          (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
+        )
+      : [...cards].sort(
+          (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+        );
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+      {sorted.map((card) => (
+        <div key={card.id} className="w-full max-w-[140px] mx-auto">
+          <CardDisplay card={card} />
+        </div>
+      ))}
     </div>
   );
 }

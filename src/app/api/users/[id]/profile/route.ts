@@ -12,6 +12,7 @@ import {
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
 } from "@/lib/data";
 import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
@@ -200,10 +201,11 @@ export async function GET(
 
   const watchlist = getWatchlist(id);
 
-  // Codex cards: discovered entries (regular, holo, alt-art) for picker and featured resolution
+  // Codex cards: discovered entries (regular, holo, alt-art, boys) for picker and featured resolution
   const regularIds = getCodexUnlockedCharacterIds(id);
   const holoIds = getCodexUnlockedHoloCharacterIds(id);
   const altArtIds = getCodexUnlockedAltArtCharacterIds(id);
+  const boysIds = getCodexUnlockedBoysCharacterIds(id);
   const pool = getCharacterPool();
   const poolById = new Map(pool.map((e) => [e.characterId, e]));
 
@@ -271,6 +273,22 @@ export async function GET(
         cardType: e.cardType,
       });
       validFeaturedIds.add(slotId);
+    }
+  }
+  for (const charId of boysIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      codexCards.push({
+        id: e.characterId,
+        rarity: e.rarity,
+        isFoil: false,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+      validFeaturedIds.add(e.characterId);
     }
   }
 
@@ -488,9 +506,15 @@ export async function PUT(
   }
 
   if (Array.isArray(body.featuredCardIds)) {
-    const codexIds = new Set(getCodexUnlockedCharacterIds(id));
+    const regularIds = new Set(getCodexUnlockedCharacterIds(id));
+    const holoIds = new Set(getCodexUnlockedHoloCharacterIds(id));
+    const altArtIds = new Set(getCodexUnlockedAltArtCharacterIds(id));
+    const validFeaturedIds = new Set<string>();
+    for (const charId of regularIds) validFeaturedIds.add(charId);
+    for (const charId of holoIds) validFeaturedIds.add(`holo:${charId}`);
+    for (const charId of altArtIds) validFeaturedIds.add(`altart:${charId}`);
     profile.featuredCardIds = body.featuredCardIds
-      .filter((charId: unknown) => typeof charId === "string" && codexIds.has(charId))
+      .filter((slotId: unknown) => typeof slotId === "string" && validFeaturedIds.has(slotId))
       .slice(0, 6);
   }
 

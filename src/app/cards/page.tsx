@@ -480,6 +480,9 @@ function CardsContent() {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [triviaCompletedIds, setTriviaCompletedIds] = useState<Set<string>>(new Set());
   const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null]);
+  const [tradeUpAutofillError, setTradeUpAutofillError] = useState("");
+  const [tradeUpAutofillErrorFading, setTradeUpAutofillErrorFading] = useState(false);
+  const tradeUpAutofillErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tradingUp, setTradingUp] = useState(false);
   const [tradeUpResult, setTradeUpResult] = useState<Card | null>(null);
   const [tradeUpResultCredits, setTradeUpResultCredits] = useState<number | null>(null);
@@ -1087,6 +1090,12 @@ function CardsContent() {
       const data = await res.json();
       if (res.ok) {
         playTradeUpReveal();
+        if (tradeUpAutofillErrorTimeoutRef.current) {
+          clearTimeout(tradeUpAutofillErrorTimeoutRef.current);
+          tradeUpAutofillErrorTimeoutRef.current = null;
+        }
+        setTradeUpAutofillError("");
+        setTradeUpAutofillErrorFading(false);
         setTradeUpSlots([null, null, null, null]);
         if (data.card) {
           setTradeUpResult(data.card);
@@ -1108,6 +1117,12 @@ function CardsContent() {
   }
 
   function addToTradeUpSlot(cardId: string) {
+    if (tradeUpAutofillErrorTimeoutRef.current) {
+      clearTimeout(tradeUpAutofillErrorTimeoutRef.current);
+      tradeUpAutofillErrorTimeoutRef.current = null;
+    }
+    setTradeUpAutofillError("");
+    setTradeUpAutofillErrorFading(false);
     if (myListedCardIds.has(cardId)) return;
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
@@ -1131,6 +1146,12 @@ function CardsContent() {
   }
 
   function removeFromTradeUpSlot(cardId: string) {
+    if (tradeUpAutofillErrorTimeoutRef.current) {
+      clearTimeout(tradeUpAutofillErrorTimeoutRef.current);
+      tradeUpAutofillErrorTimeoutRef.current = null;
+    }
+    setTradeUpAutofillError("");
+    setTradeUpAutofillErrorFading(false);
     setTradeUpSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
   }
 
@@ -1199,18 +1220,50 @@ function CardsContent() {
     });
   }
 
+  function setTradeUpAutofillErrorWithFade(message: string) {
+    if (tradeUpAutofillErrorTimeoutRef.current) {
+      clearTimeout(tradeUpAutofillErrorTimeoutRef.current);
+      tradeUpAutofillErrorTimeoutRef.current = null;
+    }
+    setTradeUpAutofillErrorFading(false);
+    setTradeUpAutofillError(message);
+    tradeUpAutofillErrorTimeoutRef.current = setTimeout(() => {
+      setTradeUpAutofillErrorFading(true);
+      tradeUpAutofillErrorTimeoutRef.current = setTimeout(() => {
+        setTradeUpAutofillError("");
+        setTradeUpAutofillErrorFading(false);
+        tradeUpAutofillErrorTimeoutRef.current = null;
+      }, 500);
+    }, 3000);
+  }
+
   function autoFillTradeUp() {
+    if (tradeUpAutofillErrorTimeoutRef.current) {
+      clearTimeout(tradeUpAutofillErrorTimeoutRef.current);
+      tradeUpAutofillErrorTimeoutRef.current = null;
+    }
+    setTradeUpAutofillError("");
+    setTradeUpAutofillErrorFading(false);
     const filled = tradeUpSlots.filter((id): id is string => id != null);
     if (filled.length >= 4) return;
     const slotsNeeded = 4 - filled.length;
     const eligible = getTradeUpEligible(false);
     let toAdd: Card[];
     if (filled.length > 0) {
-      if (eligible.length < slotsNeeded) return;
+      const firstCard = cards.find((c) => c.id === filled[0]);
+      const rarity = firstCard?.rarity ?? "matching";
+      const cardType = firstCard ? (firstCard.cardType ?? "actor") : "actor";
+      if (eligible.length < slotsNeeded) {
+        setTradeUpAutofillErrorWithFade(`Not enough eligible cards. Need ${slotsNeeded} more ${rarity} ${cardType} cards. Cards listed on the marketplace or already in slots can't be used.`);
+        return;
+      }
       toAdd = eligible.slice(0, slotsNeeded);
     } else {
       toAdd = findBestGroup(eligible, 4);
-      if (toAdd.length < 4) return;
+      if (toAdd.length < 4) {
+        setTradeUpAutofillErrorWithFade("No trade-up possible. You need 4 cards of the same rarity (uncommon, rare, or epic) and same type. Legendary cards and cards listed on the marketplace can't be used.");
+        return;
+      }
     }
     setTradeUpSlots((prev) => {
       const next = [...prev];
@@ -2585,6 +2638,11 @@ function CardsContent() {
               <p className="text-sm text-white/60 mb-4">
                 Add 4 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
               </p>
+              {tradeUpAutofillError && (
+                <div className={`mb-4 rounded-xl border border-red-500/40 bg-red-500/15 backdrop-blur-sm px-4 py-3 text-red-300 text-sm transition-opacity duration-500 ${tradeUpAutofillErrorFading ? "opacity-0" : "opacity-100"}`}>
+                  {tradeUpAutofillError}
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {/* Input slots - 4 cards */}
                 <div className="flex gap-2">
@@ -2981,14 +3039,16 @@ function CardsContent() {
                     setTimeout(() => setLegendaryBlockShown(false), 2500);
                   }
                 };
+                const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
+                const isOnBench = (inSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
                 return (
                   <div
                     key={card.id}
                     onClick={handleClick}
                     onMouseEnter={() => showNewDot && card.id && markCardSeen(card.id)}
-                    className={`relative group/card transition-all duration-200 ${
-                      (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
-                    } ${(inSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell") ? "cursor-pointer rounded-xl" : ""} ${card.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
+                    className={`relative transition-opacity duration-200 ${
+                      isSelectable || isOnBench || (card.rarity === "legendary" && inventorySubTab === "tradeup") ? "cursor-pointer" : ""
+                    } ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
                     {showNewDot && (
                       <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]" aria-label="New card" />
@@ -3013,9 +3073,7 @@ function CardsContent() {
                         Listed
                       </span>
                     )}
-                    <div className={(canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}>
-                      <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} />
-                    </div>
+                    <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} selectable={isSelectable} />
                   </div>
                 );
               };
@@ -3085,8 +3143,8 @@ function CardsContent() {
                 return (
                   <div
                     key={stackKey}
-                    className={`relative group/card transition-all duration-200 ${
-                      canAct ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
+                    className={`relative transition-opacity duration-200 ${
+                      canAct ? "cursor-pointer" : ""
                     } ${front.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${isIneligible ? "opacity-40 grayscale" : ""}`}
                     style={{ marginBottom: cascadeOffset, marginRight: cascadeOffset }}
                     onClick={handleStackClick}
@@ -3114,10 +3172,10 @@ function CardsContent() {
 
                     {/* Front card */}
                     <div
-                      className={`relative ${canAct ? "transition-transform duration-200 group-hover/card:scale-[1.02]" : ""}`}
+                      className="relative"
                       style={{ zIndex: cascadeLayers + 1 }}
                     >
-                      <CardDisplay card={{ ...front, isAltArt: isAltArtCard(front) }} inCodex={isCardSlotAlreadyInCodex(front)} />
+                      <CardDisplay card={{ ...front, isAltArt: isAltArtCard(front) }} inCodex={isCardSlotAlreadyInCodex(front)} selectable={canAct} />
                     </div>
 
                     {/* New card dot */}

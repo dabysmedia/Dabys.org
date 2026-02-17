@@ -45,8 +45,151 @@ interface CodexModalData {
   pool: CodexPoolEntry[];
 }
 
+/** Card shape for CardDisplay (discovered codex entry). */
+interface CodexCard {
+  id: string;
+  rarity: string;
+  isFoil: boolean;
+  isAltArt?: boolean;
+  actorName: string;
+  characterName: string;
+  movieTitle: string;
+  profilePath: string;
+  cardType?: string;
+}
+
 interface FriendsSidebarProps {
   currentUserId: string;
+}
+
+function buildCodexCardsFromModal(data: CodexModalData): CodexCard[] {
+  const poolById = new Map(data.pool.map((e) => [e.characterId, e]));
+  const cards: CodexCard[] = [];
+
+  for (const charId of data.characterIds) {
+    const e = poolById.get(charId);
+    if (e && !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character") {
+      cards.push({
+        id: e.characterId,
+        rarity: e.rarity,
+        isFoil: false,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+    }
+  }
+  for (const charId of data.holoCharacterIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      cards.push({
+        id: `holo:${e.characterId}`,
+        rarity: e.rarity,
+        isFoil: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+    }
+  }
+  for (const charId of data.altArtCharacterIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      cards.push({
+        id: `altart:${e.characterId}`,
+        rarity: e.rarity,
+        isFoil: false,
+        isAltArt: true,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+    }
+  }
+  for (const charId of data.boysCharacterIds) {
+    const e = poolById.get(charId);
+    if (e) {
+      cards.push({
+        id: e.characterId,
+        rarity: e.rarity,
+        isFoil: false,
+        actorName: e.actorName ?? "",
+        characterName: e.characterName ?? "",
+        movieTitle: e.movieTitle ?? "",
+        profilePath: e.profilePath ?? "",
+        cardType: e.cardType,
+      });
+    }
+  }
+  return cards;
+}
+
+function renderCodexCardGrid(
+  cards: CodexCard[],
+  sortKey: "set" | "name" | "rarity",
+) {
+  const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+
+  if (sortKey === "set") {
+    const bySet = new Map<string, CodexCard[]>();
+    for (const card of cards) {
+      const key = card.movieTitle || "Unknown";
+      if (!bySet.has(key)) bySet.set(key, []);
+      bySet.get(key)!.push(card);
+    }
+    const sets = Array.from(bySet.entries())
+      .map(([title, setCards]) => ({
+        title,
+        cards: [...setCards].sort(
+          (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+        ),
+      }))
+      .sort((a, b) => {
+        if (a.cards.length !== b.cards.length) return b.cards.length - a.cards.length;
+        return a.title.localeCompare(b.title);
+      });
+    return (
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+        {sets.flatMap((set, setIndex) => [
+          setIndex > 0 ? (
+            <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-2 mb-2 pt-2" aria-hidden />
+          ) : null,
+          <div key={`codex-set-${setIndex}`} className="col-span-full text-xs font-medium text-white/40 uppercase tracking-wider mb-1">
+            {set.title}
+          </div>,
+          ...set.cards.map((card) => (
+            <div key={card.id} className="w-full max-w-[140px] mx-auto rounded-xl overflow-hidden">
+              <CardDisplay card={card} />
+            </div>
+          )),
+        ])}
+      </div>
+    );
+  }
+
+  const sorted =
+    sortKey === "name"
+      ? [...cards].sort((a, b) =>
+          (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
+        )
+      : [...cards].sort(
+          (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+        );
+  return (
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+      {sorted.map((card) => (
+        <div key={card.id} className="w-full max-w-[140px] mx-auto rounded-xl overflow-hidden">
+          <CardDisplay card={card} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
@@ -59,6 +202,10 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [codexModal, setCodexModal] = useState<CodexModalData | null>(null);
   const [codexModalLoading, setCodexModalLoading] = useState(false);
+  type CodexViewSortKey = "set" | "name" | "rarity";
+  const [codexViewSort, setCodexViewSort] = useState<CodexViewSortKey>("set");
+  type CodexViewSubTab = "codex" | "holo" | "boys";
+  const [codexViewSubTab, setCodexViewSubTab] = useState<CodexViewSubTab>("codex");
   const menuRef = useRef<HTMLDivElement>(null);
   const { getStatus } = usePresenceStatus();
 
@@ -105,6 +252,8 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
         const altArtCharacterIds = Array.isArray(codexData.altArtCharacterIds) ? codexData.altArtCharacterIds : [];
         const boysCharacterIds = Array.isArray(codexData.boysCharacterIds) ? codexData.boysCharacterIds : [];
         const pool: CodexPoolEntry[] = Array.isArray(poolData.pool) ? poolData.pool : [];
+        setCodexViewSubTab("codex");
+        setCodexViewSort("set");
         setCodexModal({
           userName,
           characterIds,
@@ -168,15 +317,7 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
     window.dispatchEvent(new CustomEvent("dabys-sidebar-sleep-change"));
   }
 
-  const mainPoolEntries = codexModal
-    ? codexModal.pool.filter(
-        (e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character"
-      )
-    : [];
-  const isDiscovered = (entry: CodexPoolEntry) =>
-    codexModal &&
-    (codexModal.characterIds.includes(entry.characterId) ||
-      codexModal.holoCharacterIds.includes(entry.characterId));
+  const codexCards = codexModal ? buildCodexCardsFromModal(codexModal) : [];
 
   return (
     <>
@@ -204,63 +345,87 @@ export function FriendsSidebar({ currentUserId }: FriendsSidebarProps) {
               className="relative z-10 flex flex-col w-full max-w-4xl max-h-[85vh] rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0 gap-3">
                 <h3 className="text-base font-semibold text-white/90">
                   {codexModal.userName}&apos;s Codex
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => setCodexModal(null)}
-                  className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  aria-label="Close"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2 ml-auto">
+                  {(["set", "name", "rarity"] as const).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setCodexViewSort(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        codexViewSort === key
+                          ? "bg-sky-500/20 border border-sky-400/50 text-sky-300"
+                          : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                      }`}
+                    >
+                      {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setCodexModal(null)}
+                    className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                    aria-label="Close"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
+
+              {/* Sub-tabs */}
+              <div className="px-4 pt-3 pb-0 shrink-0">
+                <div className="flex gap-1 border-b border-white/[0.08]">
+                  {(
+                    [
+                      { key: "codex" as const, label: "Codex" },
+                      { key: "holo" as const, label: "Holo Cards" },
+                      { key: "boys" as const, label: "Boys" },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setCodexViewSubTab(tab.key)}
+                      className={`px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer ${
+                        codexViewSubTab === tab.key
+                          ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                          : "text-white/35 hover:text-white/55"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tab content */}
               <div className="flex-1 overflow-y-auto p-4">
-                {mainPoolEntries.length === 0 ? (
-                  <p className="text-white/40 text-sm text-center py-8">No cards in the pool.</p>
-                ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                    {mainPoolEntries.map((entry) => {
-                      const discovered = isDiscovered(entry);
-                      if (!discovered) {
-                        return (
-                          <div
-                            key={entry.characterId}
-                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
-                            style={{ aspectRatio: "2 / 3.35" }}
-                          >
-                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
-                              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <span className="text-[10px] font-medium">?</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      const codexCard = {
-                        id: entry.characterId,
-                        rarity: entry.rarity,
-                        isFoil: codexModal.holoCharacterIds.includes(entry.characterId),
-                        actorName: entry.actorName ?? "",
-                        characterName: entry.characterName ?? "",
-                        movieTitle: entry.movieTitle ?? "",
-                        profilePath: entry.profilePath ?? "",
-                        cardType: entry.cardType,
-                        isAltArt: !!entry.altArtOfCharacterId,
-                      };
-                      return (
-                        <div key={entry.characterId} className="rounded-xl overflow-hidden">
-                          <CardDisplay card={codexCard} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {codexViewSubTab === "codex" && (() => {
+                  const filtered = codexCards.filter((c) => !c.isFoil && (c.cardType ?? "actor") !== "character");
+                  if (filtered.length === 0) {
+                    return <p className="text-white/40 text-sm text-center py-8">No cards discovered in this codex.</p>;
+                  }
+                  return renderCodexCardGrid(filtered, codexViewSort);
+                })()}
+                {codexViewSubTab === "holo" && (() => {
+                  const filtered = codexCards.filter((c) => c.isFoil);
+                  if (filtered.length === 0) {
+                    return <p className="text-white/40 text-sm text-center py-8">No holo cards discovered.</p>;
+                  }
+                  return renderCodexCardGrid(filtered, codexViewSort);
+                })()}
+                {codexViewSubTab === "boys" && (() => {
+                  const filtered = codexCards.filter((c) => (c.cardType ?? "actor") === "character");
+                  if (filtered.length === 0) {
+                    return <p className="text-white/40 text-sm text-center py-8">No boys discovered.</p>;
+                  }
+                  return renderCodexCardGrid(filtered, codexViewSort);
+                })()}
               </div>
             </div>
           ) : null}

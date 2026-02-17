@@ -2,6 +2,40 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 
+// Web Audio: play a short "legendary" fanfare when the toast appears
+let legendaryAudioContext: AudioContext | null = null;
+function getLegendaryAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!legendaryAudioContext) legendaryAudioContext = new AudioContext();
+  return legendaryAudioContext;
+}
+function playLegendaryPullSound() {
+  const ctx = getLegendaryAudioContext();
+  if (!ctx) return;
+  (async () => {
+    try {
+      if (ctx.state === "suspended") await ctx.resume();
+      const t = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      gain.gain.setValueAtTime(0.12, t + 0.35);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      // Triumphant fanfare: C5 -> E5 -> G5 -> C6
+      const freqs = [523.25, 659.25, 783.99, 1046.5];
+      for (let i = 0; i < freqs.length; i++) {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freqs[i], t + i * 0.08);
+        osc.start(t + i * 0.08);
+        osc.stop(t + 0.5);
+      }
+    } catch { /* ignore */ }
+  })();
+}
+
 interface ActivityEntry {
   id: string;
   type: string;
@@ -48,6 +82,10 @@ export function ActivityToast() {
   const addToast = useCallback((entry: ActivityEntry) => {
     if (seenIdsRef.current.has(entry.id)) return;
     seenIdsRef.current.add(entry.id);
+
+    if (entry.type === "legendary_pull") {
+      playLegendaryPullSound();
+    }
 
     setToasts((prev) => {
       const next = [...prev, { entry, exiting: false }];

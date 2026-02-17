@@ -258,13 +258,6 @@ select option {
   );
 }
 
-/* Card premium glow — soft metallic edge */
-.card-premium-glow {
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 20px rgba(255, 255, 255, 0.03);
-}
-
 /* Card inner highlight — top-edge reflection */
 .card-inner-highlight {
   background: linear-gradient(
@@ -272,18 +265,6 @@ select option {
     rgba(255, 255, 255, 0.06) 0%,
     transparent 20%
   );
-}
-
-/* Card hover lift — elevation on group-hover */
-.card-hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.group:hover .card-hover-lift {
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 20px rgba(255, 255, 255, 0.03),
-    0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
 /* Click to add pulse — subtle discoverability cue */

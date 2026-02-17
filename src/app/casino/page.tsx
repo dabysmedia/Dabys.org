@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RED_NUMBERS, ROULETTE_WHEEL_ORDER } from "@/lib/casino";
+import { RED_NUMBERS } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
 
@@ -101,20 +101,35 @@ function CasinoContent() {
 
   return (
     <div className="min-h-screen">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
+      </div>
+
       <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Header block */}
-        <div className="flex flex-col gap-5 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
               Casino
             </h1>
-            <p className="text-white/45 text-sm mt-0.5">
+            <p className="text-white/50 text-sm mt-1">
               Slots · Blackjack · Roulette · Dabys Bets
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Tab bar */}
-            <div className="flex border-b border-white/[0.08]">
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-sky-400/20 bg-sky-400/10 backdrop-blur-xl">
+            <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-lg font-bold text-sky-300 tabular-nums">{creditBalance}</span>
+            <span className="text-[11px] text-sky-400/60 uppercase tracking-wider">cr</span>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div className="flex border-b border-white/[0.08] mb-8">
               {TABS.map((tab) => (
                 <button
                   key={tab.key}
@@ -128,12 +143,10 @@ function CasinoContent() {
                   {tab.label}
                 </button>
               ))}
-            </div>
-          </div>
         </div>
 
         {/* Game content — main glass panel */}
-        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.05] backdrop-blur-2xl p-6 sm:p-10 shadow-xl shadow-black/30">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
           {activeTab === "slots" && (
             <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
           )}
@@ -299,14 +312,18 @@ function SlotsGame({
 
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">3-Reel Slots</p>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">3-Reel Slots</h2>
+        <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+      </div>
 
       {/* Reels */}
       <div className="flex justify-center gap-2 sm:gap-4 mb-10">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden"
+            className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden shadow-inner"
           >
             <span className={`capitalize ${spinning ? "opacity-90" : ""}`}>
               {slotIcon((spinning ? spinDisplaySymbols : symbols)?.[i] ?? "—")}
@@ -316,16 +333,16 @@ function SlotsGame({
       </div>
 
       {/* Bet selector */}
-      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-5">
+      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6">
         {SLOT_BETS.map((b) => (
           <button
             key={b}
             onClick={() => setBet(b)}
             disabled={spinning || balance < b}
-            className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed backdrop-blur-xl ${
+            className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               bet === b
-                ? "bg-white/12 border border-white/20 text-white"
-                : "bg-white/[0.05] border border-white/[0.08] text-white/65 hover:bg-white/[0.08] hover:border-white/[0.12]"
+                ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
+                : "border border-white/[0.12] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:border-white/[0.18]"
             }`}
           >
             {b}
@@ -338,13 +355,16 @@ function SlotsGame({
         <button
           onClick={handleSpin}
           disabled={spinning || balance < bet}
-          className={`min-w-[140px] px-10 py-3.5 rounded-xl text-base font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-xl ${
-            spinning
-              ? "bg-white/10 border border-white/20 text-white/70 animate-pulse"
-              : "bg-white/12 border border-white/20 text-white hover:bg-white/18 hover:border-white/30"
-          }`}
+          className="min-w-[160px] px-10 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
         >
-          {spinning ? "Spinning…" : "Spin"}
+          {spinning ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+              Spinning…
+            </span>
+          ) : (
+            "Spin"
+          )}
         </button>
       </div>
 
@@ -353,8 +373,8 @@ function SlotsGame({
         <div
           className={
             lastResult.win
-              ? "text-center py-4 px-5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 backdrop-blur-xl text-emerald-200"
-              : "text-center py-4 px-5 rounded-xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-white/60"
+              ? "text-center py-4 px-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-xl text-emerald-400"
+              : "text-center py-4 px-5 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl text-white/60"
           }
         >
           {lastResult.win ? (
@@ -470,11 +490,15 @@ function BlackjackGame({
 
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Blackjack</p>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">Blackjack</h2>
+        <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+      </div>
 
       {/* Dealer hand */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-5">
-        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3 text-center">Dealer</p>
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 mb-5">
+        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">Dealer</p>
         <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
           {dealerHand.map((c, i) => renderCard(c, i, `d-${dealKey}-${i}`))}
         </div>
@@ -484,8 +508,8 @@ function BlackjackGame({
       </div>
 
       {/* Player hand */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 mb-6">
-        <p className="text-[11px] uppercase tracking-wider text-white/40 mb-3 text-center">Your hand</p>
+      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 mb-6">
+        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">Your hand</p>
         <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
           {playerHand.map((c, i) => renderCard(c, i, `p-${dealKey}-${i}`))}
         </div>
@@ -510,7 +534,7 @@ function BlackjackGame({
           <button
             onClick={() => handleAction("deal")}
             disabled={loading || balance < bet}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/12 border border-white/20 text-white hover:bg-white/18 backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {loading ? "…" : "Deal"}
           </button>
@@ -520,14 +544,14 @@ function BlackjackGame({
           <button
             onClick={() => handleAction("hit")}
             disabled={loading || playerValue >= 21}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] border border-white/[0.12] hover:bg-emerald-500/20 hover:border-emerald-400/25 text-white backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-medium hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             Hit
           </button>
           <button
             onClick={() => handleAction("stand")}
             disabled={loading}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl text-sm font-medium bg-white/[0.06] border border-white/[0.12] hover:bg-amber-500/20 hover:border-amber-400/25 text-white backdrop-blur-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             Stand
           </button>
@@ -536,11 +560,6 @@ function BlackjackGame({
       </div>
     </div>
   );
-}
-
-function rouletteColor(n: number): "red" | "black" | "green" {
-  if (n === 0) return "green";
-  return RED_NUMBERS.includes(n) ? "red" : "black";
 }
 
 function RouletteGame({
@@ -555,8 +574,6 @@ function RouletteGame({
   const [bet, setBet] = useState(10);
   const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const [wheelRotation, setWheelRotation] = useState(0);
-  const wheelRef = useRef<HTMLDivElement>(null);
   const [lastResult, setLastResult] = useState<{
     result: number;
     resultColor: string;
@@ -565,15 +582,13 @@ function RouletteGame({
     netChange: number;
   } | null>(null);
 
-  const SEGMENT_ANGLE = 360 / 37;
-  const SPIN_DURATION_MS = 3500;
+  const SPIN_DURATION_MS = 2000;
 
   async function handleSpin() {
     if (spinning || balance < bet || selection === null) return;
     setSpinning(true);
     setLastResult(null);
     try {
-      // 1. Get result from API first
       const res = await fetch("/api/casino/roulette", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -585,25 +600,9 @@ function RouletteGame({
         setSpinning(false);
         return;
       }
-      const resultNum = data.result as number;
-      const resultIdx = ROULETTE_WHEEL_ORDER.indexOf(resultNum);
-
-      // 2. Spin wheel to land on result: segment 0 is at top, so rotate by resultIdx segments
-      const extraRevolutions = 7 + Math.floor(Math.random() * 2);
-      const landAngle = resultIdx * SEGMENT_ANGLE;
-      const targetRotation = wheelRotation + 360 * extraRevolutions + landAngle;
-
-      setWheelRotation(targetRotation);
-
-      if (wheelRef.current) {
-        wheelRef.current.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-        wheelRef.current.style.transform = `rotate(${targetRotation}deg)`;
-      }
-
       await new Promise((r) => setTimeout(r, SPIN_DURATION_MS));
-
       setLastResult({
-        result: resultNum,
+        result: data.result,
         resultColor: data.resultColor,
         win: data.win,
         payout: data.payout,
@@ -619,71 +618,15 @@ function RouletteGame({
 
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Roulette</p>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">Roulette</h2>
+        <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+      </div>
 
       <div className="flex flex-col items-center gap-8">
-        {/* Wheel — scaled up for real table feel */}
-        <div className="relative shrink-0">
-          <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 [perspective:1000px]">
-            <div
-              ref={wheelRef}
-              className="absolute inset-0 rounded-full overflow-hidden border-[6px] border-amber-600/70 shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]"
-              style={{ transform: `rotate(${wheelRotation}deg)` }}
-            >
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {ROULETTE_WHEEL_ORDER.map((n, i) => {
-                  const color = rouletteColor(n);
-                  const fill =
-                    color === "green"
-                      ? "#166534"
-                      : color === "red"
-                        ? "#b91c1c"
-                        : "#1f2937";
-                  // Segment 0 at top (12 o'clock): offset by -90°
-                  const startAngle = -90 + (i / 37) * 360;
-                  const endAngle = -90 + ((i + 1) / 37) * 360;
-                  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-                  const r = 48;
-                  const cx = 50;
-                  const cy = 50;
-                  const x1 = cx + r * Math.cos((startAngle * Math.PI) / 180);
-                  const y1 = cy - r * Math.sin((startAngle * Math.PI) / 180);
-                  const x2 = cx + r * Math.cos((endAngle * Math.PI) / 180);
-                  const y2 = cy - r * Math.sin((endAngle * Math.PI) / 180);
-                  const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-                  const midAngle = ((startAngle + endAngle) / 2) * (Math.PI / 180);
-                  const tx = cx + 32 * Math.cos(midAngle);
-                  const ty = cy - 32 * Math.sin(midAngle);
-                  const rot = midAngle * (180 / Math.PI) + 90;
-                  return (
-                    <g key={i}>
-                      <path d={path} fill={fill} stroke="rgba(0,0,0,0.3)" strokeWidth="0.3" />
-                      <text
-                        x={tx}
-                        y={ty}
-                        fill="white"
-                        fontSize="3.2"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        transform={`rotate(${rot} ${tx} ${ty})`}
-                      >
-                        {n}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-            <div
-              className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-amber-400 drop-shadow-md z-10"
-              aria-hidden
-            />
-          </div>
-        </div>
-
         {/* Betting board — horizontal table layout */}
-        <div className="w-full max-w-3xl rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-5">
+        <div className="w-full max-w-3xl rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
             <label className="text-[11px] uppercase tracking-wider text-white/40 shrink-0">Bet</label>
             <input
@@ -697,30 +640,30 @@ function RouletteGame({
             <div className="flex gap-2">
               <button
                 onClick={() => setSelection(selection === "red" ? null : "red")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                   selection === "red"
-                    ? "bg-red-600 border-2 border-red-400 text-white shadow-lg shadow-red-500/30"
-                    : "bg-red-900/50 border border-red-500/40 text-red-200 hover:bg-red-800/60"
+                    ? "border border-red-500/50 bg-red-500/15 text-red-400 ring-2 ring-red-400/50"
+                    : "border border-red-500/30 bg-red-500/10 text-red-300 hover:border-red-500/50 hover:bg-red-500/15"
                 }`}
               >
                 Red 2×
               </button>
               <button
                 onClick={() => setSelection(selection === "black" ? null : "black")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                   selection === "black"
-                    ? "bg-gray-600 border-2 border-gray-300 text-white shadow-lg"
-                    : "bg-gray-800/50 border border-gray-500/40 text-gray-200 hover:bg-gray-700/60"
+                    ? "border border-white/40 bg-white/10 text-white ring-2 ring-white/30"
+                    : "border border-white/20 bg-white/[0.06] text-white/80 hover:border-white/30 hover:bg-white/[0.08]"
                 }`}
               >
                 Black 2×
               </button>
               <button
                 onClick={() => setSelection(selection === 0 ? null : 0)}
-                className={`w-12 py-2.5 rounded-lg text-xs font-bold ${
+                className={`w-12 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                   selection === 0
-                    ? "bg-emerald-600 border-2 border-emerald-400 text-white"
-                    : "bg-emerald-900/50 border border-emerald-600/50 text-emerald-200 hover:bg-emerald-800/60"
+                    ? "border border-emerald-500/50 bg-emerald-500/15 text-emerald-400 ring-2 ring-emerald-400/50"
+                    : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/50 hover:bg-emerald-500/15"
                 }`}
               >
                 0
@@ -733,21 +676,21 @@ function RouletteGame({
               Array.from({ length: 12 }, (_, col) => {
                 const n = col * 3 + row + 1;
                 const isRed = RED_NUMBERS.includes(n);
-                const sel = selection === n;
+                    const sel = selection === n;
                 return (
                   <button
                     key={n}
                     onClick={() => setSelection(selection === n ? null : n)}
-                    className={`aspect-[4/3] min-h-[28px] rounded text-[11px] sm:text-xs font-bold ${
-                      sel ? "ring-2 ring-white ring-offset-1 ring-offset-[#0a0a0f]" : "hover:opacity-90"
+                    className={`aspect-[4/3] min-h-[28px] rounded text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+                      sel ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-[#0a0a0f]" : ""
                     } ${
                       isRed
                         ? sel
-                          ? "bg-red-600 text-white"
-                          : "bg-red-900/60 border border-red-600/50 text-red-200"
+                          ? "border border-red-500/50 bg-red-500/20 text-red-300"
+                          : "border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/15"
                         : sel
-                          ? "bg-gray-600 text-white"
-                          : "bg-gray-800/60 border border-gray-600/50 text-gray-200"
+                          ? "border border-white/30 bg-white/10 text-white/90"
+                          : "border border-white/[0.12] bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
                     }`}
                   >
                     {n}
@@ -765,13 +708,16 @@ function RouletteGame({
         <button
           onClick={handleSpin}
           disabled={spinning || balance < bet || selection === null}
-          className={`min-w-[140px] px-10 py-3.5 rounded-xl text-base font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-xl ${
-            spinning
-              ? "bg-white/10 border border-white/20 text-white/70 animate-pulse"
-              : "bg-white/12 border border-white/20 text-white hover:bg-white/18 hover:border-white/30"
-          }`}
+          className="min-w-[160px] px-10 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
         >
-          {spinning ? "Spinning…" : "Spin"}
+          {spinning ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+              Spinning…
+            </span>
+          ) : (
+            "Spin"
+          )}
         </button>
       </div>
 
@@ -780,8 +726,8 @@ function RouletteGame({
         <div
           className={`text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
             lastResult.win
-              ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-200"
-              : "bg-white/[0.04] border-white/[0.1] text-white/60"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : "bg-white/[0.03] border-white/[0.08] text-white/60"
           }`}
         >
           <p className="text-[11px] uppercase tracking-wider text-white/45 mb-1">Landed on</p>
@@ -899,13 +845,17 @@ function DabysBetsGame({
 
   return (
     <div>
-      <p className="text-[11px] uppercase tracking-widest text-white/35 mb-6 text-center">Dabys Bets</p>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">Dabys Bets</h2>
+        <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+      </div>
 
       <div className="space-y-4">
         {events.map((evt) => (
           <div
             key={evt.id}
-            className="rounded-xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-5"
+            className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5"
           >
             <p className="text-white/90 font-medium text-sm mb-4">{evt.title}</p>
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
@@ -913,7 +863,7 @@ function DabysBetsGame({
                 <button
                   onClick={() => placeBet(evt.id, "A")}
                   disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-purple-200 hover:bg-purple-500/15 hover:border-purple-400/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all backdrop-blur-md"
                 >
                   {evt.sideA} <span className="text-white/50">({evt.oddsA}x)</span>
                 </button>
@@ -921,7 +871,7 @@ function DabysBetsGame({
                 <button
                   onClick={() => placeBet(evt.id, "B")}
                   disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl text-indigo-200 hover:bg-indigo-500/15 hover:border-indigo-400/25 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all backdrop-blur-md"
                 >
                   {evt.sideB} <span className="text-white/50">({evt.oddsB}x)</span>
                 </button>
@@ -938,7 +888,7 @@ function DabysBetsGame({
                       [evt.id]: Math.max(evt.minBet, Math.min(evt.maxBet, parseInt(e.target.value, 10) || evt.minBet)),
                     }))
                   }
-                  className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2.5 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="w-20 rounded-xl border border-white/[0.12] bg-white/[0.03] backdrop-blur-md px-2.5 py-2 text-white/90 text-center text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                 />
                 <span className="text-white/35 text-[11px]">credits</span>
               </div>
@@ -954,8 +904,8 @@ function DabysBetsGame({
         <div
           className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
             lastResult.userWon
-              ? "bg-emerald-500/10 border-emerald-400/25 text-emerald-200"
-              : "bg-red-500/10 border-red-400/25 text-red-200"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : "bg-red-500/10 border-red-500/30 text-red-400"
           }`}
         >
           <p className="font-medium text-sm">{lastResult.eventTitle}</p>
