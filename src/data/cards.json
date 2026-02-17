@@ -561,20 +561,6 @@
   },
   {
     "userId": "2",
-    "characterId": "actor-8930-809",
-    "rarity": "uncommon",
-    "isFoil": false,
-    "actorName": "John Cleese",
-    "characterName": "King Harold (voice)",
-    "movieTitle": "Shrek 2",
-    "movieTmdbId": 809,
-    "profilePath": "https://image.tmdb.org/t/p/w500/nQpBf77cStmR35V0XOinm2zZMWG.jpg",
-    "cardType": "actor",
-    "id": "card-1771308718626-32a2t24",
-    "acquiredAt": "2026-02-17T06:11:58.626Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1245-24428",
     "rarity": "rare",
     "isFoil": false,

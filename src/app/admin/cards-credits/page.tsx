@@ -161,6 +161,7 @@ export default function AdminCardsCreditsPage() {
   const [loading, setLoading] = useState(true);
   const [savingCredits, setSavingCredits] = useState(false);
   const [restockingPack, setRestockingPack] = useState(false);
+  const [resettingQuests, setResettingQuests] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
   const [addingCardCharacterId, setAddingCardCharacterId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -236,6 +237,7 @@ export default function AdminCardsCreditsPage() {
     credits: false,
     stardust: false,
     shop: false,
+    quests: false,
     trivia: false,
     collection: false,
     codex: false,
@@ -261,6 +263,7 @@ export default function AdminCardsCreditsPage() {
     tradeUpLegendaryFailureCredits: number;
     feedbackAccepted: number;
     setCompletionReward: number;
+    holoSetCompletionReward: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -275,6 +278,7 @@ export default function AdminCardsCreditsPage() {
     tradeUpLegendaryFailureCredits: "100",
     feedbackAccepted: "10",
     setCompletionReward: "1000",
+    holoSetCompletionReward: "1500",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
@@ -416,6 +420,7 @@ export default function AdminCardsCreditsPage() {
           tradeUpLegendaryFailureCredits: String(d.tradeUpLegendaryFailureCredits ?? 100),
           feedbackAccepted: String(d.feedbackAccepted ?? 10),
           setCompletionReward: String(d.setCompletionReward ?? 1000),
+          holoSetCompletionReward: String(d.holoSetCompletionReward ?? 1500),
         });
       }
     } catch {
@@ -770,6 +775,7 @@ export default function AdminCardsCreditsPage() {
         tradeUpLegendaryFailureCredits: parseInt(creditSettingsForm.tradeUpLegendaryFailureCredits, 10) ?? 0,
         feedbackAccepted: parseInt(creditSettingsForm.feedbackAccepted, 10) ?? 0,
         setCompletionReward: parseInt(creditSettingsForm.setCompletionReward, 10) ?? 0,
+        holoSetCompletionReward: parseInt(creditSettingsForm.holoSetCompletionReward, 10) ?? 0,
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -1520,6 +1526,49 @@ export default function AdminCardsCreditsPage() {
           </section>
 
           <section className="border-b border-white/[0.06]">
+            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, quests: !s.quests }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
+              <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>
+              </div>
+              <span className="text-sm font-medium text-white/70 flex-1">Quests</span>
+              <span className="text-[11px] text-white/30">Reset daily quests</span>
+              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.quests ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+            </button>
+            {openUserSection.quests && (
+              <div className="px-5 pb-4 pt-1">
+                <p className="text-white/40 text-sm mb-3">Clear this user&apos;s daily quests for today. They will receive a fresh set next time they open the quest log.</p>
+                <button
+                  type="button"
+                  disabled={resettingQuests}
+                  onClick={async () => {
+                    if (!selectedUserId || resettingQuests) return;
+                    setResettingQuests(true);
+                    setError("");
+                    try {
+                      const res = await fetch("/api/admin/quests/reset", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: selectedUserId }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok) {
+                        alert("Quests reset for this user. They will get new daily quests on next open.");
+                      } else {
+                        setError(data.error || "Failed to reset quests");
+                      }
+                    } finally {
+                      setResettingQuests(false);
+                    }
+                  }}
+                  className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
+                >
+                  {resettingQuests ? "Resetting…" : "Reset quests for today (this user)"}
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="border-b border-white/[0.06]">
             <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, trivia: !s.trivia }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
               <div className="w-6 h-6 rounded-md bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                 <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg>
@@ -1993,6 +2042,7 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1">Leaving a comment</label><input type="number" min={0} value={creditSettingsForm.comment} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, comment: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When feedback is accepted in admin panel">Feedback accepted</label><input type="number" min={0} value={creditSettingsForm.feedbackAccepted} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, feedbackAccepted: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes a set (all cards for a movie) and claims the quest">Set completion</label><input type="number" min={0} value={creditSettingsForm.setCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, setCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes a full holo set (all main codex slots upgraded to holo) and claims the quest">Holo set completion</label><input type="number" min={0} value={creditSettingsForm.holoSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, holoSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
               <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>

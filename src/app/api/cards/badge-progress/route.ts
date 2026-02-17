@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCompletedWinnerIds } from "@/lib/cards";
+import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,5 +10,6 @@ export async function GET(request: Request) {
   }
 
   const completedWinnerIds = getCompletedWinnerIds(userId);
-  return NextResponse.json({ completedWinnerIds });
+  const completedHoloWinnerIds = getCompletedHoloWinnerIds(userId);
+  return NextResponse.json({ completedWinnerIds, completedHoloWinnerIds });
 }

@@ -418,6 +418,8 @@ export interface CreditSettings {
   feedbackAccepted: number;
   /** Credits awarded when a player completes a set (collects all cards for a movie) and claims the quest. */
   setCompletionReward: number;
+  /** Credits awarded when a player completes a full holo set (all main codex slots holo-upgraded) and claims the quest. */
+  holoSetCompletionReward: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -433,6 +435,7 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   tradeUpLegendaryFailureCredits: 100,
   feedbackAccepted: 10,
   setCompletionReward: 1000,
+  holoSetCompletionReward: 1500,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -451,6 +454,7 @@ function getCreditSettingsRaw(): CreditSettings {
       tradeUpLegendaryFailureCredits: typeof raw.tradeUpLegendaryFailureCredits === "number" ? raw.tradeUpLegendaryFailureCredits : DEFAULT_CREDIT_SETTINGS.tradeUpLegendaryFailureCredits,
       feedbackAccepted: typeof raw.feedbackAccepted === "number" ? raw.feedbackAccepted : DEFAULT_CREDIT_SETTINGS.feedbackAccepted,
       setCompletionReward: typeof raw.setCompletionReward === "number" ? raw.setCompletionReward : DEFAULT_CREDIT_SETTINGS.setCompletionReward,
+      holoSetCompletionReward: typeof raw.holoSetCompletionReward === "number" ? raw.holoSetCompletionReward : DEFAULT_CREDIT_SETTINGS.holoSetCompletionReward,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };
@@ -1581,6 +1585,8 @@ export interface SetCompletionQuest {
   reward: number;
   claimed: boolean;
   completedAt: string;
+  /** When true, this quest is for completing the holo upgrade of the entire set. */
+  isHolo?: boolean;
 }
 
 type SetCompletionQuestsStore = Record<string, SetCompletionQuest[]>;
@@ -1624,7 +1630,39 @@ export function getSetCompletionQuests(userId: string): SetCompletionQuest[] {
 export function claimSetCompletionQuest(userId: string, winnerId: string): number {
   const store = getSetCompletionQuestsRaw();
   const userQuests = store[userId] ?? [];
-  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed);
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && !q.isHolo);
+  if (idx < 0) return 0;
+  const quest = userQuests[idx];
+  quest.claimed = true;
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return quest.reward;
+}
+
+/** Add a holo set completion quest for the user if they don't already have one for this winner. Returns true if added. */
+export function addHoloSetCompletionQuest(userId: string, winnerId: string, movieTitle: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  if (userQuests.some((q) => q.winnerId === winnerId && q.isHolo)) return false;
+  const reward = getCreditSettings().holoSetCompletionReward;
+  userQuests.push({
+    winnerId,
+    movieTitle,
+    reward,
+    claimed: false,
+    completedAt: new Date().toISOString(),
+    isHolo: true,
+  });
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
+/** Claim a holo set completion quest. Returns reward amount or 0 if not claimable. */
+export function claimHoloSetCompletionQuest(userId: string, winnerId: string): number {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && q.isHolo === true);
   if (idx < 0) return 0;
   const quest = userQuests[idx];
   quest.claimed = true;

@@ -695,16 +695,31 @@ export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean
   return true;
 }
 
+/** True if every main pool entry for the winner's movie has its holo slot filled in the codex (excludes alt-art/boys). */
+export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): boolean {
+  const winner = getWinners().find((w) => w.id === winnerId);
+  if (!winner?.tmdbId) return false;
+  const pool = getPoolEntriesForMovie(winner.tmdbId);
+  if (pool.length === 0) return false;
+  const holoIds = new Set(getCodexUnlockedHoloCharacterIds(userId));
+  const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
+  if (mainEntries.length === 0) return false;
+  for (const entry of mainEntries) {
+    if (!holoIds.has(entry.characterId)) return false;
+  }
+  return true;
+}
+
 /** Winner IDs for which the user has collected the full set (all codex slots for that movie). */
 export function getCompletedWinnerIds(userId: string): string[] {
   const winners = getWinners().filter((w) => w.tmdbId);
   return winners.filter((w) => hasCompletedMovie(userId, w.id)).map((w) => w.id);
 }
 
-/** Winner IDs for which the user has collected the full set in foil (Holo set). */
+/** Winner IDs for which the user has the full holo set in the codex (all main slots holo-upgraded). */
 export function getCompletedHoloWinnerIds(userId: string): string[] {
   const winners = getWinners().filter((w) => w.tmdbId);
-  return winners.filter((w) => hasCompletedMovieHolo(userId, w.id)).map((w) => w.id);
+  return winners.filter((w) => hasCompletedMovieHoloCodex(userId, w.id)).map((w) => w.id);
 }
 
 export interface BadgeLossEntry {

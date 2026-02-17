@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { resetAllDailyQuests } from "@/lib/quests";
+import { resetAllDailyQuests, resetUserDailyQuests } from "@/lib/quests";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -11,9 +11,21 @@ async function requireAdmin() {
   return null;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const auth = await requireAdmin();
   if (auth) return auth;
+
+  let body: { userId?: string } = {};
+  try {
+    body = await req.json();
+  } catch {
+    // no body: reset all
+  }
+
+  if (typeof body.userId === "string" && body.userId.trim()) {
+    resetUserDailyQuests(body.userId.trim());
+    return NextResponse.json({ success: true });
+  }
 
   resetAllDailyQuests();
   return NextResponse.json({ success: true });

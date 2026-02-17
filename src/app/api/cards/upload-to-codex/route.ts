@@ -14,11 +14,12 @@ import {
   getCharacterPool,
   getWinners,
   addSetCompletionQuest,
+  addHoloSetCompletionQuest,
 } from "@/lib/data";
-import { hasCompletedMovie } from "@/lib/cards";
+import { hasCompletedMovie, hasCompletedMovieHoloCodex } from "@/lib/cards";
 
 /** Upload a card to the codex: removes it from your collection and unlocks that slot. Legendaries re-enter the pool.
- * Main codex: you can upload both regular and holo per character (two slots).
+ * Main codex: you can upload both regular and holo per character (two slots). Holo requires regular to be in codex first.
  * Alt-arts and Boys tabs: one slot per character (lock-in). */
 export async function POST(request: Request) {
   let body: { userId?: string; cardId?: string };
@@ -70,6 +71,12 @@ export async function POST(request: Request) {
     const alreadyRegular = regularIds.includes(characterId);
     const alreadyHolo = holoIds.includes(characterId);
     if (card.isFoil) {
+      if (!alreadyRegular) {
+        return NextResponse.json(
+          { error: "Upload the regular version to the codex first before upgrading to Holo" },
+          { status: 400 }
+        );
+      }
       if (alreadyHolo) {
         return NextResponse.json(
           { error: "This character's Holo is already in your codex" },
@@ -122,12 +129,19 @@ export async function POST(request: Request) {
 
   // Check if this upload completed a set — if so, add a claimable quest
   let setCompleted: { winnerId: string; movieTitle: string } | undefined;
+  let holoSetCompleted: { winnerId: string; movieTitle: string } | undefined;
   const tmdbId = card.movieTmdbId;
   if (tmdbId) {
     const winner = getWinners().find((w) => w.tmdbId === tmdbId);
-    if (winner && hasCompletedMovie(userId, winner.id)) {
-      const added = addSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
-      if (added) setCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+    if (winner) {
+      if (hasCompletedMovie(userId, winner.id)) {
+        const added = addSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
+        if (added) setCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+      }
+      if (card.isFoil && hasCompletedMovieHoloCodex(userId, winner.id)) {
+        const added = addHoloSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
+        if (added) holoSetCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+      }
     }
   }
 
@@ -137,5 +151,6 @@ export async function POST(request: Request) {
     isFoil: card.isFoil ?? false,
     variant: isMain ? (card.isFoil ? "holo" : "regular") : isAltArt ? "altart" : "boys",
     ...(setCompleted && { setCompleted }),
+    ...(holoSetCompleted && { holoSetCompleted }),
   });
 }

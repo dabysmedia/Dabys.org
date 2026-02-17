@@ -146,6 +146,17 @@ export function resetAllDailyQuests(): void {
   writeJson("dailyQuests.json", {});
 }
 
+/** Clear daily quest data for a single user for today. Next time they fetch quests they get a fresh set. (Admin only.) */
+export function resetUserDailyQuests(userId: string): void {
+  const today = getTodayDateStr();
+  const store = getDailyQuestsStore();
+  if (store[today]) {
+    delete store[today][userId];
+    if (Object.keys(store[today]).length === 0) delete store[today];
+    saveDailyQuestsStore(store);
+  }
+}
+
 /**
  * Returns the current "quest day" as YYYY-MM-DD.
  * If the reset hour is e.g. 6, then between 00:00-05:59 UTC the quest day

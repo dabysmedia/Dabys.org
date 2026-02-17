@@ -45,6 +45,7 @@ export async function PATCH(request: Request) {
     tradeUpLegendaryFailureCredits: parse(body.tradeUpLegendaryFailureCredits, current.tradeUpLegendaryFailureCredits),
     feedbackAccepted: parse(body.feedbackAccepted, current.feedbackAccepted),
     setCompletionReward: parse(body.setCompletionReward, current.setCompletionReward),
+    holoSetCompletionReward: parse(body.holoSetCompletionReward, current.holoSetCompletionReward),
   };
 
   saveCreditSettings(settings);

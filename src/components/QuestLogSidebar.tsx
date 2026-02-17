@@ -33,6 +33,7 @@ interface SetCompletionQuest {
   reward: number;
   claimed: boolean;
   completedAt: string;
+  isHolo?: boolean;
 }
 
 interface QuestLogSidebarProps {
@@ -72,6 +73,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [questDate, setQuestDate] = useState<string>("");
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
   const [claimingSetCompletionWinnerId, setClaimingSetCompletionWinnerId] = useState<string | null>(null);
+  const [claimingHoloSetCompletionWinnerId, setClaimingHoloSetCompletionWinnerId] = useState<string | null>(null);
   const [claimingAll, setClaimingAll] = useState(false);
   const [resetHourUTC, setResetHourUTC] = useState<number>(0);
   const [rerollsUsed, setRerollsUsed] = useState<number>(0);
@@ -289,6 +291,29 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     }
   }
 
+  async function claimHoloSetCompletion(winnerId: string) {
+    setClaimingHoloSetCompletionWinnerId(winnerId);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, claimHoloSetCompletion: true, winnerId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchQuests();
+        const delta = data.reward ?? 0;
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingHoloSetCompletionWinnerId(null);
+    }
+  }
+
   async function claimAllRewards() {
     setClaimingAll(true);
     try {
@@ -496,37 +521,48 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                     <span className="text-[10px] text-white/40 uppercase tracking-wider">Set complete</span>
                     <ul className="mt-2 space-y-1">
                       {setCompletionQuests.map((q) => {
+                        const isHolo = q.isHolo === true;
                         const isClaimable = !q.claimed;
-                        const isClaiming = claimingSetCompletionWinnerId === q.winnerId;
+                        const isClaiming = isHolo
+                          ? claimingHoloSetCompletionWinnerId === q.winnerId
+                          : claimingSetCompletionWinnerId === q.winnerId;
                         return (
                           <li
-                            key={q.winnerId}
+                            key={`${q.winnerId}-${isHolo ? "holo" : "reg"}`}
                             className={`rounded-xl border transition-all ${
                               q.claimed
                                 ? "border-white/[0.04] bg-white/[0.01] opacity-60"
-                                : "border-emerald-500/20 bg-emerald-500/[0.04]"
+                                : isHolo
+                                  ? "border-indigo-400/30 bg-indigo-500/[0.06]"
+                                  : "border-emerald-500/20 bg-emerald-500/[0.04]"
                             }`}
                           >
                             <div className="flex items-start gap-3 px-3 py-2.5">
                               <div className="flex-1 min-w-0">
                                 <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
-                                  Complete: {q.movieTitle}
+                                  {isHolo ? "Holo Complete" : "Complete"}: {q.movieTitle}
                                 </span>
-                                <p className="text-[10px] text-white/35 mt-0.5">Collected all cards for this movie</p>
+                                <p className="text-[10px] text-white/35 mt-0.5">
+                                  {isHolo ? "Upgraded all codex slots to holo" : "Collected all cards for this movie"}
+                                </p>
                               </div>
                               <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                                <span className="text-[10px] text-amber-400/80 font-medium whitespace-nowrap">
+                                <span className={`text-[10px] font-medium whitespace-nowrap ${isHolo ? "text-indigo-300/80" : "text-amber-400/80"}`}>
                                   +{q.reward} cr
                                 </span>
                                 {isClaimable && (
                                   <button
                                     type="button"
-                                    onClick={() => claimSetCompletion(q.winnerId)}
+                                    onClick={() => isHolo ? claimHoloSetCompletion(q.winnerId) : claimSetCompletion(q.winnerId)}
                                     disabled={isClaiming}
-                                    className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-400 text-[10px] font-semibold hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                    className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50 ${
+                                      isHolo
+                                        ? "bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/30"
+                                        : "bg-amber-500/20 border border-amber-400/30 text-amber-400 hover:bg-amber-500/30"
+                                    }`}
                                   >
                                     {isClaiming ? (
-                                      <span className="inline-block w-2.5 h-2.5 border border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                                      <span className={`inline-block w-2.5 h-2.5 border rounded-full animate-spin ${isHolo ? "border-indigo-400/30 border-t-indigo-400" : "border-amber-400/30 border-t-amber-400"}`} />
                                     ) : (
                                       "Claim"
                                     )}

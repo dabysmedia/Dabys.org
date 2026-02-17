@@ -92,7 +92,7 @@ function useMidnightUTCCountdown(active: boolean): string {
 type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
 const TCG_TAB_STORAGE_KEY = "dabys_tcg_tab";
 const TAB_KEYS: TabKey[] = ["store", "inventory", "marketplace", "trivia", "trade", "codex"];
-type CodexSubTab = "codex" | "holo" | "boys" | "badges";
+type CodexSubTab = "codex" | "boys" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
 interface PoolEntry {
@@ -582,6 +582,7 @@ function CardsContent() {
   type CodexUploadSortKey = "rarity" | "set" | "name";
   const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("rarity");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [completedHoloBadgeWinnerIds, setCompletedHoloBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
@@ -790,6 +791,7 @@ function CardsContent() {
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
       setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
+      setCompletedHoloBadgeWinnerIds(new Set(Array.isArray(d.completedHoloWinnerIds) ? d.completedHoloWinnerIds : []));
     }
   }, []);
 
@@ -901,6 +903,7 @@ function CardsContent() {
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
       setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
+      setCompletedHoloBadgeWinnerIds(new Set(Array.isArray(d.completedHoloWinnerIds) ? d.completedHoloWinnerIds : []));
     }
   }, [getUserId]);
 
@@ -1675,6 +1678,30 @@ function CardsContent() {
     return false;
   }
 
+  /** True if this is a main foil card, the regular version IS in the codex, and the holo slot is NOT yet filled. */
+  function isHoloUpgradeEligible(card: { characterId?: string | null; isFoil?: boolean }): boolean {
+    if (!card.characterId || !card.isFoil) return false;
+    const entry = poolEntries.find((e) => e.characterId === card.characterId);
+    if (!entry) return false;
+    const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
+    const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
+    const isMain = !isAltArt && !isBoys;
+    if (!isMain) return false;
+    return discoveredCharacterIds.has(card.characterId) && !discoveredHoloCharacterIds.has(card.characterId);
+  }
+
+  /** True if this is a main foil card but the regular version is NOT yet in the codex (holo upload blocked). */
+  function isHoloMissingRegularPrereq(card: { characterId?: string | null; isFoil?: boolean }): boolean {
+    if (!card.characterId || !card.isFoil) return false;
+    const entry = poolEntries.find((e) => e.characterId === card.characterId);
+    if (!entry) return false;
+    const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
+    const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
+    const isMain = !isAltArt && !isBoys;
+    if (!isMain) return false;
+    return !discoveredCharacterIds.has(card.characterId);
+  }
+
   function isAltArtCard(card: { characterId?: string | null }): boolean {
     if (!card.characterId) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
@@ -1699,7 +1726,7 @@ function CardsContent() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const eligible = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
-      return c && c.characterId != null && !isCardSlotAlreadyInCodex(c);
+      return c && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
     });
     // One card per codex slot — never upload duplicates (e.g. multiple copies of same character regular).
     const seenSlots = new Set<string>();
@@ -1764,7 +1791,7 @@ function CardsContent() {
           else if (variant === "altart") setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
-          if (data.setCompleted) window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
+          if (data.setCompleted || data.holoSetCompleted) window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
         /* skip failed */
@@ -4104,17 +4131,6 @@ function CardsContent() {
               </button>
               <button
                 type="button"
-                onClick={() => setCodexSubTab("holo")}
-                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
-                  codexSubTab === "holo"
-                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
-                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
-                }`}
-              >
-                Holo Cards
-              </button>
-              <button
-                type="button"
                 onClick={() => setCodexSubTab("boys")}
                 className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "boys"
@@ -4227,6 +4243,7 @@ function CardsContent() {
 
                       type CodexVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: CardType; isAltArt: boolean } };
                       const variants: CodexVariant[] = [];
+                      const hasHoloUpgrade = discoveredHoloCharacterIds.has(entry.characterId);
                       if (mainDiscovered) {
                         variants.push({
                           poolEntry: entry,
@@ -4234,7 +4251,7 @@ function CardsContent() {
                           codexCard: {
                             id: entry.characterId,
                             rarity: entry.rarity,
-                            isFoil: false,
+                            isFoil: hasHoloUpgrade,
                             actorName: entry.actorName ?? "",
                             characterName: entry.characterName ?? "",
                             movieTitle: entry.movieTitle ?? "",
@@ -4340,7 +4357,7 @@ function CardsContent() {
                               key={v.poolEntry.characterId}
                               role="button"
                               tabIndex={0}
-                              className="cursor-pointer focus:outline-none"
+                              className="relative cursor-pointer focus:outline-none"
                               style={{
                                 position: idx === 0 ? "relative" : "absolute",
                                 top: 0,
@@ -4414,36 +4431,52 @@ function CardsContent() {
                           );
                           const winner = winners.find((w) => w.movieTitle === title);
                           const isComplete = winner ? completedBadgeWinnerIds.has(winner.id) : false;
+                          const isHoloComplete = winner ? completedHoloBadgeWinnerIds.has(winner.id) : false;
                           return {
                             title,
                             entries: sortedEntries,
                             completedCount: discoveredCount(entries),
                             isComplete,
+                            isHoloComplete,
                           };
                         })
                         .sort((a, b) => {
+                          if (a.isHoloComplete !== b.isHoloComplete) return a.isHoloComplete ? -1 : 1;
                           if (a.isComplete !== b.isComplete) return a.isComplete ? -1 : 1;
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
                       return sets.flatMap((set, setIndex) => {
-                        const setWrapperClass = set.isComplete
-                          ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
-                          : "col-span-full";
+                        const setWrapperClass = set.isHoloComplete
+                          ? "col-span-full rounded-xl holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 mb-4"
+                          : set.isComplete
+                            ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
+                            : "col-span-full";
                         return [
                           setIndex > 0 ? (
                             <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                           ) : null,
                           <div key={`codex-set-wrap-${setIndex}`} className={setWrapperClass}>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className={`text-sm font-semibold ${set.isComplete ? "text-amber-200" : "text-white/70"}`}>
+                              <span className={`text-sm font-semibold ${set.isHoloComplete ? "text-white/90" : set.isComplete ? "text-amber-200" : "text-white/70"}`}>
                                 {set.title}
                               </span>
-                              {set.isComplete && (
+                              {set.isHoloComplete ? (
+                                <span
+                                  className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm text-white"
+                                  style={{
+                                    background: "linear-gradient(135deg, #ff6b6b, #ffd93d, #6bff6b, #6bd5ff, #b96bff, #ff6bb5)",
+                                    backgroundSize: "200% 200%",
+                                    animation: "holo-badge-shift 3s ease infinite",
+                                  }}
+                                >
+                                  Holo Complete
+                                </span>
+                              ) : set.isComplete ? (
                                 <span className="px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm">
                                   Complete
                                 </span>
-                              )}
+                              ) : null}
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                               {set.entries.map((entry) => renderEntry(entry))}
@@ -4456,149 +4489,6 @@ function CardsContent() {
                       codexSort === "name"
                         ? [...mainEntries].sort((a, b) =>
                             (a.characterName || a.actorName || "").localeCompare(b.characterName || b.actorName || "")
-                          )
-                        : [...mainEntries].sort(
-                            (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
-                          );
-                    return sorted.map((entry) => renderEntry(entry));
-                  })()}
-                </div>
-              </div>
-            )}
-          </>
-            );
-            })()}
-
-            {codexSubTab === "holo" && (() => {
-              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
-              return (
-          <>
-            {mainEntries.length === 0 ? (
-              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No cards in the pool yet.</p>
-              </div>
-            ) : (
-              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                  <span className="text-white/50 text-sm">Sort:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {(["rarity", "set", "name"] as const).map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setCodexSort(key)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                          codexSort === key
-                            ? "bg-amber-500/20 border border-amber-400/50 text-amber-300"
-                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
-                        }`}
-                      >
-                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {(() => {
-                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
-                    const renderEntry = (entry: PoolEntry) => {
-                      const discovered = discoveredHoloCharacterIds.has(entry.characterId);
-                      if (!discovered) {
-                        const isTrackedHolo = trackedCharacterIds.has(`holo:${entry.characterId}`);
-                        return (
-                          <div
-                            key={entry.characterId}
-                            className={`group/missing relative rounded-xl overflow-hidden border flex flex-col items-center justify-center transition-colors ${
-                              isTrackedHolo
-                                ? "border-amber-400/40 bg-amber-500/[0.06]"
-                                : "border-white/10 bg-white/[0.04] hover:border-white/20"
-                            }`}
-                            style={{ aspectRatio: "2 / 3.35" }}
-                          >
-                            <div className={`flex flex-col items-center justify-center gap-2 ${isTrackedHolo ? "text-amber-400/50" : "text-white/25"}`}>
-                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <span className="text-xs font-medium">?</span>
-                            </div>
-                            {isTrackedHolo && (
-                              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
-                                Tracked
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(`holo:${entry.characterId}`); }}
-                              className={`absolute bottom-1.5 inset-x-1.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
-                                isTrackedHolo
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
-                                  : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
-                              }`}
-                              title={isTrackedHolo ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
-                              disabled={!isTrackedHolo && trackedCharacterIds.size >= MAX_TRACKED}
-                            >
-                              {isTrackedHolo ? "Untrack" : "Track"}
-                            </button>
-                          </div>
-                        );
-                      }
-                      const holoCard = {
-                        id: entry.characterId,
-                        rarity: entry.rarity,
-                        isFoil: true,
-                        actorName: entry.actorName ?? "",
-                        characterName: entry.characterName ?? "",
-                        movieTitle: entry.movieTitle ?? "",
-                        profilePath: entry.profilePath ?? "",
-                        cardType: entry.cardType,
-                      };
-                      return (
-                        <div
-                          key={entry.characterId}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setInspectedCodexCard(holoCard)}
-                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(holoCard)}
-                          className="relative cursor-pointer rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow"
-                          aria-label={`Inspect ${holoCard.characterName || holoCard.actorName}`}
-                        >
-                          <CardDisplay card={holoCard} />
-                        </div>
-                      );
-                    };
-                    if (codexSort === "set") {
-                      const key = (e: PoolEntry) => e.movieTmdbId ?? e.movieTitle;
-                      const bySet = new Map<string | number, PoolEntry[]>();
-                      for (const entry of mainEntries) {
-                        const k = key(entry);
-                        if (!bySet.has(k)) bySet.set(k, []);
-                        bySet.get(k)!.push(entry);
-                      }
-                      const completedCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredHoloCharacterIds.has(e.characterId)).length;
-                      const sets = Array.from(bySet.entries())
-                        .map(([k, entries]) => ({
-                          title: entries[0]?.movieTitle ?? String(k),
-                          entries,
-                          completedCount: completedCount(entries),
-                        }))
-                        .sort((a, b) => {
-                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
-                          return a.title.localeCompare(b.title);
-                        });
-                      return sets.flatMap((set, setIndex) => [
-                        setIndex > 0 ? (
-                          <div key={`holo-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
-                        ) : null,
-                        <div key={`holo-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
-                          {set.title}
-                        </div>,
-                        ...set.entries.map((entry) => renderEntry(entry)),
-                      ]);
-                    }
-                    const sorted =
-                      codexSort === "name"
-                        ? [...mainEntries].sort((a, b) =>
-                            ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? "")
                           )
                         : [...mainEntries].sort(
                             (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
@@ -4770,7 +4660,7 @@ function CardsContent() {
             })()}
 
             {/* Codex card inspect overlay — centered, large scale; animated enter/exit */}
-            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "holo" || codexSubTab === "boys") && inspectedCodexCard && (
+            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "boys") && inspectedCodexCard && (
               <>
                 <div
                   className={`fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm cursor-pointer transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}
@@ -4963,14 +4853,17 @@ function CardsContent() {
                       return sorted.map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
                         const alreadyInCodex = isCardSlotAlreadyInCodex(card);
+                        const needsRegular = isHoloMissingRegularPrereq(card);
+                        const isDisabled = alreadyInCodex || needsRegular;
                         return (
                           <button
                             key={card.id}
                             type="button"
-                            onClick={() => !alreadyInCodex && card.id && toggleCodexUploadSelection(card.id)}
-                            disabled={alreadyInCodex}
+                            onClick={() => !isDisabled && card.id && toggleCodexUploadSelection(card.id)}
+                            disabled={isDisabled}
+                            title={needsRegular ? "Upload the regular version to the codex first" : undefined}
                             className={`relative text-left rounded-xl overflow-hidden transition-all border-2 ${
-                              alreadyInCodex
+                              isDisabled
                                 ? "opacity-60 cursor-not-allowed border-white/5 grayscale"
                                 : "cursor-pointer " + (selected ? "ring-2 ring-cyan-400/35 border-cyan-400/30 backdrop-blur-sm bg-cyan-500/[0.08]" : "border-white/10 hover:border-white/25")
                             }`}
@@ -4983,7 +4876,12 @@ function CardsContent() {
                                 <span className="text-[10px] uppercase tracking-wider text-white/80 font-medium px-2 py-1 rounded bg-white/10">In Codex</span>
                               </span>
                             )}
-                            {selected && !alreadyInCodex && (
+                            {needsRegular && !alreadyInCodex && (
+                              <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">
+                                <span className="text-[10px] uppercase tracking-wider text-amber-300/90 font-medium px-2 py-1 rounded bg-black/40 text-center leading-tight">Regular needed first</span>
+                              </span>
+                            )}
+                            {selected && !isDisabled && (
                               <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-cyan-400/50 backdrop-blur-md border border-white/20 text-white/90 text-xs font-bold flex items-center justify-center z-10 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
                                 ✓
                               </span>
@@ -5003,7 +4901,7 @@ function CardsContent() {
                   </span>
                   {(() => {
                     const eligibleCards = cards.filter(
-                      (c) => c.id != null && !myListedCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c)
+                      (c) => c.id != null && !myListedCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
                     );
                     const onePerSlot: string[] = [];
                     const seenSlots = new Set<string>();
