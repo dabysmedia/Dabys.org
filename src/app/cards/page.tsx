@@ -2819,26 +2819,7 @@ function CardsContent() {
             )}
             {/* Trade Up - frosted glass section */}
             <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold text-amber-400/90">Trade Up</h2>
-                {canCodexdFillTradeUp() ? (
-                  <button
-                    onClick={fillTradeUpWithCodexd}
-                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                    Add Codex&apos;d
-                  </button>
-                ) : (
-                  <button
-                    onClick={autoFillTradeUp}
-                    className="px-3 py-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                    Auto-fill
-                  </button>
-                )}
-              </div>
+              <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
                 Add 4 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
               </p>
@@ -2911,22 +2892,40 @@ function CardsContent() {
                     <span className="text-[10px] text-white/40 text-center px-1">?</span>
                   )}
                 </div>
-                {canTradeUp && (
-                <button
-                  onClick={() => handleTradeUp()}
-                  disabled={tradingUp}
-                  className="ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
-                >
-                  {tradingUp ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Submitting...
-                    </span>
+                <div className="ml-auto flex items-center">
+                  {canTradeUp ? (
+                    <button
+                      onClick={() => handleTradeUp()}
+                      disabled={tradingUp}
+                      className="px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
+                    >
+                      {tradingUp ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Submitting...
+                        </span>
+                      ) : (
+                        "Submit Trade Up"
+                      )}
+                    </button>
+                  ) : canCodexdFillTradeUp() ? (
+                    <button
+                      onClick={fillTradeUpWithCodexd}
+                      className="px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5 shadow-[0_0_20px_rgba(251,191,36,0.2)]"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Add Codex&apos;d
+                    </button>
                   ) : (
-                    "Submit Trade Up"
+                    <button
+                      onClick={autoFillTradeUp}
+                      className="px-5 py-2.5 rounded-xl border border-white/[0.18] bg-white/[0.06] text-white/80 font-semibold hover:bg-white/[0.1] hover:border-white/25 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Auto-fill
+                    </button>
                   )}
-                </button>
-                )}
+                </div>
               </div>
             </div>
 
@@ -3149,26 +3148,7 @@ function CardsContent() {
             {inventorySubTab === "quicksell" && (
               <>
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-lg font-semibold text-amber-400/90">Quicksell</h2>
-                    {canCodexdFillQuicksell() ? (
-                      <button
-                        onClick={fillQuicksellWithCodexd}
-                        className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                        Add Codex&apos;d
-                      </button>
-                    ) : (
-                      <button
-                        onClick={autoFillQuicksell}
-                        className="px-3 py-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                        Auto-fill
-                      </button>
-                    )}
-                  </div>
+                  <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Quicksell</h2>
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
                   </p>
@@ -3209,22 +3189,43 @@ function CardsContent() {
                         );
                       })}
                     </div>
-                    {quicksellBenchCards.length > 0 ? (
-                      <div className="flex flex-col items-start gap-2">
-                        <span className="text-xs text-white/50">
-                          Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0)} credits
-                        </span>
-                        <button
-                          onClick={() => handleQuicksellAll()}
-                          disabled={quicksellVendingId === "_all"}
-                          className="px-4 py-2 rounded-lg border border-sky-500/40 bg-sky-500/15 text-sky-300 text-sm font-medium hover:bg-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {quicksellVendingId === "_all" ? <span className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin inline-block" /> : "Vendor all"}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-white/40">Add cards from your inventory below to vendor for credits.</span>
-                    )}
+                    <div className="flex flex-col items-start gap-2 min-w-[140px]">
+                      {quicksellBenchCards.length > 0 ? (
+                        <>
+                          <span className="text-xs text-white/50">
+                            Vendor all for {quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0)} credits
+                          </span>
+                          <button
+                            onClick={() => handleQuicksellAll()}
+                            disabled={quicksellVendingId === "_all"}
+                            className="px-5 py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/15 text-sky-300 font-semibold hover:bg-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            {quicksellVendingId === "_all" ? <span className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin inline-block" /> : "Vendor all"}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs text-white/50">Add cards from inventory below.</span>
+                          {canCodexdFillQuicksell() ? (
+                            <button
+                              onClick={fillQuicksellWithCodexd}
+                              className="px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              Add Codex&apos;d
+                            </button>
+                          ) : (
+                            <button
+                              onClick={autoFillQuicksell}
+                              className="px-5 py-2.5 rounded-xl border border-white/[0.18] bg-white/[0.06] text-white/80 font-semibold hover:bg-white/[0.1] hover:border-white/25 transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              Auto-fill
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {quicksellError && (
@@ -4467,6 +4468,7 @@ function CardsContent() {
                             return next;
                           });
                         };
+                        const isTrackedCodex = trackedCharacterIds.has(entry.characterId);
                         return (
                           <div
                             key={entry.characterId}
@@ -4474,13 +4476,31 @@ function CardsContent() {
                             tabIndex={0}
                             onClick={() => setInspectedCodexCard(v.codexCard)}
                             onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
-                            className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
+                            className={`relative cursor-pointer group/codexcard ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
                             onMouseEnter={clearNewDot}
                             aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}`}
                           >
                             {isNewlyUploaded && (
                               <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
                             )}
+                            {isTrackedCodex && (
+                              <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider pointer-events-none">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleTrackCharacter(entry.characterId); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 z-10 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/codexcard:opacity-100 ${
+                                isTrackedCodex
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                  : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                              }`}
+                              title={isTrackedCodex ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              disabled={!isTrackedCodex && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedCodex ? "Untrack" : "Track"}
+                            </button>
                             <CardDisplay card={v.codexCard} selectable />
                           </div>
                         );
@@ -4493,11 +4513,12 @@ function CardsContent() {
                         newlyUploadedToCodexCharacterIds.has(v.poolEntry.characterId) ||
                         (v.poolEntry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(v.poolEntry.altArtOfCharacterId))
                       );
+                      const isTrackedStack = trackedCharacterIds.has(entry.characterId);
 
                       return (
                         <div
                           key={entry.characterId}
-                          className="relative"
+                          className="relative group/codexstack"
                           style={{
                             zIndex: isExpanded ? 20 : "auto",
                             marginBottom: isExpanded ? 0 : cascadeOffset,
@@ -4573,6 +4594,21 @@ function CardsContent() {
                           >
                             <span className="text-[11px] font-bold text-white/90 tabular-nums">{variants.length} arts</span>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(entry.characterId); }}
+                            className={`absolute bottom-1.5 left-1.5 right-1.5 z-[10] py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/codexstack:opacity-100 ${
+                              isTrackedStack
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                            }`}
+                            style={{ zIndex: variants.length + 4 }}
+                            title={isTrackedStack ? "Stop tracking" : trackedCharacterIds.size < MAX_TRACKED ? "Track this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                            disabled={!isTrackedStack && trackedCharacterIds.size >= MAX_TRACKED}
+                          >
+                            {isTrackedStack ? "Untrack" : "Track"}
+                          </button>
                         </div>
                       );
                     };
@@ -4769,6 +4805,8 @@ function CardsContent() {
                           return next;
                         });
                       };
+                      const boysTrackKey = `boys:${entry.characterId}`;
+                      const isTrackedBoysCodex = trackedCharacterIds.has(boysTrackKey);
                       return (
                         <div
                           key={entry.characterId}
@@ -4776,13 +4814,31 @@ function CardsContent() {
                           tabIndex={0}
                           onClick={() => setInspectedCodexCard(codexCard)}
                           onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
-                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
+                          className={`relative cursor-pointer group/boyscodex ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
                           onMouseEnter={clearNewDot}
                           aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
                         >
                           {isNewlyUploaded && (
                             <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
                           )}
+                          {isTrackedBoysCodex && (
+                            <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider pointer-events-none">
+                              Tracked
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleTrackCharacter(boysTrackKey); }}
+                            className={`absolute bottom-1.5 inset-x-1.5 z-10 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/boyscodex:opacity-100 ${
+                              isTrackedBoysCodex
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                            }`}
+                            title={isTrackedBoysCodex ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                            disabled={!isTrackedBoysCodex && trackedCharacterIds.size >= MAX_TRACKED}
+                          >
+                            {isTrackedBoysCodex ? "Untrack" : "Track"}
+                          </button>
                           <CardDisplay card={codexCard} selectable />
                         </div>
                       );

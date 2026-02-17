@@ -1248,5 +1248,20 @@
       ]
     },
     "createdAt": "2026-02-17T07:20:46.975Z"
+  },
+  {
+    "id": "cl-1771313588775-ghzxc49",
+    "userId": "2",
+    "amount": 20,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771308718625-09ar83m",
+        "card-1771308716537-u5zyc06",
+        "card-1771308710144-0q5avqv",
+        "card-1771308710144-mv8n0h3"
+      ]
+    },
+    "createdAt": "2026-02-17T07:33:08.774Z"
   }
 ]
