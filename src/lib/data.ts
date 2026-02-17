@@ -2504,3 +2504,125 @@ export function getUnreadNotificationCount(userId: string): number {
   const readMs = new Date(readUpTo).getTime();
   return notifications.filter((n) => new Date(n.timestamp).getTime() > readMs).length;
 }
+
+// ──── Site Settings (marketplace toggle, etc.) ───────────
+export interface SiteSettings {
+  marketplaceEnabled: boolean;
+}
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  marketplaceEnabled: true,
+};
+
+export function getSiteSettings(): SiteSettings {
+  try {
+    const raw = readJson<Partial<SiteSettings>>("siteSettings.json");
+    return {
+      marketplaceEnabled:
+        typeof raw.marketplaceEnabled === "boolean"
+          ? raw.marketplaceEnabled
+          : DEFAULT_SITE_SETTINGS.marketplaceEnabled,
+    };
+  } catch {
+    return { ...DEFAULT_SITE_SETTINGS };
+  }
+}
+
+export function saveSiteSettings(settings: SiteSettings): void {
+  writeJson("siteSettings.json", settings);
+}
+
+/**
+ * Disable marketplace: set flag to false, remove all listings (return cards to owners),
+ * and remove all buy orders. Returns counts of removed items.
+ */
+export function disableMarketplace(): {
+  listingsRemoved: number;
+  buyOrdersRemoved: number;
+} {
+  const settings = getSiteSettings();
+  settings.marketplaceEnabled = false;
+  saveSiteSettings(settings);
+
+  const listings = getListingsRaw();
+  const listingsRemoved = listings.length;
+  if (listingsRemoved > 0) {
+    saveListingsRaw([]);
+  }
+
+  const buyOrders = getBuyOrdersRaw();
+  const buyOrdersRemoved = buyOrders.length;
+  if (buyOrdersRemoved > 0) {
+    saveBuyOrdersRaw([]);
+  }
+
+  return { listingsRemoved, buyOrdersRemoved };
+}
+
+/**
+ * Enable marketplace: set flag to true.
+ */
+export function enableMarketplace(): void {
+  const settings = getSiteSettings();
+  settings.marketplaceEnabled = true;
+  saveSiteSettings(settings);
+}
+
+// ──── Trade Block (cards users are willing to trade) ─────
+export interface TradeBlockEntry {
+  id: string;
+  userId: string;
+  cardId: string;
+  note: string;
+  createdAt: string;
+}
+
+function getTradeBlockRaw(): TradeBlockEntry[] {
+  try {
+    return readJson<TradeBlockEntry[]>("tradeBlock.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveTradeBlockRaw(entries: TradeBlockEntry[]) {
+  writeJson("tradeBlock.json", entries);
+}
+
+export function getTradeBlock(): TradeBlockEntry[] {
+  return getTradeBlockRaw();
+}
+
+export function addTradeBlockEntry(
+  entry: Omit<TradeBlockEntry, "id" | "createdAt">
+): TradeBlockEntry {
+  const entries = getTradeBlockRaw();
+  const existing = entries.find(
+    (e) => e.userId === entry.userId && e.cardId === entry.cardId
+  );
+  if (existing) return existing;
+
+  const newEntry: TradeBlockEntry = {
+    ...entry,
+    id: `tb-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: new Date().toISOString(),
+  };
+  entries.push(newEntry);
+  saveTradeBlockRaw(entries);
+  return newEntry;
+}
+
+export function removeTradeBlockEntry(userId: string, entryId: string): boolean {
+  const entries = getTradeBlockRaw();
+  const idx = entries.findIndex(
+    (e) => e.id === entryId && e.userId === userId
+  );
+  if (idx < 0) return false;
+  entries.splice(idx, 1);
+  saveTradeBlockRaw(entries);
+  return true;
+}
+
+export function getTradeBlockForUser(userId: string): TradeBlockEntry[] {
+  return getTradeBlockRaw().filter((e) => e.userId === userId);
+}

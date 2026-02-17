@@ -779,6 +779,9 @@ export default function AdminDashboard() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsTotal, setTransactionsTotal] = useState(0);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [marketplaceEnabled, setMarketplaceEnabled] = useState(true);
+  const [marketplaceToggling, setMarketplaceToggling] = useState(false);
+  const [marketplaceMsg, setMarketplaceMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/dashboard")
@@ -786,7 +789,41 @@ export default function AdminDashboard() {
       .then((d) => setData(d))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    fetch("/api/admin/marketplace-toggle")
+      .then((r) => r.json())
+      .then((d) => setMarketplaceEnabled(d.marketplaceEnabled ?? true))
+      .catch(console.error);
   }, []);
+
+  const handleMarketplaceToggle = async () => {
+    const newState = !marketplaceEnabled;
+    const confirmed = newState
+      ? true
+      : window.confirm(
+          "Disabling the marketplace will return ALL active listings to their owners and cancel all buy orders. Continue?"
+        );
+    if (!confirmed) return;
+    setMarketplaceToggling(true);
+    setMarketplaceMsg(null);
+    try {
+      const res = await fetch("/api/admin/marketplace-toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enable: newState }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setMarketplaceEnabled(d.marketplaceEnabled);
+        setMarketplaceMsg(d.message);
+        setTimeout(() => setMarketplaceMsg(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setMarketplaceToggling(false);
+    }
+  };
 
   useEffect(() => {
     if (!showTransactionsModal) return;
@@ -1259,6 +1296,48 @@ export default function AdminDashboard() {
               </div>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* ─── Marketplace Toggle ──────────────────────────────── */}
+      <div className={`rounded-xl border p-5 ${marketplaceEnabled ? "border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.04] to-transparent" : "border-red-500/20 bg-gradient-to-br from-red-500/[0.04] to-transparent"}`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${marketplaceEnabled ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+              <svg className={`w-5 h-5 ${marketplaceEnabled ? "text-emerald-400" : "text-red-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white/80">Marketplace</h2>
+              <p className="text-[11px] text-white/40 mt-0.5">
+                {marketplaceEnabled
+                  ? "Marketplace is currently active. Users can list and buy cards."
+                  : "Marketplace is disabled. Tab is hidden and all listings have been returned."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {marketplaceMsg && (
+              <span className="text-xs text-white/50 max-w-[260px] truncate">{marketplaceMsg}</span>
+            )}
+            <button
+              type="button"
+              onClick={handleMarketplaceToggle}
+              disabled={marketplaceToggling}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer disabled:opacity-50 ${
+                marketplaceEnabled
+                  ? "border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                  : "border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60"
+              }`}
+            >
+              {marketplaceToggling
+                ? "..."
+                : marketplaceEnabled
+                  ? "Disable Marketplace"
+                  : "Enable Marketplace"}
+            </button>
+          </div>
         </div>
       </div>
 

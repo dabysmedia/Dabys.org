@@ -509,6 +509,24 @@ function CardsContent() {
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [fulfillingOrderId, setFulfillingOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [marketplaceEnabled, setMarketplaceEnabled] = useState(true);
+
+  interface TradeBlockEnriched {
+    id: string;
+    userId: string;
+    userName: string;
+    cardId: string;
+    note: string;
+    createdAt: string;
+    card: Card;
+  }
+  const [tradeBlockEntries, setTradeBlockEntries] = useState<TradeBlockEnriched[]>([]);
+  const [showTradeBlockModal, setShowTradeBlockModal] = useState(false);
+  const [tradeBlockSelectedCard, setTradeBlockSelectedCard] = useState<Card | null>(null);
+  const [tradeBlockNote, setTradeBlockNote] = useState("");
+  const [tradeBlockPosting, setTradeBlockPosting] = useState(false);
+  const [tradeBlockRemovingId, setTradeBlockRemovingId] = useState<string | null>(null);
+
   const [winners, setWinners] = useState<Winner[]>([]);
   const [triviaCompletedIds, setTriviaCompletedIds] = useState<Set<string>>(new Set());
   const [tradeUpSlots, setTradeUpSlots] = useState<(string | null)[]>([null, null, null, null]);
@@ -696,12 +714,16 @@ function CardsContent() {
     listings.filter((l) => l.sellerUserId === user?.id).map((l) => l.cardId)
   ), [listings, user?.id]);
 
+  const myTradeBlockCardIds = useMemo(() => new Set(
+    tradeBlockEntries.filter((e) => e.userId === user?.id).map((e) => e.cardId)
+  ), [tradeBlockEntries, user?.id]);
+
   const loadData = useCallback(async () => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes, settingsRes, tradeBlockRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool?codex=1"),
@@ -718,6 +740,8 @@ function CardsContent() {
       fetch(`/api/cards/codex?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards/badge-progress?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/settings/quicksell"),
+      fetch("/api/settings"),
+      fetch("/api/trade-block"),
     ]);
 
     if (creditsRes.ok) {
@@ -806,6 +830,14 @@ function CardsContent() {
       const d = await badgeProgressRes.json();
       setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
       setCompletedHoloBadgeWinnerIds(new Set(Array.isArray(d.completedHoloWinnerIds) ? d.completedHoloWinnerIds : []));
+    }
+    if (settingsRes.ok) {
+      const d = await settingsRes.json();
+      setMarketplaceEnabled(d.marketplaceEnabled ?? true);
+    }
+    if (tradeBlockRes.ok) {
+      const d = await tradeBlockRes.json();
+      setTradeBlockEntries(d.entries ?? []);
     }
   }, []);
 
@@ -926,6 +958,11 @@ function CardsContent() {
     if (res.ok) { const d = await res.json(); setShopItems(d.items ?? []); }
   }, []);
 
+  const refreshTradeBlock = useCallback(async () => {
+    const res = await fetch("/api/trade-block");
+    if (res.ok) { const d = await res.json(); setTradeBlockEntries(d.entries ?? []); }
+  }, []);
+
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) {
@@ -990,6 +1027,13 @@ function CardsContent() {
       /* ignore */
     }
   }, []);
+
+  // If marketplace gets disabled while user is on that tab, switch them to store
+  useEffect(() => {
+    if (!marketplaceEnabled && tab === "marketplace") {
+      setTab("store");
+    }
+  }, [marketplaceEnabled, tab]);
 
   // Remember current tab when it changes (skip first run on mount so we don't overwrite restored value)
   const isFirstTabEffectRun = useRef(true);
@@ -1797,7 +1841,7 @@ function CardsContent() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const eligible = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
-      return c && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
+      return c && c.characterId != null && !myTradeBlockCardIds.has(cardId) && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
     });
     // One card per codex slot — never upload duplicates (e.g. multiple copies of same character regular).
     const seenSlots = new Set<string>();
@@ -2324,7 +2368,7 @@ function CardsContent() {
   const tabs: { key: TabKey; label: string }[] = [
     { key: "store", label: "Shop" },
     { key: "inventory", label: "Inventory" },
-    { key: "marketplace", label: "Marketplace" },
+    ...(marketplaceEnabled ? [{ key: "marketplace" as TabKey, label: "Marketplace" }] : []),
     { key: "trivia", label: "Trivia" },
     { key: "trade", label: "Trade" },
     { key: "codex", label: "Codex" },
@@ -4064,14 +4108,83 @@ function CardsContent() {
           <>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <p className="text-white/50 text-sm">
-                Trade cards directly with other users. Send offers and accept or deny incoming trades.
+                Trade cards with other users. List cards on the trade block, send offers, and accept or deny incoming trades.
               </p>
-              <button
-                onClick={openTradeModal}
-                className="px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-colors cursor-pointer"
-              >
-                Start Trade
-              </button>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => { setTradeBlockSelectedCard(null); setTradeBlockNote(""); setShowTradeBlockModal(true); }}
+                  className="px-4 py-2.5 rounded-xl border border-teal-500/50 bg-teal-500/20 backdrop-blur-md text-teal-300 font-medium hover:border-teal-400 hover:bg-teal-500/30 transition-colors cursor-pointer"
+                >
+                  List on Trade Block
+                </button>
+                <button
+                  onClick={openTradeModal}
+                  className="px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-colors cursor-pointer"
+                >
+                  Start Trade
+                </button>
+              </div>
+            </div>
+
+            {/* Trade Block section */}
+            <div className="mb-10">
+              <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">Trade Block</h3>
+              {tradeBlockEntries.length === 0 ? (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center">
+                  <p className="text-white/40 text-sm mb-2">No cards on the trade block yet.</p>
+                  <p className="text-white/30 text-xs">List cards you&apos;re willing to trade so others can browse and send you offers.</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {tradeBlockEntries.map((entry) => {
+                      const isOwn = entry.userId === user?.id;
+                      return (
+                        <div key={entry.id} className="flex flex-col rounded-xl border border-white/20 bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)] overflow-hidden">
+                          <CardDisplay card={{ ...entry.card, isAltArt: false }} />
+                          <div className="border-t border-white/10 bg-white/[0.02] p-3">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <Link href={`/profile/${entry.userId}`} className="text-[10px] text-white/60 hover:text-sky-300 transition-colors truncate">
+                                {entry.userName}
+                              </Link>
+                            </div>
+                            {entry.note && (
+                              <p className="text-[10px] text-white/40 mb-2 line-clamp-2 italic">&quot;{entry.note}&quot;</p>
+                            )}
+                            {isOwn ? (
+                              <button
+                                onClick={async () => {
+                                  setTradeBlockRemovingId(entry.id);
+                                  try {
+                                    const res = await fetch("/api/trade-block", {
+                                      method: "DELETE",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ userId: user?.id, entryId: entry.id }),
+                                    });
+                                    if (res.ok) await refreshTradeBlock();
+                                  } catch { /* ignore */ }
+                                  setTradeBlockRemovingId(null);
+                                }}
+                                disabled={tradeBlockRemovingId === entry.id}
+                                className="w-full px-3 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/10 disabled:opacity-40 transition-colors cursor-pointer"
+                              >
+                                {tradeBlockRemovingId === entry.id ? "Removing..." : "Remove"}
+                              </button>
+                            ) : (
+                              <Link
+                                href={`/cards?tradeWith=${entry.userId}`}
+                                className="block w-full px-3 py-2 rounded-lg border border-amber-500/50 bg-amber-500/20 backdrop-blur-md text-amber-300 text-sm font-medium text-center hover:border-amber-400 hover:bg-amber-500/30 transition-colors"
+                              >
+                                Offer Trade
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sent offers — compact by default, expand on View */}
@@ -4314,6 +4427,109 @@ function CardsContent() {
                 <p className="text-white/30 text-xs">Click &quot;Start Trade&quot; to send an offer to another user.</p>
               </div>
             )}
+
+            {/* Trade Block - List Card Modal */}
+            {showTradeBlockModal && (
+                  <>
+                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => !tradeBlockPosting && setShowTradeBlockModal(false)} aria-hidden />
+                    <div
+                      className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-5xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.08] bg-[var(--background)] shadow-2xl overflow-hidden flex flex-col"
+                      role="dialog"
+                      aria-label="List a card on the trade block"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="p-6 flex flex-col flex-1 min-h-0 overflow-auto">
+                        <h3 className="text-lg font-bold text-white/90 mb-2 shrink-0">List a Card on the Trade Block</h3>
+                        <p className="text-white/50 text-sm mb-4">Select a card from your collection that you&apos;re willing to trade. Other players can browse the trade block and send you offers.</p>
+                        {!tradeBlockSelectedCard ? (
+                          <div className="flex-1 min-h-0 overflow-auto pr-1">
+                            {(() => {
+                              const tradeBlockCardIds = new Set(tradeBlockEntries.filter((e) => e.userId === user?.id).map((e) => e.cardId));
+                              const available = cards.filter(
+                                (c) => !myListedCardIds.has(c.id) && !tradeBlockCardIds.has(c.id)
+                              );
+                              return available.length === 0 ? (
+                                <p className="text-white/40 text-sm">No cards available to list.</p>
+                              ) : (
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                                  {available.map((card) => (
+                                    <button
+                                      key={card.id}
+                                      onClick={() => setTradeBlockSelectedCard(card)}
+                                      className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-teal-500/60 focus:ring-teal-500/60 transition-all cursor-pointer text-left"
+                                    >
+                                      <CardDisplay card={card} />
+                                    </button>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <div className="w-full flex justify-between items-center mb-4">
+                              <span className="text-sm text-white/60">Listing this card</span>
+                              <button
+                                onClick={() => setTradeBlockSelectedCard(null)}
+                                className="text-xs text-teal-400/80 hover:text-teal-400 transition-colors cursor-pointer"
+                              >
+                                Change card
+                              </button>
+                            </div>
+                            <div className="w-32 mx-auto mb-6">
+                              <CardDisplay card={tradeBlockSelectedCard} />
+                            </div>
+                            <label className="block text-sm text-white/60 mb-2 w-full">Note (optional, max 100 chars)</label>
+                            <input
+                              type="text"
+                              maxLength={100}
+                              value={tradeBlockNote}
+                              onChange={(e) => setTradeBlockNote(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-teal-500/40 mb-4"
+                              placeholder='e.g. "Looking for legendaries"'
+                            />
+                            <div className="flex gap-2 w-full">
+                              <button
+                                onClick={() => { setTradeBlockSelectedCard(null); setTradeBlockNote(""); setShowTradeBlockModal(false); }}
+                                className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!tradeBlockSelectedCard || !user) return;
+                                  setTradeBlockPosting(true);
+                                  try {
+                                    const res = await fetch("/api/trade-block", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        userId: user.id,
+                                        cardId: tradeBlockSelectedCard.id,
+                                        note: tradeBlockNote.trim(),
+                                      }),
+                                    });
+                                    if (res.ok) {
+                                      await refreshTradeBlock();
+                                      setTradeBlockSelectedCard(null);
+                                      setTradeBlockNote("");
+                                      setShowTradeBlockModal(false);
+                                    }
+                                  } catch { /* ignore */ }
+                                  setTradeBlockPosting(false);
+                                }}
+                                disabled={tradeBlockPosting}
+                                className="flex-1 px-4 py-2 rounded-lg bg-teal-600 text-white font-medium hover:bg-teal-500 disabled:opacity-40 cursor-pointer"
+                              >
+                                {tradeBlockPosting ? "Listing..." : "List on Trade Block"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
           </>
         )}
 
@@ -5091,8 +5307,8 @@ function CardsContent() {
                 </div>
               )}
               <div className="p-6 overflow-y-auto flex-1 min-h-0 scrollbar-codex-modal pr-1">
-                {cards.filter((c) => !myListedCardIds.has(c.id!)).length === 0 ? (
-                  <p className="text-sm text-white/40 text-center py-8">No cards available to upload (unlist any listed cards first).</p>
+                {cards.filter((c) => !myListedCardIds.has(c.id!) && !myTradeBlockCardIds.has(c.id!)).length === 0 ? (
+                  <p className="text-sm text-white/40 text-center py-8">No cards available to upload (unlist from marketplace and remove from trade block first).</p>
                 ) : (
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -5117,7 +5333,7 @@ function CardsContent() {
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                     {(() => {
                       const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
-                      const filtered = cards.filter((c) => !myListedCardIds.has(c.id!));
+                      const filtered = cards.filter((c) => !myListedCardIds.has(c.id!) && !myTradeBlockCardIds.has(c.id!));
                       const sorted =
                         codexUploadSort === "set"
                           ? [...filtered].sort((a, b) => (a.movieTitle ?? "").localeCompare(b.movieTitle ?? ""))
@@ -5175,7 +5391,7 @@ function CardsContent() {
                   </span>
                   {(() => {
                     const eligibleCards = cards.filter(
-                      (c) => c.id != null && !myListedCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
+                      (c) => c.id != null && !myListedCardIds.has(c.id) && !myTradeBlockCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
                     );
                     const onePerSlot: string[] = [];
                     const seenSlots = new Set<string>();

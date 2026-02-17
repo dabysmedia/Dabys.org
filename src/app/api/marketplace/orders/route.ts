@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBuyOrders, getCharacterPool, getUsers } from "@/lib/data";
+import { getBuyOrders, getCharacterPool, getUsers, getSiteSettings } from "@/lib/data";
 import { getDisplayedBadgeForUser } from "@/lib/cards";
 import { createBuyOrder } from "@/lib/marketplace";
 
@@ -33,6 +33,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const settings = getSiteSettings();
+  if (!settings.marketplaceEnabled) {
+    return NextResponse.json(
+      { error: "Marketplace is currently disabled" },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   if (!body.userId || !body.characterId) {

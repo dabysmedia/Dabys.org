@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { buyListing } from "@/lib/marketplace";
 import { getCompletedWinnerIds } from "@/lib/cards";
-import { getUsers, getListing, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
+import { getUsers, getListing, getWinners, addActivity, addNotification, addGlobalNotification, getSiteSettings } from "@/lib/data";
 
 export async function POST(request: Request) {
+  const settings = getSiteSettings();
+  if (!settings.marketplaceEnabled) {
+    return NextResponse.json(
+      { error: "Marketplace is currently disabled" },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   if (!body.userId || !body.listingId) {

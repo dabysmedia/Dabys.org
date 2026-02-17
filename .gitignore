@@ -67,3 +67,6 @@ src/data/holoCodexUnlocks.json
 src/data/presence.json
 src/data/notifications.json
 src/data/activity.json
+src/data/tradeBlock.json
+src/data/siteSettings.json
+src/data/notificationReads.json

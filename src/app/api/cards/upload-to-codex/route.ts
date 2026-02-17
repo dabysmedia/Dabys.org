@@ -7,6 +7,7 @@ import {
   addCodexUnlockAltArt,
   addCodexUnlockBoys,
   getListings,
+  getTradeBlock,
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
@@ -50,6 +51,15 @@ export async function POST(request: Request) {
   if (isListed) {
     return NextResponse.json(
       { error: "Unlist the card from the marketplace before uploading to the codex" },
+      { status: 400 }
+    );
+  }
+
+  const tradeBlock = getTradeBlock();
+  const onTradeBlock = tradeBlock.some((e) => e.cardId === cardId && e.userId === userId);
+  if (onTradeBlock) {
+    return NextResponse.json(
+      { error: "Remove the card from the trade block before uploading to the codex" },
       { status: 400 }
     );
   }
