@@ -92,7 +92,7 @@ function useMidnightUTCCountdown(active: boolean): string {
 type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
 const TCG_TAB_STORAGE_KEY = "dabys_tcg_tab";
 const TAB_KEYS: TabKey[] = ["store", "inventory", "marketplace", "trivia", "trade", "codex"];
-type CodexSubTab = "codex" | "holo" | "altarts" | "boys" | "badges";
+type CodexSubTab = "codex" | "holo" | "boys" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
 interface PoolEntry {
@@ -547,6 +547,7 @@ function CardsContent() {
   type CodexUploadSortKey = "rarity" | "set" | "name";
   const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("rarity");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
   const [inspectedCodexCard, setInspectedCodexCard] = useState<{
@@ -3782,17 +3783,6 @@ function CardsContent() {
               </button>
               <button
                 type="button"
-                onClick={() => setCodexSubTab("altarts")}
-                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
-                  codexSubTab === "altarts"
-                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
-                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
-                }`}
-              >
-                Alt-arts
-              </button>
-              <button
-                type="button"
                 onClick={() => setCodexSubTab("boys")}
                 className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "boys"
@@ -3818,6 +3808,13 @@ function CardsContent() {
 
             {codexSubTab === "codex" && (() => {
               const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
+              const altArtMap = new Map<string, PoolEntry[]>();
+              for (const e of poolEntries) {
+                if (e.altArtOfCharacterId) {
+                  if (!altArtMap.has(e.altArtOfCharacterId)) altArtMap.set(e.altArtOfCharacterId, []);
+                  altArtMap.get(e.altArtOfCharacterId)!.push(e);
+                }
+              }
               return (
           <>
             {mainEntries.length === 0 ? (
@@ -3849,10 +3846,14 @@ function CardsContent() {
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const renderEntry = (entry: PoolEntry) => {
-                      const discovered =
+                      const altArts = altArtMap.get(entry.characterId) ?? [];
+                      const discoveredAltArts = altArts.filter(a => discoveredAltArtCharacterIds.has(a.characterId));
+                      const mainDiscovered =
                         discoveredCharacterIds.has(entry.characterId) ||
                         discoveredHoloCharacterIds.has(entry.characterId);
-                      if (!discovered) {
+                      const slotDiscovered = mainDiscovered || discoveredAltArts.length > 0;
+
+                      if (!slotDiscovered) {
                         return (
                           <div
                             key={entry.characterId}
@@ -3868,44 +3869,164 @@ function CardsContent() {
                           </div>
                         );
                       }
-                      const codexCard = {
-                        id: entry.characterId,
-                        rarity: entry.rarity,
-                        isFoil: false,
-                        actorName: entry.actorName ?? "",
-                        characterName: entry.characterName ?? "",
-                        movieTitle: entry.movieTitle ?? "",
-                        profilePath: entry.profilePath ?? "",
-                        cardType: entry.cardType,
-                        isAltArt: !!entry.altArtOfCharacterId,
-                      };
-                      const isNewlyUploaded =
-                        newlyUploadedToCodexCharacterIds.has(entry.characterId) ||
-                        (entry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(entry.altArtOfCharacterId));
-                      const clearNewDot = () => {
-                        if (!isNewlyUploaded) return;
-                        setNewlyUploadedToCodexCharacterIds((prev) => {
-                          const next = new Set(prev);
-                          next.delete(entry.characterId);
-                          if (entry.altArtOfCharacterId != null) next.delete(entry.altArtOfCharacterId);
-                          return next;
+
+                      type CodexVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: CardType; isAltArt: boolean } };
+                      const variants: CodexVariant[] = [];
+                      if (mainDiscovered) {
+                        variants.push({
+                          poolEntry: entry,
+                          isAlt: false,
+                          codexCard: {
+                            id: entry.characterId,
+                            rarity: entry.rarity,
+                            isFoil: false,
+                            actorName: entry.actorName ?? "",
+                            characterName: entry.characterName ?? "",
+                            movieTitle: entry.movieTitle ?? "",
+                            profilePath: entry.profilePath ?? "",
+                            cardType: entry.cardType,
+                            isAltArt: false,
+                          },
                         });
-                      };
+                      }
+                      for (const alt of discoveredAltArts) {
+                        variants.push({
+                          poolEntry: alt,
+                          isAlt: true,
+                          codexCard: {
+                            id: alt.characterId,
+                            rarity: alt.rarity,
+                            isFoil: false,
+                            actorName: alt.actorName ?? "",
+                            characterName: alt.characterName ?? "",
+                            movieTitle: alt.movieTitle ?? "",
+                            profilePath: alt.profilePath ?? "",
+                            cardType: alt.cardType,
+                            isAltArt: true,
+                          },
+                        });
+                      }
+
+                      if (variants.length <= 1) {
+                        const v = variants[0];
+                        const isNewlyUploaded =
+                          newlyUploadedToCodexCharacterIds.has(v.poolEntry.characterId) ||
+                          (v.poolEntry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(v.poolEntry.altArtOfCharacterId));
+                        const clearNewDot = () => {
+                          if (!isNewlyUploaded) return;
+                          setNewlyUploadedToCodexCharacterIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(v.poolEntry.characterId);
+                            if (v.poolEntry.altArtOfCharacterId != null) next.delete(v.poolEntry.altArtOfCharacterId);
+                            return next;
+                          });
+                        };
+                        return (
+                          <div
+                            key={entry.characterId}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setInspectedCodexCard(v.codexCard)}
+                            onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
+                            className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
+                            onMouseEnter={clearNewDot}
+                            aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}`}
+                          >
+                            {isNewlyUploaded && (
+                              <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                            )}
+                            <CardDisplay card={v.codexCard} />
+                          </div>
+                        );
+                      }
+
+                      const isExpanded = expandedCodexStack === entry.characterId;
+                      const cascadeLayers = Math.min(variants.length - 1, 3);
+                      const cascadeOffset = cascadeLayers * 3;
+                      const anyNewlyUploaded = variants.some(v =>
+                        newlyUploadedToCodexCharacterIds.has(v.poolEntry.characterId) ||
+                        (v.poolEntry.altArtOfCharacterId != null && newlyUploadedToCodexCharacterIds.has(v.poolEntry.altArtOfCharacterId))
+                      );
+
                       return (
                         <div
                           key={entry.characterId}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setInspectedCodexCard(codexCard)}
-                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
-                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
-                          onMouseEnter={clearNewDot}
-                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
+                          className="relative"
+                          style={{
+                            zIndex: isExpanded ? 20 : "auto",
+                            marginBottom: isExpanded ? 0 : cascadeOffset,
+                            marginRight: isExpanded ? 0 : cascadeOffset,
+                            transition: "margin 300ms ease-out",
+                          }}
+                          onMouseEnter={() => setExpandedCodexStack(entry.characterId)}
+                          onMouseLeave={() => setExpandedCodexStack(null)}
                         >
-                          {isNewlyUploaded && (
-                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                          {Array.from({ length: cascadeLayers }, (_, i) => {
+                            const layer = cascadeLayers - i;
+                            const offset = layer * 3;
+                            return (
+                              <div
+                                key={`shadow-${i}`}
+                                className="absolute inset-0 rounded-xl pointer-events-none"
+                                style={{
+                                  transform: `translate(${offset}px, ${offset}px)`,
+                                  background: `rgba(255,255,255,${0.02 + i * 0.01})`,
+                                  border: `1px solid rgba(255,255,255,${0.04 + i * 0.015})`,
+                                  zIndex: i,
+                                  opacity: isExpanded ? 0 : 1,
+                                  transition: "opacity 200ms ease-out",
+                                }}
+                              />
+                            );
+                          })}
+
+                          {variants.map((v, idx) => (
+                            <div
+                              key={v.poolEntry.characterId}
+                              role="button"
+                              tabIndex={0}
+                              className="rounded-xl overflow-hidden cursor-pointer ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none"
+                              style={{
+                                position: idx === 0 ? "relative" : "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                transform: `translateX(${isExpanded ? idx * 55 : 0}%)`,
+                                zIndex: isExpanded ? variants.length + 1 - idx : cascadeLayers + 1,
+                                opacity: !isExpanded && idx > 0 ? 0 : 1,
+                                transition: "transform 300ms ease-out, opacity 200ms ease-out",
+                              }}
+                              onClick={() => setInspectedCodexCard(v.codexCard)}
+                              onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
+                              aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}${v.isAlt ? " (Alt-Art)" : ""}`}
+                            >
+                              <CardDisplay card={v.codexCard} />
+                            </div>
+                          ))}
+
+                          {anyNewlyUploaded && (
+                            <span
+                              className="absolute top-1 left-1 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none"
+                              style={{ zIndex: variants.length + 2 }}
+                              aria-label="Newly added to codex"
+                            />
                           )}
-                          <CardDisplay card={codexCard} />
+
+                          <div
+                            className="absolute flex items-center justify-center rounded-full bg-black/70 border border-white/20 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                            style={{
+                              top: -8,
+                              right: isExpanded ? -8 : -8 + cascadeOffset,
+                              minWidth: 24,
+                              height: 24,
+                              padding: "0 6px",
+                              zIndex: variants.length + 3,
+                              opacity: isExpanded ? 0 : 1,
+                              transition: "opacity 200ms ease-out, right 300ms ease-out",
+                            }}
+                          >
+                            <span className="text-[11px] font-bold text-white/90 tabular-nums">{variants.length} arts</span>
+                          </div>
                         </div>
                       );
                     };
@@ -3920,7 +4041,12 @@ function CardsContent() {
                       const discoveredCount = (entries: PoolEntry[]) => {
                         let n = 0;
                         for (const e of entries) {
-                          if (discoveredCharacterIds.has(e.characterId) || discoveredHoloCharacterIds.has(e.characterId)) n++;
+                          if (discoveredCharacterIds.has(e.characterId) || discoveredHoloCharacterIds.has(e.characterId)) {
+                            n++;
+                            continue;
+                          }
+                          const alts = altArtMap.get(e.characterId);
+                          if (alts?.some(a => discoveredAltArtCharacterIds.has(a.characterId))) n++;
                         }
                         return n;
                       };
@@ -4108,140 +4234,6 @@ function CardsContent() {
             );
             })()}
 
-            {codexSubTab === "altarts" && (() => {
-              const altArtEntries = poolEntries.filter((e) => e.altArtOfCharacterId != null);
-              return (
-          <>
-            {altArtEntries.length === 0 ? (
-              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No alt-arts in the pool yet.</p>
-              </div>
-            ) : (
-              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                  <span className="text-white/50 text-sm">Sort:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {(["rarity", "set", "name"] as const).map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setCodexSort(key)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                          codexSort === key
-                            ? "bg-amber-500/20 border border-amber-400/50 text-amber-300"
-                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
-                        }`}
-                      >
-                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {(() => {
-                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
-                    const renderEntry = (entry: PoolEntry) => {
-                      const discovered = discoveredAltArtCharacterIds.has(entry.characterId);
-                      if (!discovered) {
-                        return (
-                          <div
-                            key={entry.characterId}
-                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
-                            style={{ aspectRatio: "2 / 3.35" }}
-                          >
-                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
-                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                              </svg>
-                              <span className="text-xs font-medium">?</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      const codexCard = {
-                        id: entry.characterId,
-                        rarity: entry.rarity,
-                        isFoil: false,
-                        actorName: entry.actorName ?? "",
-                        characterName: entry.characterName ?? "",
-                        movieTitle: entry.movieTitle ?? "",
-                        profilePath: entry.profilePath ?? "",
-                        cardType: entry.cardType,
-                        isAltArt: !!entry.altArtOfCharacterId,
-                      };
-                      const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
-                      const clearNewDot = () => {
-                        if (!isNewlyUploaded) return;
-                        setNewlyUploadedToCodexCharacterIds((prev) => {
-                          const next = new Set(prev);
-                          next.delete(entry.characterId);
-                          return next;
-                        });
-                      };
-                      return (
-                        <div
-                          key={entry.characterId}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setInspectedCodexCard(codexCard)}
-                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
-                          className={`relative cursor-pointer ${isNewlyUploaded ? "codex-card-reveal" : ""} rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-cyan-400/40 focus:ring-cyan-400/50 focus:outline-none transition-shadow`}
-                          onMouseEnter={clearNewDot}
-                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
-                        >
-                          {isNewlyUploaded && (
-                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
-                          )}
-                          <CardDisplay card={codexCard} />
-                        </div>
-                      );
-                    };
-                    if (codexSort === "set") {
-                      const key = (e: PoolEntry) => e.movieTmdbId ?? e.movieTitle;
-                      const bySet = new Map<string | number, PoolEntry[]>();
-                      for (const entry of altArtEntries) {
-                        const k = key(entry);
-                        if (!bySet.has(k)) bySet.set(k, []);
-                        bySet.get(k)!.push(entry);
-                      }
-                      const discoveredCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredAltArtCharacterIds.has(e.characterId)).length;
-                      const sets = Array.from(bySet.entries())
-                        .map(([k, entries]) => ({
-                          title: entries[0]?.movieTitle ?? String(k),
-                          entries,
-                          completedCount: discoveredCount(entries),
-                        }))
-                        .sort((a, b) => {
-                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
-                          return a.title.localeCompare(b.title);
-                        });
-                      return sets.flatMap((set, setIndex) => [
-                        setIndex > 0 ? (
-                          <div key={`altarts-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
-                        ) : null,
-                        <div key={`altarts-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
-                          {set.title}
-                        </div>,
-                        ...set.entries.map((entry) => renderEntry(entry)),
-                      ]);
-                    }
-                    const sorted =
-                      codexSort === "name"
-                        ? [...altArtEntries].sort((a, b) =>
-                            ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? "")
-                          )
-                        : [...altArtEntries].sort(
-                            (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
-                          );
-                    return sorted.map((entry) => renderEntry(entry));
-                  })()}
-                </div>
-              </div>
-            )}
-          </>
-            );
-            })()}
-
             {codexSubTab === "boys" && (() => {
               const boysEntries = poolEntries.filter((e) => (e.cardType ?? "actor") === "character" && !e.altArtOfCharacterId);
               return (
@@ -4377,7 +4369,7 @@ function CardsContent() {
             })()}
 
             {/* Codex card inspect overlay — centered, large scale; animated enter/exit */}
-            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "holo" || codexSubTab === "altarts" || codexSubTab === "boys") && inspectedCodexCard && (
+            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "holo" || codexSubTab === "boys") && inspectedCodexCard && (
               <>
                 <div
                   className={`fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm cursor-pointer transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}

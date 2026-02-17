@@ -85,20 +85,6 @@
   },
   {
     "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771124960446-uxqrvio",
-    "acquiredAt": "2026-02-15T03:09:20.446Z"
-  },
-  {
-    "userId": "2",
     "characterId": "actor-1245-152601",
     "rarity": "rare",
     "isFoil": false,
@@ -222,20 +208,6 @@
     "cardType": "actor",
     "id": "card-1771125495233-cqio411",
     "acquiredAt": "2026-02-15T03:18:15.233Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771125495234-azynhmn",
-    "acquiredAt": "2026-02-15T03:18:15.234Z"
   },
   {
     "userId": "2",
@@ -434,34 +406,6 @@
     "acquiredAt": "2026-02-15T03:18:28.491Z"
   },
   {
-    "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771221445467-iqt6tbc",
-    "acquiredAt": "2026-02-16T05:57:25.467Z"
-  },
-  {
-    "userId": "2",
-    "characterId": "custom-1770869738689-jilnomh",
-    "rarity": "epic",
-    "isFoil": false,
-    "actorName": "alt art nacho",
-    "characterName": "Unknown",
-    "movieTitle": "Nacho Libre",
-    "movieTmdbId": 9353,
-    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
-    "cardType": "actor",
-    "id": "card-1771228868876-ji4z152",
-    "acquiredAt": "2026-02-16T08:01:08.876Z"
-  },
-  {
     "userId": "1",
     "characterId": "custom-1771114639037-51mdjhh",
     "rarity": "uncommon",
@@ -614,5 +558,19 @@
     "cardType": "actor",
     "id": "card-1771273751268-mhekvmx",
     "acquiredAt": "2026-02-16T20:29:11.268Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-70851-9353",
+    "rarity": "legendary",
+    "isFoil": false,
+    "actorName": "Jack Black",
+    "characterName": "Nacho",
+    "movieTitle": "Nacho Libre",
+    "movieTmdbId": 9353,
+    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
+    "cardType": "actor",
+    "id": "card-1771304017763-605j4uh",
+    "acquiredAt": "2026-02-17T04:53:37.763Z"
   }
 ]

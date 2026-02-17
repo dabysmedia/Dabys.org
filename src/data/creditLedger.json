@@ -1079,5 +1079,15 @@
       "feedbackId": "fb-1771273833709-7p0dghh"
     },
     "createdAt": "2026-02-16T20:33:43.462Z"
+  },
+  {
+    "id": "cl-1771303926585-i6h1gvh",
+    "userId": "2",
+    "amount": 250,
+    "reason": "trade_up_epic",
+    "metadata": {
+      "source": "epic_trade_up"
+    },
+    "createdAt": "2026-02-17T04:52:06.584Z"
   }
 ]
