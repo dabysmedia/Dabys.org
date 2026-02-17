@@ -15,6 +15,7 @@ interface NotificationEntry {
 
 const POLL_INTERVAL = 10_000;
 
+// Brand palette: amber, purple, sky, emerald (success), red (danger)
 const TYPE_CONFIG: Record<
   string,
   { icon: string; accent: string; label: string }
@@ -23,10 +24,10 @@ const TYPE_CONFIG: Record<
   legendary_pull: { icon: "👑", accent: "#f59e0b", label: "Legendary Pull" },
   set_complete: { icon: "🏆", accent: "#10b981", label: "Set Complete" },
   trade_complete: { icon: "🤝", accent: "#8b5cf6", label: "Trade Complete" },
-  market_sale: { icon: "💰", accent: "#3b82f6", label: "Market Sale" },
+  market_sale: { icon: "💰", accent: "#38bdf8", label: "Market Sale" },
   market_order_filled: {
     icon: "📦",
-    accent: "#6366f1",
+    accent: "#8b5cf6",
     label: "Order Filled",
   },
   // Personal
@@ -37,10 +38,10 @@ const TYPE_CONFIG: Record<
   },
   buy_order_filled: {
     icon: "📬",
-    accent: "#6366f1",
+    accent: "#8b5cf6",
     label: "Order Filled",
   },
-  comment_reply: { icon: "💬", accent: "#ec4899", label: "Reply" },
+  comment_reply: { icon: "💬", accent: "#8b5cf6", label: "Reply" },
   trade_received: { icon: "📩", accent: "#f59e0b", label: "Trade Offer" },
   trade_accepted: { icon: "✅", accent: "#10b981", label: "Trade Accepted" },
   trade_denied: { icon: "❌", accent: "#ef4444", label: "Trade Denied" },
@@ -51,7 +52,7 @@ const TYPE_CONFIG: Record<
   },
   credits_awarded: {
     icon: "💰",
-    accent: "#3b82f6",
+    accent: "#38bdf8",
     label: "Credits Awarded",
   },
   new_set_added: { icon: "🃏", accent: "#8b5cf6", label: "New Set" },
@@ -184,7 +185,7 @@ export function NotificationCenter() {
       <button
         ref={bellRef}
         onClick={handleOpen}
-        className="relative p-1.5 rounded-lg text-white/30 hover:text-purple-400 transition-colors cursor-pointer"
+        className="relative p-1.5 rounded-lg text-white/40 hover:text-amber-400 transition-colors cursor-pointer"
         title="Notifications"
         aria-label="Notifications"
       >
@@ -202,7 +203,7 @@ export function NotificationCenter() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none notification-badge-pop">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-amber-500 text-black text-[10px] font-bold leading-none notification-badge-pop">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -211,22 +212,22 @@ export function NotificationCenter() {
       {open && (
         <div
           ref={panelRef}
-          className="fixed right-2 sm:absolute sm:right-0 top-[var(--header-height)] sm:top-full sm:mt-2 w-[calc(100vw-1rem)] sm:w-[380px] max-h-[min(520px,70vh)] rounded-xl border border-white/[0.08] bg-[rgba(12,10,24,0.95)] backdrop-blur-2xl shadow-[0_8px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)] flex flex-col notification-panel-in z-[100]"
+          className="fixed right-2 sm:absolute sm:right-0 top-[var(--header-height)] sm:top-full sm:mt-2 w-[calc(100vw-1rem)] sm:w-[380px] max-h-[min(520px,70vh)] rounded-xl border border-white/20 bg-[#0a0a0f]/95 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col notification-panel-in z-[100]"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-            <h3 className="text-sm font-semibold text-white/80">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">
+            <h3 className="text-sm font-semibold text-white/90">
               Notifications
             </h3>
             {notifications.length > 0 && (
-              <span className="text-[11px] text-white/30">
+              <span className="text-[11px] text-white/35">
                 {notifications.length} total
               </span>
             )}
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-white/[0.06]">
+          <div className="flex border-b border-white/[0.08]">
             {(
               [
                 ["all", "All"],
@@ -237,10 +238,10 @@ export function NotificationCenter() {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`flex-1 py-2 text-xs font-medium transition-colors cursor-pointer ${
+                className={`flex-1 py-3 text-sm font-medium transition-colors cursor-pointer ${
                   tab === key
-                    ? "text-purple-400 border-b-2 border-purple-400 -mb-px"
-                    : "text-white/30 hover:text-white/50"
+                    ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                    : "text-white/40 hover:text-white/60"
                 }`}
               >
                 {label}
@@ -248,7 +249,7 @@ export function NotificationCenter() {
                   notifications.filter(
                     (n) => PERSONAL_TYPES.has(n.type) && isUnread(n)
                   ).length > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 rounded-full bg-red-500/80 text-[9px] text-white font-bold">
+                    <span className="ml-1.5 inline-flex items-center justify-center min-w-[14px] h-3.5 px-1 rounded-full bg-amber-500/80 text-[9px] text-black font-bold">
                       {
                         notifications.filter(
                           (n) => PERSONAL_TYPES.has(n.type) && isUnread(n)
@@ -263,7 +264,7 @@ export function NotificationCenter() {
           {/* Notification List */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
             {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-white/20">
+              <div className="flex flex-col items-center justify-center py-12 text-white/40">
                 <svg
                   className="w-10 h-10 mb-2"
                   fill="none"
@@ -283,15 +284,15 @@ export function NotificationCenter() {
               filtered.map((n) => {
                 const cfg = TYPE_CONFIG[n.type] || {
                   icon: "📢",
-                  accent: "#8b5cf6",
+                  accent: "#f59e0b",
                   label: "Update",
                 };
                 const unread = isUnread(n);
                 return (
                   <div
                     key={n.id}
-                    className={`flex items-start gap-3 px-4 py-3 border-b border-white/[0.04] transition-colors hover:bg-white/[0.03] ${
-                      unread ? "bg-purple-500/[0.04]" : ""
+                    className={`flex items-start gap-3 px-4 py-3 border-b border-white/[0.06] transition-colors hover:bg-white/[0.04] ${
+                      unread ? "bg-amber-500/[0.06]" : ""
                     }`}
                   >
                     <span
@@ -311,12 +312,12 @@ export function NotificationCenter() {
                           {cfg.label}
                         </span>
                         {unread && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                         )}
                       </div>
                       <p
-                        className={`text-xs leading-relaxed ${
-                          unread ? "text-white/80" : "text-white/40"
+                        className={`text-sm leading-relaxed ${
+                          unread ? "text-white/80" : "text-white/60"
                         }`}
                       >
                         {n.actorName && (
@@ -335,7 +336,7 @@ export function NotificationCenter() {
                       </p>
                       <span
                         className={`text-[10px] mt-1 block ${
-                          unread ? "text-white/25" : "text-white/15"
+                          unread ? "text-white/30" : "text-white/25"
                         }`}
                       >
                         {timeAgo(n.timestamp)}

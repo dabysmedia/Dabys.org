@@ -22,14 +22,14 @@ interface ThemeWheelSectionProps {
 
 const JERRY_ID = "1";
 
-// Alternating sky-blue and amber/gold tints — signature site colors
+// Neutral glass tints with subtle alternation
 const SLOT_TINTS = [
-  "bg-sky-500/10 border-sky-400/25",
-  "bg-amber-500/10 border-amber-400/25",
-  "bg-sky-500/8 border-sky-400/20",
-  "bg-amber-500/8 border-amber-400/20",
-  "bg-sky-500/10 border-sky-400/25",
-  "bg-amber-500/10 border-amber-400/25",
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
 ];
 
 const CARD_GAP = 8;
@@ -470,19 +470,19 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
   if (loading || !wheel) {
     return (
-      <div className="rounded-2xl border border-sky-400/15 bg-white/[0.03] backdrop-blur-xl overflow-hidden">
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden">
         <div className="px-6 py-8 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-sky-400/20 border-t-sky-400/70 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-amber-400/20 border-t-amber-400/70 rounded-full animate-spin" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-sky-400/20 bg-white/[0.03] backdrop-blur-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.15),0_0_0_1px_rgba(56,189,248,0.08)]">
-      <div className="px-6 pt-5 pb-4 border-b border-white/[0.08] bg-gradient-to-r from-sky-500/5 via-transparent to-amber-500/5">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden">
+      <div className="px-6 pt-5 pb-4 border-b border-white/[0.08] bg-white/[0.02]">
         <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest flex items-center gap-2">
-          <span className="w-1 h-4 rounded-full bg-gradient-to-b from-sky-400/60 to-amber-400/60" />
+          <span className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-400/50 to-amber-500/50" />
           Theme Wheel
         </h3>
         <p className="text-xs text-white/40 mt-0.5">
@@ -494,11 +494,11 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
         <div className="relative w-full max-w-4xl mx-auto">
           <div
             ref={viewportRef}
-            className="relative w-full overflow-hidden rounded-xl border border-sky-400/25 bg-white/[0.02] shadow-[0_0_20px_rgba(0,0,0,0.2),inset_0_0_0_1px_rgba(251,191,36,0.05)]"
+            className="relative w-full overflow-hidden rounded-xl border border-white/[0.12] bg-white/[0.02]"
             style={{ height: cardMetrics.height + 32 }}
           >
-            <div className="absolute left-1/2 top-0 bottom-0 z-10 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/80 to-transparent shadow-[0_0_8px_rgba(251,191,36,0.3)]" />
-            <div className="absolute left-1/2 top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-gradient-to-b from-sky-300/50 via-amber-300/80 to-sky-300/50" />
+            <div className="absolute left-1/2 top-0 bottom-0 z-10 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/80 to-transparent" />
+            <div className="absolute left-1/2 top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/70 to-transparent" />
 
             <div
               className="absolute left-0 top-4 flex items-stretch gap-0 transition-none"
@@ -526,8 +526,8 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
           {spinning && !isJerry && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-xl">
-              <div className="px-6 py-3 rounded-xl border border-sky-400/30 bg-sky-500/10 backdrop-blur-xl shadow-lg">
-                <p className="text-sky-300/90 text-sm font-medium animate-pulse">Jerry is spinning...</p>
+              <div className="px-6 py-3 rounded-xl border border-amber-400/30 bg-amber-500/10 backdrop-blur-xl">
+                <p className="text-amber-300 text-sm font-medium animate-pulse">Jerry is spinning...</p>
               </div>
             </div>
           )}
@@ -537,10 +537,10 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
           <button
             onClick={handleSpin}
             disabled={spinning || wheel.entries.length < 2}
-            className={`px-10 py-4 rounded-xl text-lg font-bold tracking-wide transition-all cursor-pointer disabled:cursor-not-allowed border ${
+            className={`px-10 py-4 rounded-xl text-lg font-bold tracking-wide transition-all cursor-pointer disabled:cursor-not-allowed border backdrop-blur-md ${
               spinning
-                ? "border-sky-400/30 bg-sky-500/10 text-sky-300 animate-pulse"
-                : "border-sky-400/40 bg-gradient-to-r from-sky-500/15 to-amber-500/15 text-white hover:from-sky-500/25 hover:to-amber-500/25 hover:border-sky-400/50 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] active:scale-[0.98] disabled:opacity-40"
+                ? "border-amber-400/30 bg-amber-500/10 text-amber-300 animate-pulse"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/15 active:scale-[0.98] disabled:opacity-40"
             }`}
           >
             {spinning ? "Spinning..." : "Spin the Wheel"}
@@ -558,9 +558,9 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
         {showResult && result && (
           <div className="w-full max-w-md mx-auto space-y-4">
-            <div className="rounded-xl border border-amber-400/30 bg-gradient-to-b from-amber-500/10 to-sky-500/10 backdrop-blur-xl p-8 text-center shadow-[0_0_24px_rgba(251,191,36,0.1),0_0_0_1px_rgba(56,189,248,0.1)]">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] backdrop-blur-xl p-8 text-center">
               <p className="text-xs uppercase tracking-widest text-amber-400/80 mb-2">The wheel has spoken</p>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-200 via-amber-100 to-sky-200 bg-clip-text text-transparent" style={{ fontFamily: "'Libre Baskerville', Georgia, serif" }}>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-100 bg-clip-text text-transparent font-card-title">
                 {result}
               </h2>
             </div>
@@ -585,11 +585,11 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
         {!showResult && !spinning && (wheel.lastResult || wheel.lastConfirmedResult) && (
           <div className="w-full max-w-md mx-auto">
-            <div className="rounded-xl border border-sky-400/20 bg-gradient-to-br from-sky-500/5 to-amber-500/5 backdrop-blur-xl p-6 text-center">
-              <p className="text-xs uppercase tracking-widest text-sky-400/60 mb-2">
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center">
+              <p className="text-xs uppercase tracking-widest text-amber-400/60 mb-2">
                 {wheel.lastConfirmedResult ? "Confirmed theme" : "Last Result"}
               </p>
-              <h2 className="text-2xl font-bold text-white/95" style={{ fontFamily: "'Libre Baskerville', Georgia, serif" }}>
+              <h2 className="text-2xl font-bold text-white/95 font-card-title">
                 {wheel.lastResult || wheel.lastConfirmedResult}
               </h2>
               {(wheel.lastSpunAt || wheel.lastConfirmedAt) && (
@@ -604,7 +604,7 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
       {confirmDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !confirmLoading && setConfirmDialogOpen(false)}>
-          <div className="rounded-xl border border-white/[0.08] bg-[#0f0f14] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]" onClick={(e) => e.stopPropagation()}>
             <p className="text-white/90 font-medium mb-2">Confirm theme & create new week?</p>
             <p className="text-sm text-white/50 mb-4">Current week will be archived. Theme &quot;{result}&quot; will become the new week and be removed from the wheel.</p>
             <div className="flex gap-3">
@@ -619,7 +619,7 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
 
       {skipModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => !skipLoading && setSkipModalOpen(false)}>
-          <div className="rounded-xl border border-white/[0.08] bg-[#0f0f14] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]" onClick={(e) => e.stopPropagation()}>
             <p className="text-white/90 font-medium mb-2">Whose skip are we using?</p>
             <p className="text-sm text-white/50 mb-4">One skip will be charged for the selected person. The result will be cleared and you can spin again.</p>
             <select

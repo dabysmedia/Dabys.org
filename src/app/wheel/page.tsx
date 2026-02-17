@@ -19,10 +19,14 @@ interface WheelData {
 
 const JERRY_ID = "1";
 
-// Case-style slot colours (cycle per card)
-const SLOT_COLORS = [
-  "#7c3aed", "#6366f1", "#8b5cf6", "#4f46e5", "#a78bfa",
-  "#818cf8", "#6d28d9", "#4338ca", "#c084fc", "#7e22ce",
+// Neutral glass tints for slot cards
+const SLOT_TINTS = [
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
+  "bg-white/[0.04] border-white/[0.10]",
+  "bg-white/[0.03] border-white/[0.08]",
 ];
 
 const CARD_GAP = 8;
@@ -519,12 +523,13 @@ export default function WheelPage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
       </div>
 
       <main className="relative z-10 max-w-3xl mx-auto px-6 py-12">
         {/* Title */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-purple-400 via-violet-400 to-indigo-400 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-amber-200 via-amber-100 to-amber-300 bg-clip-text text-transparent mb-2">
             Theme Wheel
           </h1>
           <p className="text-white/40 text-sm">
@@ -538,12 +543,12 @@ export default function WheelPage() {
             {/* Case window: overflow hidden, center slot highlighted */}
             <div
               ref={viewportRef}
-              className="relative w-full overflow-hidden rounded-2xl border-2 border-purple-500/30 bg-black/40 shadow-2xl"
+              className="relative w-full overflow-hidden rounded-2xl border border-white/[0.12] bg-white/[0.02] backdrop-blur-xl"
               style={{ height: cardMetrics.height + 32 }}
             >
               {/* Center line (CS:GO-style pointer) */}
-              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-1 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/90 to-transparent" />
-              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-white/60" />
+              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/80 to-transparent" />
+              <div className="absolute left-1/2 top-0 bottom-0 z-10 w-0.5 -translate-x-1/2 bg-gradient-to-b from-transparent via-amber-400/70 to-transparent" />
 
               {/* Scrolling strip */}
               <div
@@ -557,13 +562,11 @@ export default function WheelPage() {
                 {stripEntries.map((label, i) => (
                   <div
                     key={`${i}-${label}`}
-                    className="flex shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 text-center font-bold text-white/95 shadow-inner"
+                    className={`flex shrink-0 items-center justify-center rounded-xl border px-4 text-center font-semibold text-white/90 ${SLOT_TINTS[i % SLOT_TINTS.length]}`}
                     style={{
                       width: cardMetrics.width,
                       height: cardMetrics.height,
                       marginRight: cardMetrics.gap,
-                      background: `linear-gradient(135deg, ${SLOT_COLORS[i % SLOT_COLORS.length]}40, ${SLOT_COLORS[(i + 1) % SLOT_COLORS.length]}20)`,
-                      borderLeftWidth: i === 0 ? 0 : 1,
                     }}
                   >
                     <span className="truncate text-sm sm:text-base">{label}</span>
@@ -575,8 +578,8 @@ export default function WheelPage() {
             {/* Spinning overlay for non-Jerry users */}
             {spinning && !isJerry && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-2xl">
-                <div className="px-6 py-3 rounded-2xl bg-black/60 backdrop-blur-sm border border-purple-500/20">
-                  <p className="text-purple-300 text-sm font-medium animate-pulse">Jerry is spinning...</p>
+                <div className="px-6 py-3 rounded-xl border border-amber-400/30 bg-amber-500/10 backdrop-blur-xl">
+                  <p className="text-amber-300 text-sm font-medium animate-pulse">Jerry is spinning...</p>
                 </div>
               </div>
             )}
@@ -587,10 +590,10 @@ export default function WheelPage() {
             <button
               onClick={handleSpin}
               disabled={spinning || wheel.entries.length < 2}
-              className={`px-10 py-4 rounded-2xl text-lg font-bold tracking-wide transition-all cursor-pointer disabled:cursor-not-allowed ${
+              className={`px-10 py-4 rounded-xl text-lg font-bold tracking-wide transition-all cursor-pointer disabled:cursor-not-allowed border backdrop-blur-md ${
                 spinning
-                  ? "bg-purple-500/20 border border-purple-500/30 text-purple-300 animate-pulse"
-                  : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 hover:shadow-xl hover:shadow-purple-500/20 hover:scale-105 active:scale-95 disabled:opacity-30"
+                  ? "border-amber-400/30 bg-amber-500/10 text-amber-300 animate-pulse"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/15 active:scale-[0.98] disabled:opacity-40"
               }`}
             >
               {spinning ? "Spinning..." : "Spin the Wheel"}
@@ -609,9 +612,9 @@ export default function WheelPage() {
           {/* Result banner + Confirm / Use skip (Jerry only) */}
           {showResult && result && (
             <div className="w-full max-w-md mx-auto space-y-4">
-              <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 backdrop-blur-xl p-8 text-center shadow-xl shadow-purple-500/10">
-                <p className="text-xs uppercase tracking-widest text-purple-400/60 mb-2">The wheel has spoken</p>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-300 via-violet-200 to-indigo-300 bg-clip-text text-transparent">
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] backdrop-blur-xl p-8 text-center">
+                <p className="text-xs uppercase tracking-widest text-amber-400/80 mb-2">The wheel has spoken</p>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-100 bg-clip-text text-transparent font-card-title">
                   {result}
                 </h2>
               </div>
@@ -619,13 +622,13 @@ export default function WheelPage() {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <button
                     onClick={() => setConfirmDialogOpen(true)}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium hover:from-green-500 hover:to-emerald-500 transition-all cursor-pointer"
+                    className="px-6 py-3 rounded-xl border border-green-500/30 bg-green-500/10 text-green-300 font-medium hover:bg-green-500/20 hover:border-green-500/40 transition-all cursor-pointer"
                   >
                     Confirm theme & create new week
                   </button>
                   <button
                     onClick={openSkipModal}
-                    className="px-6 py-3 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-medium hover:bg-cyan-500/20 transition-all cursor-pointer"
+                    className="px-6 py-3 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08] transition-all cursor-pointer"
                   >
                     Use skip
                   </button>
@@ -637,12 +640,12 @@ export default function WheelPage() {
           {/* Confirm theme dialog */}
           {confirmDialogOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !confirmLoading && setConfirmDialogOpen(false)}>
-              <div className="rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]" onClick={(e) => e.stopPropagation()}>
                 <p className="text-white/90 font-medium mb-2">Confirm theme & create new week?</p>
                 <p className="text-sm text-white/50 mb-4">Current week will be archived. Theme &quot;{result}&quot; will become the new week and be removed from the wheel.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => !confirmLoading && setConfirmDialogOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
-                  <button onClick={handleConfirmTheme} disabled={confirmLoading} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
+                  <button onClick={() => !confirmLoading && setConfirmDialogOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/[0.12] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer">Cancel</button>
+                  <button onClick={handleConfirmTheme} disabled={confirmLoading} className="flex-1 py-2.5 rounded-xl border border-green-500/30 bg-green-500/10 text-green-300 font-medium hover:bg-green-500/20 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
                     {confirmLoading ? "..." : "Confirm"}
                   </button>
                 </div>
@@ -653,23 +656,23 @@ export default function WheelPage() {
           {/* Use skip modal: whose skip? */}
           {skipModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => !skipLoading && setSkipModalOpen(false)}>
-              <div className="rounded-2xl border border-white/10 bg-[#1a1a2e] p-6 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 max-w-sm w-full shadow-[0_8px_32px_rgba(0,0,0,0.5)]" onClick={(e) => e.stopPropagation()}>
                 <p className="text-white/90 font-medium mb-2">Whose skip are we using?</p>
                 <p className="text-sm text-white/50 mb-4">One skip will be charged for the selected person. The result will be cleared and you can spin again.</p>
                 <select
                   value={selectedSkipUserId}
                   onChange={(e) => setSelectedSkipUserId(e.target.value)}
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-4 py-3 text-white/90 text-sm mb-4 cursor-pointer"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-white/90 text-sm mb-4 cursor-pointer focus:outline-none focus:border-white/20"
                 >
                   <option value="">Select user...</option>
                   {skipEligible.map((u) => (
-                    <option key={u.id} value={u.id} className="bg-[#1a1a2e]">{u.name} ({u.skipsAvailable} skip{u.skipsAvailable !== 1 ? "s" : ""})</option>
+                    <option key={u.id} value={u.id}>{u.name} ({u.skipsAvailable} skip{u.skipsAvailable !== 1 ? "s" : ""})</option>
                   ))}
                 </select>
                 {skipEligible.length === 0 && <p className="text-white/40 text-sm mb-4">No one has skips available.</p>}
                 <div className="flex gap-3">
-                  <button onClick={() => !skipLoading && setSkipModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white/80 hover:bg-white/5 transition-colors cursor-pointer">Cancel</button>
-                  <button onClick={handleUseSkip} disabled={skipLoading || !selectedSkipUserId} className="flex-1 py-2.5 rounded-xl bg-cyan-600 text-white font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
+                  <button onClick={() => !skipLoading && setSkipModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/[0.12] text-white/80 hover:bg-white/[0.04] transition-colors cursor-pointer">Cancel</button>
+                  <button onClick={handleUseSkip} disabled={skipLoading || !selectedSkipUserId} className="flex-1 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.06] text-white/90 font-medium hover:bg-white/[0.08] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed">
                     {skipLoading ? "..." : "Use skip"}
                   </button>
                 </div>
@@ -680,11 +683,11 @@ export default function WheelPage() {
           {/* Last result / confirmed theme (when no fresh spin and not spinning) — saved and visible for all */}
           {!showResult && !spinning && (wheel.lastResult || wheel.lastConfirmedResult) && (
             <div className="w-full max-w-md mx-auto">
-              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-6 text-center">
-                <p className="text-xs uppercase tracking-widest text-white/25 mb-2">
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 text-center">
+                <p className="text-xs uppercase tracking-widest text-amber-400/60 mb-2">
                   {wheel.lastConfirmedResult ? "Confirmed theme" : "Last Result"}
                 </p>
-                <h2 className="text-2xl font-bold text-white/80">
+                <h2 className="text-2xl font-bold text-white/90 font-card-title">
                   {wheel.lastResult || wheel.lastConfirmedResult}
                 </h2>
                 {(wheel.lastSpunAt || wheel.lastConfirmedAt) && (

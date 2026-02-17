@@ -114,15 +114,15 @@ function CasinoContent() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {/* Tab bar */}
-            <div className="flex gap-1.5">
+            <div className="flex border-b border-white/[0.08]">
               {TABS.map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setTab(tab.key)}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer backdrop-blur-xl ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
                     activeTab === tab.key
-                      ? "bg-white/15 border border-white/25 text-white"
-                      : "bg-white/[0.05] border border-white/[0.08] text-white/55 hover:text-white/85 hover:bg-white/[0.08] hover:border-white/[0.12]"
+                      ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                      : "text-white/40 hover:text-white/60"
                   }`}
                 >
                   {tab.label}

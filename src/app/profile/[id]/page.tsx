@@ -536,10 +536,11 @@ export default function ProfilePage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
       </div>
 
       {/* Banner */}
-      <div className="relative z-10 h-48 sm:h-64 overflow-hidden bg-gradient-to-br from-purple-900/60 via-indigo-900/60 to-violet-900/60 group/banner">
+      <div className="relative z-10 h-48 sm:h-64 overflow-hidden bg-gradient-to-br from-purple-900/60 via-indigo-900/50 to-amber-900/20 group/banner">
         {(editing ? editBannerUrl : profile.bannerUrl) ? (
           <img
             src={editing ? editBannerUrl : profile.bannerUrl}
@@ -547,7 +548,7 @@ export default function ProfilePage() {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-purple-900/80 via-indigo-900/60 to-violet-900/80" />
+          <div className="w-full h-full bg-gradient-to-br from-purple-900/80 via-indigo-900/50 to-amber-900/30" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent" />
         {isOwnProfile && editing && (
@@ -724,7 +725,7 @@ export default function ProfilePage() {
 
         {/* Login PIN (edit only, own profile) */}
         {isOwnProfile && editing && data && (
-          <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+          <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4">
             <h3 className="text-sm font-medium text-white/70 mb-3">Login PIN</h3>
             <p className="text-white/40 text-xs mb-3">
               Set or change the PIN you enter when logging in. Leave new PIN blank to remove it.
@@ -779,7 +780,7 @@ export default function ProfilePage() {
           return (
           <Wrapper
             {...wrapperProps}
-            className="group block relative rounded-2xl overflow-hidden border border-white/[0.08] mb-6 hover:border-pink-500/20 transition-all"
+            className="group block relative rounded-2xl overflow-hidden border border-white/[0.08] backdrop-blur-xl mb-6 hover:border-pink-500/20 transition-all"
           >
             {/* Backdrop */}
             <div className="absolute inset-0">
@@ -873,12 +874,12 @@ export default function ProfilePage() {
             icon="star"
             onClick={() => setShowRatingsModal(true)}
           />
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4">
             <div className="flex items-center gap-2 mb-1.5">
               <svg className="w-4 h-4 text-cyan-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
               </svg>
-              <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Skips</span>
+              <span className="text-[11px] uppercase tracking-widest text-white/35 font-medium">Skips</span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-bold text-cyan-400">{stats.skipsAvailable}</span>
@@ -896,7 +897,7 @@ export default function ProfilePage() {
                 <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
+                <span className="text-[11px] uppercase tracking-widest text-white/35 font-medium">Credits</span>
               </div>
               <p className="text-xl font-bold text-sky-300">{creditBalance ?? "—"}</p>
             </Link>
@@ -906,7 +907,7 @@ export default function ProfilePage() {
                 <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Credits</span>
+                <span className="text-[11px] uppercase tracking-widest text-white/35 font-medium">Credits</span>
               </div>
               <p className="text-xl font-bold text-sky-300">{creditBalance ?? "—"}</p>
             </div>
@@ -914,9 +915,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Feature cards — pick from codex, up to 6 */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium">Feature cards</h3>
+            <h3 className="text-[11px] uppercase tracking-widest text-white/35 font-medium">Feature cards</h3>
             <div className="flex items-center gap-2">
               {isOwnProfile && editing && (
                 <button
@@ -973,8 +974,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Achievements — full-size badges (codex style) */}
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 mb-6">
-          <h3 className="text-[11px] uppercase tracking-widest text-white/25 font-medium mb-4">Achievements</h3>
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+          <h3 className="text-[11px] uppercase tracking-widest text-white/35 font-medium mb-4">Achievements</h3>
           {completedBadges.length === 0 ? (
             <p className="text-sm text-white/40">
               No badges yet. Complete card sets in the Codex (discover all cards for a movie) or buy badges in the Shop.
@@ -1047,7 +1048,7 @@ export default function ProfilePage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-white/[0.06]">
+        <div className="flex gap-1 mb-6 border-b border-white/[0.08]">
           {([
             { key: "submissions" as const, label: "Submissions", count: submissions.length },
             { key: "wins" as const, label: "Wins", count: weeksWon.length },
@@ -1057,24 +1058,21 @@ export default function ProfilePage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-3 text-sm font-medium transition-all cursor-pointer relative ${
+              className={`px-5 py-3 text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === tab.key
-                  ? "text-white/90"
-                  : "text-white/30 hover:text-white/60"
+                  ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                  : "text-white/40 hover:text-white/60"
               }`}
             >
               {tab.label}
               {tab.count > 0 && (
                 <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
                   activeTab === tab.key
-                    ? "bg-purple-500/20 text-purple-300"
-                    : "bg-white/[0.04] text-white/25"
+                    ? "bg-amber-500/20 text-amber-300"
+                    : "bg-white/[0.04] text-white/30"
                 }`}>
                   {tab.count}
                 </span>
-              )}
-              {activeTab === tab.key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500" />
               )}
             </button>
           ))}
@@ -1089,7 +1087,7 @@ export default function ProfilePage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {submissions.map((s) => (
-                  <div key={s.id} className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] hover:border-white/10 transition-all">
+                  <div key={s.id} className="group relative rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.03] hover:border-white/10 transition-all">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {s.posterUrl ? (
                         <img src={s.posterUrl} alt={s.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -1130,7 +1128,7 @@ export default function ProfilePage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {weeksWon.map((w) => (
-                  <Link href={`/winners/${w.winnerId}`} key={w.winnerId} className="group relative rounded-xl overflow-hidden border border-amber-500/10 bg-white/[0.02] hover:border-amber-500/25 transition-all">
+                  <Link href={`/winners/${w.winnerId}`} key={w.winnerId} className="group relative rounded-xl overflow-hidden border border-amber-500/10 bg-white/[0.03] hover:border-amber-500/25 transition-all">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-amber-900/30 to-orange-900/30">
                       {w.posterUrl ? (
                         <img src={w.posterUrl} alt={w.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -1170,7 +1168,7 @@ export default function ProfilePage() {
                   <Link
                     href={`/winners/${c.winnerId}`}
                     key={c.id}
-                    className="block rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/10 hover:bg-white/[0.03] transition-all"
+                    className="block rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 hover:border-white/10 hover:bg-white/[0.03] transition-all"
                   >
                     <div className="flex items-start gap-3">
                       {/* Tiny movie poster */}
@@ -1294,7 +1292,7 @@ export default function ProfilePage() {
                   {watchlist.map((w) => (
                     <div
                       key={w.id}
-                      className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] hover:border-white/10 transition-all"
+                      className="group relative rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.03] hover:border-white/10 transition-all"
                     >
                       <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                         {w.posterUrl ? (
@@ -1348,7 +1346,7 @@ export default function ProfilePage() {
               className="w-full max-w-xl max-h-[80vh] rounded-2xl border border-white/[0.08] bg-[var(--background,#050509)] shadow-2xl overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-white/[0.03]">
                 <div>
                   <h2 className="text-sm font-semibold text-white/80 uppercase tracking-widest">
                     Your Ratings
@@ -1380,7 +1378,7 @@ export default function ProfilePage() {
                     {ratings.map((r, idx) => (
                       <li
                         key={r.id}
-                        className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5"
+                        className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.03] px-3 py-2.5"
                       >
                         <span className="w-6 text-xs font-semibold text-white/30 tabular-nums text-center">
                           #{idx + 1}
@@ -1393,7 +1391,7 @@ export default function ProfilePage() {
                           }}
                           className="flex items-center gap-3 flex-1 min-w-0 group cursor-pointer"
                         >
-                          <div className="w-10 h-14 rounded-md overflow-hidden bg-gradient-to-br from-purple-900/40 to-indigo-900/40 flex-shrink-0 border border-white/[0.06]">
+                          <div className="w-10 h-14 rounded-md overflow-hidden bg-gradient-to-br from-purple-900/40 to-indigo-900/40 flex-shrink-0 border border-white/[0.08]">
                             {r.posterUrl ? (
                               <img src={r.posterUrl} alt={r.title} className="w-full h-full object-cover" />
                             ) : (
@@ -1864,7 +1862,7 @@ function StatCard({
 
   return (
     <div
-      className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 ${
+      className={`rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4 ${
         clickable ? "cursor-pointer hover:border-purple-500/40 hover:bg-white/[0.04] transition-colors" : ""
       }`}
       onClick={onClick}
@@ -1873,7 +1871,7 @@ function StatCard({
     >
       <div className="flex items-center gap-2 mb-1.5">
         {iconEl}
-        <span className="text-[11px] uppercase tracking-widest text-white/25 font-medium">{label}</span>
+        <span className="text-[11px] uppercase tracking-widest text-white/35 font-medium">{label}</span>
       </div>
       <p className={`font-bold text-white/80 ${small ? "text-sm truncate" : "text-xl"}`}>{value}</p>
     </div>

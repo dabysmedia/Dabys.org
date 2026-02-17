@@ -388,15 +388,15 @@ export default function StatsPage() {
             </div>
 
             {/* ═══ TAB BAR ═══ */}
-            <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06] w-fit">
+            <div className="flex border-b border-white/[0.08]">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-5 py-3 text-sm font-medium transition-colors duration-200 cursor-pointer ${
                     activeTab === tab.id
-                      ? "bg-white/[0.1] text-white shadow-sm"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/[0.04]"
+                      ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                      : "text-white/40 hover:text-white/60"
                   }`}
                 >
                   {tab.label}
@@ -429,8 +429,8 @@ export default function StatsPage() {
                         value: e.value,
                       }))}
                       valueLabel="legendaries"
-                      accentFrom="from-amber-400/70"
-                      accentTo="to-yellow-500/70"
+                      accentFrom="from-amber-400/60"
+                      accentTo="to-amber-500/60"
                       emptyText="No legendary cards pulled yet"
                       glowColor="bg-amber-500"
                     />
@@ -445,10 +445,10 @@ export default function StatsPage() {
                         displayValue: `${e.pct}% (${e.unlocked}/${e.total})`,
                         subtitle: e.holoUnlocked > 0 ? `${e.holoUnlocked} holo discovered` : undefined,
                       }))}
-                      accentFrom="from-violet-500/70"
-                      accentTo="to-purple-500/70"
+                      accentFrom="from-purple-400/60"
+                      accentTo="to-purple-500/60"
                       emptyText="No codex entries discovered"
-                      glowColor="bg-violet-500"
+                      glowColor="bg-purple-500"
                     />
 
                     <LeaderboardCard
@@ -460,10 +460,10 @@ export default function StatsPage() {
                         value: e.value,
                       }))}
                       valueLabel="cards"
-                      accentFrom="from-blue-500/70"
-                      accentTo="to-cyan-500/70"
+                      accentFrom="from-purple-400/60"
+                      accentTo="to-purple-500/60"
                       emptyText="No cards collected"
-                      glowColor="bg-blue-500"
+                      glowColor="bg-purple-500"
                     />
 
                     <LeaderboardCard
@@ -475,10 +475,10 @@ export default function StatsPage() {
                         value: e.value,
                       }))}
                       valueLabel="opened"
-                      accentFrom="from-orange-500/70"
-                      accentTo="to-red-500/70"
+                      accentFrom="from-amber-300/50"
+                      accentTo="to-amber-400/50"
                       emptyText="No packs opened"
-                      glowColor="bg-orange-500"
+                      glowColor="bg-amber-400"
                     />
                   </div>
                 </div>
@@ -486,11 +486,11 @@ export default function StatsPage() {
                 {/* ── Economy & Hustle ── */}
                 <div>
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="h-px flex-1 bg-gradient-to-r from-emerald-500/30 to-transparent" />
+                    <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
                     <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">
                       Economy & Hustle
                     </h2>
-                    <div className="h-px flex-1 bg-gradient-to-l from-emerald-500/30 to-transparent" />
+                    <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
                   </div>
 
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -502,10 +502,10 @@ export default function StatsPage() {
                         value: e.value,
                         displayValue: `${e.value.toLocaleString()} cr`,
                       }))}
-                      accentFrom="from-emerald-500/70"
-                      accentTo="to-green-500/70"
+                      accentFrom="from-sky-400/60"
+                      accentTo="to-sky-500/60"
                       emptyText="No credits earned"
-                      glowColor="bg-emerald-500"
+                      glowColor="bg-sky-400"
                     />
 
                     <LeaderboardCard
@@ -516,10 +516,10 @@ export default function StatsPage() {
                         value: e.value,
                         displayValue: `${e.value.toLocaleString()} cr`,
                       }))}
-                      accentFrom="from-sky-500/70"
-                      accentTo="to-teal-500/70"
+                      accentFrom="from-sky-400/60"
+                      accentTo="to-sky-500/60"
                       emptyText="No credits earned"
-                      glowColor="bg-sky-500"
+                      glowColor="bg-sky-400"
                     />
 
                     <LeaderboardCard
@@ -530,10 +530,10 @@ export default function StatsPage() {
                         value: e.value,
                       }))}
                       valueLabel="quests"
-                      accentFrom="from-lime-500/70"
-                      accentTo="to-green-400/70"
+                      accentFrom="from-amber-300/50"
+                      accentTo="to-amber-400/50"
                       emptyText="No quests completed"
-                      glowColor="bg-lime-500"
+                      glowColor="bg-amber-400"
                     />
 
                     <LeaderboardCard
@@ -545,10 +545,10 @@ export default function StatsPage() {
                         displayValue: `${e.value.toLocaleString()} cr wagered`,
                         subtitle: `${e.hands} hands · ${e.netPnl >= 0 ? "+" : ""}${e.netPnl.toLocaleString()} cr net`,
                       }))}
-                      accentFrom="from-pink-500/70"
-                      accentTo="to-rose-500/70"
+                      accentFrom="from-sky-400/60"
+                      accentTo="to-sky-500/60"
                       emptyText="No casino action"
-                      glowColor="bg-pink-500"
+                      glowColor="bg-sky-400"
                     />
 
                     <LeaderboardCard
@@ -559,10 +559,10 @@ export default function StatsPage() {
                         value: e.value,
                       }))}
                       valueLabel="trades"
-                      accentFrom="from-indigo-500/70"
-                      accentTo="to-blue-500/70"
+                      accentFrom="from-purple-400/60"
+                      accentTo="to-purple-500/60"
                       emptyText="No trades yet"
-                      glowColor="bg-indigo-500"
+                      glowColor="bg-purple-500"
                     />
 
                     <LeaderboardCard
@@ -573,8 +573,8 @@ export default function StatsPage() {
                         value: e.count,
                       }))}
                       valueLabel="wins"
-                      accentFrom="from-amber-500/70"
-                      accentTo="to-orange-500/70"
+                      accentFrom="from-amber-400/60"
+                      accentTo="to-amber-500/60"
                       emptyText="No winners yet"
                       glowColor="bg-amber-500"
                     />
@@ -598,47 +598,47 @@ export default function StatsPage() {
                         <ServerStat
                           value={data.serverStats.totalCardsUnpacked}
                           label="Cards Unpacked"
-                          color="text-blue-400"
+                          color="text-purple-400"
                         />
                         <ServerStat
                           value={data.serverStats.totalPacksOpened}
                           label="Packs Ripped"
-                          color="text-orange-400"
+                          color="text-amber-400"
                         />
                         <ServerStat
                           value={data.serverStats.legendaryTradeUpsFailed}
                           label="Legendary Trade-Ups Failed"
-                          color="text-red-400"
+                          color="text-amber-400"
                         />
                         <ServerStat
                           value={data.serverStats.totalTradesCompleted}
                           label="Trades Completed"
-                          color="text-indigo-400"
+                          color="text-purple-400"
                         />
                         <ServerStat
                           value={data.serverStats.totalQuestsCompleted}
                           label="Quests Completed"
-                          color="text-lime-400"
+                          color="text-amber-400"
                         />
                         <ServerStat
                           value={data.serverStats.totalCasinoHands}
                           label="Casino Hands"
-                          color="text-pink-400"
+                          color="text-sky-400"
                         />
                         <ServerStat
                           value={`${data.serverStats.totalCreditsEarnedServer.toLocaleString()} cr`}
                           label="Credits Earned"
-                          color="text-emerald-400"
+                          color="text-sky-400"
                         />
                         <ServerStat
                           value={`${data.serverStats.totalCreditsSpent.toLocaleString()} cr`}
                           label="Credits Spent"
-                          color="text-amber-400"
+                          color="text-sky-400"
                         />
                         <ServerStat
                           value={data.serverStats.totalQuicksells}
                           label="Cards Quicksold"
-                          color="text-violet-400"
+                          color="text-purple-400"
                         />
                         <ServerStat value={data.totalCodexEntries} label="Codex Pool Size" color="text-purple-400" />
                       </div>
@@ -887,11 +887,11 @@ export default function StatsPage() {
                 {/* Dabys favorites */}
                 <div>
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="h-px flex-1 bg-gradient-to-r from-purple-500/30 to-transparent" />
+                    <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
                     <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">
                       Dabys Favorites
                     </h2>
-                    <div className="h-px flex-1 bg-gradient-to-l from-purple-500/30 to-transparent" />
+                    <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
                   </div>
                   <div className="grid sm:grid-cols-3 gap-6">
                     <div className={cardClass}>
@@ -956,7 +956,7 @@ export default function StatsPage() {
                           </div>
                           <div className="h-2 rounded bg-white/[0.06] overflow-hidden">
                             <div
-                              className="h-full bg-gradient-to-r from-violet-500/40 to-indigo-500/40 rounded"
+                              className="h-full bg-gradient-to-r from-purple-400/50 to-purple-500/50 rounded"
                               style={{ width: `${(entry.count / maxDecadeCount) * 100}%` }}
                             />
                           </div>

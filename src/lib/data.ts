@@ -708,11 +708,17 @@ export function recordPackPurchase(
   return true;
 }
 
-/** Remove all pack_purchase ledger entries for this user (per-user reset). Returns number of entries removed. */
+/** Remove pack_purchase ledger entries for this user only in the current restock period (UTC day from midnight). Lets the user buy again today without wiping all-time pack opening stats. Returns number of entries removed. */
 export function resetUserPackPurchaseHistory(userId: string): number {
+  const since = getRestockPeriodStartUtc(0, 0); // start of current UTC day
   const ledger = getCreditLedgerRaw();
   const filtered = ledger.filter(
-    (e) => !(e.userId === userId && e.reason === "pack_purchase")
+    (e) =>
+      !(
+        e.userId === userId &&
+        e.reason === "pack_purchase" &&
+        e.createdAt >= since
+      )
   );
   const removed = ledger.length - filtered.length;
   if (removed > 0) saveCreditLedgerRaw(filtered);
