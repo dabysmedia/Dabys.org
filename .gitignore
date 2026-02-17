@@ -70,3 +70,6 @@ src/data/activity.json
 src/data/tradeBlock.json
 src/data/siteSettings.json
 src/data/notificationReads.json
+src/data/stardust.json
+src/data/darkMatterCodexUnlocks.json
+src/data/prismaticCodexUnlocks.json

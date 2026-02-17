@@ -100,6 +100,23 @@ export async function POST(request: Request) {
         }
       : undefined;
 
+  const allowPrismatic = !!body.allowPrismatic;
+  const allowDarkMatter = !!body.allowDarkMatter;
+  const rawPrismaticChance = typeof body.prismaticChance === "number" ? body.prismaticChance : parseFloat(String(body.prismaticChance ?? ""));
+  const prismaticChance =
+    allowPrismatic
+      ? Number.isFinite(rawPrismaticChance) && rawPrismaticChance >= 0 && rawPrismaticChance <= 100
+        ? Math.min(100, Math.max(0, rawPrismaticChance))
+        : 2
+      : undefined;
+  const rawDarkMatterChance = typeof body.darkMatterChance === "number" ? body.darkMatterChance : parseFloat(String(body.darkMatterChance ?? ""));
+  const darkMatterChance =
+    allowDarkMatter
+      ? Number.isFinite(rawDarkMatterChance) && rawDarkMatterChance >= 0 && rawDarkMatterChance <= 100
+        ? Math.min(100, Math.max(0, rawDarkMatterChance))
+        : 0.5
+      : undefined;
+
   const pack = upsertPack({
     name,
     imageUrl,
@@ -116,6 +133,10 @@ export async function POST(request: Request) {
     discounted,
     discountPercent: discounted ? discountPercent : undefined,
     rarityWeights,
+    allowPrismatic: allowPrismatic ? true : undefined,
+    allowDarkMatter: allowDarkMatter ? true : undefined,
+    prismaticChance: allowPrismatic ? (prismaticChance !== undefined ? prismaticChance : 2) : undefined,
+    darkMatterChance: allowDarkMatter ? (darkMatterChance !== undefined ? darkMatterChance : 0.5) : undefined,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -230,6 +251,31 @@ export async function PATCH(request: Request) {
           }
         : undefined;
 
+  const allowPrismatic =
+    body.allowPrismatic !== undefined ? !!body.allowPrismatic : (existing as { allowPrismatic?: boolean }).allowPrismatic;
+  const allowDarkMatter =
+    body.allowDarkMatter !== undefined ? !!body.allowDarkMatter : (existing as { allowDarkMatter?: boolean }).allowDarkMatter;
+  const rawPrismaticChance =
+    body.prismaticChance !== undefined
+      ? (typeof body.prismaticChance === "number" ? body.prismaticChance : parseFloat(String(body.prismaticChance ?? "")))
+      : (existing as { prismaticChance?: number }).prismaticChance;
+  const prismaticChance =
+    allowPrismatic
+      ? Number.isFinite(rawPrismaticChance) && rawPrismaticChance >= 0 && rawPrismaticChance <= 100
+        ? Math.min(100, Math.max(0, rawPrismaticChance))
+        : 2
+      : undefined;
+  const rawDarkMatterChance =
+    body.darkMatterChance !== undefined
+      ? (typeof body.darkMatterChance === "number" ? body.darkMatterChance : parseFloat(String(body.darkMatterChance ?? "")))
+      : (existing as { darkMatterChance?: number }).darkMatterChance;
+  const darkMatterChance =
+    allowDarkMatter
+      ? Number.isFinite(rawDarkMatterChance) && rawDarkMatterChance >= 0 && rawDarkMatterChance <= 100
+        ? Math.min(100, Math.max(0, rawDarkMatterChance))
+        : 0.5
+      : undefined;
+
   const updated = upsertPack({
     id,
     name,
@@ -247,6 +293,10 @@ export async function PATCH(request: Request) {
     discounted,
     discountPercent: discounted ? discountPercent : undefined,
     rarityWeights,
+    allowPrismatic: allowPrismatic ? true : undefined,
+    allowDarkMatter: allowDarkMatter ? true : undefined,
+    prismaticChance: allowPrismatic ? (prismaticChance ?? 2) : undefined,
+    darkMatterChance: allowDarkMatter ? (darkMatterChance ?? 0.5) : undefined,
   });
 
   return NextResponse.json(updated);

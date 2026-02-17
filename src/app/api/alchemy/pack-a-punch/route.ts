@@ -6,8 +6,12 @@ import {
   addStardust,
   getStardust,
   getListings,
+  getCardFinish,
+  nextFinishTier,
+  CARD_FINISH_LABELS,
 } from "@/lib/data";
-import { getPackAPunchCost } from "@/lib/alchemy";
+import type { CardFinish } from "@/lib/data";
+import { getUpgradeCost, getUpgradeSuccessChance } from "@/lib/alchemy";
 
 export async function POST(request: Request) {
   let body: { userId?: string; cardId?: string };
@@ -32,9 +36,12 @@ export async function POST(request: Request) {
   if (card.userId !== userId) {
     return NextResponse.json({ error: "Not your card" }, { status: 403 });
   }
-  if (card.isFoil) {
+
+  const currentFinish = getCardFinish(card);
+  const targetFinish = nextFinishTier(currentFinish);
+  if (!targetFinish) {
     return NextResponse.json(
-      { error: "Card is already a Holo" },
+      { error: `Card is already at maximum tier (${CARD_FINISH_LABELS[currentFinish]})` },
       { status: 400 }
     );
   }
@@ -48,7 +55,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const cost = getPackAPunchCost(card.rarity);
+  const cost = getUpgradeCost(card.rarity, targetFinish);
   const balance = getStardust(userId);
   if (balance < cost) {
     return NextResponse.json(
@@ -67,9 +74,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const success = Math.random() < 0.5;
+  const successChance = getUpgradeSuccessChance(targetFinish);
+  const success = Math.random() < successChance;
   if (success) {
-    const updated = updateCard(cardId, { isFoil: true });
+    const updates: { isFoil: boolean; finish: CardFinish } = {
+      isFoil: targetFinish !== "normal",
+      finish: targetFinish,
+    };
+    const updated = updateCard(cardId, updates);
     if (!updated) {
       addStardust(userId, cost);
       return NextResponse.json(
@@ -84,5 +96,11 @@ export async function POST(request: Request) {
   recordQuestProgress(userId, "pack_a_punch", { rarity: card.rarity as "uncommon" | "rare" | "epic" | "legendary" });
 
   const newBalance = getStardust(userId);
-  return NextResponse.json({ balance: newBalance, success });
+  return NextResponse.json({
+    balance: newBalance,
+    success,
+    targetFinish,
+    cost,
+    successChance: Math.round(successChance * 100),
+  });
 }

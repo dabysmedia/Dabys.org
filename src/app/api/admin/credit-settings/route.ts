@@ -46,6 +46,8 @@ export async function PATCH(request: Request) {
     feedbackAccepted: parse(body.feedbackAccepted, current.feedbackAccepted),
     setCompletionReward: parse(body.setCompletionReward, current.setCompletionReward),
     holoSetCompletionReward: parse(body.holoSetCompletionReward, current.holoSetCompletionReward),
+    prismaticSetCompletionReward: parse(body.prismaticSetCompletionReward, current.prismaticSetCompletionReward),
+    darkMatterSetCompletionReward: parse(body.darkMatterSetCompletionReward, current.darkMatterSetCompletionReward),
   };
 
   saveCreditSettings(settings);

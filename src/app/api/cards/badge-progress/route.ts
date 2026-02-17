@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
+import {
+  getCompletedWinnerIds,
+  getCompletedHoloWinnerIds,
+  getCompletedPrismaticWinnerIds,
+  getCompletedDarkMatterWinnerIds,
+} from "@/lib/cards";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,5 +16,12 @@ export async function GET(request: Request) {
 
   const completedWinnerIds = getCompletedWinnerIds(userId);
   const completedHoloWinnerIds = getCompletedHoloWinnerIds(userId);
-  return NextResponse.json({ completedWinnerIds, completedHoloWinnerIds });
+  const completedPrismaticWinnerIds = getCompletedPrismaticWinnerIds(userId);
+  const completedDarkMatterWinnerIds = getCompletedDarkMatterWinnerIds(userId);
+  return NextResponse.json({
+    completedWinnerIds,
+    completedHoloWinnerIds,
+    completedPrismaticWinnerIds,
+    completedDarkMatterWinnerIds,
+  });
 }

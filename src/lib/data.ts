@@ -420,6 +420,10 @@ export interface CreditSettings {
   setCompletionReward: number;
   /** Credits awarded when a player completes a full holo set (all main codex slots holo-upgraded) and claims the quest. */
   holoSetCompletionReward: number;
+  /** Credits awarded when a player completes a full prismatic set and claims the quest. */
+  prismaticSetCompletionReward: number;
+  /** Credits awarded when a player completes a full dark matter set and claims the quest. */
+  darkMatterSetCompletionReward: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -436,6 +440,8 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   feedbackAccepted: 10,
   setCompletionReward: 1000,
   holoSetCompletionReward: 1500,
+  prismaticSetCompletionReward: 3000,
+  darkMatterSetCompletionReward: 5000,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -455,6 +461,8 @@ function getCreditSettingsRaw(): CreditSettings {
       feedbackAccepted: typeof raw.feedbackAccepted === "number" ? raw.feedbackAccepted : DEFAULT_CREDIT_SETTINGS.feedbackAccepted,
       setCompletionReward: typeof raw.setCompletionReward === "number" ? raw.setCompletionReward : DEFAULT_CREDIT_SETTINGS.setCompletionReward,
       holoSetCompletionReward: typeof raw.holoSetCompletionReward === "number" ? raw.holoSetCompletionReward : DEFAULT_CREDIT_SETTINGS.holoSetCompletionReward,
+      prismaticSetCompletionReward: typeof raw.prismaticSetCompletionReward === "number" ? raw.prismaticSetCompletionReward : DEFAULT_CREDIT_SETTINGS.prismaticSetCompletionReward,
+      darkMatterSetCompletionReward: typeof raw.darkMatterSetCompletionReward === "number" ? raw.darkMatterSetCompletionReward : DEFAULT_CREDIT_SETTINGS.darkMatterSetCompletionReward,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };
@@ -818,6 +826,37 @@ export function setStardust(userId: string, balance: number): void {
   saveStardustRaw(entries);
 }
 
+// ──── Card Finish (visual tier: normal < holo < prismatic < darkMatter) ────
+export type CardFinish = "normal" | "holo" | "prismatic" | "darkMatter";
+
+/** Ordered list of finishes from lowest to highest tier. */
+export const CARD_FINISH_ORDER: readonly CardFinish[] = ["normal", "holo", "prismatic", "darkMatter"] as const;
+
+/** Human-readable labels for each finish tier. */
+export const CARD_FINISH_LABELS: Record<CardFinish, string> = {
+  normal: "Normal",
+  holo: "Holo",
+  prismatic: "Prismatic",
+  darkMatter: "Dark Matter",
+};
+
+/** Derive the canonical finish for a card, handling legacy isFoil-only cards. */
+export function getCardFinish(card: { isFoil?: boolean; finish?: CardFinish }): CardFinish {
+  if (card.finish) return card.finish;
+  return card.isFoil ? "holo" : "normal";
+}
+
+/** True if finish A is strictly higher tier than finish B. */
+export function isHigherFinish(a: CardFinish, b: CardFinish): boolean {
+  return CARD_FINISH_ORDER.indexOf(a) > CARD_FINISH_ORDER.indexOf(b);
+}
+
+/** Returns the next finish tier above the given one, or null if already at max. */
+export function nextFinishTier(current: CardFinish): CardFinish | null {
+  const idx = CARD_FINISH_ORDER.indexOf(current);
+  return idx < CARD_FINISH_ORDER.length - 1 ? CARD_FINISH_ORDER[idx + 1] : null;
+}
+
 // ──── Card Types (multi-type pool) ───────────────────────
 export type CardType = "actor" | "director" | "character" | "scene";
 
@@ -843,6 +882,8 @@ export interface Card {
   characterId: string;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
   isFoil: boolean;
+  /** Visual finish tier. Takes precedence over isFoil when set. Legacy cards without this field use isFoil to derive finish. */
+  finish?: CardFinish;
   actorName: string;
   characterName: string;
   movieTitle: string;
@@ -1094,7 +1135,7 @@ export function transferCard(cardId: string, newUserId: string): boolean {
 export function updateCard(
   cardId: string,
   updates: Partial<
-    Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "isFoil" | "cardType" | "movieTmdbId">
+    Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "isFoil" | "finish" | "cardType" | "movieTmdbId">
   >
 ): Card | undefined {
   const cards = getCardsRaw();
@@ -1121,7 +1162,7 @@ export function removeCard(cardId: string): boolean {
 /** Update all cards with the given characterId to match pool entry changes (e.g. when admin edits pool image). */
 export function updateCardsByCharacterId(
   characterId: string,
-  updates: Partial<Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "cardType" | "movieTmdbId">>
+  updates: Partial<Pick<Card, "actorName" | "characterName" | "movieTitle" | "profilePath" | "rarity" | "finish" | "cardType" | "movieTmdbId">>
 ): number {
   const cards = getCardsRaw();
   let changed = 0;
@@ -1214,6 +1255,84 @@ export function removeCodexUnlockHolo(userId: string, characterId: string): void
 /** Clear all holo codex unlocks for all users (admin). */
 export function resetHoloCodexUnlocks(): void {
   saveHoloCodexUnlocksRaw({});
+}
+
+// ──── Prismatic Codex (unlock by uploading a prismatic card; requires holo slot first) ────
+const PRISMATIC_CODEX_UNLOCKS_FILE = "prismaticCodexUnlocks.json";
+
+function getPrismaticCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(PRISMATIC_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function savePrismaticCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(PRISMATIC_CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedPrismaticCharacterIds(userId: string): string[] {
+  const data = getPrismaticCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockPrismatic(userId: string, characterId: string): void {
+  const data = getPrismaticCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  savePrismaticCodexUnlocksRaw(data);
+}
+
+export function removeCodexUnlockPrismatic(userId: string, characterId: string): void {
+  const data = getPrismaticCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
+  savePrismaticCodexUnlocksRaw(data);
+}
+
+export function resetPrismaticCodexUnlocks(): void {
+  savePrismaticCodexUnlocksRaw({});
+}
+
+// ──── Dark Matter Codex (unlock by uploading a dark matter card; requires prismatic slot first) ────
+const DARK_MATTER_CODEX_UNLOCKS_FILE = "darkMatterCodexUnlocks.json";
+
+function getDarkMatterCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(DARK_MATTER_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveDarkMatterCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(DARK_MATTER_CODEX_UNLOCKS_FILE, data);
+}
+
+export function getCodexUnlockedDarkMatterCharacterIds(userId: string): string[] {
+  const data = getDarkMatterCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockDarkMatter(userId: string, characterId: string): void {
+  const data = getDarkMatterCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  if (list.includes(characterId)) return;
+  data[userId] = [...list, characterId];
+  saveDarkMatterCodexUnlocksRaw(data);
+}
+
+export function removeCodexUnlockDarkMatter(userId: string, characterId: string): void {
+  const data = getDarkMatterCodexUnlocksRaw();
+  const list = Array.isArray(data[userId]) ? data[userId] : [];
+  data[userId] = list.filter((id) => id !== characterId);
+  saveDarkMatterCodexUnlocksRaw(data);
+}
+
+export function resetDarkMatterCodexUnlocks(): void {
+  saveDarkMatterCodexUnlocksRaw({});
 }
 
 // ──── Alt-Art Codex (unlock by uploading an alt-art card; same lock-in behavior) ────
@@ -1587,6 +1706,10 @@ export interface SetCompletionQuest {
   completedAt: string;
   /** When true, this quest is for completing the holo upgrade of the entire set. */
   isHolo?: boolean;
+  /** When true, this quest is for completing the prismatic upgrade of the entire set. */
+  isPrismatic?: boolean;
+  /** When true, this quest is for completing the dark matter upgrade of the entire set. */
+  isDarkMatter?: boolean;
   /** When false, the set was already complete before this quest was added; claim awards 0. Default true. */
   firstCompletion?: boolean;
 }
@@ -1668,6 +1791,74 @@ export function claimHoloSetCompletionQuest(userId: string, winnerId: string): {
   const store = getSetCompletionQuestsRaw();
   const userQuests = store[userId] ?? [];
   const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && q.isHolo === true);
+  if (idx < 0) return { reward: 0, didClaim: false };
+  const quest = userQuests[idx];
+  quest.claimed = true;
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  const reward = quest.firstCompletion === false ? 0 : quest.reward;
+  return { reward, didClaim: true };
+}
+
+/** Add a prismatic set completion quest for the user. Returns true if added. */
+export function addPrismaticSetCompletionQuest(userId: string, winnerId: string, movieTitle: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  if (userQuests.some((q) => q.winnerId === winnerId && q.isPrismatic)) return false;
+  const reward = getCreditSettings().prismaticSetCompletionReward;
+  userQuests.push({
+    winnerId,
+    movieTitle,
+    reward,
+    claimed: false,
+    completedAt: new Date().toISOString(),
+    isPrismatic: true,
+    firstCompletion: true,
+  });
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
+/** Claim a prismatic set completion quest. */
+export function claimPrismaticSetCompletionQuest(userId: string, winnerId: string): { reward: number; didClaim: boolean } {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && q.isPrismatic === true);
+  if (idx < 0) return { reward: 0, didClaim: false };
+  const quest = userQuests[idx];
+  quest.claimed = true;
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  const reward = quest.firstCompletion === false ? 0 : quest.reward;
+  return { reward, didClaim: true };
+}
+
+/** Add a dark matter set completion quest for the user. Returns true if added. */
+export function addDarkMatterSetCompletionQuest(userId: string, winnerId: string, movieTitle: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  if (userQuests.some((q) => q.winnerId === winnerId && q.isDarkMatter)) return false;
+  const reward = getCreditSettings().darkMatterSetCompletionReward;
+  userQuests.push({
+    winnerId,
+    movieTitle,
+    reward,
+    claimed: false,
+    completedAt: new Date().toISOString(),
+    isDarkMatter: true,
+    firstCompletion: true,
+  });
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
+/** Claim a dark matter set completion quest. */
+export function claimDarkMatterSetCompletionQuest(userId: string, winnerId: string): { reward: number; didClaim: boolean } {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && !q.claimed && q.isDarkMatter === true);
   if (idx < 0) return { reward: 0, didClaim: false };
   const quest = userQuests[idx];
   quest.claimed = true;
@@ -1879,6 +2070,14 @@ export interface Pack {
     rare: number;
     uncommon: number;
   };
+  /** When true, cards from this pack can roll Prismatic finish. */
+  allowPrismatic?: boolean;
+  /** When true, cards from this pack can roll Dark Matter finish. */
+  allowDarkMatter?: boolean;
+  /** Prismatic drop chance (0–100). Used when allowPrismatic is true. Default 2. */
+  prismaticChance?: number;
+  /** Dark Matter drop chance (0–100). Used when allowDarkMatter is true. Default 0.5. */
+  darkMatterChance?: number;
 }
 
 export function getPacksRaw(): Pack[] {
@@ -1945,6 +2144,10 @@ export function getPacks(): Pack[] {
           };
         })()
       : undefined,
+    allowPrismatic: !!(p as Pack).allowPrismatic,
+    allowDarkMatter: !!(p as Pack).allowDarkMatter,
+    prismaticChance: typeof (p as Pack).prismaticChance === "number" ? Math.min(100, Math.max(0, (p as Pack).prismaticChance!)) : undefined,
+    darkMatterChance: typeof (p as Pack).darkMatterChance === "number" ? Math.min(100, Math.max(0, (p as Pack).darkMatterChance!)) : undefined,
   }));
 }
 
@@ -2007,6 +2210,10 @@ export function upsertPack(
           uncommon: typeof input.rarityWeights.uncommon === "number" ? input.rarityWeights.uncommon : 64,
         }
       : undefined,
+    allowPrismatic: !!(input as Pack).allowPrismatic,
+    allowDarkMatter: !!(input as Pack).allowDarkMatter,
+    prismaticChance: typeof (input as Pack).prismaticChance === "number" ? Math.min(100, Math.max(0, (input as Pack).prismaticChance!)) : undefined,
+    darkMatterChance: typeof (input as Pack).darkMatterChance === "number" ? Math.min(100, Math.max(0, (input as Pack).darkMatterChance!)) : undefined,
   };
   packs.push(newPack);
   savePacks(packs);

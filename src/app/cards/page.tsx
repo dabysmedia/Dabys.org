@@ -21,6 +21,7 @@ interface Card {
   characterId?: string;
   rarity: string;
   isFoil: boolean;
+  finish?: "normal" | "holo" | "prismatic" | "darkMatter";
   actorName: string;
   characterName: string;
   movieTitle: string;
@@ -591,6 +592,8 @@ function CardsContent() {
 
   const [discoveredCharacterIds, setDiscoveredCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredHoloCharacterIds, setDiscoveredHoloCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredPrismaticCharacterIds, setDiscoveredPrismaticCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredDarkMatterCharacterIds, setDiscoveredDarkMatterCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredAltArtCharacterIds, setDiscoveredAltArtCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredBoysCharacterIds, setDiscoveredBoysCharacterIds] = useState<Set<string>>(new Set());
   const [showCodexUploadModal, setShowCodexUploadModal] = useState(false);
@@ -612,11 +615,13 @@ function CardsContent() {
     id: string;
     rarity: string;
     isFoil: boolean;
+    finish?: "normal" | "holo" | "prismatic" | "darkMatter";
     actorName: string;
     characterName: string;
     movieTitle: string;
     profilePath: string;
     cardType?: CardType;
+    isAltArt?: boolean;
   } | null>(null);
   const TRACKED_CHARS_KEY = "tcg-tracked-character-ids";
   const MAX_TRACKED = 10;
@@ -823,6 +828,8 @@ function CardsContent() {
       const d = await codexRes.json();
       setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
       setDiscoveredHoloCharacterIds(new Set(Array.isArray(d.holoCharacterIds) ? d.holoCharacterIds : []));
+      setDiscoveredPrismaticCharacterIds(new Set(Array.isArray(d.prismaticCharacterIds) ? d.prismaticCharacterIds : []));
+      setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
     }
@@ -943,6 +950,8 @@ function CardsContent() {
       const d = await codexRes.json();
       setDiscoveredCharacterIds(new Set(Array.isArray(d.characterIds) ? d.characterIds : []));
       setDiscoveredHoloCharacterIds(new Set(Array.isArray(d.holoCharacterIds) ? d.holoCharacterIds : []));
+      setDiscoveredPrismaticCharacterIds(new Set(Array.isArray(d.prismaticCharacterIds) ? d.prismaticCharacterIds : []));
+      setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
     }
@@ -1778,7 +1787,7 @@ function CardsContent() {
     }
   }
 
-  function isCardSlotAlreadyInCodex(card: { characterId?: string | null; isFoil?: boolean }): boolean {
+  function isCardSlotAlreadyInCodex(card: { characterId?: string | null; isFoil?: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter" }): boolean {
     if (!card.characterId) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return false;
@@ -1786,7 +1795,11 @@ function CardsContent() {
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isMain = !isAltArt && !isBoys;
     if (isMain) {
-      return card.isFoil ? discoveredHoloCharacterIds.has(card.characterId) : discoveredCharacterIds.has(card.characterId);
+      if (!card.isFoil) return discoveredCharacterIds.has(card.characterId);
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      if (f === "darkMatter") return discoveredDarkMatterCharacterIds.has(card.characterId);
+      if (f === "prismatic") return discoveredPrismaticCharacterIds.has(card.characterId);
+      return discoveredHoloCharacterIds.has(card.characterId);
     }
     if (isAltArt) return discoveredAltArtCharacterIds.has(card.characterId);
     if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
@@ -4676,9 +4689,12 @@ function CardsContent() {
                         );
                       }
 
-                      type CodexVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: CardType; isAltArt: boolean } };
+                      type CodexVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter"; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: CardType; isAltArt: boolean } };
                       const variants: CodexVariant[] = [];
-                      const hasHoloUpgrade = discoveredHoloCharacterIds.has(entry.characterId);
+                      const hasDarkMatter = discoveredDarkMatterCharacterIds.has(entry.characterId);
+                      const hasPrismatic = discoveredPrismaticCharacterIds.has(entry.characterId);
+                      const hasHolo = discoveredHoloCharacterIds.has(entry.characterId);
+                      const codexFinish: "normal" | "holo" | "prismatic" | "darkMatter" = hasDarkMatter ? "darkMatter" : hasPrismatic ? "prismatic" : hasHolo ? "holo" : "normal";
                       if (mainDiscovered) {
                         variants.push({
                           poolEntry: entry,
@@ -4686,7 +4702,8 @@ function CardsContent() {
                           codexCard: {
                             id: entry.characterId,
                             rarity: entry.rarity,
-                            isFoil: hasHoloUpgrade,
+                            isFoil: codexFinish !== "normal",
+                            finish: codexFinish,
                             actorName: entry.actorName ?? "",
                             characterName: entry.characterName ?? "",
                             movieTitle: entry.movieTitle ?? "",

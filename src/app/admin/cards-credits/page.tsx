@@ -9,18 +9,27 @@ interface User {
   name: string;
 }
 
+type CardFinish = "normal" | "holo" | "prismatic" | "darkMatter";
+
 interface Card {
   id: string;
   userId: string;
   characterId: string;
   rarity: string;
   isFoil: boolean;
+  finish?: CardFinish;
   actorName: string;
   characterName: string;
   movieTitle: string;
   profilePath: string;
   cardType?: CardType;
   movieTmdbId?: number;
+}
+
+/** Derive the effective finish tier (handles legacy cards without finish). */
+function getFinish(card: { isFoil?: boolean; finish?: CardFinish }): CardFinish {
+  if (card.finish) return card.finish;
+  return card.isFoil ? "holo" : "normal";
 }
 
 type CardType = "actor" | "director" | "character" | "scene";
@@ -54,6 +63,10 @@ interface Pack {
   discounted?: boolean;
   discountPercent?: number;
   rarityWeights?: { legendary: number; epic: number; rare: number; uncommon: number };
+  allowPrismatic?: boolean;
+  allowDarkMatter?: boolean;
+  prismaticChance?: number;
+  darkMatterChance?: number;
 }
 
 type ShopItemType = "badge" | "skip";
@@ -165,7 +178,7 @@ export default function AdminCardsCreditsPage() {
   const [addingCard, setAddingCard] = useState(false);
   const [addingCardCharacterId, setAddingCardCharacterId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [addHolo, setAddHolo] = useState(false);
+  const [addFinish, setAddFinish] = useState<"normal" | "holo" | "prismatic" | "darkMatter">("normal");
   const [error, setError] = useState("");
   const [poolLoading, setPoolLoading] = useState(false);
   const [addingToPool, setAddingToPool] = useState(false);
@@ -302,6 +315,10 @@ export default function AdminCardsCreditsPage() {
     discountPercent: string;
     useCustomWeights: boolean;
     rarityWeights: { legendary: string; epic: string; rare: string; uncommon: string };
+    allowPrismatic: boolean;
+    allowDarkMatter: boolean;
+    prismaticChance: string;
+    darkMatterChance: string;
   }>({
     name: "",
     imageUrl: "",
@@ -319,6 +336,10 @@ export default function AdminCardsCreditsPage() {
     discountPercent: "",
     useCustomWeights: false,
     rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
+    allowPrismatic: false,
+    allowDarkMatter: false,
+    prismaticChance: "2",
+    darkMatterChance: "0.5",
   });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
@@ -650,6 +671,10 @@ export default function AdminCardsCreditsPage() {
       discountPercent: "",
       useCustomWeights: false,
       rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
+      allowPrismatic: false,
+      allowDarkMatter: false,
+      prismaticChance: "2",
+      darkMatterChance: "0.5",
     });
   }
 
@@ -676,6 +701,10 @@ export default function AdminCardsCreditsPage() {
       rarityWeights: w
         ? { legendary: String(w.legendary), epic: String(w.epic), rare: String(w.rare), uncommon: String(w.uncommon) }
         : { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
+      allowPrismatic: !!pack.allowPrismatic,
+      allowDarkMatter: !!pack.allowDarkMatter,
+      prismaticChance: typeof pack.prismaticChance === "number" ? String(pack.prismaticChance) : "2",
+      darkMatterChance: typeof pack.darkMatterChance === "number" ? String(pack.darkMatterChance) : "0.5",
     });
   }
 
@@ -733,6 +762,14 @@ export default function AdminCardsCreditsPage() {
               rare: Math.max(0, parseFloat(packForm.rarityWeights.rare) || 0),
               uncommon: Math.max(0, parseFloat(packForm.rarityWeights.uncommon) || 0),
             }
+          : undefined,
+        allowPrismatic: packForm.allowPrismatic,
+        allowDarkMatter: packForm.allowDarkMatter,
+        prismaticChance: packForm.allowPrismatic
+          ? (parseFloat(packForm.prismaticChance) || 2)
+          : undefined,
+        darkMatterChance: packForm.allowDarkMatter
+          ? (parseFloat(packForm.darkMatterChance) || 0.5)
           : undefined,
       };
       if (editingPackId) body.id = editingPackId;
@@ -1078,7 +1115,7 @@ export default function AdminCardsCreditsPage() {
         body: JSON.stringify({
           userId: selectedUserId,
           characterId,
-          isFoil: addHolo,
+          finish: addFinish,
         }),
       });
       const data = await res.json();
@@ -1254,6 +1291,7 @@ export default function AdminCardsCreditsPage() {
       profilePath: card.profilePath,
       rarity: card.rarity,
       isFoil: card.isFoil,
+      finish: getFinish(card),
       cardType: card.cardType ?? "actor",
       movieTmdbId: card.movieTmdbId ?? 0,
     });
@@ -1611,12 +1649,20 @@ export default function AdminCardsCreditsPage() {
               <div className="px-5 pb-4 pt-1">
                 <div className="mb-4">
                   <p className="text-xs text-white/40 mb-2">Add card from pool — click a card to add it to this user&apos;s collection.</p>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={addHolo} onChange={(e) => setAddHolo(e.target.checked)} className="rounded border-white/30 bg-white/5" /><span className="text-sm text-white/60">Add as Holo</span></label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="text-xs text-white/40">Add as</label>
+                    <select value={addFinish} onChange={(e) => setAddFinish(e.target.value as "normal" | "holo" | "prismatic" | "darkMatter")} className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]">
+                      <option value="normal">Normal</option>
+                      <option value="holo">Holo</option>
+                      <option value="prismatic">Prismatic</option>
+                      <option value="darkMatter">Dark Matter</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="max-h-[320px] overflow-y-auto rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 mb-6">
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     {pool.filter((c) => c.profilePath?.trim()).map((c) => {
-                      const cardForDisplay = { profilePath: c.profilePath ?? "", actorName: c.actorName, characterName: c.characterName, movieTitle: c.movieTitle, rarity: c.rarity, isFoil: addHolo, cardType: c.cardType };
+                      const cardForDisplay = { profilePath: c.profilePath ?? "", actorName: c.actorName, characterName: c.characterName, movieTitle: c.movieTitle, rarity: c.rarity, isFoil: addFinish !== "normal", finish: addFinish, cardType: c.cardType };
                       const isAdding = addingCardCharacterId === c.characterId;
                       return (
                         <div key={c.characterId} className={`rounded-xl border overflow-hidden bg-white/[0.03] transition-all ${RARITY_COLORS[c.rarity] ?? "border-white/10"} hover:ring-2 hover:ring-green-500/40`}>
@@ -1634,21 +1680,78 @@ export default function AdminCardsCreditsPage() {
                 </div>
                 {cards.length === 0 ? ( <p className="text-white/30 text-sm">No cards in collection.</p> ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                    {cards.map((card) => (
-                      <div key={card.id} className={`rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${card.isFoil ? "ring-2 ring-indigo-400/50" : ""}`}>
-                        <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
-                          {card.profilePath ? ( <img src={card.profilePath} alt={card.actorName} className={`w-full h-full object-cover ${card.isFoil ? "holo-sheen" : ""}`} /> ) : ( <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">{card.actorName.charAt(0)}</div> )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
-                          {card.isFoil && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}>HOLO</span> )}
-                          {(() => { const entry = pool.find((p) => p.characterId === card.characterId); const altOfId = entry?.altArtOfCharacterId; const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null; return altOfId ? ( <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90" title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}>Alt</span> ) : null; })()}
-                          <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90">{card.rarity}</span>
+                    {cards.map((card) => {
+                      const finish = getFinish(card);
+                      const isDM = finish === "darkMatter";
+                      const isPrismatic = finish === "prismatic";
+                      const isHolo = finish === "holo";
+                      const isEnhanced = finish !== "normal";
+
+                      const ringClass = isDM
+                        ? "ring-2 ring-purple-500/70"
+                        : isPrismatic
+                        ? "ring-2 ring-cyan-400/60"
+                        : isHolo
+                        ? "ring-2 ring-indigo-400/50"
+                        : "";
+
+                      const sheenClass = isDM
+                        ? "dark-matter-sheen"
+                        : isPrismatic
+                        ? "prismatic-sheen"
+                        : isHolo
+                        ? "holo-sheen"
+                        : "";
+
+                      const cardBoxShadow = isDM
+                        ? "0 0 16px rgba(139, 92, 246, 0.35), 0 4px 20px rgba(0,0,0,0.4)"
+                        : isPrismatic
+                        ? "0 0 14px rgba(59, 130, 246, 0.25), 0 4px 20px rgba(0,0,0,0.4)"
+                        : "";
+
+                      return (
+                      <div key={card.id} className={`group rounded-xl border overflow-hidden bg-white/[0.02] ${RARITY_COLORS[card.rarity] || RARITY_COLORS.uncommon} ${ringClass}`} style={cardBoxShadow ? { boxShadow: cardBoxShadow } : undefined}>
+                        <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30 overflow-hidden">
+                          {card.profilePath ? ( <img src={card.profilePath} alt={card.actorName} className={`w-full h-full object-cover ${sheenClass}`} /> ) : ( <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">{card.actorName.charAt(0)}</div> )}
+
+                          {/* Dark Matter overlays — nebula, particles, hover void */}
+                          {isDM && (
+                            <>
+                              <div className="absolute inset-0 card-dark-matter-nebula z-[1]" />
+                              <div className="absolute inset-0 card-dark-matter-particles z-[2]" />
+                              <div className="absolute inset-0 card-dark-matter-hover pointer-events-none z-[3]" />
+                            </>
+                          )}
+
+                          {/* Prismatic overlays — light beam, shimmer */}
+                          {isPrismatic && (
+                            <>
+                              <div className="card-prismatic-beam z-[2]" />
+                              <div className="absolute inset-0 card-prismatic-hover pointer-events-none z-[3]" />
+                            </>
+                          )}
+
+                          {/* Holo overlay */}
+                          {isHolo && (
+                            <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
+                          )}
+
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent z-[4]" />
+
+                          {/* Finish tag */}
+                          {isDM && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(135deg, #1e0a3c, #7c3aed, #4c1d95, #a855f7, #3b0764)", boxShadow: "0 0 12px rgba(139,92,246,0.7), 0 0 4px rgba(168,85,247,0.5)", letterSpacing: "0.05em" }}>DARK MATTER</span> )}
+                          {isPrismatic && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899)", backgroundSize: "200% 100%", animation: "prismatic-hover-shift 3s ease-in-out infinite", boxShadow: "0 0 10px rgba(255,255,255,0.6), 0 0 20px rgba(139,92,246,0.3)", letterSpacing: "0.05em" }}>PRISMATIC</span> )}
+                          {isHolo && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}>HOLO</span> )}
+
+                          {(() => { const entry = pool.find((p) => p.characterId === card.characterId); const altOfId = entry?.altArtOfCharacterId; const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null; return altOfId ? ( <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90 z-[5]" title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}>Alt</span> ) : null; })()}
+                          <span className="absolute bottom-2 left-2 right-2 text-[10px] font-medium uppercase text-amber-400/90 z-[5]">{card.rarity}</span>
                         </div>
                         <div className="p-2">
                           {(() => { const { title, subtitle } = cardLabelLines(card); return ( <><p className="text-sm font-semibold text-white/90 truncate">{title}</p><p className="text-xs text-white/60 truncate">{subtitle}</p><p className="text-[10px] text-white/40 truncate mt-0.5">{card.movieTitle}</p></> ); })()}
                           <div className="mt-3"><button onClick={() => openEditCard(card)} className="w-full min-h-[44px] px-4 py-3 rounded-lg text-sm font-medium border border-purple-500/40 text-purple-400 hover:bg-purple-500/15 cursor-pointer touch-manipulation">Edit</button></div>
                         </div>
                       </div>
-                    ))}
+                    ); })}
                   </div>
                 )}
               </div>
@@ -1767,6 +1870,33 @@ export default function AdminCardsCreditsPage() {
               {packForm.discounted && ( <div><label className="block text-xs text-white/40 mb-1">Discount %</label><input type="number" min={0} max={100} placeholder="e.g. 20" value={packForm.discountPercent} onChange={(e) => setPackForm((f) => ({ ...f, discountPercent: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30" /><p className="text-[10px] text-white/40 mt-0.5">Optional. Shows e.g. &quot;Sale 20%&quot; on the pack.</p></div> )}
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.useCustomWeights} onChange={(e) => setPackForm((f) => ({ ...f, useCustomWeights: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Custom drop rates</label>
               {packForm.useCustomWeights && (() => { const vals = { legendary: parseFloat(packForm.rarityWeights.legendary) || 0, epic: parseFloat(packForm.rarityWeights.epic) || 0, rare: parseFloat(packForm.rarityWeights.rare) || 0, uncommon: parseFloat(packForm.rarityWeights.uncommon) || 0 }; const total = vals.legendary + vals.epic + vals.rare + vals.uncommon; const pct = (v: number) => total > 0 ? ((v / total) * 100).toFixed(1) : "0.0"; return ( <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2"><p className="text-[10px] text-white/50 mb-1">Set relative weights for each rarity tier. They are normalised to percentages automatically.</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{(["legendary", "epic", "rare", "uncommon"] as const).map((r) => ( <div key={r}><label className="block text-[11px] text-white/50 mb-0.5 capitalize">{r}</label><input type="number" min={0} step="any" value={packForm.rarityWeights[r]} onChange={(e) => setPackForm((f) => ({ ...f, rarityWeights: { ...f.rarityWeights, [r]: e.target.value } }))} className="w-full px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" /><span className="text-[10px] text-white/40">{pct(vals[r])}%</span></div> ))}</div><div className="flex items-center gap-2 mt-1"><span className={`text-[11px] font-medium ${total > 0 ? "text-white/60" : "text-red-400"}`}>Total weight: {total} {total > 0 ? `(${(["legendary", "epic", "rare", "uncommon"] as const).map((r) => `${r[0].toUpperCase()}:${pct(vals[r])}%`).join(" ")})` : "— add at least one non-zero weight"}</span></div></div> ); })()}
+
+              <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-3">
+                <p className="text-xs text-white/60 font-medium">Premium finish drop rates</p>
+                <label className="flex items-center gap-2 text-sm text-white/70">
+                  <input type="checkbox" checked={packForm.allowPrismatic} onChange={(e) => setPackForm((f) => ({ ...f, allowPrismatic: e.target.checked }))} className="rounded border-white/30 bg-white/5" />
+                  <span>Enable Prismatic drops</span>
+                </label>
+                {packForm.allowPrismatic && (
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-0.5">Prismatic chance (%) per card</label>
+                    <input type="number" min={0} max={100} step={0.1} value={packForm.prismaticChance} onChange={(e) => setPackForm((f) => ({ ...f, prismaticChance: e.target.value }))} className="w-24 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/50" placeholder="2" />
+                    <span className="text-[10px] text-white/40 ml-2">Default 2%</span>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 text-sm text-white/70">
+                  <input type="checkbox" checked={packForm.allowDarkMatter} onChange={(e) => setPackForm((f) => ({ ...f, allowDarkMatter: e.target.checked }))} className="rounded border-white/30 bg-white/5" />
+                  <span>Enable Dark Matter drops</span>
+                </label>
+                {packForm.allowDarkMatter && (
+                  <div>
+                    <label className="block text-[11px] text-white/50 mb-0.5">Dark Matter chance (%) per card</label>
+                    <input type="number" min={0} max={100} step={0.1} value={packForm.darkMatterChance} onChange={(e) => setPackForm((f) => ({ ...f, darkMatterChance: e.target.value }))} className="w-24 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/50" placeholder="0.5" />
+                    <span className="text-[10px] text-white/40 ml-2">Default 0.5%</span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
                 {editingPackId && ( <button type="button" onClick={resetPackForm} disabled={savingPack} className="px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer">Cancel edit</button> )}
                 <button type="submit" disabled={savingPack} className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer">{savingPack ? "Saving..." : editingPackId ? "Save Pack" : "Create Pack"}</button>
@@ -1791,6 +1921,11 @@ export default function AdminCardsCreditsPage() {
                       <p className="text-xs text-white/60">{pack.isFree ? ( <span className="text-green-400 font-semibold">Free</span> ) : ( <span className="text-amber-300 font-semibold">{pack.price}</span> )}{" "}{pack.isFree ? "" : "credits · "}{pack.cardsPerPack} cards{pack.maxPurchasesPerDay != null && pack.maxPurchasesPerDay > 0 && ( <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/{typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0 ? `${pack.restockIntervalHours}h` : "day"} limit</span></> )}</p>
                       <p className="text-[11px] text-white/40 mt-0.5 truncate">Drops{" "}{pack.allowedRarities.slice().sort((a, b) => ["legendary", "epic", "rare", "uncommon"].indexOf(a) - ["legendary", "epic", "rare", "uncommon"].indexOf(b)).join(", ")}{" "}({pack.allowedCardTypes.join(", ")})</p>
                       {pack.rarityWeights && (() => { const w = pack.rarityWeights; const t = w.legendary + w.epic + w.rare + w.uncommon || 1; const p = (v: number) => ((v / t) * 100).toFixed(1); return ( <p className="text-[10px] text-purple-300/70 mt-0.5">Rates: L:{p(w.legendary)}% E:{p(w.epic)}% R:{p(w.rare)}% U:{p(w.uncommon)}%</p> ); })()}
+                      {(pack.allowPrismatic || pack.allowDarkMatter) && (
+                        <p className="text-[10px] text-cyan-300/70 mt-0.5">
+                          {[pack.allowPrismatic && `Prismatic ${pack.prismaticChance ?? 2}%`, pack.allowDarkMatter && `DM ${pack.darkMatterChance ?? 0.5}%`].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1">
                       <button type="button" onClick={() => startEditPack(pack)} className="px-3 py-1.5 rounded-lg border border-purple-500/40 text-purple-300 text-xs font-medium hover:bg-purple-500/10 cursor-pointer">Edit</button>
@@ -2138,7 +2273,7 @@ export default function AdminCardsCreditsPage() {
                   <div><label className="block text-xs text-white/40 mb-1">TMDB Movie ID</label><input type="number" value={editForm.movieTmdbId ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, movieTmdbId: parseInt(e.target.value, 10) || 0 }))} className="w-20 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" /></div>
                   <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={editForm.rarity ?? "uncommon"} onChange={(e) => setEditForm((f) => ({ ...f, rarity: e.target.value }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
                   <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={editForm.cardType ?? "actor"} onChange={(e) => setEditForm((f) => ({ ...f, cardType: e.target.value as CardType }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
-                  <label className="flex items-center gap-2 cursor-pointer self-end pb-2"><input type="checkbox" checked={editForm.isFoil ?? false} onChange={(e) => setEditForm((f) => ({ ...f, isFoil: e.target.checked }))} className="rounded border-white/30 bg-white/5" /><span className="text-sm text-white/60">Holo</span></label>
+                  <div className="self-end pb-1"><label className="block text-xs text-white/40 mb-1">Finish</label><select value={editForm.finish ?? "normal"} onChange={(e) => { const f = e.target.value as CardFinish; setEditForm((prev) => ({ ...prev, finish: f, isFoil: f !== "normal" })); }} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="normal">Normal</option><option value="holo">Holo</option><option value="prismatic">Prismatic</option><option value="darkMatter">Dark Matter</option></select></div>
                 </div>
                 <div className="flex flex-col gap-2 pt-2">
                   <div className="flex gap-2"><button type="button" onClick={() => setEditingCard(null)} disabled={savingEdit} className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer">Cancel</button><button type="submit" disabled={savingEdit} className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer">{savingEdit ? "Saving..." : "Save"}</button></div>

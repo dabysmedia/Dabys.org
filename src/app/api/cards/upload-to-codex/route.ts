@@ -4,20 +4,32 @@ import {
   removeCard,
   addCodexUnlock,
   addCodexUnlockHolo,
+  addCodexUnlockPrismatic,
+  addCodexUnlockDarkMatter,
   addCodexUnlockAltArt,
   addCodexUnlockBoys,
   getListings,
   getTradeBlock,
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
+  getCodexUnlockedPrismaticCharacterIds,
+  getCodexUnlockedDarkMatterCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
   getWinners,
+  getCardFinish,
   addSetCompletionQuest,
   addHoloSetCompletionQuest,
+  addPrismaticSetCompletionQuest,
+  addDarkMatterSetCompletionQuest,
 } from "@/lib/data";
-import { hasCompletedMovie, hasCompletedMovieHoloCodex } from "@/lib/cards";
+import {
+  hasCompletedMovie,
+  hasCompletedMovieHoloCodex,
+  hasCompletedMoviePrismaticCodex,
+  hasCompletedMovieDarkMatterCodex,
+} from "@/lib/cards";
 
 /** Upload a card to the codex: removes it from your collection and unlocks that slot. Legendaries re-enter the pool.
  * Main codex: you can upload both regular and holo per character (two slots). Holo requires regular to be in codex first.
@@ -78,9 +90,41 @@ export async function POST(request: Request) {
   if (isMain) {
     const regularIds = getCodexUnlockedCharacterIds(userId);
     const holoIds = getCodexUnlockedHoloCharacterIds(userId);
+    const prismaticIds = getCodexUnlockedPrismaticCharacterIds(userId);
+    const darkMatterIds = getCodexUnlockedDarkMatterCharacterIds(userId);
     const alreadyRegular = regularIds.includes(characterId);
     const alreadyHolo = holoIds.includes(characterId);
-    if (card.isFoil) {
+    const alreadyPrismatic = prismaticIds.includes(characterId);
+    const alreadyDarkMatter = darkMatterIds.includes(characterId);
+    const finish = getCardFinish(card);
+
+    if (finish === "darkMatter") {
+      if (!alreadyPrismatic) {
+        return NextResponse.json(
+          { error: "Upload the Prismatic version to the codex first before upgrading to Dark Matter" },
+          { status: 400 }
+        );
+      }
+      if (alreadyDarkMatter) {
+        return NextResponse.json(
+          { error: "This character's Dark Matter is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else if (finish === "prismatic") {
+      if (!alreadyHolo) {
+        return NextResponse.json(
+          { error: "Upload the Holo version to the codex first before upgrading to Prismatic" },
+          { status: 400 }
+        );
+      }
+      if (alreadyPrismatic) {
+        return NextResponse.json(
+          { error: "This character's Prismatic is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else if (finish === "holo") {
       if (!alreadyRegular) {
         return NextResponse.json(
           { error: "Upload the regular version to the codex first before upgrading to Holo" },
@@ -121,11 +165,22 @@ export async function POST(request: Request) {
 
   removeCard(cardId);
 
+  const finish = getCardFinish(card);
+
   if (isMain) {
-    if (card.isFoil) {
-      addCodexUnlockHolo(userId, characterId);
-    } else {
-      addCodexUnlock(userId, characterId);
+    switch (finish) {
+      case "darkMatter":
+        addCodexUnlockDarkMatter(userId, characterId);
+        break;
+      case "prismatic":
+        addCodexUnlockPrismatic(userId, characterId);
+        break;
+      case "holo":
+        addCodexUnlockHolo(userId, characterId);
+        break;
+      default:
+        addCodexUnlock(userId, characterId);
+        break;
     }
   } else if (isAltArt) {
     addCodexUnlockAltArt(userId, characterId);
@@ -140,6 +195,8 @@ export async function POST(request: Request) {
   // Check if this upload completed a set — if so, add a claimable quest
   let setCompleted: { winnerId: string; movieTitle: string } | undefined;
   let holoSetCompleted: { winnerId: string; movieTitle: string } | undefined;
+  let prismaticSetCompleted: { winnerId: string; movieTitle: string } | undefined;
+  let darkMatterSetCompleted: { winnerId: string; movieTitle: string } | undefined;
   const tmdbId = card.movieTmdbId;
   if (tmdbId) {
     const winner = getWinners().find((w) => w.tmdbId === tmdbId);
@@ -148,19 +205,37 @@ export async function POST(request: Request) {
         const added = addSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
         if (added) setCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
       }
-      if (card.isFoil && hasCompletedMovieHoloCodex(userId, winner.id)) {
+      if ((finish === "holo" || finish === "prismatic" || finish === "darkMatter") && hasCompletedMovieHoloCodex(userId, winner.id)) {
         const added = addHoloSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
         if (added) holoSetCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
       }
+      if ((finish === "prismatic" || finish === "darkMatter") && hasCompletedMoviePrismaticCodex(userId, winner.id)) {
+        const added = addPrismaticSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
+        if (added) prismaticSetCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+      }
+      if (finish === "darkMatter" && hasCompletedMovieDarkMatterCodex(userId, winner.id)) {
+        const added = addDarkMatterSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");
+        if (added) darkMatterSetCompleted = { winnerId: winner.id, movieTitle: winner.movieTitle ?? "" };
+      }
     }
   }
+
+  const variantMap: Record<string, string> = {
+    darkMatter: "darkMatter",
+    prismatic: "prismatic",
+    holo: "holo",
+    normal: "regular",
+  };
 
   return NextResponse.json({
     ok: true,
     characterId,
     isFoil: card.isFoil ?? false,
-    variant: isMain ? (card.isFoil ? "holo" : "regular") : isAltArt ? "altart" : "boys",
+    finish,
+    variant: isMain ? (variantMap[finish] ?? "regular") : isAltArt ? "altart" : "boys",
     ...(setCompleted && { setCompleted }),
     ...(holoSetCompleted && { holoSetCompleted }),
+    ...(prismaticSetCompleted && { prismaticSetCompleted }),
+    ...(darkMatterSetCompleted && { darkMatterSetCompleted }),
   });
 }

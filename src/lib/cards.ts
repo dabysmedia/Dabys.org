@@ -22,14 +22,19 @@ import {
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedPrismaticCharacterIds,
+  getCodexUnlockedDarkMatterCharacterIds,
+  getCardFinish,
 } from "@/lib/data";
-import type { CharacterPortrayal, Winner, Pack } from "@/lib/data";
+import type { CharacterPortrayal, Winner, Pack, CardFinish } from "@/lib/data";
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_IMG = "https://image.tmdb.org/t/p";
 const PACK_PRICE = 50;
 const CARDS_PER_PACK = 5;
 const FOIL_CHANCE = 0.08;
+const PRISMATIC_CHANCE = 0.02;
+const DARK_MATTER_CHANCE = 0.005;
 const CARDS_PER_MOVIE = 6;
 const TMDB_DELAY_MS = 100;
 
@@ -37,6 +42,37 @@ type Rarity = "uncommon" | "rare" | "epic" | "legendary";
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Roll the finish tier for a newly created card. Options control which premium finishes are possible.
+ * - allowPrismatic: if true, prismatic can drop
+ * - allowDarkMatter: if true, dark matter can drop
+ * - prismaticChance: 0–100 percent (when allowPrismatic). If omitted, uses default 2.
+ * - darkMatterChance: 0–100 percent (when allowDarkMatter). If omitted, uses default 0.5.
+ * Rolls from highest to lowest; a dark matter roll also satisfies prismatic/holo.
+ */
+function rollCardFinish(opts?: {
+  allowPrismatic?: boolean;
+  allowDarkMatter?: boolean;
+  prismaticChance?: number;
+  darkMatterChance?: number;
+}): { isFoil: boolean; finish: CardFinish } {
+  const dmChance = opts?.allowDarkMatter
+    ? (typeof opts.darkMatterChance === "number" ? opts.darkMatterChance : 0.5) / 100
+    : 0;
+  if (dmChance > 0 && Math.random() < dmChance) {
+    return { isFoil: true, finish: "darkMatter" };
+  }
+  const prismChance = opts?.allowPrismatic
+    ? (typeof opts.prismaticChance === "number" ? opts.prismaticChance : 2) / 100
+    : 0;
+  if (prismChance > 0 && Math.random() < prismChance) {
+    return { isFoil: true, finish: "prismatic" };
+  }
+  if (Math.random() < FOIL_CHANCE) {
+    return { isFoil: true, finish: "holo" };
+  }
+  return { isFoil: false, finish: "normal" };
 }
 
 function assignRarity(popularity: number): Rarity {
@@ -521,12 +557,22 @@ export function buyPack(
     // #region agent log
     if (effectiveWeights && wantedRarity !== char.rarity) fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:pickCard',message:'cascade: wanted vs granted',data:{slotIndex:i,wantedRarity,grantedRarity:char.rarity},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
     // #endregion
-    const isFoil = Math.random() < FOIL_CHANCE;
+    const packAllowsPrismatic = !!selectedPack?.allowPrismatic;
+    const packAllowsDarkMatter = !!selectedPack?.allowDarkMatter;
+    const packPrismaticChance = selectedPack?.prismaticChance;
+    const packDarkMatterChance = selectedPack?.darkMatterChance;
+    const { isFoil, finish } = rollCardFinish({
+      allowPrismatic: packAllowsPrismatic,
+      allowDarkMatter: packAllowsDarkMatter,
+      prismaticChance: packAllowsPrismatic && typeof packPrismaticChance === "number" ? packPrismaticChance : undefined,
+      darkMatterChance: packAllowsDarkMatter && typeof packDarkMatterChance === "number" ? packDarkMatterChance : undefined,
+    });
     const card = addCard({
       userId,
       characterId: char.characterId,
       rarity: char.rarity,
       isFoil,
+      finish,
       actorName: char.actorName,
       characterName: char.characterName,
       movieTitle: char.movieTitle,
@@ -614,12 +660,13 @@ export function tradeUp(
 
   for (const c of selected) removeCard(c.id);
   const char = subset[Math.floor(Math.random() * subset.length)];
-  const isFoil = Math.random() < FOIL_CHANCE;
+  const { isFoil, finish } = rollCardFinish();
   const newCard = addCard({
     userId,
     characterId: char.characterId,
     rarity: char.rarity,
     isFoil,
+    finish,
     actorName: char.actorName,
     characterName: char.characterName,
     movieTitle: char.movieTitle,
@@ -678,12 +725,13 @@ export function legendaryReroll(
 
   for (const c of selected) removeCard(c.id);
   const char = subset[Math.floor(Math.random() * subset.length)];
-  const isFoil = Math.random() < FOIL_CHANCE;
+  const { isFoil, finish } = rollCardFinish();
   const newCard = addCard({
     userId,
     characterId: char.characterId,
     rarity: char.rarity,
     isFoil,
+    finish,
     actorName: char.actorName,
     characterName: char.characterName,
     movieTitle: char.movieTitle,
@@ -786,6 +834,48 @@ export function getCompletedHoloWinnerIds(userId: string): string[] {
   return winners.filter((w) => hasCompletedMovieHoloCodex(userId, w.id)).map((w) => w.id);
 }
 
+/** True if every main pool entry for the winner's movie has its prismatic slot filled in the codex. */
+export function hasCompletedMoviePrismaticCodex(userId: string, winnerId: string): boolean {
+  const winner = getWinners().find((w) => w.id === winnerId);
+  if (!winner?.tmdbId) return false;
+  const pool = getPoolEntriesForMovie(winner.tmdbId);
+  if (pool.length === 0) return false;
+  const prismaticIds = new Set(getCodexUnlockedPrismaticCharacterIds(userId));
+  const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
+  if (mainEntries.length === 0) return false;
+  for (const entry of mainEntries) {
+    if (!prismaticIds.has(entry.characterId)) return false;
+  }
+  return true;
+}
+
+/** True if every main pool entry for the winner's movie has its dark matter slot filled in the codex. */
+export function hasCompletedMovieDarkMatterCodex(userId: string, winnerId: string): boolean {
+  const winner = getWinners().find((w) => w.id === winnerId);
+  if (!winner?.tmdbId) return false;
+  const pool = getPoolEntriesForMovie(winner.tmdbId);
+  if (pool.length === 0) return false;
+  const darkMatterIds = new Set(getCodexUnlockedDarkMatterCharacterIds(userId));
+  const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
+  if (mainEntries.length === 0) return false;
+  for (const entry of mainEntries) {
+    if (!darkMatterIds.has(entry.characterId)) return false;
+  }
+  return true;
+}
+
+/** Winner IDs for which the user has the full prismatic set in the codex. */
+export function getCompletedPrismaticWinnerIds(userId: string): string[] {
+  const winners = getWinners().filter((w) => w.tmdbId);
+  return winners.filter((w) => hasCompletedMoviePrismaticCodex(userId, w.id)).map((w) => w.id);
+}
+
+/** Winner IDs for which the user has the full dark matter set in the codex. */
+export function getCompletedDarkMatterWinnerIds(userId: string): string[] {
+  const winners = getWinners().filter((w) => w.tmdbId);
+  return winners.filter((w) => hasCompletedMovieDarkMatterCodex(userId, w.id)).map((w) => w.id);
+}
+
 export interface BadgeLossEntry {
   winnerId: string;
   movieTitle: string;
@@ -855,24 +945,37 @@ export function getBadgesLostIfCardsRemoved(
   return result;
 }
 
-/** Displayed badge for a user (single badge they chose to show). Used by APIs to attach to user payloads. */
+/** Displayed badge for a user (single badge they chose to show). Used by APIs to attach to user payloads.
+ * Returns the highest tier the user has completed for that movie.
+ */
 export function getDisplayedBadgeForUser(userId: string): {
   winnerId: string;
   movieTitle: string;
   isHolo: boolean;
+  /** Highest completed finish tier for this badge: "normal" | "holo" | "prismatic" | "darkMatter". */
+  badgeTier: CardFinish;
 } | null {
   const profile = getProfile(userId);
   const displayedWinnerId = profile.displayedBadgeWinnerId ?? null;
   if (!displayedWinnerId) return null;
   const completed = getCompletedWinnerIds(userId);
-  const completedHolo = getCompletedHoloWinnerIds(userId);
   if (!completed.includes(displayedWinnerId)) return null;
+  const completedHolo = getCompletedHoloWinnerIds(userId);
+  const completedPrismatic = getCompletedPrismaticWinnerIds(userId);
+  const completedDarkMatter = getCompletedDarkMatterWinnerIds(userId);
   const winners = getWinners();
   const w = winners.find((x) => x.id === displayedWinnerId);
+
+  let badgeTier: CardFinish = "normal";
+  if (completedHolo.includes(displayedWinnerId)) badgeTier = "holo";
+  if (completedPrismatic.includes(displayedWinnerId)) badgeTier = "prismatic";
+  if (completedDarkMatter.includes(displayedWinnerId)) badgeTier = "darkMatter";
+
   return {
     winnerId: displayedWinnerId,
     movieTitle: w?.movieTitle ?? "Unknown",
     isHolo: completedHolo.includes(displayedWinnerId),
+    badgeTier,
   };
 }
 

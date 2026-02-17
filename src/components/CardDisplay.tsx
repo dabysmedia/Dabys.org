@@ -12,6 +12,7 @@ import {
   CARD_MAX_WIDTH_XL,
   CARD_ASPECT_RATIO,
 } from "@/lib/constants";
+import type { CardFinish } from "@/lib/data";
 
 type CardType = "actor" | "director" | "character" | "scene";
 
@@ -30,6 +31,8 @@ export interface CardDisplayCard {
   id?: string;
   rarity: string;
   isFoil: boolean;
+  /** Visual finish tier. When set, takes precedence over isFoil for determining visuals. */
+  finish?: CardFinish;
   actorName: string;
   characterName: string;
   movieTitle: string;
@@ -37,6 +40,12 @@ export interface CardDisplayCard {
   cardType?: CardType | string;
   /** When true, shows a red "Alt Art" tag on the top-left (similar to the holo badge). */
   isAltArt?: boolean;
+}
+
+/** Derive effective finish from card data (handles legacy cards without finish field). */
+function effectiveFinish(card: CardDisplayCard): CardFinish {
+  if (card.finish) return card.finish;
+  return card.isFoil ? "holo" : "normal";
 }
 
 const TILT_MAX = 10;
@@ -102,7 +111,26 @@ export function CardDisplay({
 
   const rarityGlow = RARITY_GLOW[card.rarity] || RARITY_GLOW.uncommon;
   const isTilted = tilt.x !== 0 || tilt.y !== 0;
+  const finish = effectiveFinish(card);
+  const isHoloOrAbove = finish !== "normal";
+  // Single canonical tier: exactly one applies (no stacking)
+  const tier: "normal" | "holo" | "prismatic" | "darkMatter" = finish;
 
+  // Ring color based on finish tier
+  const finishRingClass =
+    tier === "darkMatter" ? "ring-2 ring-purple-500/70" :
+    tier === "prismatic" ? "ring-2 ring-cyan-400/60" :
+    tier === "holo" ? "ring-2 ring-indigo-400/50" : "";
+
+  // Image sheen animation class
+  const sheenClass =
+    tier === "darkMatter" ? "dark-matter-sheen" :
+    tier === "prismatic" ? "prismatic-sheen" :
+    tier === "holo" ? "holo-sheen" : "";
+
+  const prismaticAmbientGlow = tier === "prismatic"
+    ? "0 0 28px rgba(255,250,220,0.22), 0 0 56px rgba(255,230,180,0.14), 0 0 84px rgba(255,255,255,0.1)"
+    : "";
   const boxShadow = hovered
     ? [
         `0 0 0 1px rgba(255,255,255,0.12)`,
@@ -110,16 +138,21 @@ export function CardDisplay({
         `0 0 6px ${rarityGlow}`,
         `0 16px 48px rgba(0,0,0,0.7)`,
         selectable ? `0 0 0 2px rgba(255,255,255,0.35)` : "",
+        tier === "darkMatter" ? `0 0 24px rgba(139, 92, 246, 0.4)` : "",
+        tier === "prismatic" ? `0 0 24px rgba(255,220,150,0.3), 0 0 16px rgba(255,250,230,0.2)` : "",
+        prismaticAmbientGlow,
       ].filter(Boolean).join(", ")
     : [
         `0 0 0 1px rgba(255,255,255,0.08)`,
         `0 4px 16px rgba(0,0,0,0.3)`,
-      ].join(", ");
+        tier === "darkMatter" ? `0 0 12px rgba(139, 92, 246, 0.25)` : "",
+        prismaticAmbientGlow,
+      ].filter(Boolean).join(", ");
 
   return (
     <div
       ref={cardRef}
-      className={`group ${maxWidth ? "w-full" : ""}`}
+      className={`group relative ${maxWidth ? "w-full" : ""}`}
       style={{
         ...(maxWidth ? { maxWidth } : {}),
         perspective: "800px",
@@ -127,10 +160,14 @@ export function CardDisplay({
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Dark Matter swirling vortex — behind card, visible around edges */}
+      {tier === "darkMatter" && (
+        <div className="absolute inset-0 pointer-events-none -z-10" aria-hidden>
+          <div className="absolute inset-[-20%] card-dark-matter-swirl opacity-70" />
+        </div>
+      )}
       <div
-        className={`relative rounded-xl overflow-hidden backdrop-blur-xl border border-white/[0.12] ${
-          card.isFoil ? "ring-2 ring-indigo-400/50" : ""
-        }`}
+        className={`relative rounded-xl overflow-hidden backdrop-blur-xl border border-white/[0.12] ${finishRingClass} ${tier === "prismatic" ? "isolate" : ""}`}
         style={{
           background: "linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 50%, rgba(255,255,255,0.02) 100%)",
           transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${hovered ? 1.02 : 1})`,
@@ -158,7 +195,7 @@ export function CardDisplay({
                 <img
                   src={card.profilePath}
                   alt={title}
-                  className={`absolute inset-0 w-full h-full object-cover object-center ${card.isFoil ? "holo-sheen" : ""}`}
+                  className={`absolute inset-0 w-full h-full object-cover object-center ${sheenClass}`}
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-white/20 text-4xl font-bold bg-gradient-to-br from-purple-900/20 to-indigo-900/20">
@@ -166,7 +203,24 @@ export function CardDisplay({
                 </div>
               )}
               <div className="absolute inset-0 card-art-bleed pointer-events-none" />
-              {card.isFoil && (
+              {/* Exactly one tier's overlays — no stacking */}
+              {tier === "darkMatter" && (
+                <>
+                  <div className="absolute inset-0 card-dark-matter-nebula z-[1]" />
+                  <div className="absolute inset-0 card-dark-matter-particles z-[2]" />
+                  <div className="absolute inset-0 card-dark-matter-hover pointer-events-none z-[3]" />
+                </>
+              )}
+              {tier === "prismatic" && (
+                <>
+                  <div className="absolute inset-0 z-[2] pointer-events-none">
+                    <div className="card-prismatic-beam" aria-hidden />
+                  </div>
+                  <div className="absolute inset-0 card-prismatic-glass z-[2]" aria-hidden />
+                  <div className="absolute inset-0 card-prismatic-hover pointer-events-none z-[3]" />
+                </>
+              )}
+              {tier === "holo" && (
                 <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
               )}
               {/* Rarity tint + dark gradient so art fades into nameplate */}
@@ -188,7 +242,33 @@ export function CardDisplay({
                 ALT
               </span>
             )}
-            {card.isFoil && (
+            {tier === "darkMatter" && (
+              <span
+                className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
+                style={{
+                  background: "linear-gradient(135deg, #1e0a3c, #7c3aed, #4c1d95, #a855f7, #3b0764)",
+                  boxShadow: "0 0 12px rgba(139, 92, 246, 0.7), 0 0 4px rgba(168, 85, 247, 0.5)",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                DARK MATTER
+              </span>
+            )}
+            {tier === "prismatic" && (
+              <span
+                className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
+                style={{
+                  background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899)",
+                  backgroundSize: "200% 100%",
+                  animation: "prismatic-hover-shift 3s ease-in-out infinite",
+                  boxShadow: "0 0 10px rgba(255,255,255,0.6), 0 0 20px rgba(139, 92, 246, 0.3)",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                PRISMATIC
+              </span>
+            )}
+            {tier === "holo" && (
               <span
                 className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
                 style={{

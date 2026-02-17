@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const userId = body.userId as string | undefined;
   const characterId = body.characterId as string | undefined;
-  const isFoil = !!body.isFoil;
+  const finish = ["normal", "holo", "prismatic", "darkMatter"].includes(body.finish) ? body.finish : (body.isFoil ? "holo" : "normal");
 
   if (!userId || !characterId) {
     return NextResponse.json(
@@ -63,11 +63,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  const isFoil = finish !== "normal";
   const card = addCard({
     userId,
     characterId: char.characterId,
     rarity: char.rarity,
     isFoil,
+    finish,
     actorName: char.actorName,
     characterName: char.characterName,
     movieTitle: char.movieTitle,
@@ -98,6 +100,10 @@ export async function PATCH(request: Request) {
   else if (body.movieTmdbId !== undefined) updates.movieTmdbId = parseInt(String(body.movieTmdbId), 10) || 0;
   if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity;
   if (typeof body.isFoil === "boolean") updates.isFoil = body.isFoil;
+  if (["normal", "holo", "prismatic", "darkMatter"].includes(body.finish)) {
+    updates.finish = body.finish;
+    updates.isFoil = body.finish !== "normal";
+  }
   if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType;
 
   const updated = updateCard(cardId, updates);

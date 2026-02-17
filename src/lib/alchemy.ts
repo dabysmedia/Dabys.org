@@ -1,9 +1,27 @@
+import type { CardFinish } from "@/lib/data";
+
 /** Stardust received when disenchanting a Holo card by rarity. */
 export const DISENCHANT_DUST: Record<string, number> = {
   uncommon: 10,
   rare: 20,
   epic: 30,
   legendary: 50,
+};
+
+/** Stardust received when disenchanting a Prismatic card by rarity. */
+export const DISENCHANT_DUST_PRISMATIC: Record<string, number> = {
+  uncommon: 40,
+  rare: 80,
+  epic: 120,
+  legendary: 200,
+};
+
+/** Stardust received when disenchanting a Dark Matter card by rarity. */
+export const DISENCHANT_DUST_DARK_MATTER: Record<string, number> = {
+  uncommon: 100,
+  rare: 200,
+  epic: 300,
+  legendary: 500,
 };
 
 /** Stardust cost to Pack-A-Punch one normal card into a Holo, by rarity. */
@@ -14,8 +32,56 @@ export const PACK_A_PUNCH_COST: Record<string, number> = {
   legendary: 120,
 };
 
+/** Stardust cost to upgrade a Holo card to Prismatic, by rarity. */
+export const PRISMATIC_UPGRADE_COST: Record<string, number> = {
+  uncommon: 80,
+  rare: 160,
+  epic: 240,
+  legendary: 350,
+};
+
+/** Stardust cost to upgrade a Prismatic card to Dark Matter, by rarity. */
+export const DARK_MATTER_UPGRADE_COST: Record<string, number> = {
+  uncommon: 200,
+  rare: 400,
+  epic: 600,
+  legendary: 900,
+};
+
+/** Success chance for each upgrade tier (Pack-A-Punch). */
+export const UPGRADE_SUCCESS_CHANCE: Record<string, number> = {
+  holo: 0.50,
+  prismatic: 0.35,
+  darkMatter: 0.20,
+};
+
 export function getPackAPunchCost(rarity: string): number {
   return PACK_A_PUNCH_COST[rarity] ?? PACK_A_PUNCH_COST.uncommon;
+}
+
+/** Get the stardust cost to upgrade to the target finish tier. */
+export function getUpgradeCost(rarity: string, targetFinish: CardFinish): number {
+  switch (targetFinish) {
+    case "holo": return PACK_A_PUNCH_COST[rarity] ?? PACK_A_PUNCH_COST.uncommon;
+    case "prismatic": return PRISMATIC_UPGRADE_COST[rarity] ?? PRISMATIC_UPGRADE_COST.uncommon;
+    case "darkMatter": return DARK_MATTER_UPGRADE_COST[rarity] ?? DARK_MATTER_UPGRADE_COST.uncommon;
+    default: return 0;
+  }
+}
+
+/** Get success chance for upgrading to the target finish. */
+export function getUpgradeSuccessChance(targetFinish: CardFinish): number {
+  return UPGRADE_SUCCESS_CHANCE[targetFinish] ?? 0.5;
+}
+
+/** Get disenchant dust for a card based on its finish and rarity. */
+export function getDisenchantDust(rarity: string, finish: CardFinish): number {
+  switch (finish) {
+    case "darkMatter": return DISENCHANT_DUST_DARK_MATTER[rarity] ?? DISENCHANT_DUST_DARK_MATTER.uncommon;
+    case "prismatic": return DISENCHANT_DUST_PRISMATIC[rarity] ?? DISENCHANT_DUST_PRISMATIC.uncommon;
+    case "holo": return DISENCHANT_DUST[rarity] ?? DISENCHANT_DUST.uncommon;
+    default: return 0;
+  }
 }
 
 /** Credits per rarity for quicksell (vendor). Used for client-side display. Legendary cannot be quicksold. Server uses getCreditSettings() for actual payouts. */

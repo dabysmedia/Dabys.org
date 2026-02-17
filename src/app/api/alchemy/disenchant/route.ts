@@ -5,8 +5,10 @@ import {
   addStardust,
   getStardust,
   getListings,
+  getCardFinish,
+  CARD_FINISH_LABELS,
 } from "@/lib/data";
-import { DISENCHANT_DUST } from "@/lib/alchemy";
+import { getDisenchantDust } from "@/lib/alchemy";
 
 export async function POST(request: Request) {
   let body: { userId?: string; cardId?: string };
@@ -31,9 +33,11 @@ export async function POST(request: Request) {
   if (card.userId !== userId) {
     return NextResponse.json({ error: "Not your card" }, { status: 403 });
   }
-  if (!card.isFoil) {
+
+  const finish = getCardFinish(card);
+  if (finish === "normal") {
     return NextResponse.json(
-      { error: "Only Holo cards can be disenchanted" },
+      { error: "Only enhanced cards (Holo, Prismatic, Dark Matter) can be disenchanted" },
       { status: 400 }
     );
   }
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const amount = DISENCHANT_DUST[card.rarity] ?? 0;
+  const amount = getDisenchantDust(card.rarity, finish);
   if (amount <= 0) {
     return NextResponse.json(
       { error: "Invalid rarity for disenchant" },
@@ -56,7 +60,8 @@ export async function POST(request: Request) {
   }
 
   const cardRarity = card.rarity;
-  const updated = updateCard(cardId, { isFoil: false });
+  const previousFinish = finish;
+  const updated = updateCard(cardId, { isFoil: false, finish: "normal" });
   if (!updated) {
     return NextResponse.json({ error: "Failed to update card" }, { status: 500 });
   }
@@ -67,5 +72,11 @@ export async function POST(request: Request) {
   const { recordQuestProgress } = await import("@/lib/quests");
   recordQuestProgress(userId, "disenchant_holo", { rarity: cardRarity as "uncommon" | "rare" | "epic" | "legendary" });
 
-  return NextResponse.json({ balance, dustReceived: amount, card: updated });
+  return NextResponse.json({
+    balance,
+    dustReceived: amount,
+    card: updated,
+    previousFinish,
+    previousFinishLabel: CARD_FINISH_LABELS[previousFinish],
+  });
 }
