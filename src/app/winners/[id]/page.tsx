@@ -164,31 +164,6 @@ export default function WinnerDetailPage() {
   const prevWinnerId = currentIndex > 0 ? winnerIdsOrder[currentIndex - 1] : null;
   const nextWinnerId = currentIndex >= 0 && currentIndex < winnerIdsOrder.length - 1 ? winnerIdsOrder[currentIndex + 1] : null;
 
-  // Pinned/tracked winners for TCG badge progress (max 3, stored in localStorage)
-  const TRACKED_KEY = "tcg-tracked-winner-ids";
-  const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(TRACKED_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      setTrackedWinnerIds(Array.isArray(parsed) ? parsed.slice(0, 3) : []);
-    } catch { setTrackedWinnerIds([]); }
-  }, []);
-  const isTracked = trackedWinnerIds.includes(winnerId);
-  const canTrack = trackedWinnerIds.length < 3;
-  function toggleTrack() {
-    if (isTracked) {
-      const next = trackedWinnerIds.filter((id) => id !== winnerId);
-      setTrackedWinnerIds(next);
-      localStorage.setItem(TRACKED_KEY, JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent("dabys-quest-collection-update"));
-    } else if (canTrack) {
-      const next = [...trackedWinnerIds, winnerId].slice(0, 3);
-      setTrackedWinnerIds(next);
-      localStorage.setItem(TRACKED_KEY, JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent("dabys-quest-collection-update"));
-    }
-  }
 
   const loadWinner = useCallback(async () => {
     try {
@@ -862,16 +837,6 @@ export default function WinnerDetailPage() {
                   <Link href="/cards" className="text-amber-400/80 hover:text-amber-400 transition-colors">
                     TCG → upload cards to Codex
                   </Link>
-                  {" · "}
-                  <button
-                    type="button"
-                    onClick={toggleTrack}
-                    className={`text-sm font-medium transition-colors cursor-pointer ${isTracked ? "text-amber-400 hover:text-amber-300" : canTrack ? "text-white/50 hover:text-amber-400/90" : "text-white/30 cursor-not-allowed"}`}
-                    disabled={!isTracked && !canTrack}
-                    title={isTracked ? "Remove from pinned badge progress on TCG tab" : canTrack ? "Pin this movie in TCG tab to track badge progress" : "You can only track 3 movies at once"}
-                  >
-                    {isTracked ? "Untrack" : "Track"}
-                  </button>
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                   {(() => {

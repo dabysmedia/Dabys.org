@@ -1115,5 +1115,90 @@
       "weekId": "10"
     },
     "createdAt": "2026-02-17T05:16:23.341Z"
+  },
+  {
+    "id": "cl-1771308603410-szvuc61",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-17T06:10:03.409Z"
+  },
+  {
+    "id": "cl-1771308608786-8amwm8t",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_roulette",
+    "metadata": {
+      "bet": 10,
+      "selection": "black"
+    },
+    "createdAt": "2026-02-17T06:10:08.786Z"
+  },
+  {
+    "id": "cl-1771308608788-0a6utqg",
+    "userId": "2",
+    "amount": 20,
+    "reason": "casino_roulette_win",
+    "metadata": {
+      "bet": 10,
+      "selection": "black",
+      "result": 22,
+      "payout": 20
+    },
+    "createdAt": "2026-02-17T06:10:08.787Z"
+  },
+  {
+    "id": "cl-1771308617469-3yzchni",
+    "userId": "2",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-17T06:10:17.468Z"
+  },
+  {
+    "id": "cl-1771308710142-i9yivqw",
+    "userId": "2",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-17T06:11:50.141Z"
+  },
+  {
+    "id": "cl-1771308714388-k14iake",
+    "userId": "2",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-17T06:11:54.388Z"
+  },
+  {
+    "id": "cl-1771308716536-3fzy7n9",
+    "userId": "2",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-17T06:11:56.535Z"
+  },
+  {
+    "id": "cl-1771308718623-q44c6t6",
+    "userId": "2",
+    "amount": -37,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1770883960789-vqg92vi"
+    },
+    "createdAt": "2026-02-17T06:11:58.623Z"
   }
 ]

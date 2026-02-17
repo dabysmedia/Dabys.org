@@ -157,6 +157,20 @@ select option {
   animation: card-reveal 0.5s ease-out forwards;
 }
 
+/* Tracked card found in pack — golden glow pulse */
+@keyframes tracked-card-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.8), 0 0 32px rgba(245, 158, 11, 0.5);
+  }
+}
+.tracked-card-found {
+  border-radius: 0.75rem;
+  animation: card-reveal 0.5s ease-out forwards, tracked-card-glow 1.5s ease-in-out 0.5s infinite;
+}
+
 /* Trade-up frosted glass area */
 @keyframes tradeup-slot-pop {
   0% { transform: scale(0.9); opacity: 0.7; }

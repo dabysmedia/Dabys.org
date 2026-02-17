@@ -392,6 +392,38 @@ async function playAlchemyPackAPunchSuccess() {
     osc.stop(t + 0.4);
   } catch { /* ignore */ }
 }
+async function playTrackedFoundSound() {
+  const ctx = getTradeUpAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const t = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+    osc1.type = "sine";
+    osc2.type = "triangle";
+    osc1.frequency.setValueAtTime(659.25, t);
+    osc1.frequency.setValueAtTime(880, t + 0.1);
+    osc1.frequency.setValueAtTime(1046.5, t + 0.2);
+    osc1.frequency.setValueAtTime(1318.51, t + 0.3);
+    osc2.frequency.setValueAtTime(659.25, t);
+    osc2.frequency.setValueAtTime(880, t + 0.1);
+    osc2.frequency.setValueAtTime(1046.5, t + 0.2);
+    osc2.frequency.setValueAtTime(1318.51, t + 0.3);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.14, t + 0.03);
+    gain.gain.setValueAtTime(0.14, t + 0.28);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+    osc1.start(t);
+    osc1.stop(t + 0.55);
+    osc2.start(t);
+    osc2.stop(t + 0.55);
+  } catch { /* ignore */ }
+}
 
 interface Winner {
   id: string;
@@ -563,6 +595,28 @@ function CardsContent() {
     profilePath: string;
     cardType?: CardType;
   } | null>(null);
+  const TRACKED_CHARS_KEY = "tcg-tracked-character-ids";
+  const MAX_TRACKED = 10;
+  const [trackedCharacterIds, setTrackedCharacterIds] = useState<Set<string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("tcg-tracked-character-ids") : null;
+      const parsed = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(parsed) ? parsed.slice(0, 10) : []);
+    } catch { return new Set(); }
+  });
+  function toggleTrackCharacter(characterId: string) {
+    setTrackedCharacterIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(characterId)) {
+        next.delete(characterId);
+      } else if (next.size < MAX_TRACKED) {
+        next.add(characterId);
+      }
+      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
   const codexUploadCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codexLoadingAudioRef = useRef<HTMLAudioElement | null>(null);
   const codexSkipRequestedRef = useRef(false);
@@ -1033,13 +1087,20 @@ function CardsContent() {
       return;
     }
     setRevealCount(0);
-    newCards.forEach((_, idx) => {
+    let trackedSoundPlayed = false;
+    newCards.forEach((card, idx) => {
       const delay = idx * 220;
       setTimeout(() => {
         setRevealCount((prev) => {
           const next = prev < idx + 1 ? idx + 1 : prev;
           if (next === idx + 1) {
-            void playPackFlipSound(idx);
+            const isTrackedPull = card.characterId && trackedCharacterIds.has(card.characterId);
+            if (isTrackedPull && !trackedSoundPlayed) {
+              trackedSoundPlayed = true;
+              void playTrackedFoundSound();
+            } else {
+              void playPackFlipSound(idx);
+            }
           }
           return next;
         });
@@ -1390,6 +1451,41 @@ function CardsContent() {
 
   function removeFromQuicksellBench(cardId: string) {
     setQuicksellBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  function canCodexdFillQuicksell(): boolean {
+    const filled = quicksellBenchSlots.filter((id): id is string => id != null);
+    if (filled.length >= 5) return false;
+    const slotsNeeded = 5 - filled.length;
+    const eligible = cards.filter((c) =>
+      c.id &&
+      !myListedCardIds.has(c.id) &&
+      c.rarity !== "legendary" &&
+      !filled.includes(c.id) &&
+      isCardSlotAlreadyInCodex(c)
+    );
+    return eligible.length >= slotsNeeded;
+  }
+
+  function autoFillQuicksell() {
+    const filled = quicksellBenchSlots.filter((id): id is string => id != null);
+    if (filled.length >= 5) return;
+    const eligible = cards.filter((c) =>
+      c.id &&
+      !myListedCardIds.has(c.id) &&
+      c.rarity !== "legendary" &&
+      !filled.includes(c.id)
+    );
+    const emptyCount = 5 - filled.length;
+    const toAdd = eligible.slice(0, emptyCount);
+    setQuicksellBenchSlots((prev) => {
+      const next = [...prev];
+      for (const card of toAdd) {
+        const idx = next.findIndex((id) => id == null);
+        if (idx >= 0) next[idx] = card.id!;
+      }
+      return next;
+    });
   }
 
   function fillQuicksellWithCodexd() {
@@ -2479,6 +2575,7 @@ function CardsContent() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 max-sm:mx-auto">
                       {newCards.map((card, i) => {
                         const revealed = i < revealCount;
+                        const isTrackedPull = revealed && card.characterId && trackedCharacterIds.has(card.characterId);
                         return (
                           <div key={card.id} className="relative">
                             {!revealed && (
@@ -2487,8 +2584,15 @@ function CardsContent() {
                               </div>
                             )}
                             {revealed && (
-                              <div className="card-reveal">
+                              <div className={`card-reveal ${isTrackedPull ? "tracked-card-found" : ""}`}>
                                 <CardDisplay card={card} />
+                                {isTrackedPull && (
+                                  <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2 pointer-events-none">
+                                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(245,158,11,0.6)] animate-pulse">
+                                      Tracked
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -2844,13 +2948,23 @@ function CardsContent() {
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <h2 className="text-lg font-semibold text-amber-400/90">Quicksell</h2>
-                    <button
-                      onClick={fillQuicksellWithCodexd}
-                      className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                      Add Codex&apos;d
-                    </button>
+                    {canCodexdFillQuicksell() ? (
+                      <button
+                        onClick={fillQuicksellWithCodexd}
+                        className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                        Add Codex&apos;d
+                      </button>
+                    ) : (
+                      <button
+                        onClick={autoFillQuicksell}
+                        className="px-3 py-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                        Auto-fill
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
@@ -3041,6 +3155,7 @@ function CardsContent() {
                 };
                 const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
                 const isOnBench = (inSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
+                const isTrackedCard = card.characterId && trackedCharacterIds.has(card.characterId);
                 return (
                   <div
                     key={card.id}
@@ -3073,7 +3188,14 @@ function CardsContent() {
                         Listed
                       </span>
                     )}
-                    <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} selectable={isSelectable} />
+                    <div className={`relative rounded-xl ${isTrackedCard ? "ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]" : ""}`}>
+                      {isTrackedCard && (
+                        <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded bg-amber-500/90 text-amber-950 text-[9px] font-bold uppercase tracking-wider pointer-events-none">
+                          Tracked
+                        </span>
+                      )}
+                      <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} inCodex={isCardSlotAlreadyInCodex(card)} selectable={isSelectable} />
+                    </div>
                   </div>
                 );
               };
@@ -3175,7 +3297,19 @@ function CardsContent() {
                       className="relative"
                       style={{ zIndex: cascadeLayers + 1 }}
                     >
-                      <CardDisplay card={{ ...front, isAltArt: isAltArtCard(front) }} inCodex={isCardSlotAlreadyInCodex(front)} selectable={canAct} />
+                      {(() => {
+                        const isTrackedFront = front.characterId && trackedCharacterIds.has(front.characterId);
+                        return (
+                          <div className={`relative rounded-xl ${isTrackedFront ? "ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]" : ""}`}>
+                            {isTrackedFront && (
+                              <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded bg-amber-500/90 text-amber-950 text-[9px] font-bold uppercase tracking-wider pointer-events-none">
+                                Tracked
+                              </span>
+                            )}
+                            <CardDisplay card={{ ...front, isAltArt: isAltArtCard(front) }} inCodex={isCardSlotAlreadyInCodex(front)} selectable={canAct} />
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* New card dot */}
@@ -4052,18 +4186,41 @@ function CardsContent() {
                       const slotDiscovered = mainDiscovered || discoveredAltArts.length > 0;
 
                       if (!slotDiscovered) {
+                        const isTrackedChar = trackedCharacterIds.has(entry.characterId);
                         return (
                           <div
                             key={entry.characterId}
-                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            className={`group/missing relative rounded-xl overflow-hidden border flex flex-col items-center justify-center transition-colors ${
+                              isTrackedChar
+                                ? "border-amber-400/40 bg-amber-500/[0.06]"
+                                : "border-white/10 bg-white/[0.04] hover:border-white/20"
+                            }`}
                             style={{ aspectRatio: "2 / 3.35" }}
                           >
-                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                            <div className={`flex flex-col items-center justify-center gap-2 ${isTrackedChar ? "text-amber-400/50" : "text-white/25"}`}>
                               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                               </svg>
                               <span className="text-xs font-medium">?</span>
                             </div>
+                            {isTrackedChar && (
+                              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(entry.characterId); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
+                                isTrackedChar
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
+                                  : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
+                              }`}
+                              title={isTrackedChar ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              disabled={!isTrackedChar && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedChar ? "Untrack" : "Track"}
+                            </button>
                           </div>
                         );
                       }
@@ -4347,18 +4504,41 @@ function CardsContent() {
                     const renderEntry = (entry: PoolEntry) => {
                       const discovered = discoveredHoloCharacterIds.has(entry.characterId);
                       if (!discovered) {
+                        const isTrackedHolo = trackedCharacterIds.has(`holo:${entry.characterId}`);
                         return (
                           <div
                             key={entry.characterId}
-                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            className={`group/missing relative rounded-xl overflow-hidden border flex flex-col items-center justify-center transition-colors ${
+                              isTrackedHolo
+                                ? "border-amber-400/40 bg-amber-500/[0.06]"
+                                : "border-white/10 bg-white/[0.04] hover:border-white/20"
+                            }`}
                             style={{ aspectRatio: "2 / 3.35" }}
                           >
-                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                            <div className={`flex flex-col items-center justify-center gap-2 ${isTrackedHolo ? "text-amber-400/50" : "text-white/25"}`}>
                               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                               </svg>
                               <span className="text-xs font-medium">?</span>
                             </div>
+                            {isTrackedHolo && (
+                              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(`holo:${entry.characterId}`); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
+                                isTrackedHolo
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
+                                  : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
+                              }`}
+                              title={isTrackedHolo ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              disabled={!isTrackedHolo && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedHolo ? "Untrack" : "Track"}
+                            </button>
                           </div>
                         );
                       }
@@ -4467,18 +4647,41 @@ function CardsContent() {
                     const renderEntry = (entry: PoolEntry) => {
                       const discovered = discoveredBoysCharacterIds.has(entry.characterId);
                       if (!discovered) {
+                        const isTrackedBoys = trackedCharacterIds.has(`boys:${entry.characterId}`);
                         return (
                           <div
                             key={entry.characterId}
-                            className="rounded-xl overflow-hidden border border-white/10 bg-white/[0.04] flex items-center justify-center"
+                            className={`group/missing relative rounded-xl overflow-hidden border flex flex-col items-center justify-center transition-colors ${
+                              isTrackedBoys
+                                ? "border-amber-400/40 bg-amber-500/[0.06]"
+                                : "border-white/10 bg-white/[0.04] hover:border-white/20"
+                            }`}
                             style={{ aspectRatio: "2 / 3.35" }}
                           >
-                            <div className="flex flex-col items-center justify-center gap-2 text-white/25">
+                            <div className={`flex flex-col items-center justify-center gap-2 ${isTrackedBoys ? "text-amber-400/50" : "text-white/25"}`}>
                               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                               </svg>
                               <span className="text-xs font-medium">?</span>
                             </div>
+                            {isTrackedBoys && (
+                              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(`boys:${entry.characterId}`); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
+                                isTrackedBoys
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
+                                  : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
+                              }`}
+                              title={isTrackedBoys ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              disabled={!isTrackedBoys && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedBoys ? "Untrack" : "Track"}
+                            </button>
                           </div>
                         );
                       }
