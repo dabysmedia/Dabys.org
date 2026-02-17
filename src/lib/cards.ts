@@ -807,7 +807,7 @@ export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean
   return true;
 }
 
-/** True if every main pool entry for the winner's movie has its holo slot filled in the codex (excludes alt-art/boys). */
+/** True if every main pool entry for the winner's movie has its holo slot filled in the codex. Main or alt-art holo counts for each slot. */
 export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
@@ -817,7 +817,10 @@ export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): bo
   const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
   if (mainEntries.length === 0) return false;
   for (const entry of mainEntries) {
-    if (!holoIds.has(entry.characterId)) return false;
+    const slotFilledAsHolo =
+      holoIds.has(entry.characterId) ||
+      pool.some((p) => p.altArtOfCharacterId === entry.characterId && holoIds.has(p.characterId));
+    if (!slotFilledAsHolo) return false;
   }
   return true;
 }
@@ -834,7 +837,7 @@ export function getCompletedHoloWinnerIds(userId: string): string[] {
   return winners.filter((w) => hasCompletedMovieHoloCodex(userId, w.id)).map((w) => w.id);
 }
 
-/** True if every main pool entry for the winner's movie has its prismatic slot filled in the codex. */
+/** True if every main pool entry for the winner's movie has its prismatic slot filled in the codex. Main or alt-art prismatic counts for each slot. */
 export function hasCompletedMoviePrismaticCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
@@ -844,12 +847,15 @@ export function hasCompletedMoviePrismaticCodex(userId: string, winnerId: string
   const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
   if (mainEntries.length === 0) return false;
   for (const entry of mainEntries) {
-    if (!prismaticIds.has(entry.characterId)) return false;
+    const slotFilledAsPrismatic =
+      prismaticIds.has(entry.characterId) ||
+      pool.some((p) => p.altArtOfCharacterId === entry.characterId && prismaticIds.has(p.characterId));
+    if (!slotFilledAsPrismatic) return false;
   }
   return true;
 }
 
-/** True if every main pool entry for the winner's movie has its dark matter slot filled in the codex. */
+/** True if every main pool entry for the winner's movie has its dark matter slot filled in the codex. Main or alt-art dark matter counts for each slot. */
 export function hasCompletedMovieDarkMatterCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
   if (!winner?.tmdbId) return false;
@@ -859,7 +865,10 @@ export function hasCompletedMovieDarkMatterCodex(userId: string, winnerId: strin
   const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
   if (mainEntries.length === 0) return false;
   for (const entry of mainEntries) {
-    if (!darkMatterIds.has(entry.characterId)) return false;
+    const slotFilledAsDarkMatter =
+      darkMatterIds.has(entry.characterId) ||
+      pool.some((p) => p.altArtOfCharacterId === entry.characterId && darkMatterIds.has(p.characterId));
+    if (!slotFilledAsDarkMatter) return false;
   }
   return true;
 }

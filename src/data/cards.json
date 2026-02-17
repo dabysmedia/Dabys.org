@@ -279,5 +279,20 @@
     "cardType": "actor",
     "id": "card-1771323704586-ccjkble",
     "acquiredAt": "2026-02-17T10:21:44.586Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1161-111",
+    "rarity": "legendary",
+    "isFoil": true,
+    "finish": "darkMatter",
+    "actorName": "Mary Elizabeth Mastrantonio",
+    "characterName": "Gina",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/vbZ1E557K5oj34xLHR5ErO8wPCi.jpg",
+    "cardType": "actor",
+    "id": "card-1771359853097-upqwsxg",
+    "acquiredAt": "2026-02-17T20:24:13.097Z"
   }
 ]

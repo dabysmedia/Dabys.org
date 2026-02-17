@@ -32,19 +32,11 @@ export function BadgePill({ movieTitle, isHolo, badgeTier, className = "" }: Bad
 
   if (tier === "prismatic") {
     return (
-      <span
-        className={`${base} text-white ${className}`.trim()}
-        style={{
-          background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899)",
-          backgroundSize: "200% 100%",
-          animation: "prismatic-hover-shift 3s ease-in-out infinite",
-          boxShadow: "0 0 10px rgba(255,255,255,0.6), 0 0 20px rgba(139, 92, 246, 0.3)",
-        }}
-      >
+      <span className={`${base} text-amber-950 badge-pill-prismatic ${className}`.trim()}>
         <svg className="w-2.5 h-2.5 shrink-0 opacity-90" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
           <path d={starPath} />
         </svg>
-        <span className="truncate">{movieTitle}</span>
+        <span className="truncate badge-pill-prismatic-text">{movieTitle}</span>
       </span>
     );
   }

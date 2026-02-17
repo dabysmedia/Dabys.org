@@ -119,7 +119,7 @@ export function CardDisplay({
   // Ring color based on finish tier
   const finishRingClass =
     tier === "darkMatter" ? "ring-2 ring-purple-500/70" :
-    tier === "prismatic" ? "ring-2 ring-cyan-400/60" :
+    tier === "prismatic" ? "ring-2 ring-amber-400/60" :
     tier === "holo" ? "ring-2 ring-indigo-400/50" : "";
 
   // Image sheen animation class
@@ -129,7 +129,7 @@ export function CardDisplay({
     tier === "holo" ? "holo-sheen" : "";
 
   const prismaticAmbientGlow = tier === "prismatic"
-    ? "0 0 28px rgba(255,250,220,0.22), 0 0 56px rgba(255,230,180,0.14), 0 0 84px rgba(255,255,255,0.1)"
+    ? "0 0 24px rgba(255,235,180,0.35), 0 0 48px rgba(255,220,150,0.2), 0 0 72px rgba(255,200,120,0.12)"
     : "";
   const boxShadow = hovered
     ? [
@@ -139,7 +139,7 @@ export function CardDisplay({
         `0 16px 48px rgba(0,0,0,0.7)`,
         selectable ? `0 0 0 2px rgba(255,255,255,0.35)` : "",
         tier === "darkMatter" ? `0 0 24px rgba(139, 92, 246, 0.4)` : "",
-        tier === "prismatic" ? `0 0 24px rgba(255,220,150,0.3), 0 0 16px rgba(255,250,230,0.2)` : "",
+        tier === "prismatic" ? `0 0 28px rgba(255,220,150,0.4), 0 0 16px rgba(255,235,180,0.3)` : "",
         prismaticAmbientGlow,
       ].filter(Boolean).join(", ")
     : [
@@ -152,7 +152,7 @@ export function CardDisplay({
   return (
     <div
       ref={cardRef}
-      className={`group relative ${maxWidth ? "w-full" : ""}`}
+      className={`group relative ${maxWidth ? "w-full" : ""} ${tier === "darkMatter" ? "overflow-visible" : ""}`}
       style={{
         ...(maxWidth ? { maxWidth } : {}),
         perspective: "800px",
@@ -162,8 +162,8 @@ export function CardDisplay({
     >
       {/* Dark Matter swirling vortex — behind card, visible around edges */}
       {tier === "darkMatter" && (
-        <div className="absolute inset-0 pointer-events-none -z-10" aria-hidden>
-          <div className="absolute inset-[-20%] card-dark-matter-swirl opacity-70" />
+        <div className="absolute inset-0 pointer-events-none -z-10 overflow-visible" aria-hidden>
+          <div className="card-dark-matter-swirl" />
         </div>
       )}
       <div
@@ -206,9 +206,8 @@ export function CardDisplay({
               {/* Exactly one tier's overlays — no stacking */}
               {tier === "darkMatter" && (
                 <>
-                  <div className="absolute inset-0 card-dark-matter-nebula z-[1]" />
-                  <div className="absolute inset-0 card-dark-matter-particles z-[2]" />
-                  <div className="absolute inset-0 card-dark-matter-hover pointer-events-none z-[3]" />
+                  <div className="absolute inset-0 card-dark-matter-nebula z-[4]" aria-hidden />
+                  <div className="absolute inset-0 card-dark-matter-particles z-[5]" aria-hidden />
                 </>
               )}
               {tier === "prismatic" && (
@@ -223,9 +222,9 @@ export function CardDisplay({
               {tier === "holo" && (
                 <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
               )}
-              {/* Rarity tint + dark gradient so art fades into nameplate */}
+              {/* Rarity tint + dark gradient so art fades into nameplate (below tier overlays) */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none z-[1]"
                 style={{
                   background: `linear-gradient(to top, ${rarityTint} 0%, transparent 35%), linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.6) 25%, rgba(0,0,0,0.15) 55%, transparent 100%)`,
                 }}
@@ -256,12 +255,12 @@ export function CardDisplay({
             )}
             {tier === "prismatic" && (
               <span
-                className={`absolute top-2 right-2 rounded font-bold text-white backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
+                className={`absolute top-2 right-2 rounded font-bold text-amber-950 backdrop-blur-sm z-10 ${inspect ? "px-4 py-1.5 text-sm sm:text-base" : "px-2 py-0.5 text-[10px]"}`}
                 style={{
-                  background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899)",
-                  backgroundSize: "200% 100%",
-                  animation: "prismatic-hover-shift 3s ease-in-out infinite",
-                  boxShadow: "0 0 10px rgba(255,255,255,0.6), 0 0 20px rgba(139, 92, 246, 0.3)",
+                  background: "linear-gradient(135deg, #fef3c7, #fde68a, #fcd34d, #fbbf24, #f59e0b)",
+                  backgroundSize: "200% 200%",
+                  animation: "prismatic-hover-shift 4s ease-in-out infinite",
+                  boxShadow: "0 0 12px rgba(251, 191, 36, 0.6), 0 0 24px rgba(245, 158, 11, 0.3)",
                   letterSpacing: "0.05em",
                 }}
               >

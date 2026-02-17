@@ -1690,7 +1690,7 @@ export default function AdminCardsCreditsPage() {
                       const ringClass = isDM
                         ? "ring-2 ring-purple-500/70"
                         : isPrismatic
-                        ? "ring-2 ring-cyan-400/60"
+                        ? "ring-2 ring-amber-400/60"
                         : isHolo
                         ? "ring-2 ring-indigo-400/50"
                         : "";
@@ -1706,7 +1706,7 @@ export default function AdminCardsCreditsPage() {
                       const cardBoxShadow = isDM
                         ? "0 0 16px rgba(139, 92, 246, 0.35), 0 4px 20px rgba(0,0,0,0.4)"
                         : isPrismatic
-                        ? "0 0 14px rgba(59, 130, 246, 0.25), 0 4px 20px rgba(0,0,0,0.4)"
+                        ? "0 0 20px rgba(255, 220, 150, 0.35), 0 4px 20px rgba(0,0,0,0.4)"
                         : "";
 
                       return (
@@ -1714,12 +1714,11 @@ export default function AdminCardsCreditsPage() {
                         <div className="aspect-[2/3] relative bg-gradient-to-br from-purple-900/30 to-indigo-900/30 overflow-hidden">
                           {card.profilePath ? ( <img src={card.profilePath} alt={card.actorName} className={`w-full h-full object-cover ${sheenClass}`} /> ) : ( <div className="w-full h-full flex items-center justify-center text-white/20 text-4xl font-bold">{card.actorName.charAt(0)}</div> )}
 
-                          {/* Dark Matter overlays — nebula, particles, hover void */}
+                          {/* Dark Matter overlays — nebula, particles */}
                           {isDM && (
                             <>
-                              <div className="absolute inset-0 card-dark-matter-nebula z-[1]" />
-                              <div className="absolute inset-0 card-dark-matter-particles z-[2]" />
-                              <div className="absolute inset-0 card-dark-matter-hover pointer-events-none z-[3]" />
+                              <div className="absolute inset-0 card-dark-matter-nebula z-[4]" aria-hidden />
+                              <div className="absolute inset-0 card-dark-matter-particles z-[5]" aria-hidden />
                             </>
                           )}
 
@@ -1736,11 +1735,11 @@ export default function AdminCardsCreditsPage() {
                             <div className="absolute inset-0 card-holo-hover pointer-events-none z-[2]" />
                           )}
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent z-[4]" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent z-[1]" />
 
                           {/* Finish tag */}
                           {isDM && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(135deg, #1e0a3c, #7c3aed, #4c1d95, #a855f7, #3b0764)", boxShadow: "0 0 12px rgba(139,92,246,0.7), 0 0 4px rgba(168,85,247,0.5)", letterSpacing: "0.05em" }}>DARK MATTER</span> )}
-                          {isPrismatic && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #06b6d4, #3b82f6, #8b5cf6, #ec4899)", backgroundSize: "200% 100%", animation: "prismatic-hover-shift 3s ease-in-out infinite", boxShadow: "0 0 10px rgba(255,255,255,0.6), 0 0 20px rgba(139,92,246,0.3)", letterSpacing: "0.05em" }}>PRISMATIC</span> )}
+                          {isPrismatic && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-amber-950 z-[5]" style={{ background: "linear-gradient(135deg, #fef3c7, #fde68a, #fcd34d, #fbbf24, #f59e0b)", backgroundSize: "200% 200%", animation: "prismatic-hover-shift 4s ease-in-out infinite", boxShadow: "0 0 12px rgba(251,191,36,0.6), 0 0 24px rgba(245,158,11,0.3)", letterSpacing: "0.05em" }}>PRISMATIC</span> )}
                           {isHolo && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}>HOLO</span> )}
 
                           {(() => { const entry = pool.find((p) => p.characterId === card.characterId); const altOfId = entry?.altArtOfCharacterId; const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null; return altOfId ? ( <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90 z-[5]" title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}>Alt</span> ) : null; })()}
