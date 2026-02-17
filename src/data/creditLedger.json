@@ -1089,5 +1089,31 @@
       "source": "epic_trade_up"
     },
     "createdAt": "2026-02-17T04:52:06.584Z"
+  },
+  {
+    "id": "cl-1771305264065-o9uzde8",
+    "userId": "2",
+    "amount": 320,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771305251393-x2dkkd2",
+        "card-1771304939923-f5oe5i6",
+        "card-1771304934989-9ulx241",
+        "card-1771124960447-h0ztbal"
+      ]
+    },
+    "createdAt": "2026-02-17T05:14:24.064Z"
+  },
+  {
+    "id": "cl-1771305383342-sph9k9s",
+    "userId": "2",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "23",
+      "weekId": "10"
+    },
+    "createdAt": "2026-02-17T05:16:23.341Z"
   }
 ]

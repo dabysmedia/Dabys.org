@@ -428,10 +428,10 @@ export default function StatsPage() {
                         name: e.userName,
                         value: e.value,
                       }))}
-                      valueLabel="legendaries"
+                      valueLabel="legendaries codex'd"
                       accentFrom="from-amber-400/60"
                       accentTo="to-amber-500/60"
-                      emptyText="No legendary cards pulled yet"
+                      emptyText="No legendaries codex'd yet"
                       glowColor="bg-amber-500"
                     />
 

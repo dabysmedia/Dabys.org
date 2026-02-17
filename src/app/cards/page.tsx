@@ -1134,6 +1134,94 @@ function CardsContent() {
     setTradeUpSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
   }
 
+  const RARITY_ORDER = ["uncommon", "rare", "epic"] as const;
+
+  function getTradeUpEligible(codexOnly: boolean) {
+    const filled = tradeUpSlots.filter((id): id is string => id != null);
+    const firstCard = filled[0] ? cards.find((c) => c.id === filled[0]) : null;
+    const targetRarity = firstCard?.rarity;
+    const targetCardType = firstCard ? (firstCard.cardType ?? "actor") : null;
+    return cards.filter((c) =>
+      c.id &&
+      !myListedCardIds.has(c.id) &&
+      c.rarity !== "legendary" &&
+      !filled.includes(c.id) &&
+      (!codexOnly || isCardSlotAlreadyInCodex(c)) &&
+      (!targetRarity || c.rarity === targetRarity) &&
+      (!targetCardType || (c.cardType ?? "actor") === targetCardType)
+    );
+  }
+
+  function findBestGroup(eligible: Card[], slotsNeeded: number): Card[] {
+    const groups = new Map<string, Card[]>();
+    for (const c of eligible) {
+      const key = `${c.rarity}:${c.cardType ?? "actor"}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(c);
+    }
+    for (const r of RARITY_ORDER) {
+      for (const [key, group] of groups) {
+        if (key.startsWith(r + ":") && group.length >= slotsNeeded) return group.slice(0, slotsNeeded);
+      }
+    }
+    return [];
+  }
+
+  function canCodexdFillTradeUp(): boolean {
+    const filled = tradeUpSlots.filter((id): id is string => id != null);
+    if (filled.length >= 4) return false;
+    const slotsNeeded = 4 - filled.length;
+    const eligible = getTradeUpEligible(true);
+    if (filled.length > 0) return eligible.length >= slotsNeeded;
+    return findBestGroup(eligible, 4).length >= 4;
+  }
+
+  function fillTradeUpWithCodexd() {
+    const filled = tradeUpSlots.filter((id): id is string => id != null);
+    if (filled.length >= 4) return;
+    const slotsNeeded = 4 - filled.length;
+    const eligible = getTradeUpEligible(true);
+    let toAdd: Card[];
+    if (filled.length > 0) {
+      if (eligible.length < slotsNeeded) return;
+      toAdd = eligible.slice(0, slotsNeeded);
+    } else {
+      toAdd = findBestGroup(eligible, 4);
+      if (toAdd.length < 4) return;
+    }
+    setTradeUpSlots((prev) => {
+      const next = [...prev];
+      for (const card of toAdd) {
+        const idx = next.findIndex((id) => id == null);
+        if (idx >= 0) next[idx] = card.id!;
+      }
+      return next;
+    });
+  }
+
+  function autoFillTradeUp() {
+    const filled = tradeUpSlots.filter((id): id is string => id != null);
+    if (filled.length >= 4) return;
+    const slotsNeeded = 4 - filled.length;
+    const eligible = getTradeUpEligible(false);
+    let toAdd: Card[];
+    if (filled.length > 0) {
+      if (eligible.length < slotsNeeded) return;
+      toAdd = eligible.slice(0, slotsNeeded);
+    } else {
+      toAdd = findBestGroup(eligible, 4);
+      if (toAdd.length < 4) return;
+    }
+    setTradeUpSlots((prev) => {
+      const next = [...prev];
+      for (const card of toAdd) {
+        const idx = next.findIndex((id) => id == null);
+        if (idx >= 0) next[idx] = card.id!;
+      }
+      return next;
+    });
+  }
+
   function getDustForRarity(rarity: string): number {
     return DISENCHANT_DUST[rarity] ?? 0;
   }
@@ -1249,6 +1337,28 @@ function CardsContent() {
 
   function removeFromQuicksellBench(cardId: string) {
     setQuicksellBenchSlots((prev) => prev.map((id) => (id === cardId ? null : id)));
+  }
+
+  function fillQuicksellWithCodexd() {
+    const filled = quicksellBenchSlots.filter((id): id is string => id != null);
+    if (filled.length >= 5) return;
+    const eligible = cards.filter((c) =>
+      c.id &&
+      !myListedCardIds.has(c.id) &&
+      c.rarity !== "legendary" &&
+      !filled.includes(c.id) &&
+      isCardSlotAlreadyInCodex(c)
+    );
+    const emptyCount = 5 - filled.length;
+    const toAdd = eligible.slice(0, emptyCount);
+    setQuicksellBenchSlots((prev) => {
+      const next = [...prev];
+      for (const card of toAdd) {
+        const idx = next.findIndex((id) => id == null);
+        if (idx >= 0) next[idx] = card.id!;
+      }
+      return next;
+    });
   }
 
   /** Credits for quicksell display/confirm: use admin-configured prices when loaded, else defaults. */
@@ -2452,7 +2562,26 @@ function CardsContent() {
             )}
             {/* Trade Up - frosted glass section */}
             <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
-              <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-amber-400/90">Trade Up</h2>
+                {canCodexdFillTradeUp() ? (
+                  <button
+                    onClick={fillTradeUpWithCodexd}
+                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    Add Codex&apos;d
+                  </button>
+                ) : (
+                  <button
+                    onClick={autoFillTradeUp}
+                    className="px-3 py-1.5 rounded-lg border border-white/[0.12] bg-white/[0.04] text-white/70 text-xs font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    Auto-fill
+                  </button>
+                )}
+              </div>
               <p className="text-sm text-white/60 mb-4">
                 Add 4 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
               </p>
@@ -2520,13 +2649,11 @@ function CardsContent() {
                     <span className="text-[10px] text-white/40 text-center px-1">?</span>
                   )}
                 </div>
-                {/* Submit button */}
+                {canTradeUp && (
                 <button
                   onClick={() => handleTradeUp()}
-                  disabled={!canTradeUp || tradingUp}
-                  className={`ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                    canTradeUp && !tradingUp ? "shadow-[0_0_20px_rgba(251,191,36,0.2)]" : ""
-                  }`}
+                  disabled={tradingUp}
+                  className="ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
                 >
                   {tradingUp ? (
                     <span className="flex items-center gap-2">
@@ -2537,6 +2664,7 @@ function CardsContent() {
                     "Submit Trade Up"
                   )}
                 </button>
+                )}
               </div>
             </div>
             </>
@@ -2656,7 +2784,16 @@ function CardsContent() {
             {inventorySubTab === "quicksell" && (
               <>
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
-                  <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Quicksell</h2>
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-semibold text-amber-400/90">Quicksell</h2>
+                    <button
+                      onClick={fillQuicksellWithCodexd}
+                      className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer backdrop-blur-md flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      Add Codex&apos;d
+                    </button>
+                  </div>
                   <p className="text-sm text-white/60 mb-4">
                     Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
                   </p>
@@ -2828,13 +2965,16 @@ function CardsContent() {
                 const showNewDot = isNewCard && card.id && !seenCardIds.has(card.id);
                 const handleClick = () => {
                   if (inventorySubTab === "alchemy") {
+                    if (onAlchemyBench && card.id) { removeFromAlchemyBench(card.id); return; }
                     if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
                     return;
                   }
                   if (inventorySubTab === "quicksell") {
+                    if (onQuicksellBench && card.id) { removeFromQuicksellBench(card.id); return; }
                     if (canAddQuicksell && card.id) addToQuicksellBench(card.id);
                     return;
                   }
+                  if (inSlots && card.id) { removeFromTradeUpSlot(card.id); return; }
                   if (canAddTradeUp && card.id) addToTradeUpSlot(card.id!);
                   else if (card.rarity === "legendary") {
                     setLegendaryBlockShown(true);
@@ -2848,7 +2988,7 @@ function CardsContent() {
                     onMouseEnter={() => showNewDot && card.id && markCardSeen(card.id)}
                     className={`relative group/card transition-all duration-200 ${
                       (canAddTradeUp && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell") ? "cursor-pointer hover:ring-2 hover:ring-white/40 rounded-xl" : ""
-                    } ${card.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
+                    } ${(inSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell") ? "cursor-pointer rounded-xl" : ""} ${card.rarity === "legendary" && inventorySubTab === "tradeup" ? "cursor-pointer" : ""} ${ineligible ? "opacity-40 grayscale" : ""}`}
                   >
                     {showNewDot && (
                       <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)]" aria-label="New card" />

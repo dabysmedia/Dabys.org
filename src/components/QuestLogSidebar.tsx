@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { formatUtcTimeInHalifax } from "@/lib/dateUtils";
 
 const TCG_TRACKED_KEY = "tcg-tracked-winner-ids";
 const HOVER_SLEEP_KEY = "dabys-sidebar-hover-sleep";
@@ -73,6 +74,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [claimingSetCompletionWinnerId, setClaimingSetCompletionWinnerId] = useState<string | null>(null);
   const [claimingAll, setClaimingAll] = useState(false);
   const [resetHourUTC, setResetHourUTC] = useState<number>(0);
+  const [rerollsUsed, setRerollsUsed] = useState<number>(0);
+  const [countdown, setCountdown] = useState<string>("");
+  const [rerollingIndex, setRerollingIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
 
   // Sync sleep preference from other sidebar (or same) when toggled
@@ -166,6 +170,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (data.quests) setDailyQuests(data.quests);
         if (data.date) setQuestDate(data.date);
         if (typeof data.resetHourUTC === "number") setResetHourUTC(data.resetHourUTC);
+        setRerollsUsed(typeof data.rerollsUsed === "number" ? data.rerollsUsed : 0);
         setSetCompletionQuests(Array.isArray(data.setCompletionQuests) ? data.setCompletionQuests : []);
       })
       .catch(() => {});
@@ -210,6 +215,26 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchQuests]);
+
+  // Countdown until quest reset (next occurrence of resetHourUTC UTC)
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const h = resetHourUTC;
+      const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, 0, 0, 0));
+      if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+      const ms = next.getTime() - now.getTime();
+      const secs = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(secs / 60) % 60;
+      const hh = Math.floor(secs / 3600);
+      if (hh > 0) setCountdown(`${hh}h ${m}m`);
+      else if (m > 0) setCountdown(`${m}m ${secs % 60}s`);
+      else setCountdown(`${secs}s`);
+    };
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, [resetHourUTC]);
 
   function unpinWinner(winnerId: string) {
     const next = trackedWinnerIds.filter((id) => id !== winnerId);
@@ -292,6 +317,23 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
   const claimableCount = dailyQuests.filter((q) => q.completed && !q.claimed).length + setCompletionClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
+  const rerollsRemaining = Math.max(0, 1 - rerollsUsed);
+
+  async function handleReroll(questIndex: number) {
+    setRerollingIndex(questIndex);
+    try {
+      const res = await fetch("/api/quests/reroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, questIndex }),
+      });
+      if (res.ok) fetchQuests();
+    } catch {
+      // silently fail
+    } finally {
+      setRerollingIndex(null);
+    }
+  }
 
   function openByHover() {
     if (!sleep) {
@@ -498,7 +540,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                     </ul>
                   </div>
                 )}
-                {/* Progress summary */}
+                {/* Progress summary + countdown */}
                 {dailyQuests.length > 0 && (
                   <div className="px-4 mb-3">
                     <div className="flex items-center justify-between mb-2">
@@ -515,6 +557,14 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                         style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
                       />
                     </div>
+                    {countdown && (
+                      <p className="text-[10px] text-white/35 mt-1.5">
+                        Resets in {countdown} · {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)
+                        {rerollsRemaining > 0 && (
+                          <span className="text-purple-400/70 ml-1">· 1 reroll left</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -545,6 +595,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                     {dailyQuests.map((quest, idx) => {
                       const isClaimable = quest.completed && !quest.claimed;
                       const isClaiming = claimingIndex === idx;
+                      const canReroll = !quest.completed && !quest.claimed && rerollsRemaining > 0;
+                      const isRerolling = rerollingIndex === idx;
 
                       return (
                         <li
@@ -590,6 +642,16 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                                 </span>
                               )}
                               <p className="text-[10px] text-white/35 mt-0.5 truncate">{quest.description}</p>
+                              {canReroll && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReroll(idx)}
+                                  disabled={isRerolling}
+                                  className="mt-1.5 text-[10px] text-purple-400/80 hover:text-purple-400 font-medium cursor-pointer disabled:opacity-50"
+                                >
+                                  {isRerolling ? "Rerolling…" : "Reroll quest"}
+                                </button>
+                              )}
                             </div>
 
                             {/* Reward / Claim button */}
@@ -624,7 +686,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                   <div className="px-4 py-4 text-center">
                     <p className="text-xs text-green-400/70">All daily quests completed!</p>
                     <p className="text-[10px] text-amber-400/60 mt-1">Completion bonus awarded</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">New quests at {String(resetHourUTC).padStart(2, "0")}:00 UTC</p>
+                    <p className="text-[10px] text-white/30 mt-0.5">New quests at {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)</p>
                   </div>
                 )}
               </div>

@@ -287,6 +287,7 @@ export default function HomePage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
         <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
+        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
       </div>
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
@@ -607,7 +608,7 @@ export default function HomePage() {
                         </div>
 
                         <div className="flex items-center gap-3 mt-4">
-                          <button type="submit" disabled={submitting} className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-medium hover:from-green-500 hover:to-emerald-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+                          <button type="submit" disabled={submitting} className="px-5 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md text-emerald-400 font-medium hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">
                             {submitting ? "Submitting..." : "Submit Movie"}
                           </button>
                           <button type="button" onClick={() => setSelectedMovie(null)} className="text-xs text-white/30 hover:text-white/60 transition-colors cursor-pointer">
@@ -696,7 +697,7 @@ export default function HomePage() {
                       return (
                         <div
                           key={sub.id}
-                          className={`group relative rounded-xl overflow-hidden border bg-white/[0.02] transition-all duration-300 ${voteCardBorderClass} ${!myVote && !isOwn ? "cursor-pointer" : ""}`}
+                          className={`group relative rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl transition-all duration-300 ${voteCardBorderClass} ${!myVote && !isOwn ? "cursor-pointer" : ""}`}
                         >
                           {showTrailer && sub.trailerUrl ? (
                             <>
@@ -953,14 +954,14 @@ export default function HomePage() {
 
         {/* ═══ WINNERS CIRCLE ═══ */}
         <section>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C0C0C0]/20 to-transparent" />
-            <h2 className="text-2xl font-bold tracking-wide" style={{ fontFamily: "'Libre Baskerville', serif" }}>
-              <span className="winners-circle-glow bg-gradient-to-r from-[#B8B8C0] via-[#F0F4F8] to-[#9098A0] bg-clip-text text-transparent inline-block" style={{ WebkitTextStroke: '0.4px rgba(255,255,255,0.2)' }}>Winners Circle</span>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+            <h2 className="text-2xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+              Winners Circle
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#C0C0C0]/20 to-transparent" />
+            <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
           </div>
-          <p className="text-center text-white/40 text-xs mb-6 -mt-2">Click any winner to rate, comment, and play trivia</p>
+          <p className="text-center text-white/40 text-sm mb-6 -mt-2">Click any winner to rate, comment, and play trivia</p>
 
           {winners.length === 0 ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
@@ -974,7 +975,7 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {winners.map((winner) => (
-                <div key={winner.id} className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-300 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.03]">
+                <div key={winner.id} className="group relative rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl transition-all duration-300 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.03]">
                   <Link href={`/winners/${winner.id}`} className="block">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {winner.posterUrl ? (
@@ -1114,14 +1115,14 @@ function SubmissionsGrid({
           ? "col-span-2 sm:col-span-2 md:col-span-3 lg:col-span-3 border-purple-500/30 shadow-lg shadow-purple-500/10"
           : isHighlighted || isTopVoted
             ? "border-amber-500/30 shadow-lg shadow-amber-500/10"
-            : "border-white/[0.06]";
+            : "border-white/[0.08]";
 
         const isMine = currentUserId && sub.userId === currentUserId;
 
         return (
           <div
             key={sub.id}
-            className={`group relative rounded-xl border bg-white/[0.02] transition-all duration-300 ${borderClass}`}
+            className={`group relative rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl transition-all duration-300 ${borderClass}`}
           >
             <div className="rounded-xl overflow-hidden">
             {/* ── Trailer expanded view ── */}
@@ -1274,7 +1275,7 @@ function SubmissionsGrid({
     {/* Pitch editor modal */}
     {pitchModalSub && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setPitchModalSub(null)}>
-        <div className="rounded-2xl border border-white/[0.12] bg-[#0f0f14] p-5 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl p-6 w-full max-w-md shadow-[0_22px_70px_rgba(0,0,0,0.85)]" onClick={(e) => e.stopPropagation()}>
           <h3 className="text-sm font-semibold text-white/80 mb-1">Pitch for {pitchModalSub.movieTitle}</h3>
           <p className="text-[11px] text-white/40 mb-3">Short elevator pitch (max 100 characters), shown on hover.</p>
           <textarea
@@ -1287,8 +1288,8 @@ function SubmissionsGrid({
           <div className="flex justify-between items-center mt-3">
             <span className="text-[11px] text-white/30">{draftPitch.length}/100</span>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPitchModalSub(null)} className="px-3 py-1.5 rounded-lg text-xs text-white/50 hover:text-white/80 border border-white/[0.08] cursor-pointer">Cancel</button>
-              <button type="button" onClick={savePitch} disabled={pitchSaving} className="px-3 py-1.5 rounded-lg text-xs bg-purple-500/80 text-white hover:bg-purple-500 disabled:opacity-50 cursor-pointer">
+              <button type="button" onClick={() => setPitchModalSub(null)} className="px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer">Cancel</button>
+              <button type="button" onClick={savePitch} disabled={pitchSaving} className="px-5 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md text-purple-300 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer">
                 {pitchSaving ? "Saving…" : "Save"}
               </button>
             </div>

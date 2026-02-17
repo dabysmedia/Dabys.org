@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatUtcTimeInHalifax } from "@/lib/dateUtils";
 
 interface QuestDefinition {
   label: string;
@@ -239,7 +240,7 @@ export default function AdminQuestsPage() {
             >
               {Array.from({ length: 24 }, (_, h) => (
                 <option key={h} value={h}>
-                  {String(h).padStart(2, "0")}:00 UTC
+                  {String(h).padStart(2, "0")}:00 UTC → {formatUtcTimeInHalifax(h)} (Halifax)
                 </option>
               ))}
             </select>

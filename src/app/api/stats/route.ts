@@ -259,12 +259,16 @@ export async function GET() {
   // Card data
   const allCards = getCardsRaw();
 
-  // Legendary Collectors
+  // Legendary Collectors (codex'd legendaries, not held in hand)
+  const codexPool = getCodexPoolEntries();
+  const legendaryCharacterIds = new Set(
+    codexPool.filter((e) => e.rarity === "legendary").map((e) => e.characterId)
+  );
   const legendaryByUser = new Map<string, number>();
-  for (const card of allCards) {
-    if (card.rarity === "legendary") {
-      legendaryByUser.set(card.userId, (legendaryByUser.get(card.userId) || 0) + 1);
-    }
+  for (const user of users) {
+    const unlocked = getCodexUnlockedCharacterIds(user.id);
+    const count = unlocked.filter((id) => legendaryCharacterIds.has(id)).length;
+    if (count > 0) legendaryByUser.set(user.id, count);
   }
   const legendaryCollectors = Array.from(legendaryByUser.entries())
     .map(([userId, count]) => {
@@ -288,7 +292,6 @@ export async function GET() {
     .slice(0, 10);
 
   // Codex Completion
-  const codexPool = getCodexPoolEntries();
   const totalCodexEntries = codexPool.length;
   const codexCompletion = users
     .map((u) => {

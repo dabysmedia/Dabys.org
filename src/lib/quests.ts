@@ -80,6 +80,8 @@ export interface UserDailyQuests {
   quests: DailyQuestInstance[];
   /** True after the all-quests-complete bonus has been awarded for this day. */
   allCompleteBonusClaimed?: boolean;
+  /** Number of quest rerolls used today (max 1). */
+  rerollsUsed?: number;
 }
 
 /** Daily quests are per-user: keyed by date (YYYY-MM-DD) then by userId. */
@@ -264,6 +266,97 @@ function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
   }
 
   return quests;
+}
+
+/** Generate a single replacement quest for reroll. Picks from optional types not already in the list, and never returns the same type as the quest being replaced. */
+function generateSingleReplacementQuest(
+  settings: QuestSettings,
+  existingQuests: DailyQuestInstance[],
+  excludeQuestType: QuestType
+): DailyQuestInstance {
+  const defs = settings.questDefinitions;
+  const questTypes = Object.keys(defs) as QuestType[];
+  const optional = questTypes.filter((t) => !defs[t].alwaysActive);
+  const existingTypes = new Set(existingQuests.map((q) => q.questType));
+  const available = optional.filter((t) => !existingTypes.has(t) && t !== excludeQuestType);
+  const pool = available.length > 0 ? available : optional.filter((t) => t !== excludeQuestType);
+  const questType = pool[Math.floor(Math.random() * pool.length)] as QuestType;
+  const def = defs[questType];
+  const rarity = def.rarityParam ? pickRandomRarity() : undefined;
+  let label = def.label;
+  let description = def.description;
+
+  if (rarity) {
+    const rl = rarityLabel(rarity);
+    const article = aOrAn(rl);
+    switch (questType) {
+      case "disenchant_holo":
+        label = `Disenchant ${article} ${rl} Holo`;
+        description = `Disenchant ${article} ${rl} rarity holo card`;
+        break;
+      case "pack_a_punch":
+        label = `Pack-a-Punch ${article} ${rl} Card`;
+        description = `Pack-a-Punch ${article} ${rl} rarity card`;
+        break;
+      case "find_rarity_in_pack":
+        label = `Find ${article} ${rl} in a Pack`;
+        description = `Find ${article} ${rl} rarity card in a pack`;
+        break;
+      case "trade_up":
+        label = `${rl} Trade Up`;
+        description = `Complete ${article} ${rl} trade-up`;
+        break;
+      default:
+        label = `${def.label} (${rl})`;
+        description = def.description.replace("a trade-up", `${article} ${rl} trade-up`);
+    }
+  }
+
+  return {
+    questType,
+    rarity,
+    completed: false,
+    claimed: false,
+    reward: def.reward,
+    rewardType: def.rewardType,
+    label,
+    description,
+  };
+}
+
+/** Reroll the quest at the given index. Returns new quests and remaining rerolls. Max 1 reroll per day. Cannot reroll completed/claimed quests. */
+export function rerollQuest(
+  userId: string,
+  questIndex: number
+): { success: boolean; error?: string; quests?: DailyQuestInstance[]; rerollsRemaining?: number } {
+  const today = getTodayDateStr();
+  const store = getDailyQuestsStore();
+  const userQuests = store[today]?.[userId];
+  if (!userQuests) return { success: false, error: "No quests found for today" };
+  if (questIndex < 0 || questIndex >= userQuests.quests.length) {
+    return { success: false, error: "Invalid quest index" };
+  }
+  const quest = userQuests.quests[questIndex];
+  if (quest.completed || quest.claimed) {
+    return { success: false, error: "Cannot reroll a completed or claimed quest" };
+  }
+  const rerollsUsed = userQuests.rerollsUsed ?? 0;
+  if (rerollsUsed >= 1) return { success: false, error: "No rerolls left today" };
+
+  const settings = getQuestSettings();
+  const otherQuests = userQuests.quests.filter((_, i) => i !== questIndex);
+  const replacement = generateSingleReplacementQuest(settings, otherQuests, quest.questType);
+  const newQuests = [...userQuests.quests];
+  newQuests[questIndex] = replacement;
+  userQuests.quests = newQuests;
+  userQuests.rerollsUsed = rerollsUsed + 1;
+  store[today][userId] = userQuests;
+  saveDailyQuestsStore(store);
+  return {
+    success: true,
+    quests: newQuests,
+    rerollsRemaining: 0,
+  };
 }
 
 // ──── Get/Create Daily Quests (per user) ─────────────────

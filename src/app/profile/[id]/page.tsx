@@ -628,7 +628,7 @@ export default function ProfilePage() {
                           : null
                     );
                   }}
-                  className="px-4 py-2 text-xs font-medium text-white/60 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/80 transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer"
                 >
                   Edit Profile
                 </button>
@@ -657,14 +657,14 @@ export default function ProfilePage() {
                             : null
                       );
                     }}
-                    className="px-3 py-2 text-xs font-medium text-white/40 border border-white/10 rounded-lg hover:bg-white/[0.04] hover:text-white/60 transition-all cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/60 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={saveProfile}
                     disabled={saving}
-                    className="px-4 py-2 text-xs font-medium bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-all cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     {saving ? "Saving..." : "Save"}
                   </button>
@@ -680,7 +680,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowBadgeModal(true)}
-              className="px-4 py-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-300 text-sm font-medium hover:bg-amber-500/15 hover:border-amber-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer inline-flex items-center gap-2"
             >
               <span>Equip Badge</span>
               {displayedBadge && (
@@ -690,7 +690,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => setShowFeaturedCardsModal(true)}
-              className="px-4 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-sm font-medium hover:bg-cyan-500/15 hover:border-cyan-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-md text-cyan-300 font-medium hover:border-cyan-500/50 hover:bg-cyan-500/15 transition-colors cursor-pointer inline-flex items-center gap-2"
             >
               <span>Feature cards</span>
               {editFeaturedCharacterIds.length > 0 && (
@@ -704,18 +704,18 @@ export default function ProfilePage() {
                 setFavoriteMovieSearchQuery("");
                 setFavoriteMovieSearchResults([]);
               }}
-              className="px-4 py-2.5 rounded-xl border border-pink-500/40 bg-pink-500/10 text-pink-300 text-sm font-medium hover:bg-pink-500/15 hover:border-pink-500/50 transition-colors cursor-pointer inline-flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md text-purple-300 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 transition-colors cursor-pointer inline-flex items-center gap-2"
             >
               <span>{favoriteMovieSelecting ? "Change favourite movie" : "Choose favourite movie"}</span>
               {favoriteMovieSelecting && (
-                <span className="text-pink-400/80 truncate max-w-[120px]">{favoriteMovieSelecting.title}</span>
+                <span className="text-purple-400/80 truncate max-w-[120px]">{favoriteMovieSelecting.title}</span>
               )}
             </button>
             {favoriteMovieSelecting && (
               <button
                 type="button"
                 onClick={() => setFavoriteMovieSelecting(null)}
-                className="px-3 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/50 text-sm hover:bg-white/10 hover:text-white/70 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/60 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer"
               >
                 Clear favourite
               </button>
@@ -726,7 +726,7 @@ export default function ProfilePage() {
         {/* Login PIN (edit only, own profile) */}
         {isOwnProfile && editing && data && (
           <div className="mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4">
-            <h3 className="text-sm font-medium text-white/70 mb-3">Login PIN</h3>
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3">Login PIN</h3>
             <p className="text-white/40 text-xs mb-3">
               Set or change the PIN you enter when logging in. Leave new PIN blank to remove it.
             </p>
@@ -761,7 +761,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={savePin}
                 disabled={pinSaving}
-                className="px-4 py-2 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/15 disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md text-purple-300 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 {pinSaving ? "Saving…" : data.hasPin ? "Update PIN" : "Set PIN"}
               </button>
@@ -917,7 +917,7 @@ export default function ProfilePage() {
         {/* Feature cards — pick from codex, up to 6 */}
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-widest text-white/35 font-medium">Feature cards</h3>
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest">Feature cards</h3>
             <div className="flex items-center gap-2">
               {isOwnProfile && editing && (
                 <button
@@ -975,7 +975,7 @@ export default function ProfilePage() {
 
         {/* Achievements — full-size badges (codex style) */}
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
-          <h3 className="text-[11px] uppercase tracking-widest text-white/35 font-medium mb-4">Achievements</h3>
+          <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Achievements</h3>
           {completedBadges.length === 0 ? (
             <p className="text-sm text-white/40">
               No badges yet. Complete card sets in the Codex (discover all cards for a movie) or buy badges in the Shop.
@@ -1343,7 +1343,7 @@ export default function ProfilePage() {
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
             <div
-              className="w-full max-w-xl max-h-[80vh] rounded-2xl border border-white/[0.08] bg-[var(--background,#050509)] shadow-2xl overflow-hidden flex flex-col"
+              className="w-full max-w-xl max-h-[80vh] rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.08] bg-white/[0.03]">
@@ -1481,7 +1481,7 @@ export default function ProfilePage() {
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
             role="dialog"
             aria-label="Feature cards"
             onClick={(e) => e.stopPropagation()}
@@ -1539,7 +1539,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowFeaturedCardsModal(false)}
-                className="w-full px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-medium hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                className="w-full px-5 py-2.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 backdrop-blur-md text-cyan-300 font-medium hover:border-cyan-500/50 hover:bg-cyan-500/15 transition-all cursor-pointer"
               >
                 Done
               </button>
@@ -1556,7 +1556,7 @@ export default function ProfilePage() {
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col"
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
             role="dialog"
             aria-label="View codex"
             onClick={(e) => e.stopPropagation()}
@@ -1661,7 +1661,7 @@ export default function ProfilePage() {
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden"
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden"
             role="dialog"
             aria-label="Choose favourite movie"
             onClick={(e) => e.stopPropagation()}
@@ -1728,7 +1728,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowFavoriteMovieModal(false)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+                className="w-full px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer"
               >
                 Done
               </button>
@@ -1746,7 +1746,7 @@ export default function ProfilePage() {
             aria-hidden
           />
           <div
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden"
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden"
             role="dialog"
             aria-label="Equip Badge"
             onClick={(e) => e.stopPropagation()}
@@ -1805,7 +1805,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowBadgeModal(false)}
-                className="w-full px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-medium hover:bg-amber-500/30 transition-colors cursor-pointer"
+                className="w-full px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 transition-all cursor-pointer"
               >
                 Done
               </button>
