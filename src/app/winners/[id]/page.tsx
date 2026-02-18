@@ -1117,7 +1117,7 @@ export default function WinnerDetailPage() {
               aria-hidden
             />
             <div
-              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] overflow-hidden"
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden"
               role="dialog"
               aria-label="Trivia"
               onClick={(e) => e.stopPropagation()}
@@ -1143,7 +1143,7 @@ export default function WinnerDetailPage() {
                         setTriviaCompleted(true);
                         window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: earned } }));
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-purple-500/30 bg-purple-500/10 backdrop-blur-md text-purple-200 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 transition-colors cursor-pointer"
+                      className="w-full px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       Done
                     </button>
@@ -1153,7 +1153,7 @@ export default function WinnerDetailPage() {
                     const q = triviaQuestions[triviaIndex];
                     const isLast = triviaIndex >= triviaQuestions.length - 1;
                     return (
-                      <div>
+                      <div key={q.id}>
                         <div className="flex justify-between items-center mb-4">
                           <h3 className="text-lg font-bold text-white/90">Trivia</h3>
                           <span className="text-xs text-white/40">
@@ -1161,10 +1161,10 @@ export default function WinnerDetailPage() {
                           </span>
                         </div>
                         <p className="text-white/90 mb-6">{q.question}</p>
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2" key={`${q.id}-options`}>
                           {q.options.map((opt, i) => (
                             <button
-                              key={i}
+                              key={`${q.id}-${i}`}
                               onClick={() => {
                                 const next = [...triviaAnswers, { questionId: q.id, selectedIndex: i }];
                                 setTriviaAnswers(next);
@@ -1194,7 +1194,7 @@ export default function WinnerDetailPage() {
                                 }
                               }}
                               disabled={triviaSubmitting}
-                              className="w-full text-left px-4 py-3 rounded-xl bg-white/[0.06] backdrop-blur-md border border-white/[0.12] text-white/90 hover:bg-white/[0.1] hover:border-purple-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                              className="w-full text-left px-4 py-3 rounded-xl border border-white/[0.12] bg-white/[0.04] backdrop-blur-md text-white/80 font-medium hover:bg-white/[0.08] hover:border-white/[0.18] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               {opt}
                             </button>

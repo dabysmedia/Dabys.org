@@ -137,10 +137,13 @@ export function NotificationCenter() {
     const onVisibility = () => {
       if (!document.hidden) fetchNotifications();
     };
+    const onRefresh = () => fetchNotifications();
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("dabys-notifications-refresh", onRefresh);
     return () => {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("dabys-notifications-refresh", onRefresh);
     };
   }, [fetchNotifications]);
 

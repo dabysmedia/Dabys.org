@@ -566,6 +566,8 @@ function CardsContent() {
   const [tradeHistory, setTradeHistory] = useState<TradeOfferEnriched[]>([]);
   const [expandedHistoryTradeId, setExpandedHistoryTradeId] = useState<string | null>(null);
   const [userAvatarMap, setUserAvatarMap] = useState<Record<string, string>>({});
+  /** On mobile, which panel is active: yours | trade | theirs */
+  const [mobileTradeTab, setMobileTradeTab] = useState<"yours" | "trade" | "theirs">("trade");
   const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
   const [stardust, setStardust] = useState(0);
   const [alchemyDisenchantingId, setAlchemyDisenchantingId] = useState<string | null>(null);
@@ -634,8 +636,8 @@ function CardsContent() {
   const [codexUploadCompleteCount, setCodexUploadCompleteCount] = useState<number | null>(null);
   type CodexSortKey = "set" | "name" | "rarity";
   const [codexSort, setCodexSort] = useState<CodexSortKey>("set");
-  type CodexUploadSortKey = "rarity" | "set" | "name";
-  const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("rarity");
+  type CodexUploadSortKey = "holo" | "rarity" | "set" | "name";
+  const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("holo");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedHoloBadgeWinnerIds, setCompletedHoloBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedPrismaticBadgeWinnerIds, setCompletedPrismaticBadgeWinnerIds] = useState<Set<string>>(new Set());
@@ -689,6 +691,32 @@ function CardsContent() {
       return next;
     });
   }
+
+  const [isMobileTouch, setIsMobileTouch] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none)");
+    setIsMobileTouch(mq.matches);
+    const onChange = () => setIsMobileTouch(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Collapse expanded codex stack when tapping outside (mobile only)
+  useEffect(() => {
+    if (!isMobileTouch || !expandedCodexStack) return;
+    const handler = (e: Event) => {
+      const target = e.target;
+      if (target instanceof Element && !target.closest("[data-codex-stack]")) {
+        setExpandedCodexStack(null);
+      }
+    };
+    document.addEventListener("click", handler, true);
+    document.addEventListener("touchend", handler, true);
+    return () => {
+      document.removeEventListener("click", handler, true);
+      document.removeEventListener("touchend", handler, true);
+    };
+  }, [isMobileTouch, expandedCodexStack]);
 
   const CODEX_SOUND_MUTED_KEY = "dabys_codex_sound_muted";
   const [codexSoundMuted, setCodexSoundMuted] = useState<boolean>(() => {
@@ -1417,6 +1445,7 @@ function CardsContent() {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: data.credits } }));
         }
         await Promise.all([refreshCards(), refreshCredits(), refreshStardust()]);
+        window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
       } else {
         alert(data.error || "Trade up failed");
       }
@@ -1670,6 +1699,7 @@ function CardsContent() {
       setTimeout(() => setAlchemySuccessFlash(false), 500);
       setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
       await Promise.all([refreshCards(), refreshStardust()]);
+      window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
     } finally {
       setAlchemyDisenchantingId(null);
     }
@@ -1705,6 +1735,7 @@ function CardsContent() {
           setAlchemyBenchSlots((prev) => prev.map((id) => (id === card.id ? null : id)));
           setAlchemyPunchHoloCardIds([]);
           Promise.all([refreshCards(), refreshStardust()]);
+          window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }, 1100);
       } else {
         setAlchemyPunchFailedCardIds([card.id]);
@@ -1879,6 +1910,7 @@ function CardsContent() {
       setTimeout(() => setAlchemySuccessFlash(false), 500);
       setAlchemyBenchSlots([null, null, null, null, null]);
       await Promise.all([refreshCards(), refreshStardust()]);
+      window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
     } finally {
       setAlchemyDisenchantingId(null);
     }
@@ -1921,6 +1953,7 @@ function CardsContent() {
           setAlchemyBenchSlots((prev) => prev.map((id) => (id != null && succeededIds.includes(id) ? null : id)));
           setAlchemyPunchHoloCardIds([]);
           Promise.all([refreshCards(), refreshStardust()]);
+          window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }, 1200);
       }
       const failedCount = failedIds.length;
@@ -2029,6 +2062,7 @@ function CardsContent() {
         setNewCards(data.cards);
         await Promise.all([refreshCards(), refreshCredits(), refreshPacks()]);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -effectivePrice } }));
+        window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
       } else {
         alert(data.error || "Failed to buy pack");
       }
@@ -2180,7 +2214,7 @@ function CardsContent() {
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
           untrackCharacterId(data.characterId);
           if (variant === "boys") untrackCharacterId(`boys:${data.characterId}`);
-          if (data.setCompleted || data.holoSetCompleted) window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
+          window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
         /* skip failed */
@@ -2321,6 +2355,7 @@ function CardsContent() {
         setSelectedOrderCharacter(null);
         setOrderOfferPrice("");
         await refreshMarketplaceOrders();
+        window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
       } else {
         alert(data.error || "Failed to create order");
       }
@@ -2538,6 +2573,7 @@ function CardsContent() {
         setTradeFeedback("accepted");
         setExpandedReceivedTradeId(null);
         window.dispatchEvent(new CustomEvent("dabys-credits-refresh"));
+        window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         await Promise.all([refreshCards(), refreshCredits(), refreshTrades()]);
         setTimeout(() => setTradeFeedback(null), 2200);
       } else {
@@ -2731,7 +2767,7 @@ function CardsContent() {
               >
                 {t.label}
                 {t.key === "trade" && receivedTrades.length > 0 && (
-                  <span className="absolute top-2.5 right-3 sm:top-1.5 sm:right-1.5 w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+                  <span className="absolute top-2.5 right-3 sm:top-1.5 sm:right-1.5 w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(245,158,11,0.4)]" aria-label="Incoming trades" />
                 )}
               </button>
             ))}
@@ -5464,6 +5500,7 @@ function CardsContent() {
                       return (
                         <div
                           key={entry.characterId}
+                          data-codex-stack
                           className="relative group/codexstack"
                           style={{
                             zIndex: isExpanded ? 20 : "auto",
@@ -5473,6 +5510,14 @@ function CardsContent() {
                           }}
                           onMouseEnter={() => setExpandedCodexStack(entry.characterId)}
                           onMouseLeave={() => setExpandedCodexStack(null)}
+                          onClickCapture={(e) => {
+                            if (!isMobileTouch || variants.length <= 1) return;
+                            if (!isExpanded) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setExpandedCodexStack(entry.characterId);
+                            }
+                          }}
                         >
                           {Array.from({ length: cascadeLayers }, (_, i) => {
                             const layer = cascadeLayers - i;
@@ -5544,7 +5589,7 @@ function CardsContent() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(entry.characterId); }}
-                            className={`absolute bottom-1.5 left-1.5 right-1.5 z-[10] py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/codexstack:opacity-100 ${
+                            className={`absolute bottom-1.5 left-1.5 right-1.5 z-[10] py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${isExpanded ? "opacity-100" : "opacity-0 group-hover/codexstack:opacity-100"} ${
                               isTrackedStack
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                                 : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
@@ -6054,7 +6099,7 @@ function CardsContent() {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                       <span className="text-white/50 text-sm">Sort:</span>
                       <div className="flex flex-wrap gap-2">
-                        {(["rarity", "set", "name"] as const).map((key) => (
+                        {(["holo", "rarity", "set", "name"] as const).map((key) => (
                           <button
                             key={key}
                             type="button"
@@ -6065,7 +6110,7 @@ function CardsContent() {
                                 : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
                             }`}
                           >
-                            {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                            {key === "holo" ? "Holo" : key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
                           </button>
                         ))}
                       </div>
@@ -6073,13 +6118,21 @@ function CardsContent() {
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                     {(() => {
                       const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                      const isHolo = (c: { isFoil?: boolean; finish?: string }) => !!(c.isFoil || c.finish === "holo" || c.finish === "prismatic" || c.finish === "darkMatter");
                       const filtered = cards.filter((c) => !myListedCardIds.has(c.id!) && !myTradeBlockCardIds.has(c.id!));
                       const sorted =
-                        codexUploadSort === "set"
-                          ? [...filtered].sort((a, b) => (a.movieTitle ?? "").localeCompare(b.movieTitle ?? ""))
-                          : codexUploadSort === "name"
-                            ? [...filtered].sort((a, b) => ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? ""))
-                            : [...filtered].sort((a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0));
+                        codexUploadSort === "holo"
+                          ? [...filtered].sort((a, b) => {
+                              const aHolo = isHolo(a) ? 1 : 0;
+                              const bHolo = isHolo(b) ? 1 : 0;
+                              if (bHolo !== aHolo) return bHolo - aHolo;
+                              return (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0);
+                            })
+                          : codexUploadSort === "set"
+                            ? [...filtered].sort((a, b) => (a.movieTitle ?? "").localeCompare(b.movieTitle ?? ""))
+                            : codexUploadSort === "name"
+                              ? [...filtered].sort((a, b) => ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? ""))
+                              : [...filtered].sort((a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0));
                       return sorted.map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
                         const alreadyInCodex = isCardSlotAlreadyInCodex(card);
@@ -6227,7 +6280,7 @@ function CardsContent() {
               aria-hidden
             />
             <div
-              className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-[#0c0c18]/95 backdrop-blur-2xl shadow-[0_8px_48px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${tradeStep === 1 ? "max-w-3xl max-h-[70vh]" : "max-w-[90rem] h-[min(85vh,820px)]"}`}
+              className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-[#0c0c18]/95 backdrop-blur-2xl shadow-[0_8px_48px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${tradeStep === 1 ? "max-w-3xl max-h-[70vh]" : "max-w-[90rem] max-h-[calc(100dvh-2rem)] lg:h-[min(85vh,820px)] lg:max-h-[min(85vh,820px)]"}`}
               role="dialog"
               aria-label="Start trade"
               onClick={(e) => e.stopPropagation()}
@@ -6240,8 +6293,8 @@ function CardsContent() {
                   </h3>
                   {tradeStep >= 2 && tradeCounterparty && (
                     <button
-                      onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); }}
-                      className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 cursor-pointer transition-colors"
+                      onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); setMobileTradeTab("trade"); }}
+                      className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 cursor-pointer transition-colors min-h-[44px] min-w-[44px] -m-2 p-2 inline-flex items-center"
                     >
                       Change user
                     </button>
@@ -6249,7 +6302,7 @@ function CardsContent() {
                 </div>
                 <button
                   onClick={() => !tradeLoading && setShowTradeModal(false)}
-                  className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer transition-colors"
+                  className="min-h-[44px] min-w-[44px] p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer transition-colors flex items-center justify-center touch-manipulation"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -6270,7 +6323,7 @@ function CardsContent() {
                         <button
                           key={u.id}
                           onClick={() => { setTradeCounterparty(u); setTradeStep(2); }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl border border-white/[0.12] bg-white/[0.04] hover:border-amber-500/40 hover:bg-amber-500/10 transition-all cursor-pointer text-left group"
+                          className="flex items-center gap-3 px-4 py-3 min-h-[52px] rounded-xl border border-white/[0.12] bg-white/[0.04] hover:border-amber-500/40 hover:bg-amber-500/10 active:bg-amber-500/15 transition-all cursor-pointer text-left group touch-manipulation"
                         >
                           {u.avatarUrl ? (
                             <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10 group-hover:border-amber-500/30 transition-colors" />
@@ -6287,13 +6340,44 @@ function CardsContent() {
                 </div>
               )}
 
-              {/* Step 2+: Unified 3-column trading view */}
+              {/* Step 2+: Unified 3-column trading view (desktop) / tabbed view (mobile) */}
               {tradeStep >= 2 && (
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  {/* Mobile-only: tab bar to switch between Your cards, Trade summary, Their cards */}
+                  <div className="lg:hidden flex shrink-0 border-b border-white/[0.08] bg-black/30 px-2 py-2 gap-1" role="tablist" aria-label="Trade sections">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mobileTradeTab === "yours"}
+                      onClick={() => setMobileTradeTab("yours")}
+                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "yours" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                    >
+                      Yours
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mobileTradeTab === "trade"}
+                      onClick={() => setMobileTradeTab("trade")}
+                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "trade" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                    >
+                      Trade
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mobileTradeTab === "theirs"}
+                      onClick={() => setMobileTradeTab("theirs")}
+                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "theirs" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                    >
+                      Theirs
+                    </button>
+                  </div>
+
                   <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px_1fr] overflow-hidden">
 
                     {/* Left: Your inventory */}
-                    <div className="flex flex-col min-h-0 lg:border-r border-white/[0.08] order-2 lg:order-1">
+                    <div className={`flex flex-col min-h-0 lg:border-r border-white/[0.08] order-2 lg:order-1 ${mobileTradeTab === "yours" ? "flex" : "hidden lg:flex"}`}>
                       <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
                         <div className="flex items-center gap-2">
                           {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{user.name?.charAt(0) || "?"}</div>)}
@@ -6329,7 +6413,7 @@ function CardsContent() {
                     </div>
 
                     {/* Center: The Trade */}
-                    <div className="flex flex-col min-h-0 bg-black/20 overflow-hidden order-1 lg:order-2 border-b lg:border-b-0 border-white/[0.08]">
+                    <div className={`flex flex-col min-h-0 bg-black/20 overflow-hidden order-1 lg:order-2 border-b lg:border-b-0 border-white/[0.08] ${mobileTradeTab === "trade" ? "flex" : "hidden lg:flex"}`}>
                       <div className="px-4 py-3 border-b border-white/[0.08] bg-gradient-to-r from-red-500/[0.04] via-amber-500/[0.08] to-green-500/[0.04] shrink-0 text-center">
                         <h4 className="text-sm font-bold text-amber-400/90 tracking-wide uppercase">The Trade</h4>
                       </div>
@@ -6377,7 +6461,7 @@ function CardsContent() {
                                 setTradeOfferedCredits(isNaN(v) ? 0 : Math.max(0, v));
                               }}
                               placeholder="0"
-                              className="w-20 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-xs outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors"
+                              className="w-20 min-h-[44px] px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-sm outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors touch-manipulation"
                             />
                             <span className="text-[10px] text-white/20">/ {creditBalance}</span>
                           </div>
@@ -6432,14 +6516,14 @@ function CardsContent() {
                                 setTradeRequestedCredits(isNaN(v) ? 0 : Math.max(0, v));
                               }}
                               placeholder="0"
-                              className="w-20 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-xs outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors"
+                              className="w-20 min-h-[44px] px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-sm outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors touch-manipulation"
                             />
                           </div>
                         </div>
                       </div>
 
-                      {/* Send button */}
-                      <div className="px-4 py-3.5 border-t border-white/[0.08] bg-black/30 shrink-0">
+                      {/* Send button (desktop: inside center; mobile: in sticky footer below) */}
+                      <div className="hidden lg:block px-4 py-3.5 border-t border-white/[0.08] bg-black/30 shrink-0">
                         {tradeError && <p className="text-red-400 text-xs mb-2">{tradeError}</p>}
                         <button
                           onClick={() => handleSendTrade()}
@@ -6452,7 +6536,7 @@ function CardsContent() {
                     </div>
 
                     {/* Right: Their inventory */}
-                    <div className="flex flex-col min-h-0 lg:border-l border-white/[0.08] order-3 lg:order-3">
+                    <div className={`flex flex-col min-h-0 lg:border-l border-white/[0.08] order-3 lg:order-3 ${mobileTradeTab === "theirs" ? "flex" : "hidden lg:flex"}`}>
                       <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
                         <div className="flex items-center gap-2">
                           {tradeCounterparty && (userAvatarMap[tradeCounterparty.id] ? <img src={userAvatarMap[tradeCounterparty.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{(tradeCounterparty?.name || "?")[0]}</div>)}
@@ -6487,6 +6571,18 @@ function CardsContent() {
                       </div>
                     </div>
 
+                  </div>
+
+                  {/* Mobile-only: sticky Send button so it's always reachable */}
+                  <div className="lg:hidden shrink-0 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-white/[0.08] bg-[#0c0c18]/98">
+                    {tradeError && <p className="text-red-400 text-xs mb-2">{tradeError}</p>}
+                    <button
+                      onClick={() => handleSendTrade()}
+                      disabled={tradeLoading || (tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0) || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
+                      className="w-full min-h-[48px] px-4 py-3 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-amber-600/15 text-amber-400 font-semibold text-base hover:border-amber-500/50 hover:from-amber-500/25 hover:to-amber-600/25 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all touch-manipulation"
+                    >
+                      {tradeLoading ? "Sending..." : editingTradeId ? "Send Counter-Offer" : "Send Trade Offer"}
+                    </button>
                   </div>
                 </div>
               )}

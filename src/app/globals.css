@@ -92,6 +92,17 @@ select option {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Casino bet input — hide native spinners, custom arrows added via JSX */
+.casino-bet-input::-webkit-outer-spin-button,
+.casino-bet-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.casino-bet-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Chrome silver glow animation for Winners Circle — slow, subtle, lava-lamp feel */
 @keyframes winners-glow {
   0%, 100% {

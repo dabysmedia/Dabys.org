@@ -6,7 +6,7 @@ import {
   isRed,
 } from "@/lib/casino";
 
-const MIN_BET = 5;
+const MIN_BET = 2;
 const MAX_BET = 500;
 
 export async function POST(request: Request) {
@@ -16,9 +16,9 @@ export async function POST(request: Request) {
   const betRaw = typeof body.bet === "number" ? Math.floor(body.bet) : undefined;
   const selection = body.selection; // "red" | "black" | number 0-36
 
-  if (!userId || betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET) {
+  if (!userId || betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET || betRaw % 2 !== 0) {
     return NextResponse.json(
-      { error: `Bet must be between ${MIN_BET} and ${MAX_BET} credits` },
+      { error: `Bet must be an even number between ${MIN_BET} and ${MAX_BET} credits` },
       { status: 400 }
     );
   }

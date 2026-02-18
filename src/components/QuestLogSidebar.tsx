@@ -263,6 +263,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
       // silently fail
@@ -286,6 +287,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
       // silently fail
@@ -309,6 +311,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
       // silently fail
@@ -332,6 +335,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
       // silently fail

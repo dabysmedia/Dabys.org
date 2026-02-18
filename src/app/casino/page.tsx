@@ -110,22 +110,13 @@ function CasinoContent() {
 
       <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Header block */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
-              Casino
-            </h1>
-            <p className="text-white/50 text-sm mt-1">
-              Slots · Blackjack · Roulette · Dabys Bets
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-sky-400/20 bg-sky-400/10 backdrop-blur-xl">
-            <svg className="w-4 h-4 text-sky-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-lg font-bold text-sky-300 tabular-nums">{creditBalance}</span>
-            <span className="text-[11px] text-sky-400/60 uppercase tracking-wider">cr</span>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+            Casino
+          </h1>
+          <p className="text-white/50 text-sm mt-1">
+            Slots · Blackjack · Roulette · Dabys Bets
+          </p>
         </div>
 
         {/* Tab bar */}
@@ -415,7 +406,7 @@ function BlackjackGame({
   onCreditsChange: (delta?: number) => void;
   onResult: (r: { result: string; payout: number; netChange: number } | null) => void;
 }) {
-  const [bet, setBet] = useState(10);
+  const [betInput, setBetInput] = useState("10");
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<{ status: string; bet: number } | null>(null);
   const [playerHand, setPlayerHand] = useState<{ suit: string; rank: string }[]>([]);
@@ -451,11 +442,28 @@ function BlackjackGame({
 
   async function handleAction(action: "deal" | "hit" | "stand") {
     if (loading) return;
+    if (action === "deal") {
+      const parsed = parseInt(betInput, 10);
+      const betVal = isNaN(parsed) ? 0 : Math.max(2, Math.min(500, parsed));
+      if (betVal < 2 || betVal > 500) {
+        alert("Please enter a bet between 2 and 500.");
+        return;
+      }
+      if (betVal % 2 !== 0) {
+        alert("Please enter an even number for your bet.");
+        return;
+      }
+      if (balance < betVal) {
+        alert("Not enough credits.");
+        return;
+      }
+    }
     setLoading(true);
     if (action === "deal") onResult(null);
     try {
+      const betVal = action === "deal" ? Math.max(2, Math.min(500, parseInt(betInput, 10) || 0)) : 0;
       const body: Record<string, unknown> = { userId, action };
-      if (action === "deal") body.bet = bet;
+      if (action === "deal") body.bet = betVal;
       const res = await fetch("/api/casino/blackjack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -522,18 +530,49 @@ function BlackjackGame({
       <div className="flex justify-center items-center gap-3 min-h-[44px]">
       {!session ? (
         <>
-          <input
-            type="number"
-            min={5}
-            max={500}
-            value={bet}
-            onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
-            className="w-16 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-2.5 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
-            title="Bet"
-          />
+          <div className="flex items-stretch rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl overflow-hidden focus-within:ring-2 focus-within:ring-white/20">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={betInput}
+              onChange={(e) => setBetInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="2–500, even"
+              className="casino-bet-input w-20 bg-transparent px-2 py-2.5 text-white/90 text-center text-sm focus:outline-none placeholder:text-white/30"
+              title="Bet (even number, 2–500)"
+            />
+            <div className="flex flex-col border-l border-white/[0.1]">
+              <button
+                type="button"
+                onClick={() => {
+                  const v = parseInt(betInput, 10) || 0;
+                  const next = Math.min(500, Math.max(2, v) + 2);
+                  setBetInput(String(next));
+                }}
+                disabled={(parseInt(betInput, 10) || 0) >= 500}
+                className="flex items-center justify-center w-6 h-5 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                aria-label="Increase bet"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const v = parseInt(betInput, 10) || 0;
+                  const next = Math.max(2, Math.min(500, v) - 2);
+                  setBetInput(String(next));
+                }}
+                disabled={(parseInt(betInput, 10) || 0) <= 2}
+                className="flex items-center justify-center w-6 h-5 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer border-t border-white/[0.08]"
+                aria-label="Decrease bet"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            </div>
+          </div>
           <button
             onClick={() => handleAction("deal")}
-            disabled={loading || balance < bet}
+            disabled={loading || balance < (parseInt(betInput, 10) || 0)}
             className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {loading ? "…" : "Deal"}
@@ -571,7 +610,7 @@ function RouletteGame({
   balance: number;
   onCreditsChange: (delta?: number) => void;
 }) {
-  const [bet, setBet] = useState(10);
+  const [betInput, setBetInput] = useState("10");
   const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [lastResult, setLastResult] = useState<{
@@ -585,14 +624,27 @@ function RouletteGame({
   const SPIN_DURATION_MS = 2000;
 
   async function handleSpin() {
-    if (spinning || balance < bet || selection === null) return;
+    const betVal = Math.max(2, Math.min(500, parseInt(betInput, 10) || 0));
+    if (spinning || selection === null) return;
+    if (betVal < 2 || betVal > 500) {
+      alert("Please enter a bet between 2 and 500.");
+      return;
+    }
+    if (betVal % 2 !== 0) {
+      alert("Please enter an even number for your bet.");
+      return;
+    }
+    if (balance < betVal) {
+      alert("Not enough credits.");
+      return;
+    }
     setSpinning(true);
     setLastResult(null);
     try {
       const res = await fetch("/api/casino/roulette", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, bet, selection }),
+        body: JSON.stringify({ userId, bet: betVal, selection }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -629,14 +681,46 @@ function RouletteGame({
         <div className="w-full max-w-3xl rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
             <label className="text-[11px] uppercase tracking-wider text-white/40 shrink-0">Bet</label>
-            <input
-              type="number"
-              min={5}
-              max={500}
-              value={bet}
-              onChange={(e) => setBet(Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 5)))}
-              className="w-20 bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-2 text-white/90 text-center text-sm backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-white/20"
-            />
+            <div className="flex items-stretch rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl overflow-hidden focus-within:ring-2 focus-within:ring-white/20">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={betInput}
+                onChange={(e) => setBetInput(e.target.value.replace(/\D/g, ""))}
+                placeholder="2–500, even"
+                className="casino-bet-input w-20 bg-transparent px-3 py-2 text-white/90 text-center text-sm focus:outline-none placeholder:text-white/30"
+                title="Bet (even number, 2–500)"
+              />
+              <div className="flex flex-col border-l border-white/[0.1]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = parseInt(betInput, 10) || 0;
+                    const next = Math.min(500, Math.max(2, v) + 2);
+                    setBetInput(String(next));
+                  }}
+                  disabled={(parseInt(betInput, 10) || 0) >= 500}
+                  className="flex items-center justify-center w-6 h-4 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  aria-label="Increase bet"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const v = parseInt(betInput, 10) || 0;
+                    const next = Math.max(2, Math.min(500, v) - 2);
+                    setBetInput(String(next));
+                  }}
+                  disabled={(parseInt(betInput, 10) || 0) <= 2}
+                  className="flex items-center justify-center w-6 h-4 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer border-t border-white/[0.08]"
+                  aria-label="Decrease bet"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setSelection(selection === "red" ? null : "red")}
@@ -707,7 +791,7 @@ function RouletteGame({
       <div className="flex justify-center mt-6 mb-4">
         <button
           onClick={handleSpin}
-          disabled={spinning || balance < bet || selection === null}
+          disabled={spinning || balance < (parseInt(betInput, 10) || 0) || selection === null}
           className="min-w-[160px] px-10 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
         >
           {spinning ? (

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { getSiteSettings } from "@/lib/data";
 
 const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
 const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
@@ -194,13 +195,20 @@ function aOrAn(word: string): string {
 
 // ──── Quest Generation ──────────────────────────────────
 
+/** Quest types that require the marketplace; excluded from pool when marketplace is disabled. */
+const MARKETPLACE_QUEST_TYPES: QuestType[] = ["marketplace_request"];
+
 function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
   const defs = settings.questDefinitions;
   const questTypes = Object.keys(defs) as QuestType[];
+  const marketplaceEnabled = getSiteSettings().marketplaceEnabled;
+  const allowedTypes = marketplaceEnabled
+    ? questTypes
+    : questTypes.filter((t) => !MARKETPLACE_QUEST_TYPES.includes(t));
 
   // Always-active quests first
-  const alwaysActive = questTypes.filter((t) => defs[t].alwaysActive);
-  const optional = questTypes.filter((t) => !defs[t].alwaysActive);
+  const alwaysActive = allowedTypes.filter((t) => defs[t].alwaysActive);
+  const optional = allowedTypes.filter((t) => !defs[t].alwaysActive);
 
   const quests: DailyQuestInstance[] = [];
 
@@ -287,7 +295,11 @@ function generateSingleReplacementQuest(
 ): DailyQuestInstance {
   const defs = settings.questDefinitions;
   const questTypes = Object.keys(defs) as QuestType[];
-  const optional = questTypes.filter((t) => !defs[t].alwaysActive);
+  const marketplaceEnabled = getSiteSettings().marketplaceEnabled;
+  const allowedTypes = marketplaceEnabled
+    ? questTypes
+    : questTypes.filter((t) => !MARKETPLACE_QUEST_TYPES.includes(t));
+  const optional = allowedTypes.filter((t) => !defs[t].alwaysActive);
   const existingTypes = new Set(existingQuests.map((q) => q.questType));
   const available = optional.filter((t) => !existingTypes.has(t) && t !== excludeQuestType);
   const pool = available.length > 0 ? available : optional.filter((t) => t !== excludeQuestType);

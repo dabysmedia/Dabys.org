@@ -15,7 +15,7 @@ import {
   type Card,
 } from "@/lib/casino";
 
-const MIN_BET = 5;
+const MIN_BET = 2;
 const MAX_BET = 500;
 
 function toDataCard(c: Card): BlackjackCard {
@@ -47,9 +47,9 @@ export async function POST(request: Request) {
   }
 
   if (action === "deal") {
-    if (betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET) {
+    if (betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET || betRaw % 2 !== 0) {
       return NextResponse.json(
-        { error: `Bet must be between ${MIN_BET} and ${MAX_BET}` },
+        { error: `Bet must be an even number between ${MIN_BET} and ${MAX_BET}` },
         { status: 400 }
       );
     }

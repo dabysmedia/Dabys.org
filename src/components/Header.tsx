@@ -65,7 +65,7 @@ function NavLink({
     <Link href={href} className={`${base} ${activeClass}`}>
       {label}
       {dot && (
-        <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+        <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-amber-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(245,158,11,0.4)]" aria-label="Incoming trades" />
       )}
     </Link>
   );
@@ -524,7 +524,7 @@ export default function Header() {
               >
                 TCG
                 {hasIncomingTrade && (
-                  <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-red-500/50 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.4)]" aria-label="Incoming trades" />
+                  <span className="absolute top-4 right-4 w-2.5 h-2.5 rounded-full bg-amber-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(245,158,11,0.4)]" aria-label="Incoming trades" />
                 )}
               </Link>
               <div className="min-h-[48px] flex items-center">

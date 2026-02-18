@@ -967,7 +967,7 @@ export default function HomePage() {
         <section>
           <div className="flex items-center gap-3 mb-8">
             <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
-            <h2 className="text-2xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+            <h2 className="text-2xl font-bold text-amber-300/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
               Winners Circle
             </h2>
             <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
