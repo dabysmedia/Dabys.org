@@ -18,15 +18,5 @@
     "userId": "9",
     "balance": 350,
     "updatedAt": "2026-02-15T19:11:18.243Z"
-  },
-  {
-    "userId": "2",
-    "balance": 2585,
-    "updatedAt": "2026-02-18T02:13:12.790Z"
-  },
-  {
-    "userId": "1",
-    "balance": 1750,
-    "updatedAt": "2026-02-18T01:46:02.326Z"
   }
 ]

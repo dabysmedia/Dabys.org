@@ -2716,6 +2716,49 @@ export function wipeUserInventory(userId: string): {
   };
 }
 
+/** Per-user inventory + currency wipe only. Keeps trivia, comments, submissions, codex, etc. */
+export function wipeUserInventoryAndCurrencyOnly(userId: string): {
+  cardsRemoved: number;
+  listingsRemoved: number;
+  tradesRemoved: number;
+} {
+  const cardsRaw = getCardsRaw();
+  const userCards = cardsRaw.filter((c) => c.userId === userId);
+  const userCardIds = new Set(userCards.map((c) => c.id));
+
+  const listings = getListingsRaw();
+  let listingsRemoved = 0;
+  for (const l of listings) {
+    if (l.sellerUserId === userId || userCardIds.has(l.cardId)) {
+      removeListing(l.id);
+      listingsRemoved++;
+    }
+  }
+
+  saveCardsRaw(cardsRaw.filter((c) => c.userId !== userId));
+  saveCreditsRaw(getCreditsRaw().filter((c) => c.userId !== userId));
+  saveCreditLedgerRaw(getCreditLedgerRaw().filter((e) => e.userId !== userId));
+  saveStardustRaw(getStardustRaw().filter((e) => e.userId !== userId));
+  savePrismsRaw(getPrismsRaw().filter((e) => e.userId !== userId));
+
+  const trades = getTradesRaw();
+  const tradesFiltered = trades.filter(
+    (t) => t.initiatorUserId !== userId && t.counterpartyUserId !== userId
+  );
+  const tradesRemoved = trades.length - tradesFiltered.length;
+  saveTradesRaw(tradesFiltered);
+
+  const buyOrders = getBuyOrdersRaw();
+  const buyOrdersFiltered = buyOrders.filter((o) => o.requesterUserId !== userId);
+  if (buyOrders.length !== buyOrdersFiltered.length) saveBuyOrdersRaw(buyOrdersFiltered);
+
+  return {
+    cardsRemoved: userCards.length,
+    listingsRemoved,
+    tradesRemoved,
+  };
+}
+
 /** Full server inventory reset: only cards, credits, ledger, trivia, marketplace (listings), trades. Users, weeks, winners, etc. are unchanged. */
 export function wipeServer(confirmWord: string): { success: boolean; error?: string } {
   if (confirmWord !== WIPE_CONFIRM_WORD) {
@@ -2729,6 +2772,24 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
   writeJson("cards.json", []);
   writeJson("triviaAttempts.json", []);
   writeJson("triviaSessions.json", []);
+  writeJson("listings.json", []);
+  writeJson("buyOrders.json", []);
+  writeJson("trades.json", []);
+
+  return { success: true };
+}
+
+/** Server-wide inventory + currency reset only. Keeps trivia, comments, submissions, codex, etc. */
+export function wipeServerInventoryAndCurrencyOnly(confirmWord: string): { success: boolean; error?: string } {
+  if (confirmWord !== WIPE_CONFIRM_WORD) {
+    return { success: false, error: "Confirmation word does not match" };
+  }
+
+  writeJson("credits.json", []);
+  writeJson("creditLedger.json", []);
+  writeJson("stardust.json", []);
+  writeJson("prisms.json", []);
+  writeJson("cards.json", []);
   writeJson("listings.json", []);
   writeJson("buyOrders.json", []);
   writeJson("trades.json", []);

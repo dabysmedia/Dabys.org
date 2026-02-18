@@ -261,8 +261,12 @@ export default function AdminCardsCreditsPage() {
   });
   const [wipeConfirmUser, setWipeConfirmUser] = useState("");
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
+  const [wipeConfirmUserInvCurr, setWipeConfirmUserInvCurr] = useState("");
+  const [wipeConfirmServerInvCurr, setWipeConfirmServerInvCurr] = useState("");
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
+  const [wipingUserInvCurr, setWipingUserInvCurr] = useState(false);
+  const [wipingServerInvCurr, setWipingServerInvCurr] = useState(false);
   const [resettingCodex, setResettingCodex] = useState(false);
   const [legendaryInInventory, setLegendaryInInventory] = useState<(Card & { inPool: boolean })[]>([]);
   const [legendaryInInventoryLoading, setLegendaryInInventoryLoading] = useState(false);
@@ -1080,6 +1084,69 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to reset server");
     } finally {
       setWipingServer(false);
+    }
+  }
+
+  async function handleWipeUserInventoryCurrency(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedUserId || wipingUserInvCurr) return;
+    if (wipeConfirmUserInvCurr.trim().toUpperCase() !== "WIPE") {
+      setError("Type WIPE to confirm");
+      return;
+    }
+    setWipingUserInvCurr(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/wipe/user-inventory-currency", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, confirm: wipeConfirmUserInvCurr.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWipeConfirmUserInvCurr("");
+        setCreditBalance(0);
+        setCards([]);
+        setError("");
+        alert(`Wiped: ${data.cardsRemoved} cards, ${data.listingsRemoved} listings, ${data.tradesRemoved} trades. Trivia, comments, and submissions preserved.`);
+      } else {
+        setError(data.error || "Failed to wipe user inventory");
+      }
+    } catch {
+      setError("Failed to wipe user inventory");
+    } finally {
+      setWipingUserInvCurr(false);
+    }
+  }
+
+  async function handleWipeServerInventoryCurrency(e: React.FormEvent) {
+    e.preventDefault();
+    if (wipingServerInvCurr) return;
+    if (wipeConfirmServerInvCurr.trim().toUpperCase() !== "WIPE") {
+      setError("Type WIPE to confirm");
+      return;
+    }
+    setWipingServerInvCurr(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/wipe/server-inventory-currency", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: wipeConfirmServerInvCurr.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWipeConfirmServerInvCurr("");
+        setError("");
+        alert("Inventory and currency reset complete. Trivia, comments, submissions preserved. Reload the page.");
+        window.location.reload();
+      } else {
+        setError(data.error || "Failed to reset inventory");
+      }
+    } catch {
+      setError("Failed to reset inventory");
+    } finally {
+      setWipingServerInvCurr(false);
     }
   }
 
@@ -2418,6 +2485,15 @@ export default function AdminCardsCreditsPage() {
             </form>
           </div>
           <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-2">Wipe one user&apos;s inventory &amp; currency only</h3>
+            <p className="text-[11px] text-white/40 mb-3">Removes cards, credits, stardust, prisms, listings, trades. Keeps trivia, comments, submissions, codex.</p>
+            <form onSubmit={handleWipeUserInventoryCurrency} className="flex flex-wrap gap-3 items-end">
+              <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-red-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"><option value="">-- Select user --</option>{users.map((u) => ( <option key={u.id} value={u.id}>{u.name} ({u.id})</option> ))}</select>
+              <input type="text" value={wipeConfirmUserInvCurr} onChange={(e) => setWipeConfirmUserInvCurr(e.target.value)} placeholder="Type WIPE to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48" />
+              <button type="submit" disabled={!selectedUserId || wipingUserInvCurr || wipeConfirmUserInvCurr.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingUserInvCurr ? "Wiping..." : "Wipe inventory &amp; currency only"}</button>
+            </form>
+          </div>
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <h3 className="text-sm font-medium text-white/70 mb-2">Rebuild pool (6 per movie)</h3>
             <p className="text-[11px] text-white/40 mb-3">Re-fetches cast from TMDB and rebuilds the character pool. Custom entries are preserved.</p>
             {showRebuildConfirm ? (
@@ -2435,12 +2511,20 @@ export default function AdminCardsCreditsPage() {
             <p className="text-[11px] text-white/40 mb-3">Clears all codex unlocks for all users. Everyone will see the Codex as locked.</p>
             <button type="button" onClick={handleResetCodex} disabled={resettingCodex} className="px-4 py-2.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-sm font-medium hover:bg-amber-500/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{resettingCodex ? "Resetting..." : "Reset codex"}</button>
           </div>
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <h3 className="text-sm font-medium text-white/70 mb-2">Reset all inventory &amp; currency (server-wide)</h3>
+            <p className="text-[11px] text-white/40 mb-3">Clears all cards, credits, stardust, prisms, listings, and trades. Keeps trivia, comments, submissions, codex, users, weeks, winners, packs.</p>
+            <form onSubmit={handleWipeServerInventoryCurrency} className="flex flex-wrap gap-3 items-end">
+              <input type="text" value={wipeConfirmServerInvCurr} onChange={(e) => setWipeConfirmServerInvCurr(e.target.value)} placeholder="Type WIPE to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48" />
+              <button type="submit" disabled={wipingServerInvCurr || wipeConfirmServerInvCurr.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-600/80 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingServerInvCurr ? "Resetting..." : "Reset inventory &amp; currency only"}</button>
+            </form>
+          </div>
           <div className="rounded-lg border border-red-500/20 bg-red-500/[0.03] p-4">
-            <h3 className="text-sm font-medium text-red-400/90 mb-2">Reset all inventory (server-wide)</h3>
+            <h3 className="text-sm font-medium text-red-400/90 mb-2">Reset all inventory (server-wide, full)</h3>
             <p className="text-[11px] text-white/40 mb-3">Clears all cards, credits, credit history, trivia attempts, marketplace listings, and trades. Users, weeks, winners, submissions, ratings, comments, and packs are not touched.</p>
             <form onSubmit={handleWipeServer} className="flex flex-wrap gap-3 items-end">
               <input type="text" value={wipeConfirmServer} onChange={(e) => setWipeConfirmServer(e.target.value)} placeholder="Type WIPE to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-red-500/40 w-48" />
-              <button type="submit" disabled={wipingServer || wipeConfirmServer.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingServer ? "Resetting..." : "Reset all inventory"}</button>
+              <button type="submit" disabled={wipingServer || wipeConfirmServer.trim().toUpperCase() !== "WIPE"} className="px-4 py-2.5 rounded-lg bg-red-700 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{wipingServer ? "Resetting..." : "Reset all inventory (incl. trivia)"}</button>
             </form>
           </div>
         </div>
