@@ -1,12 +1,12 @@
 [
   {
-    "userId": "2",
-    "lastSeen": "2026-02-17T22:38:39.234Z",
-    "idle": false
+    "userId": "1",
+    "lastSeen": "2026-02-18T02:19:03.596Z",
+    "idle": true
   },
   {
-    "userId": "1",
-    "lastSeen": "2026-02-17T22:39:03.654Z",
-    "idle": true
+    "userId": "2",
+    "lastSeen": "2026-02-18T02:19:03.601Z",
+    "idle": false
   }
 ]

@@ -26,5 +26,99 @@
     "targetUserId": "__global__",
     "id": "ntf_1771316421901_1fqfm6",
     "timestamp": "2026-02-17T08:20:21.901Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Manny Ray",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771376648253-14176a5",
+      "characterName": "Manny Ray",
+      "movieTitle": "Scarface"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771376648265_js44ft",
+    "timestamp": "2026-02-18T01:04:08.265Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Nacho",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771376648254-nrgdc63",
+      "characterName": "Nacho",
+      "movieTitle": "Nacho Libre"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771376648266_1fo9pk",
+    "timestamp": "2026-02-18T01:04:08.266Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Shrek (voice)",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771376650503-11xhdwp",
+      "characterName": "Shrek (voice)",
+      "movieTitle": "Shrek 2"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771376650512_bvyum5",
+    "timestamp": "2026-02-18T01:04:10.512Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Sam Witwicky",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771376906938-hafn7o8",
+      "characterName": "Sam Witwicky",
+      "movieTitle": "Transformers"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771376906952_uz283i",
+    "timestamp": "2026-02-18T01:08:26.952Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Nacho",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771377932134-e157646",
+      "characterName": "Nacho",
+      "movieTitle": "Nacho Libre"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771377932145_2tbhmb",
+    "timestamp": "2026-02-18T01:25:32.145Z"
+  },
+  {
+    "type": "trade_received",
+    "targetUserId": "1",
+    "message": "sent you a trade offer (1 card)",
+    "actorUserId": "5",
+    "actorName": "Jacob",
+    "meta": {
+      "tradeId": "trd-1771379618489-eh8nqek"
+    },
+    "id": "ntf_1771379618490_upu8jr",
+    "timestamp": "2026-02-18T01:53:38.490Z"
+  },
+  {
+    "type": "trade_received",
+    "targetUserId": "2",
+    "message": "sent you a trade offer (1 card)",
+    "actorUserId": "5",
+    "actorName": "Jacob",
+    "meta": {
+      "tradeId": "trd-1771379643940-4e3m7us"
+    },
+    "id": "ntf_1771379643941_0o0zs2",
+    "timestamp": "2026-02-18T01:54:03.941Z"
   }
 ]

@@ -52,5 +52,75 @@
     },
     "id": "act_1771316421901_tcty8k",
     "timestamp": "2026-02-17T08:20:21.901Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Manny Ray",
+    "meta": {
+      "cardId": "card-1771376648253-14176a5",
+      "characterName": "Manny Ray",
+      "actorName": "Steven Bauer",
+      "movieTitle": "Scarface"
+    },
+    "id": "act_1771376648263_qxt9n2",
+    "timestamp": "2026-02-18T01:04:08.263Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Nacho",
+    "meta": {
+      "cardId": "card-1771376648254-nrgdc63",
+      "characterName": "Nacho",
+      "actorName": "Jack Black",
+      "movieTitle": "Nacho Libre"
+    },
+    "id": "act_1771376648266_e60wsb",
+    "timestamp": "2026-02-18T01:04:08.266Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Shrek (voice)",
+    "meta": {
+      "cardId": "card-1771376650503-11xhdwp",
+      "characterName": "Shrek (voice)",
+      "actorName": "Mike Myers",
+      "movieTitle": "Shrek 2"
+    },
+    "id": "act_1771376650511_01z76l",
+    "timestamp": "2026-02-18T01:04:10.511Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Sam Witwicky",
+    "meta": {
+      "cardId": "card-1771376906938-hafn7o8",
+      "characterName": "Sam Witwicky",
+      "actorName": "Shia LaBeouf",
+      "movieTitle": "Transformers"
+    },
+    "id": "act_1771376906951_zh4vbm",
+    "timestamp": "2026-02-18T01:08:26.951Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Nacho",
+    "meta": {
+      "cardId": "card-1771377932134-e157646",
+      "characterName": "Nacho",
+      "actorName": "Jack Black",
+      "movieTitle": "Nacho Libre"
+    },
+    "id": "act_1771377932144_xyierp",
+    "timestamp": "2026-02-18T01:25:32.144Z"
   }
 ]

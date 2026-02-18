@@ -1,18 +1,8 @@
 [
   {
-    "userId": "2",
-    "balance": 1751,
-    "updatedAt": "2026-02-17T07:33:08.774Z"
-  },
-  {
     "userId": "4",
     "balance": 100,
     "updatedAt": "2026-02-15T18:59:25.879Z"
-  },
-  {
-    "userId": "1",
-    "balance": 13,
-    "updatedAt": "2026-02-16T20:33:43.462Z"
   },
   {
     "userId": "5",
@@ -28,5 +18,15 @@
     "userId": "9",
     "balance": 350,
     "updatedAt": "2026-02-15T19:11:18.243Z"
+  },
+  {
+    "userId": "2",
+    "balance": 2585,
+    "updatedAt": "2026-02-18T02:13:12.790Z"
+  },
+  {
+    "userId": "1",
+    "balance": 1750,
+    "updatedAt": "2026-02-18T01:46:02.326Z"
   }
 ]

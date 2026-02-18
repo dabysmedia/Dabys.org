@@ -1,0 +1,20 @@
+[
+  {
+    "id": "dm-1771377134114-lh07x9x",
+    "senderId": "2",
+    "senderName": "Carlos",
+    "recipientId": "1",
+    "recipientName": "Jerry",
+    "message": "yo",
+    "createdAt": "2026-02-18T01:12:14.114Z"
+  },
+  {
+    "id": "dm-1771379399716-b7p4ck7",
+    "senderId": "1",
+    "senderName": "Jerry",
+    "recipientId": "7",
+    "recipientName": "Anthony",
+    "message": "yo",
+    "createdAt": "2026-02-18T01:49:59.716Z"
+  }
+]

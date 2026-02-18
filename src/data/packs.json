@@ -19,13 +19,14 @@
     "restockHourUtc": 0,
     "restockMinuteUtc": 0,
     "discounted": true,
-    "discountPercent": 25,
+    "discountPercent": 0,
     "rarityWeights": {
-      "legendary": 2,
-      "epic": 10,
-      "rare": 50,
-      "uncommon": 40
-    }
+      "legendary": 1,
+      "epic": 8,
+      "rare": 20,
+      "uncommon": 71
+    },
+    "holoChance": 3
   },
   {
     "id": "pack-1771000454277-lsrtxlr",
@@ -35,20 +36,19 @@
     "cardsPerPack": 1,
     "allowedRarities": [
       "uncommon",
-      "rare",
-      "epic",
-      "legendary"
+      "rare"
     ],
     "allowedCardTypes": [
-      "actor",
-      "director",
-      "character",
-      "scene"
+      "actor"
     ],
     "isActive": true,
     "maxPurchasesPerDay": 3,
     "isFree": true,
-    "discounted": false
+    "discounted": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
   },
   {
     "id": "pack-1771076755342-xbvgzn7",
@@ -69,6 +69,8 @@
     "isFree": false,
     "restockHourUtc": 0,
     "restockMinuteUtc": 0,
-    "discounted": false
+    "discounted": false,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
   }
 ]

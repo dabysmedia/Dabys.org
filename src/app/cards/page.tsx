@@ -3888,7 +3888,6 @@ function CardsContent() {
                       setPrismaticCraftCardId(card.id);
                       setPrismaticCraftPrisms(1);
                       setPrismaticCraftResult(null);
-                      setShowPrismaticForgeTab(true);
                       setAlchemySubTab("forge");
                       return;
                     }
@@ -4011,7 +4010,6 @@ function CardsContent() {
                       setPrismaticCraftCardId(eligible.id!);
                       setPrismaticCraftPrisms(1);
                       setPrismaticCraftResult(null);
-                      setShowPrismaticForgeTab(true);
                       setAlchemySubTab("forge");
                     } else {
                       addToAlchemyBench(eligible.id!);
