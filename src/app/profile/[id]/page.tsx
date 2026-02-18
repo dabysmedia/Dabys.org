@@ -46,6 +46,8 @@ interface DisplayedBadge {
   isHolo?: boolean;
 }
 
+type BadgeTier = "normal" | "holo" | "prismatic" | "darkMatter";
+
 interface CompletedBadge {
   winnerId?: string;
   shopItemId?: string;
@@ -54,6 +56,7 @@ interface CompletedBadge {
   imageUrl?: string;
   posterUrl?: string;
   isHolo?: boolean;
+  badgeTier?: BadgeTier;
 }
 
 type BadgeSelection = null | { type: "winner"; id: string } | { type: "shop"; id: string };
@@ -975,7 +978,7 @@ export default function ProfilePage() {
           })()}
         </div>
 
-        {/* Achievements — full-size badges (codex style) */}
+        {/* Achievements — full-size badges (codex completion styling) */}
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
           <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Achievements</h3>
           {completedBadges.length === 0 ? (
@@ -988,10 +991,32 @@ export default function ProfilePage() {
                 const isWinner = !!b.winnerId;
                 const imageUrl = isWinner ? (b.posterUrl ?? "") : (b.imageUrl ?? "");
                 const key = isWinner ? `w-${b.winnerId}` : `s-${b.shopItemId}`;
+                const tier = b.badgeTier ?? "normal";
+                const wrapperClass =
+                  tier === "darkMatter"
+                    ? "dark-matter-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                    : tier === "prismatic"
+                      ? "prismatic-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                      : tier === "holo"
+                        ? "holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                        : "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30";
+                const tierTagClass =
+                  tier === "darkMatter"
+                    ? "bg-violet-900/90 border border-violet-400/50 text-violet-200"
+                    : tier === "prismatic"
+                      ? "bg-amber-400/90 border border-amber-300/50 text-amber-950"
+                      : tier === "holo"
+                        ? "text-white border border-white/40"
+                        : "bg-amber-500/90 text-amber-950";
+                const tierTagStyle = tier === "holo" ? { background: "linear-gradient(135deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 6px rgba(255,255,255,0.4)" } : undefined;
+                const tierLabel = tier === "darkMatter" ? "Dark Matter" : tier === "prismatic" ? "Prismatic" : tier === "holo" ? "Holo" : "Complete";
+                const checkBgClass = tier === "darkMatter" ? "bg-violet-400" : tier === "prismatic" ? "bg-amber-300" : tier === "holo" ? "bg-white/90" : "bg-amber-400";
+                const checkTextClass = tier === "darkMatter" ? "text-violet-950" : tier === "prismatic" ? "text-amber-950" : tier === "holo" ? "text-violet-900" : "text-amber-950";
+                const fallbackIconClass = tier === "darkMatter" ? "text-violet-400/80" : tier === "prismatic" ? "text-amber-300/80" : tier === "holo" ? "text-white/80" : "text-amber-400/80";
                 return (
                   <div
                     key={key}
-                    className="rounded-xl overflow-hidden border border-amber-500/30 bg-amber-500/5 transition-all hover:ring-2 hover:ring-amber-400/40"
+                    className={`rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${wrapperClass}`}
                     style={{ aspectRatio: "1" }}
                   >
                     <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
@@ -1005,26 +1030,21 @@ export default function ProfilePage() {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                         </>
                       ) : (
-                        <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
-                          <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        <div className={`w-full h-full absolute inset-0 flex items-center justify-center ${tier === "normal" ? "bg-amber-500/20" : "bg-white/[0.06]"}`}>
+                          <svg className={`w-10 h-10 ${fallbackIconClass}`} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                           </svg>
                         </div>
                       )}
                       <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                         {b.movieTitle || b.name || "Badge"}
                       </span>
-                      {b.isHolo && (
-                        <span
-                          className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
-                          style={{
-                            background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
-                            boxShadow: "0 0 6px rgba(255,255,255,0.5)",
-                          }}
-                        >
-                          HOLO
-                        </span>
-                      )}
+                      <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
+                        <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      </span>
+                      <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`} style={tierTagStyle} aria-hidden>
+                        {tierLabel}
+                      </span>
                     </div>
                   </div>
                 );
@@ -1656,13 +1676,36 @@ export default function ProfilePage() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {completedBadges.map((b) => {
-                      const isWinner = !!(b as CompletedBadge).winnerId;
-                      const imageUrl = isWinner ? ((b as CompletedBadge).posterUrl ?? "") : ((b as CompletedBadge).imageUrl ?? "");
-                      const key = isWinner ? `w-${(b as CompletedBadge).winnerId}` : `s-${(b as CompletedBadge).shopItemId}`;
+                      const badge = b as CompletedBadge;
+                      const isWinner = !!badge.winnerId;
+                      const imageUrl = isWinner ? (badge.posterUrl ?? "") : (badge.imageUrl ?? "");
+                      const key = isWinner ? `w-${badge.winnerId}` : `s-${badge.shopItemId}`;
+                      const tier = badge.badgeTier ?? "normal";
+                      const wrapperClass =
+                        tier === "darkMatter"
+                          ? "dark-matter-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                          : tier === "prismatic"
+                            ? "prismatic-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                            : tier === "holo"
+                              ? "holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                              : "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30";
+                      const tierTagClass =
+                        tier === "darkMatter"
+                          ? "bg-violet-900/90 border border-violet-400/50 text-violet-200"
+                          : tier === "prismatic"
+                            ? "bg-amber-400/90 border border-amber-300/50 text-amber-950"
+                            : tier === "holo"
+                              ? "text-white border border-white/40"
+                              : "bg-amber-500/90 text-amber-950";
+                      const tierTagStyle = tier === "holo" ? { background: "linear-gradient(135deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 6px rgba(255,255,255,0.4)" } : undefined;
+                      const tierLabel = tier === "darkMatter" ? "Dark Matter" : tier === "prismatic" ? "Prismatic" : tier === "holo" ? "Holo" : "Complete";
+                      const checkBgClass = tier === "darkMatter" ? "bg-violet-400" : tier === "prismatic" ? "bg-amber-300" : tier === "holo" ? "bg-white/90" : "bg-amber-400";
+                      const checkTextClass = tier === "darkMatter" ? "text-violet-950" : tier === "prismatic" ? "text-amber-950" : tier === "holo" ? "text-violet-900" : "text-amber-950";
+                      const fallbackIconClass = tier === "darkMatter" ? "text-violet-400/80" : tier === "prismatic" ? "text-amber-300/80" : tier === "holo" ? "text-white/80" : "text-amber-400/80";
                       return (
                         <div
                           key={key}
-                          className="rounded-xl overflow-hidden border border-amber-500/30 bg-amber-500/5 transition-all hover:ring-2 hover:ring-amber-400/40"
+                          className={`rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${wrapperClass}`}
                           style={{ aspectRatio: "1" }}
                         >
                           <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
@@ -1672,26 +1715,21 @@ export default function ProfilePage() {
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                               </>
                             ) : (
-                              <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
-                                <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              <div className={`w-full h-full absolute inset-0 flex items-center justify-center ${tier === "normal" ? "bg-amber-500/20" : "bg-white/[0.06]"}`}>
+                                <svg className={`w-10 h-10 ${fallbackIconClass}`} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                  <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                                 </svg>
                               </div>
                             )}
                             <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                              {b.movieTitle || (b as CompletedBadge).name || "Badge"}
+                              {badge.movieTitle || badge.name || "Badge"}
                             </span>
-                            {b.isHolo && (
-                              <span
-                                className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded text-[10px] font-bold text-white"
-                                style={{
-                                  background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
-                                  boxShadow: "0 0 6px rgba(255,255,255,0.5)",
-                                }}
-                              >
-                                HOLO
-                              </span>
-                            )}
+                            <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
+                              <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                            </span>
+                            <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`} style={tierTagStyle} aria-hidden>
+                              {tierLabel}
+                            </span>
                           </div>
                         </div>
                       );

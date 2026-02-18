@@ -15,7 +15,7 @@ import {
   getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
 } from "@/lib/data";
-import { getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
+import { getCompletedWinnerIds, getCompletedHoloWinnerIds, getCompletedPrismaticWinnerIds, getCompletedDarkMatterWinnerIds } from "@/lib/cards";
 
 // GET /api/users/[id]/profile — full profile + stats + submissions + comments
 export async function GET(
@@ -344,21 +344,32 @@ export async function GET(
     })
     .filter((e) => e != null) as CodexCardItem[];
 
-  // Completed badges (winner-based + Holo) + purchased movie badges + standalone purchased badges
+  // Completed badges (winner-based + tier) + purchased movie badges + standalone purchased badges
   const completedWinnerIds = getCompletedWinnerIds(id);
   const completedHoloWinnerIds = getCompletedHoloWinnerIds(id);
+  const completedPrismaticWinnerIds = getCompletedPrismaticWinnerIds(id);
+  const completedDarkMatterWinnerIds = getCompletedDarkMatterWinnerIds(id);
   const purchasedBadgeWinnerIds = profile.purchasedBadgeWinnerIds ?? [];
   const purchasedBadges = profile.purchasedBadges ?? [];
   const allDisplayableWinnerIds = [...new Set([...completedWinnerIds, ...purchasedBadgeWinnerIds])];
+  type BadgeTier = "normal" | "holo" | "prismatic" | "darkMatter";
   const completedBadges = [
     ...allDisplayableWinnerIds.map((wid) => {
       const w = allWinners.find((x) => x.id === wid);
       const isPurchased = purchasedBadgeWinnerIds.includes(wid);
+      let badgeTier: BadgeTier = "normal";
+      if (!isPurchased) {
+        if (completedDarkMatterWinnerIds.includes(wid)) badgeTier = "darkMatter";
+        else if (completedPrismaticWinnerIds.includes(wid)) badgeTier = "prismatic";
+        else if (completedHoloWinnerIds.includes(wid)) badgeTier = "holo";
+        else if (completedWinnerIds.includes(wid)) badgeTier = "normal";
+      }
       return {
         winnerId: wid,
         movieTitle: w?.movieTitle ?? "Unknown",
         posterUrl: w?.posterUrl ?? undefined,
         isHolo: !isPurchased && completedHoloWinnerIds.includes(wid),
+        badgeTier,
       };
     }),
     ...purchasedBadges.map((b) => ({
@@ -367,6 +378,7 @@ export async function GET(
       name: b.name,
       imageUrl: b.imageUrl,
       isHolo: false as const,
+      badgeTier: "normal" as BadgeTier,
     })),
   ];
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 
 const MOBILE_BREAKPOINT_PX = 768;
-const POLL_INTERVAL_MS = 8000;
+const POLL_INTERVAL_MS = 2000;
 
 function convKey(a: string, b: string) {
   return [a, b].sort().join("_");
@@ -93,9 +93,9 @@ export function MessagesPanel() {
       .then((d) => { if (d?.profile?.avatarUrl) setUserAvatarUrl(d.profile.avatarUrl); });
   }, [user?.id]);
 
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (silent = false) => {
     if (!user?.id) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/dms?userId=${user.id}`);
       if (!res.ok) return;
@@ -115,7 +115,7 @@ export function MessagesPanel() {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [user?.id]);
 
@@ -150,22 +150,42 @@ export function MessagesPanel() {
 
   useEffect(() => {
     if (open && user) {
-      loadConversations();
+      loadConversations(false);
       if (showNewChat && users.length === 0) loadUsers();
     }
   }, [open, user, showNewChat, loadConversations, loadUsers, users.length]);
 
-  // Poll for new messages when logged in (live-updating badge)
+  // Refetch immediately when tab becomes visible
+  useEffect(() => {
+    const onVisibility = () => {
+      if (!document.hidden && user?.id) {
+        loadConversations(true);
+        if (open && selectedOther?.id) loadMessages();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [user?.id, open, selectedOther?.id, loadConversations, loadMessages]);
+
+  // Poll for conversations when logged in (live-updating badge)
   useEffect(() => {
     if (!user?.id) return;
-    loadConversations();
-    const id = setInterval(loadConversations, POLL_INTERVAL_MS);
+    loadConversations(false);
+    const id = setInterval(() => loadConversations(true), POLL_INTERVAL_MS);
     return () => clearInterval(id);
   }, [user?.id, loadConversations]);
 
+  // Load messages when opening a conversation
   useEffect(() => {
     if (open && selectedOther) loadMessages();
   }, [open, selectedOther, loadMessages]);
+
+  // Poll for new messages in active conversation
+  useEffect(() => {
+    if (!open || !user?.id || !selectedOther?.id) return;
+    const id = setInterval(loadMessages, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [open, user?.id, selectedOther?.id, loadMessages]);
 
   // Mark conversation as read when viewing it
   useEffect(() => {

@@ -51,7 +51,7 @@ interface Toast {
   exiting: boolean;
 }
 
-const POLL_INTERVAL = 8_000;
+const POLL_INTERVAL = 2_000;
 const TOAST_DISPLAY_MS = 5_000;
 const MAX_VISIBLE = 3;
 

@@ -14,7 +14,7 @@ interface NotificationEntry {
   meta?: Record<string, unknown>;
 }
 
-const POLL_INTERVAL = 10_000;
+const POLL_INTERVAL = 2_000;
 
 // Brand palette: amber, purple, sky, emerald (success), red (danger)
 const TYPE_CONFIG: Record<
