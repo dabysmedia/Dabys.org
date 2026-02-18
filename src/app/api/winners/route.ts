@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits, getCreditSettings } from "@/lib/data";
+import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits, getCreditSettings, getVotes } from "@/lib/data";
 import { addPendingPoolEntriesForWinner, getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 export async function GET() {
   const winners = getWinners();
   const weeks = getWeeks();
   const users = getUsers();
+  const submissions = getSubmissions();
+  const votes = getVotes();
   const enriched = winners.map((w) => {
     const week = weeks.find((wk) => wk.id === w.weekId);
     const submitterUser = users.find((u) => u.name === w.submittedBy);
     const submittedByUserId = submitterUser?.id || "";
+    const winningSubmission = submissions.find(
+      (s) => s.weekId === w.weekId && (s.userName === w.submittedBy || s.userId === submittedByUserId)
+    );
+    const voteCount = winningSubmission
+      ? votes.filter((v) => v.weekId === w.weekId && v.submissionId === winningSubmission.id).length
+      : 0;
     let submitterAvatarUrl: string | undefined;
     let submitterDisplayedBadge: { winnerId: string; movieTitle: string; isHolo: boolean } | null = null;
     if (submittedByUserId) {
@@ -33,6 +41,7 @@ export async function GET() {
       submittedByUserId,
       submitterAvatarUrl,
       submitterDisplayedBadge,
+      voteCount,
     };
   });
   return NextResponse.json(enriched);

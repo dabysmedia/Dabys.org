@@ -117,6 +117,12 @@ export async function POST(request: Request) {
         : 0.5
       : undefined;
 
+  const rawHoloChance = typeof body.holoChance === "number" ? body.holoChance : parseFloat(String(body.holoChance ?? ""));
+  const holoChance =
+    Number.isFinite(rawHoloChance) && rawHoloChance >= 0 && rawHoloChance <= 100
+      ? Math.min(100, Math.max(0, rawHoloChance))
+      : undefined;
+
   const pack = upsertPack({
     name,
     imageUrl,
@@ -137,6 +143,7 @@ export async function POST(request: Request) {
     allowDarkMatter: allowDarkMatter ? true : undefined,
     prismaticChance: allowPrismatic ? (prismaticChance !== undefined ? prismaticChance : 2) : undefined,
     darkMatterChance: allowDarkMatter ? (darkMatterChance !== undefined ? darkMatterChance : 0.5) : undefined,
+    holoChance,
   });
 
   return NextResponse.json(pack, { status: 201 });
@@ -237,8 +244,8 @@ export async function PATCH(request: Request) {
         ? Math.round(rawDiscountPercent)
         : (existing as { discountPercent?: number }).discountPercent;
 
-  // Parse rarityWeights — keep existing if not provided
-  const rawRarityWeights = body.rarityWeights;
+  // Parse rarityWeights — keep existing if field absent; explicit null removes them
+  const rawRarityWeights = "rarityWeights" in body ? body.rarityWeights : undefined;
   const rarityWeights =
     rawRarityWeights === undefined
       ? existing.rarityWeights
@@ -276,6 +283,15 @@ export async function PATCH(request: Request) {
         : 0.5
       : undefined;
 
+  const rawHoloChance =
+    "holoChance" in body
+      ? (typeof body.holoChance === "number" ? body.holoChance : parseFloat(String(body.holoChance ?? "")))
+      : (existing as { holoChance?: number }).holoChance;
+  const holoChance =
+    Number.isFinite(rawHoloChance) && rawHoloChance! >= 0 && rawHoloChance! <= 100
+      ? Math.min(100, Math.max(0, rawHoloChance!))
+      : undefined;
+
   const updated = upsertPack({
     id,
     name,
@@ -297,6 +313,7 @@ export async function PATCH(request: Request) {
     allowDarkMatter: allowDarkMatter ? true : undefined,
     prismaticChance: allowPrismatic ? (prismaticChance ?? 2) : undefined,
     darkMatterChance: allowDarkMatter ? (darkMatterChance ?? 0.5) : undefined,
+    holoChance,
   });
 
   return NextResponse.json(updated);

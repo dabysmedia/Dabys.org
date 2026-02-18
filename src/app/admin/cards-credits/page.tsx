@@ -67,6 +67,7 @@ interface Pack {
   allowDarkMatter?: boolean;
   prismaticChance?: number;
   darkMatterChance?: number;
+  holoChance?: number;
 }
 
 type ShopItemType = "badge" | "skip";
@@ -162,6 +163,8 @@ export default function AdminCardsCreditsPage() {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [creditBalance, setCreditBalance] = useState<number>(0);
   const [creditInput, setCreditInput] = useState("");
+  const [addCreditsInput, setAddCreditsInput] = useState("");
+  const [addingCredits, setAddingCredits] = useState(false);
   const [stardustBalance, setStardustBalance] = useState<number>(0);
   const [stardustInput, setStardustInput] = useState("");
   const [savingStardust, setSavingStardust] = useState(false);
@@ -190,6 +193,7 @@ export default function AdminCardsCreditsPage() {
   const [customRarity, setCustomRarity] = useState<"uncommon" | "rare" | "epic" | "legendary">("uncommon");
   const [customCardType, setCustomCardType] = useState<CardType>("actor");
   const [customAltArtOfCharacterId, setCustomAltArtOfCharacterId] = useState("");
+  const [customAddToPending, setCustomAddToPending] = useState(false);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editForm, setEditForm] = useState<Partial<Card>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -277,6 +281,8 @@ export default function AdminCardsCreditsPage() {
     feedbackAccepted: number;
     setCompletionReward: number;
     holoSetCompletionReward: number;
+    prismaticSetCompletionReward: number;
+    darkMatterSetCompletionReward: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -292,9 +298,26 @@ export default function AdminCardsCreditsPage() {
     feedbackAccepted: "10",
     setCompletionReward: "1000",
     holoSetCompletionReward: "1500",
+    prismaticSetCompletionReward: "3000",
+    darkMatterSetCompletionReward: "5000",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
+  const [alchemySettingsForm, setAlchemySettingsForm] = useState({
+    prismTransmuteEpicHoloCount: "3",
+    prismTransmuteSuccessChance: "50",
+    prismsPerTransmute: "1",
+    prismaticCraftBaseChance: "5",
+    prismaticCraftChancePerPrism: "10",
+    prismaticCraftMaxPrisms: "10",
+    prismaticCraftFailureStardust: "25",
+    epicHoloForgePrisms: "1",
+    holoUpgradeChance: "50",
+    prismaticUpgradeChance: "35",
+    darkMatterUpgradeChance: "20",
+  });
+  const [savingAlchemySettings, setSavingAlchemySettings] = useState(false);
+  const [alchemySettingsLoading, setAlchemySettingsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"users" | "packs" | "pool" | "economy" | "danger">("users");
   const [addAllCreditsInput, setAddAllCreditsInput] = useState("");
   const [addAllCreditsLoading, setAddAllCreditsLoading] = useState(false);
@@ -319,6 +342,7 @@ export default function AdminCardsCreditsPage() {
     allowDarkMatter: boolean;
     prismaticChance: string;
     darkMatterChance: string;
+    holoChance: string;
   }>({
     name: "",
     imageUrl: "",
@@ -340,6 +364,7 @@ export default function AdminCardsCreditsPage() {
     allowDarkMatter: false,
     prismaticChance: "2",
     darkMatterChance: "0.5",
+    holoChance: "",
   });
 
   const REBUILD_CONFIRM_WORD = "rebuild";
@@ -442,12 +467,41 @@ export default function AdminCardsCreditsPage() {
           feedbackAccepted: String(d.feedbackAccepted ?? 10),
           setCompletionReward: String(d.setCompletionReward ?? 1000),
           holoSetCompletionReward: String(d.holoSetCompletionReward ?? 1500),
+          prismaticSetCompletionReward: String(d.prismaticSetCompletionReward ?? 3000),
+          darkMatterSetCompletionReward: String(d.darkMatterSetCompletionReward ?? 5000),
         });
       }
     } catch {
       setError("Failed to load credit settings");
     } finally {
       setCreditSettingsLoading(false);
+    }
+  }, []);
+
+  const loadAlchemySettings = useCallback(async () => {
+    setAlchemySettingsLoading(true);
+    try {
+      const res = await fetch("/api/admin/alchemy-settings");
+      if (res.ok) {
+        const d = await res.json();
+        setAlchemySettingsForm({
+          prismTransmuteEpicHoloCount: String(d.prismTransmuteEpicHoloCount ?? 3),
+          prismTransmuteSuccessChance: String(d.prismTransmuteSuccessChance ?? 50),
+          prismsPerTransmute: String(d.prismsPerTransmute ?? 1),
+          prismaticCraftBaseChance: String(d.prismaticCraftBaseChance ?? 5),
+          prismaticCraftChancePerPrism: String(d.prismaticCraftChancePerPrism ?? 10),
+          prismaticCraftMaxPrisms: String(d.prismaticCraftMaxPrisms ?? 10),
+          prismaticCraftFailureStardust: String(d.prismaticCraftFailureStardust ?? 25),
+          epicHoloForgePrisms: String(d.epicHoloForgePrisms ?? 1),
+          holoUpgradeChance: String(d.holoUpgradeChance ?? 50),
+          prismaticUpgradeChance: String(d.prismaticUpgradeChance ?? 35),
+          darkMatterUpgradeChance: String(d.darkMatterUpgradeChance ?? 20),
+        });
+      }
+    } catch {
+      setError("Failed to load alchemy settings");
+    } finally {
+      setAlchemySettingsLoading(false);
     }
   }, []);
 
@@ -550,8 +604,9 @@ export default function AdminCardsCreditsPage() {
     loadPacks();
     loadShopItems();
     loadCreditSettings();
+    loadAlchemySettings();
     loadLegendaryInInventory();
-  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadLegendaryInInventory]);
+  }, [loadUsers, loadPool, loadPacks, loadShopItems, loadCreditSettings, loadAlchemySettings, loadLegendaryInInventory]);
 
   useEffect(() => {
     loadData();
@@ -675,6 +730,7 @@ export default function AdminCardsCreditsPage() {
       allowDarkMatter: false,
       prismaticChance: "2",
       darkMatterChance: "0.5",
+      holoChance: "",
     });
   }
 
@@ -705,6 +761,7 @@ export default function AdminCardsCreditsPage() {
       allowDarkMatter: !!pack.allowDarkMatter,
       prismaticChance: typeof pack.prismaticChance === "number" ? String(pack.prismaticChance) : "2",
       darkMatterChance: typeof pack.darkMatterChance === "number" ? String(pack.darkMatterChance) : "0.5",
+      holoChance: typeof pack.holoChance === "number" ? String(pack.holoChance) : "",
     });
   }
 
@@ -762,7 +819,7 @@ export default function AdminCardsCreditsPage() {
               rare: Math.max(0, parseFloat(packForm.rarityWeights.rare) || 0),
               uncommon: Math.max(0, parseFloat(packForm.rarityWeights.uncommon) || 0),
             }
-          : undefined,
+          : null,
         allowPrismatic: packForm.allowPrismatic,
         allowDarkMatter: packForm.allowDarkMatter,
         prismaticChance: packForm.allowPrismatic
@@ -771,6 +828,9 @@ export default function AdminCardsCreditsPage() {
         darkMatterChance: packForm.allowDarkMatter
           ? (parseFloat(packForm.darkMatterChance) || 0.5)
           : undefined,
+        holoChance: packForm.holoChance.trim() !== ""
+          ? Math.min(100, Math.max(0, parseFloat(packForm.holoChance) || 0))
+          : null,
       };
       if (editingPackId) body.id = editingPackId;
 
@@ -813,6 +873,8 @@ export default function AdminCardsCreditsPage() {
         feedbackAccepted: parseInt(creditSettingsForm.feedbackAccepted, 10) ?? 0,
         setCompletionReward: parseInt(creditSettingsForm.setCompletionReward, 10) ?? 0,
         holoSetCompletionReward: parseInt(creditSettingsForm.holoSetCompletionReward, 10) ?? 0,
+        prismaticSetCompletionReward: parseInt(creditSettingsForm.prismaticSetCompletionReward, 10) ?? 0,
+        darkMatterSetCompletionReward: parseInt(creditSettingsForm.darkMatterSetCompletionReward, 10) ?? 0,
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -829,6 +891,41 @@ export default function AdminCardsCreditsPage() {
       setError("Failed to save credit settings");
     } finally {
       setSavingCreditSettings(false);
+    }
+  }
+
+  async function handleSaveAlchemySettings(e: React.FormEvent) {
+    e.preventDefault();
+    if (savingAlchemySettings) return;
+    setSavingAlchemySettings(true);
+    setError("");
+    try {
+      const body = {
+        prismTransmuteEpicHoloCount: parseInt(alchemySettingsForm.prismTransmuteEpicHoloCount, 10) || 3,
+        prismTransmuteSuccessChance: parseFloat(alchemySettingsForm.prismTransmuteSuccessChance) || 50,
+        prismsPerTransmute: parseInt(alchemySettingsForm.prismsPerTransmute, 10) || 1,
+        prismaticCraftBaseChance: parseFloat(alchemySettingsForm.prismaticCraftBaseChance) || 5,
+        prismaticCraftChancePerPrism: parseFloat(alchemySettingsForm.prismaticCraftChancePerPrism) || 10,
+        prismaticCraftMaxPrisms: parseInt(alchemySettingsForm.prismaticCraftMaxPrisms, 10) || 10,
+        prismaticCraftFailureStardust: parseInt(alchemySettingsForm.prismaticCraftFailureStardust, 10) || 25,
+        epicHoloForgePrisms: parseInt(alchemySettingsForm.epicHoloForgePrisms, 10) || 1,
+        holoUpgradeChance: parseFloat(alchemySettingsForm.holoUpgradeChance) || 50,
+        prismaticUpgradeChance: parseFloat(alchemySettingsForm.prismaticUpgradeChance) || 35,
+        darkMatterUpgradeChance: parseFloat(alchemySettingsForm.darkMatterUpgradeChance) || 20,
+      };
+      const res = await fetch("/api/admin/alchemy-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save alchemy settings");
+      }
+    } catch {
+      setError("Failed to save alchemy settings");
+    } finally {
+      setSavingAlchemySettings(false);
     }
   }
 
@@ -1043,6 +1140,37 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
+  async function handleAddCredits(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedUserId || addingCredits) return;
+    const val = parseInt(addCreditsInput, 10);
+    if (isNaN(val) || val <= 0) {
+      setError("Enter a positive number to add");
+      return;
+    }
+    setAddingCredits(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/credits", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, add: val }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCreditBalance(data.balance);
+        setCreditInput(String(data.balance));
+        setAddCreditsInput("");
+      } else {
+        setError(data.error || "Failed to add credits");
+      }
+    } catch {
+      setError("Failed to add credits");
+    } finally {
+      setAddingCredits(false);
+    }
+  }
+
   async function handleSetCredits(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedUserId || savingCredits) return;
@@ -1147,6 +1275,7 @@ export default function AdminCardsCreditsPage() {
           characterName: customCharacterName.trim() || "Unknown",
           profilePath: customProfilePath.trim(),
           ...(customCardType !== "character" && customWinnerId && { winnerId: customWinnerId }),
+          ...(customAddToPending && customWinnerId && { addToPending: true }),
           rarity: customRarity,
           cardType: customCardType,
           ...(customAltArtOfCharacterId.trim() && { altArtOfCharacterId: customAltArtOfCharacterId.trim() }),
@@ -1511,7 +1640,14 @@ export default function AdminCardsCreditsPage() {
               <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.credits ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.credits && (
-              <div className="px-5 pb-4 pt-1">
+              <div className="px-5 pb-4 pt-1 space-y-4">
+                <form onSubmit={handleAddCredits} className="flex gap-3 flex-wrap items-end">
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Add credits</label>
+                    <input type="number" min={1} value={addCreditsInput} onChange={(e) => setAddCreditsInput(e.target.value)} className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-purple-500/40 w-32" placeholder="0" />
+                  </div>
+                  <button type="submit" disabled={addingCredits} className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer">{addingCredits ? "Adding..." : "Add Credits"}</button>
+                </form>
                 <form onSubmit={handleSetCredits} className="flex gap-3 flex-wrap items-end">
                   <div>
                     <label className="block text-xs text-white/40 mb-1">Set balance to</label>
@@ -1872,6 +2008,11 @@ export default function AdminCardsCreditsPage() {
 
               <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-3">
                 <p className="text-xs text-white/60 font-medium">Premium finish drop rates</p>
+                <div>
+                  <label className="block text-[11px] text-white/50 mb-0.5">Holo drop chance (%) per card</label>
+                  <input type="number" min={0} max={100} step={0.1} value={packForm.holoChance} onChange={(e) => setPackForm((f) => ({ ...f, holoChance: e.target.value }))} className="w-24 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-indigo-500/50" placeholder="8" />
+                  <span className="text-[10px] text-white/40 ml-2">Leave blank for global default (8%)</span>
+                </div>
                 <label className="flex items-center gap-2 text-sm text-white/70">
                   <input type="checkbox" checked={packForm.allowPrismatic} onChange={(e) => setPackForm((f) => ({ ...f, allowPrismatic: e.target.checked }))} className="rounded border-white/30 bg-white/5" />
                   <span>Enable Prismatic drops</span>
@@ -1920,9 +2061,9 @@ export default function AdminCardsCreditsPage() {
                       <p className="text-xs text-white/60">{pack.isFree ? ( <span className="text-green-400 font-semibold">Free</span> ) : ( <span className="text-amber-300 font-semibold">{pack.price}</span> )}{" "}{pack.isFree ? "" : "credits · "}{pack.cardsPerPack} cards{pack.maxPurchasesPerDay != null && pack.maxPurchasesPerDay > 0 && ( <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/{typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0 ? `${pack.restockIntervalHours}h` : "day"} limit</span></> )}</p>
                       <p className="text-[11px] text-white/40 mt-0.5 truncate">Drops{" "}{pack.allowedRarities.slice().sort((a, b) => ["legendary", "epic", "rare", "uncommon"].indexOf(a) - ["legendary", "epic", "rare", "uncommon"].indexOf(b)).join(", ")}{" "}({pack.allowedCardTypes.join(", ")})</p>
                       {pack.rarityWeights && (() => { const w = pack.rarityWeights; const t = w.legendary + w.epic + w.rare + w.uncommon || 1; const p = (v: number) => ((v / t) * 100).toFixed(1); return ( <p className="text-[10px] text-purple-300/70 mt-0.5">Rates: L:{p(w.legendary)}% E:{p(w.epic)}% R:{p(w.rare)}% U:{p(w.uncommon)}%</p> ); })()}
-                      {(pack.allowPrismatic || pack.allowDarkMatter) && (
+                      {(pack.holoChance != null || pack.allowPrismatic || pack.allowDarkMatter) && (
                         <p className="text-[10px] text-cyan-300/70 mt-0.5">
-                          {[pack.allowPrismatic && `Prismatic ${pack.prismaticChance ?? 2}%`, pack.allowDarkMatter && `DM ${pack.darkMatterChance ?? 0.5}%`].filter(Boolean).join(" · ")}
+                          {[pack.holoChance != null && `Holo ${pack.holoChance}%`, pack.allowPrismatic && `Prismatic ${pack.prismaticChance ?? 2}%`, pack.allowDarkMatter && `DM ${pack.darkMatterChance ?? 0.5}%`].filter(Boolean).join(" · ")}
                         </p>
                       )}
                     </div>
@@ -2113,12 +2254,18 @@ export default function AdminCardsCreditsPage() {
               <div><label className="block text-xs text-white/40 mb-1">Winner / Movie *</label><select value={customWinnerId} onChange={(e) => { setCustomWinnerId(e.target.value); setCustomAltArtOfCharacterId(""); }} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" required><option value="">-- Select winner (movie) --</option>{winners.map((w) => ( <option key={w.id} value={w.id}>{w.movieTitle}</option> ))}</select></div>
               )}
               {customWinnerId && customCardType !== "character" && (() => { const winner = winners.find((w) => w.id === customWinnerId); const sameMoviePool = pool.filter((c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (winner?.tmdbId ?? 0)); return ( <div><label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label><select value={customAltArtOfCharacterId} onChange={(e) => setCustomAltArtOfCharacterId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="">— None (normal pool entry) —</option>{sameMoviePool.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}</select><p className="text-[10px] text-white/40 mt-1">If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.</p></div> ); })()}
+              {customCardType !== "character" && customWinnerId && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={customAddToPending} onChange={(e) => setCustomAddToPending(e.target.checked)} className="rounded border-white/30 bg-white/[0.06] text-amber-500 focus:ring-amber-500/40" />
+                  <span className="text-xs text-white/70">Add to Pending (for this winner) — edit and push to pool when ready</span>
+                </label>
+              )}
               <div><label className="block text-xs text-white/40 mb-1">Image *</label><div className="flex gap-2"><input type="text" value={customProfilePath} onChange={(e) => setCustomProfilePath(e.target.value)} className="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="URL, or paste image (Ctrl+V) / click button" /><button type="button" onClick={() => setShowImagePickerForAdd(true)} disabled={pastingImage} className="px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors cursor-pointer disabled:opacity-50">{pastingImage ? "Uploading..." : "Upload or paste"}</button></div></div>
               <div className="flex flex-wrap gap-3">
                 <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={customRarity} onChange={(e) => setCustomRarity(e.target.value as typeof customRarity)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
                 <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={customCardType} onChange={(e) => setCustomCardType(e.target.value as CardType)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
               </div>
-              <button type="submit" disabled={!customActorName.trim() || !customProfilePath.trim() || (customCardType !== "character" && !customWinnerId) || addingToPool} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer">{addingToPool ? "Adding..." : "Add to Pool"}</button>
+              <button type="submit" disabled={!customActorName.trim() || !customProfilePath.trim() || (customCardType !== "character" && !customWinnerId) || addingToPool} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer">{addingToPool ? "Adding..." : customAddToPending ? "Add to Pending" : "Add to Pool"}</button>
             </form>
               </>
             )}
@@ -2175,8 +2322,10 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1">Rating a movie</label><input type="number" min={0} value={creditSettingsForm.rating} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, rating: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1">Leaving a comment</label><input type="number" min={0} value={creditSettingsForm.comment} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, comment: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When feedback is accepted in admin panel">Feedback accepted</label><input type="number" min={0} value={creditSettingsForm.feedbackAccepted} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, feedbackAccepted: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
-            <div><label className="block text-xs text-white/40 mb-1" title="When player completes a set (all cards for a movie) and claims the quest">Set completion</label><input type="number" min={0} value={creditSettingsForm.setCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, setCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
-            <div><label className="block text-xs text-white/40 mb-1" title="When player completes a full holo set (all main codex slots upgraded to holo) and claims the quest">Holo set completion</label><input type="number" min={0} value={creditSettingsForm.holoSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, holoSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes a set and claims the quest">Set completion</label><input type="number" min={0} value={creditSettingsForm.setCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, setCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes full holo set and claims the quest">Holo set completion</label><input type="number" min={0} value={creditSettingsForm.holoSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, holoSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes full prismatic set and claims the quest">Prismatic set completion</label><input type="number" min={0} value={creditSettingsForm.prismaticSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, prismaticSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes full dark matter set and claims the quest">Dark matter set completion</label><input type="number" min={0} value={creditSettingsForm.darkMatterSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, darkMatterSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
               <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
@@ -2197,6 +2346,51 @@ export default function AdminCardsCreditsPage() {
             <button type="submit" disabled={addAllCreditsLoading} className="px-5 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer">{addAllCreditsLoading ? "Adding..." : "Add credits to all users"}</button>
           </form>
         </div>
+      </div>
+
+      {/* Alchemy Settings */}
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-cyan-400 text-sm font-bold">◆</span>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white/70">Alchemy & Prism Settings</h2>
+            <p className="text-[11px] text-white/30">Upgrade chances, prism transmute, prismatic crafting</p>
+          </div>
+        </div>
+        {alchemySettingsLoading ? ( <div className="flex items-center gap-2 text-sm text-white/50"><div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />Loading...</div> ) : (
+          <form onSubmit={handleSaveAlchemySettings} className="space-y-5">
+            <div>
+              <span className="text-xs text-white/50 font-medium block mb-2">Pack-A-Punch / Upgrade Success Chances</span>
+              <div className="flex flex-wrap gap-4">
+                <div><label className="block text-[11px] text-white/40 mb-1">Holo upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Prismatic upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Dark Matter upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.darkMatterUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, darkMatterUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+              </div>
+            </div>
+            <div className="border-t border-white/[0.06] pt-4">
+              <span className="text-xs text-white/50 font-medium block mb-2">Prism Transmutation (Epic+ Holo → Prisms)</span>
+              <div className="flex flex-wrap gap-4">
+                <div><label className="block text-[11px] text-white/40 mb-1">Cards required</label><input type="number" min={1} max={10} value={alchemySettingsForm.prismTransmuteEpicHoloCount} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismTransmuteEpicHoloCount: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Success chance %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismTransmuteSuccessChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismTransmuteSuccessChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Prisms awarded</label><input type="number" min={1} max={100} value={alchemySettingsForm.prismsPerTransmute} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismsPerTransmute: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+              </div>
+            </div>
+            <div className="border-t border-white/[0.06] pt-4">
+              <span className="text-xs text-white/50 font-medium block mb-2">Prismatic Crafting (Prisms → Prismatic Card)</span>
+              <div className="flex flex-wrap gap-4">
+                <div><label className="block text-[11px] text-white/40 mb-1">Base chance %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticCraftBaseChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftBaseChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">% per prism</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticCraftChancePerPrism} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftChancePerPrism: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Max prisms</label><input type="number" min={1} max={100} value={alchemySettingsForm.prismaticCraftMaxPrisms} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftMaxPrisms: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Failure stardust</label><input type="number" min={0} max={10000} value={alchemySettingsForm.prismaticCraftFailureStardust} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftFailureStardust: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Epic Holo forge prisms</label><input type="number" min={0} max={100} value={alchemySettingsForm.epicHoloForgePrisms} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, epicHoloForgePrisms: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+              </div>
+              <p className="text-[10px] text-white/30 mt-2">Chance = base + (prisms applied × per-prism). Epic Holo in forge = disenchant for prisms; only Legendary Holo can be crafted to Prismatic.</p>
+            </div>
+            <div className="flex items-end pt-2"><button type="submit" disabled={savingAlchemySettings} className="px-5 py-2.5 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-40 cursor-pointer">{savingAlchemySettings ? "Saving..." : "Save Alchemy Settings"}</button></div>
+          </form>
+        )}
       </div>
       </>
       )}

@@ -1,4 +1,14 @@
-import type { CardFinish } from "@/lib/data";
+/** Card finish tier (client-safe; do not import from @/lib/data here to avoid pulling fs into client bundle). */
+export type CardFinish = "normal" | "holo" | "prismatic" | "darkMatter";
+
+/** Minimal alchemy settings shape used by chance helpers. Pass from API routes via getAlchemySettings(). */
+export interface AlchemySettingsChance {
+  holoUpgradeChance: number;
+  prismaticUpgradeChance: number;
+  darkMatterUpgradeChance: number;
+  prismaticCraftBaseChance: number;
+  prismaticCraftChancePerPrism: number;
+}
 
 /** Stardust received when disenchanting a Holo card by rarity. */
 export const DISENCHANT_DUST: Record<string, number> = {
@@ -48,7 +58,7 @@ export const DARK_MATTER_UPGRADE_COST: Record<string, number> = {
   legendary: 900,
 };
 
-/** Success chance for each upgrade tier (Pack-A-Punch). */
+/** Fallback success chances (used if settings file is missing). */
 export const UPGRADE_SUCCESS_CHANCE: Record<string, number> = {
   holo: 0.50,
   prismatic: 0.35,
@@ -69,9 +79,14 @@ export function getUpgradeCost(rarity: string, targetFinish: CardFinish): number
   }
 }
 
-/** Get success chance for upgrading to the target finish. */
-export function getUpgradeSuccessChance(targetFinish: CardFinish): number {
-  return UPGRADE_SUCCESS_CHANCE[targetFinish] ?? 0.5;
+/** Get success chance for upgrading to the target finish. Pass settings from API (getAlchemySettings()); uses fallback if omitted. */
+export function getUpgradeSuccessChance(targetFinish: CardFinish, settings?: AlchemySettingsChance): number {
+  switch (targetFinish) {
+    case "holo": return settings ? settings.holoUpgradeChance / 100 : UPGRADE_SUCCESS_CHANCE.holo;
+    case "prismatic": return settings ? settings.prismaticUpgradeChance / 100 : UPGRADE_SUCCESS_CHANCE.prismatic;
+    case "darkMatter": return settings ? settings.darkMatterUpgradeChance / 100 : UPGRADE_SUCCESS_CHANCE.darkMatter;
+    default: return 0.5;
+  }
 }
 
 /** Get disenchant dust for a card based on its finish and rarity. */
@@ -95,4 +110,12 @@ export const QUICKSELL_CREDITS: Record<string, number> = {
 /** Client-safe: returns quicksell credits from default map. Server API uses credit settings for actual amount. */
 export function getQuicksellCredits(rarity: string): number {
   return QUICKSELL_CREDITS[rarity] ?? (rarity === "legendary" ? 0 : QUICKSELL_CREDITS.uncommon);
+}
+
+/** Calculate prismatic craft success chance based on number of prisms applied. Pass settings from API or client-fetched config; uses fallback if omitted. */
+export function getPrismaticCraftChance(prismsApplied: number, settings?: AlchemySettingsChance): number {
+  const base = settings?.prismaticCraftBaseChance ?? 5;
+  const perPrism = settings?.prismaticCraftChancePerPrism ?? 10;
+  const chance = base + (prismsApplied * perPrism);
+  return Math.min(100, Math.max(0, chance));
 }

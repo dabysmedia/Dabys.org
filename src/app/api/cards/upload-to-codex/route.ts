@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getCardById,
   removeCard,
+  cancelPendingTradesInvolvingCards,
   addCodexUnlock,
   addCodexUnlockHolo,
   addCodexUnlockPrismatic,
@@ -164,6 +165,7 @@ export async function POST(request: Request) {
   }
 
   removeCard(cardId);
+  cancelPendingTradesInvolvingCards([cardId]);
 
   const finish = getCardFinish(card);
 
@@ -183,7 +185,8 @@ export async function POST(request: Request) {
         break;
     }
   } else if (isAltArt) {
-    addCodexUnlockAltArt(userId, characterId);
+    const isHolo = finish === "holo";
+    addCodexUnlockAltArt(userId, characterId, isHolo);
   } else if (isBoys) {
     addCodexUnlockBoys(userId, characterId);
   }

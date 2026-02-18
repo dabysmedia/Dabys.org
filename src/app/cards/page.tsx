@@ -561,6 +561,10 @@ function CardsContent() {
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [expandedReceivedTradeId, setExpandedReceivedTradeId] = useState<string | null>(null);
   const [expandedSentTradeId, setExpandedSentTradeId] = useState<string | null>(null);
+  /** Deep-link from notification: expand this trade when trades have loaded */
+  const [urlTradeId, setUrlTradeId] = useState<string | null>(null);
+  const [tradeHistory, setTradeHistory] = useState<TradeOfferEnriched[]>([]);
+  const [expandedHistoryTradeId, setExpandedHistoryTradeId] = useState<string | null>(null);
   const [userAvatarMap, setUserAvatarMap] = useState<Record<string, string>>({});
   const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
   const [stardust, setStardust] = useState(0);
@@ -585,6 +589,31 @@ function CardsContent() {
   const stardustPrevRef = useRef<number>(0);
   const stardustInitializedRef = useRef(false);
   const stardustAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [prisms, setPrisms] = useState(0);
+  const [prismDelta, setPrismDelta] = useState<number | null>(null);
+  const [prismAnimClass, setPrismAnimClass] = useState("");
+  const prismPrevRef = useRef<number>(0);
+  const prismInitializedRef = useRef(false);
+  const prismAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [alchemySettings, setAlchemySettings] = useState<{
+    prismTransmuteEpicHoloCount: number;
+    prismTransmuteSuccessChance: number;
+    prismsPerTransmute: number;
+    prismaticCraftBaseChance: number;
+    prismaticCraftChancePerPrism: number;
+    prismaticCraftMaxPrisms: number;
+    prismaticCraftFailureStardust: number;
+    epicHoloForgePrisms: number;
+    holoUpgradeChance: number;
+    prismaticUpgradeChance: number;
+    darkMatterUpgradeChance: number;
+  } | null>(null);
+  const [prismaticCraftCardId, setPrismaticCraftCardId] = useState<string | null>(null);
+  const [prismaticCraftPrisms, setPrismaticCraftPrisms] = useState(1);
+  const [prismaticCraftLoading, setPrismaticCraftLoading] = useState(false);
+  const [disenchantEpicForgeLoading, setDisenchantEpicForgeLoading] = useState(false);
+  const [prismaticCraftResult, setPrismaticCraftResult] = useState<{ success: boolean; stardustAwarded: number } | null>(null);
+  const [alchemySubTab, setAlchemySubTab] = useState<"bench" | "forge">("bench");
   const incomingTradeIdsRef = useRef<Set<string>>(new Set());
   const tradesPollInitializedRef = useRef(false);
   const acceptedSentTradeIdsRef = useRef<Set<string>>(new Set());
@@ -595,6 +624,7 @@ function CardsContent() {
   const [discoveredPrismaticCharacterIds, setDiscoveredPrismaticCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredDarkMatterCharacterIds, setDiscoveredDarkMatterCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredAltArtCharacterIds, setDiscoveredAltArtCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredAltArtHoloCharacterIds, setDiscoveredAltArtHoloCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredBoysCharacterIds, setDiscoveredBoysCharacterIds] = useState<Set<string>>(new Set());
   const [showCodexUploadModal, setShowCodexUploadModal] = useState(false);
   const [codexUploadSelectedIds, setCodexUploadSelectedIds] = useState<Set<string>>(new Set());
@@ -608,9 +638,14 @@ function CardsContent() {
   const [codexUploadSort, setCodexUploadSort] = useState<CodexUploadSortKey>("rarity");
   const [completedBadgeWinnerIds, setCompletedBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedHoloBadgeWinnerIds, setCompletedHoloBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [completedPrismaticBadgeWinnerIds, setCompletedPrismaticBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [completedDarkMatterBadgeWinnerIds, setCompletedDarkMatterBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
+  const [prismaticForgeUnlocked, setPrismaticForgeUnlocked] = useState(false);
+  const [showPrestigeCodexConfirm, setShowPrestigeCodexConfirm] = useState(false);
+  const [prestigeCodexLoading, setPrestigeCodexLoading] = useState(false);
   const [inspectedCodexCard, setInspectedCodexCard] = useState<{
     id: string;
     rarity: string;
@@ -651,6 +686,25 @@ function CardsContent() {
       const next = new Set(prev);
       next.delete(characterId);
       localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  const CODEX_SOUND_MUTED_KEY = "dabys_codex_sound_muted";
+  const [codexSoundMuted, setCodexSoundMuted] = useState<boolean>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(CODEX_SOUND_MUTED_KEY) : null;
+      return raw === "1";
+    } catch {
+      return false;
+    }
+  });
+  function toggleCodexSoundMuted() {
+    setCodexSoundMuted((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(CODEX_SOUND_MUTED_KEY, next ? "1" : "0");
+      } catch {}
       return next;
     });
   }
@@ -728,7 +782,7 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes, settingsRes, tradeBlockRes] = await Promise.all([
+    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, deniedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes, settingsRes, tradeBlockRes, prismsRes, alchemySettingsRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool?codex=1"),
@@ -739,6 +793,7 @@ function CardsContent() {
       fetch(`/api/cards/packs?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`),
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=accepted`),
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=denied`),
       fetch("/api/users?includeProfile=1"),
       fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/shop/items"),
@@ -747,6 +802,8 @@ function CardsContent() {
       fetch("/api/settings/quicksell"),
       fetch("/api/settings"),
       fetch("/api/trade-block"),
+      fetch(`/api/alchemy/prisms?userId=${encodeURIComponent(u.id)}`),
+      fetch("/api/admin/alchemy-settings"),
     ]);
 
     if (creditsRes.ok) {
@@ -774,8 +831,9 @@ function CardsContent() {
       setPacks(d.packs || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
+    let acceptedList: TradeOfferEnriched[] = [];
     if (acceptedTradesRes.ok) {
-      const acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
+      acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
       const sentAcceptedIds = new Set(
         (acceptedList || []).filter((t) => t.initiatorUserId === u.id).map((t) => t.id)
       );
@@ -789,6 +847,13 @@ function CardsContent() {
         acceptedSentTradeIdsRef.current = sentAcceptedIds;
       }
     }
+    let deniedList: TradeOfferEnriched[] = [];
+    if (deniedTradesRes.ok) deniedList = (await deniedTradesRes.json()) as TradeOfferEnriched[];
+    setTradeHistory(
+      [...acceptedList, ...deniedList].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    );
     if (usersRes.ok) {
       const usersWithProfile = await usersRes.json() as { id: string; name: string; avatarUrl?: string }[];
       setUserAvatarMap(usersWithProfile.reduce((acc, x) => ({ ...acc, [x.id]: x.avatarUrl || "" }), {}));
@@ -814,6 +879,31 @@ function CardsContent() {
       }
       stardustInitializedRef.current = true;
     }
+    if (prismsRes.ok) {
+      const d = await prismsRes.json();
+      const newBalance = typeof d?.balance === "number" ? d.balance : 0;
+      const prev = prismPrevRef.current;
+      prismPrevRef.current = newBalance;
+      setPrisms(newBalance);
+      if (prismInitializedRef.current) {
+        const delta = newBalance - prev;
+        if (delta !== 0) {
+          prismAnimTimeoutRef.current && clearTimeout(prismAnimTimeoutRef.current);
+          setPrismDelta(delta);
+          setPrismAnimClass(delta > 0 ? "stardust-animate-add" : "stardust-animate-subtract");
+          prismAnimTimeoutRef.current = setTimeout(() => {
+            setPrismDelta(null);
+            setPrismAnimClass("");
+            prismAnimTimeoutRef.current = null;
+          }, 900);
+        }
+      }
+      prismInitializedRef.current = true;
+    }
+    if (alchemySettingsRes.ok) {
+      const d = await alchemySettingsRes.json();
+      setAlchemySettings(d);
+    }
     if (shopItemsRes.ok) {
       const d = await shopItemsRes.json();
       setShopItems(d.items ?? []);
@@ -831,12 +921,16 @@ function CardsContent() {
       setDiscoveredPrismaticCharacterIds(new Set(Array.isArray(d.prismaticCharacterIds) ? d.prismaticCharacterIds : []));
       setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
+      setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
+      setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
       setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
       setCompletedHoloBadgeWinnerIds(new Set(Array.isArray(d.completedHoloWinnerIds) ? d.completedHoloWinnerIds : []));
+      setCompletedPrismaticBadgeWinnerIds(new Set(Array.isArray(d.completedPrismaticWinnerIds) ? d.completedPrismaticWinnerIds : []));
+      setCompletedDarkMatterBadgeWinnerIds(new Set(Array.isArray(d.completedDarkMatterWinnerIds) ? d.completedDarkMatterWinnerIds : []));
     }
     if (settingsRes.ok) {
       const d = await settingsRes.json();
@@ -897,16 +991,45 @@ function CardsContent() {
     }
   }, [getUserId]);
 
+  const refreshPrisms = useCallback(async () => {
+    const uid = getUserId();
+    if (!uid) return;
+    const res = await fetch(`/api/alchemy/prisms?userId=${encodeURIComponent(uid)}`);
+    if (res.ok) {
+      const d = await res.json();
+      const newBalance = typeof d?.balance === "number" ? d.balance : 0;
+      const prev = prismPrevRef.current;
+      prismPrevRef.current = newBalance;
+      setPrisms(newBalance);
+      if (prismInitializedRef.current) {
+        const delta = newBalance - prev;
+        if (delta !== 0) {
+          prismAnimTimeoutRef.current && clearTimeout(prismAnimTimeoutRef.current);
+          setPrismDelta(delta);
+          setPrismAnimClass(delta > 0 ? "stardust-animate-add" : "stardust-animate-subtract");
+          prismAnimTimeoutRef.current = setTimeout(() => {
+            setPrismDelta(null);
+            setPrismAnimClass("");
+            prismAnimTimeoutRef.current = null;
+          }, 900);
+        }
+      }
+      prismInitializedRef.current = true;
+    }
+  }, [getUserId]);
+
   const refreshTrades = useCallback(async () => {
     const uid = getUserId();
     if (!uid) return;
-    const [tradesRes, acceptedTradesRes] = await Promise.all([
+    const [tradesRes, acceptedTradesRes, deniedTradesRes] = await Promise.all([
       fetch(`/api/trades?userId=${encodeURIComponent(uid)}&status=pending`),
       fetch(`/api/trades?userId=${encodeURIComponent(uid)}&status=accepted`),
+      fetch(`/api/trades?userId=${encodeURIComponent(uid)}&status=denied`),
     ]);
     if (tradesRes.ok) setTrades(await tradesRes.json());
+    let acceptedList: TradeOfferEnriched[] = [];
     if (acceptedTradesRes.ok) {
-      const acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
+      acceptedList = (await acceptedTradesRes.json()) as TradeOfferEnriched[];
       const sentAcceptedIds = new Set(
         (acceptedList || []).filter((t) => t.initiatorUserId === uid).map((t) => t.id)
       );
@@ -920,6 +1043,13 @@ function CardsContent() {
         acceptedSentTradeIdsRef.current = sentAcceptedIds;
       }
     }
+    let deniedList: TradeOfferEnriched[] = [];
+    if (deniedTradesRes.ok) deniedList = (await deniedTradesRes.json()) as TradeOfferEnriched[];
+    setTradeHistory(
+      [...acceptedList, ...deniedList].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    );
   }, [getUserId]);
 
   const refreshMarketplace = useCallback(async () => {
@@ -953,12 +1083,16 @@ function CardsContent() {
       setDiscoveredPrismaticCharacterIds(new Set(Array.isArray(d.prismaticCharacterIds) ? d.prismaticCharacterIds : []));
       setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
+      setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
+      setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
       setCompletedBadgeWinnerIds(new Set(Array.isArray(d.completedWinnerIds) ? d.completedWinnerIds : []));
       setCompletedHoloBadgeWinnerIds(new Set(Array.isArray(d.completedHoloWinnerIds) ? d.completedHoloWinnerIds : []));
+      setCompletedPrismaticBadgeWinnerIds(new Set(Array.isArray(d.completedPrismaticWinnerIds) ? d.completedPrismaticWinnerIds : []));
+      setCompletedDarkMatterBadgeWinnerIds(new Set(Array.isArray(d.completedDarkMatterWinnerIds) ? d.completedDarkMatterWinnerIds : []));
     }
   }, [getUserId]);
 
@@ -999,6 +1133,13 @@ function CardsContent() {
       setInventorySubTab("quicksell");
     }
 
+    // Deep-link: open Trade tab and expand a specific trade (e.g. from notification)
+    const tradeIdFromUrl = searchParams.get("trade");
+    if (tradeIdFromUrl) {
+      setTab("trade");
+      setUrlTradeId(tradeIdFromUrl);
+    }
+
     // Deep-link: open trade modal pre-selecting a counterparty
     const tradeWithId = searchParams.get("tradeWith");
     if (tradeWithId && user) {
@@ -1026,6 +1167,20 @@ function CardsContent() {
         .catch(() => setTradeUsers([]));
     }
   }, [searchParams, user?.id]);
+
+  // When trades have loaded and we have a URL trade id, expand that trade
+  useEffect(() => {
+    if (!urlTradeId || !user?.id || trades.length === 0) return;
+    const t = trades.find((x) => x.id === urlTradeId);
+    if (t) {
+      if (t.counterpartyUserId === user.id) {
+        setExpandedReceivedTradeId(urlTradeId);
+      } else if (t.initiatorUserId === user.id) {
+        setExpandedSentTradeId(urlTradeId);
+      }
+    }
+    setUrlTradeId(null);
+  }, [trades, urlTradeId, user?.id]);
 
   // Restore last selected tab when returning to TCG page
   useEffect(() => {
@@ -1128,6 +1283,7 @@ function CardsContent() {
   useEffect(() => {
     return () => {
       stardustAnimTimeoutRef.current && clearTimeout(stardustAnimTimeoutRef.current);
+      prismAnimTimeoutRef.current && clearTimeout(prismAnimTimeoutRef.current);
       codexUploadCompleteTimeoutRef.current && clearTimeout(codexUploadCompleteTimeoutRef.current);
     };
   }, []);
@@ -1176,6 +1332,30 @@ function CardsContent() {
         });
       }, delay);
     });
+  }, [newCards]);
+
+  // Lock body scroll when pack reveal is open so the page underneath doesn't scroll (fixes mobile overlap/input issues)
+  useEffect(() => {
+    if (!newCards || newCards.length === 0) return;
+    const scrollY = window.scrollY;
+    const prevOverflow = document.body.style.overflow;
+    const prevPosition = document.body.style.position;
+    const prevTop = document.body.style.top;
+    const prevLeft = document.body.style.left;
+    const prevRight = document.body.style.right;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.position = prevPosition;
+      document.body.style.top = prevTop;
+      document.body.style.left = prevLeft;
+      document.body.style.right = prevRight;
+      window.scrollTo(0, scrollY);
+    };
   }, [newCards]);
 
   const TRADE_UP_NEXT: Record<string, string> = { uncommon: "rare", rare: "epic", epic: "legendary" };
@@ -1757,6 +1937,78 @@ function CardsContent() {
     }
   }
 
+  // Prismatic craft: apply prisms to craft a prismatic card
+  async function handlePrismaticCraft() {
+    if (!user || !prismaticCraftCardId || !alchemySettings) return;
+    const card = cards.find((c) => c.id === prismaticCraftCardId);
+    if (!card) return;
+    const amount = prismaticCraftPrisms;
+    if (prisms < amount) {
+      setAlchemyErrorFading(false);
+      setAlchemyError(`Not enough Prisms. Need ${amount}, have ${prisms}.`);
+      return;
+    }
+    const chance = Math.min(100, alchemySettings.prismaticCraftBaseChance + amount * alchemySettings.prismaticCraftChancePerPrism);
+    if (!confirm(`Apply ${amount} Prism(s) for a ${chance}% chance to craft Prismatic? Prisms are consumed. Failure awards ${alchemySettings.prismaticCraftFailureStardust} Stardust.`)) return;
+    setAlchemyError("");
+    setPrismaticCraftLoading(true);
+    setPrismaticCraftResult(null);
+    try {
+      const res = await fetch("/api/alchemy/prismatic-craft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardId: prismaticCraftCardId, prismsToApply: amount }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlchemyErrorFading(false);
+        setAlchemyError(data?.error ?? "Prismatic craft failed");
+        return;
+      }
+      setPrismaticCraftResult({ success: data.success, stardustAwarded: data.stardustAwarded ?? 0 });
+      if (data.success) {
+        playAlchemyPackAPunchSuccess();
+        setAlchemySuccessFlash(true);
+        setTimeout(() => setAlchemySuccessFlash(false), 500);
+        setPrismaticCraftCardId(null);
+      } else {
+        setPAPFailureErrorAndFade(`Prismatic craft failed — ${data.stardustAwarded ?? 0} Stardust consolation awarded.`);
+      }
+      await Promise.all([refreshCards(), refreshPrisms(), refreshStardust()]);
+    } finally {
+      setPrismaticCraftLoading(false);
+    }
+  }
+
+  // Disenchant one Epic Holo in the forge for prisms (card destroyed)
+  async function handleDisenchantEpicForge() {
+    if (!user || !prismaticCraftCardId || !alchemySettings) return;
+    const card = cards.find((c) => c.id === prismaticCraftCardId);
+    if (!card || card.rarity !== "epic") return;
+    const amount = alchemySettings.epicHoloForgePrisms ?? 1;
+    if (!confirm(`Destroy this Epic Holo for ${amount} Prism(s)? Card is permanently removed.`)) return;
+    setAlchemyError("");
+    setDisenchantEpicForgeLoading(true);
+    try {
+      const res = await fetch("/api/alchemy/disenchant-epic-forge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardId: prismaticCraftCardId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAlchemyErrorFading(false);
+        setAlchemyError(data?.error ?? "Disenchant failed");
+        return;
+      }
+      setPrismaticCraftCardId(null);
+      setPrismaticCraftResult(null);
+      await Promise.all([refreshCards(), refreshPrisms()]);
+    } finally {
+      setDisenchantEpicForgeLoading(false);
+    }
+  }
+
   async function handleBuyPack(pack: Pack) {
     const effectivePrice =
       pack.discounted &&
@@ -1871,10 +2123,15 @@ function CardsContent() {
     codexSkipRequestedRef.current = false;
     setCodexUploading(true);
     setCodexUploadProgress(0);
-    if (!codexLoadingAudioRef.current) codexLoadingAudioRef.current = new Audio("/data/codex-loading.mp3");
-    const codexAudio = codexLoadingAudioRef.current;
-    codexAudio.loop = true;
-    codexAudio.play().catch(() => {});
+    const codexAudio = !codexSoundMuted
+      ? (() => {
+          if (!codexLoadingAudioRef.current) codexLoadingAudioRef.current = new Audio("/data/codex-loading.mp3");
+          const a = codexLoadingAudioRef.current;
+          a.loop = true;
+          a.play().catch(() => {});
+          return a;
+        })()
+      : null;
 
     const startTime = Date.now();
     const ANIMATION_MS = 3000;
@@ -1916,8 +2173,10 @@ function CardsContent() {
           const variant = data.variant ?? (data.isFoil ? "holo" : "regular");
           if (variant === "regular") setDiscoveredCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "holo") setDiscoveredHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
-          else if (variant === "altart") setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
-          else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "altart") {
+            setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
+            if (data.finish === "holo" || data.isFoil) setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+          } else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
           untrackCharacterId(data.characterId);
           if (variant === "boys") untrackCharacterId(`boys:${data.characterId}`);
@@ -1938,12 +2197,16 @@ function CardsContent() {
     setCodexUploadProgress(100);
     window.removeEventListener("keydown", onKeyDown);
 
-    codexAudio.pause();
-    codexAudio.currentTime = 0;
+    if (codexAudio) {
+      codexAudio.pause();
+      codexAudio.currentTime = 0;
+    }
     if (uploadedCount > 0) {
       setCodexUploadCompleteCount(uploadedCount);
-      const completeSound = new Audio("/data/codex-complete.mp3");
-      completeSound.play().catch(() => {});
+      if (!codexSoundMuted) {
+        const completeSound = new Audio("/data/codex-complete.mp3");
+        completeSound.play().catch(() => {});
+      }
       if (codexUploadCompleteTimeoutRef.current) clearTimeout(codexUploadCompleteTimeoutRef.current);
       codexUploadCompleteTimeoutRef.current = setTimeout(() => {
         setCodexUploadCompleteCount(null);
@@ -2401,7 +2664,7 @@ function CardsContent() {
           <div>
             <h1 className="text-2xl font-bold text-white/90 mb-2">Trading Card Game</h1>
             <p className="text-white/50 text-sm">
-              Buy packs, manage your inventory, trade on the marketplace, and play trivia to earn credits.
+              Buy packs, manage your inventory, trade on the marketplace, and earn credits from Trivia and quests.
             </p>
           </div>
           <div className="relative flex-shrink-0 group self-end sm:self-auto">
@@ -2423,16 +2686,16 @@ function CardsContent() {
             >
               <p className="text-sm font-semibold text-amber-300 mb-2">How the TCG works</p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Earn credits</strong> from Trivia (answer questions about winning movies). <strong className="text-amber-300/95">Buy packs</strong> in the Store to get character cards. Trade up 5 duplicates for a rarer card, or use <strong className="text-amber-300/95">Alchemy</strong> (remove Holo from cards for Stardust—card stays as normal; Pack-A-Punch normals to Holo) and <strong className="text-amber-300/95">Quicksell</strong> for credits.
+                <strong className="text-amber-300/95">Credits:</strong> Trivia + quests. <strong className="text-amber-300/95">Store:</strong> Buy packs. <strong className="text-amber-300/95">Trade up:</strong> 4 same-rarity, same-type cards → 1 next rarity (Epic→Legendary: 33% card, 67% credits). <strong className="text-amber-300/95">Alchemy:</strong> Disenchant foils for Stardust or Pack-A-Punch normals to Holo. <strong className="text-amber-300/95">Quicksell:</strong> Vendor non-legendary for credits.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                Buy or sell on the <strong className="text-amber-300/95">Marketplace</strong> and <strong className="text-amber-300/95">Trade</strong> with others—a user-driven economy.
+                <strong className="text-amber-300/95">Marketplace</strong> & <strong className="text-amber-300/95">Trade</strong>: buy/sell and trade with others.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Codex</strong>: Upload cards from inventory to discover them (card leaves collection; legendaries re-enter pool). Complete each set (discover all cards for a movie) to earn <strong className="text-amber-300/95">badges</strong> for your profile.
+                <strong className="text-amber-300/95">Codex:</strong> Upload to discover (card leaves collection; legendaries re-enter pool). Complete a set for <strong className="text-amber-300/95">badges</strong> (normal → Holo → Prismatic → Dark Matter).
               </p>
               <p className="text-xs text-white/50 leading-relaxed">
-                New cards are added weekly from winning movies.
+                New cards weekly from winning movies.
               </p>
               {tcgInfoExpanded && (
                 <button
@@ -2710,12 +2973,13 @@ function CardsContent() {
             {newCards && newCards.length > 0 && (
               <>
                 <div
-                  className="fixed inset-0 z-30 bg-black/55 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-30 bg-black/55 backdrop-blur-[2px] touch-none overscroll-contain"
                   onClick={() => setNewCards(null)}
+                  onTouchMove={(e) => e.preventDefault()}
                   aria-hidden
                 />
-                <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center p-3 pt-[calc(var(--header-height)+0.5rem)] sm:pt-4 sm:px-4 sm:p-4">
-                  <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[calc(100dvh-var(--header-height)-1rem)] sm:max-h-none rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col">
+                <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center p-3 pt-[calc(var(--header-height)+0.5rem)] sm:pt-4 sm:px-4 sm:p-4 pointer-events-none">
+                  <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[calc(100dvh-var(--header-height)-1rem)] sm:max-h-none rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col pointer-events-auto overscroll-contain">
                     <div className="relative flex-shrink-0">
                     {/* Mobile: sticky close X so you can always dismiss */}
                     <button
@@ -2896,10 +3160,10 @@ function CardsContent() {
             {!showLegendaryReroll && (
             <>
             {/* Trade Up - frosted glass section */}
-            <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
+            <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-2">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Trade Up</h2>
               <p className="text-sm text-white/60 mb-4">
-                Add 4 cards of the same rarity below. Consume them to get 1 card of the next rarity. Epic→Legendary: 33% legendary card, 67% 100 credits.
+                4 same-rarity, same-type cards → 1 next rarity. Epic→Legendary: 33% card, 67% credits. Use Legendary Reroll for 2 legendaries.
               </p>
               {tradeUpAutofillError && (
                 <div className={`mb-4 rounded-xl border border-red-500/40 bg-red-500/15 backdrop-blur-sm px-4 py-3 text-red-300 text-sm transition-opacity duration-500 ${tradeUpAutofillErrorFading ? "opacity-0" : "opacity-100"}`}>
@@ -2916,7 +3180,7 @@ function CardsContent() {
                     return (
                       <div
                         key={`${cardId ?? "empty"}-${i}`}
-                        className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
                           cardId
                             ? `group ${filledStyle} tradeup-slot-pop`
                             : currentRarity ? SLOT_EMPTY_STYLE[currentRarity] ?? SLOT_EMPTY_STYLE.uncommon : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
@@ -2953,7 +3217,7 @@ function CardsContent() {
                   →
                 </div>
                 {/* Output slot */}
-                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                <div className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
                   canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : currentRarity ? SLOT_OUTPUT_STYLE[currentRarity] ?? SLOT_OUTPUT_STYLE.uncommon : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canTradeUp ? (
@@ -3016,7 +3280,7 @@ function CardsContent() {
             <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-8">
               <h2 className="text-lg font-semibold text-amber-400/90 mb-1">Legendary Reroll</h2>
               <p className="text-sm text-white/60 mb-4">
-                Sacrifice 2 legendary cards to reroll into a different legendary character.
+                2 legendaries → 1 new legendary.
               </p>
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 <div className="flex gap-2">
@@ -3025,7 +3289,7 @@ function CardsContent() {
                     return (
                       <div
                         key={`reroll-${cardId ?? "empty"}-${i}`}
-                        className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
                           cardId
                             ? `group ${SLOT_FILLED_STYLE.legendary} tradeup-slot-pop`
                             : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
@@ -3052,7 +3316,7 @@ function CardsContent() {
                 <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">
                   →
                 </div>
-                <div className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                <div className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
                   canLegendaryReroll ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canLegendaryReroll ? (
@@ -3131,31 +3395,82 @@ function CardsContent() {
 
             {inventorySubTab === "alchemy" && (
               <>
-                {/* Alchemy bench - Holo → remove Holo for Stardust, normal → Pack-A-Punch */}
-                <div className={`rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
+                {/* Alchemy: title + toggle (Bench | Prismatic Forge) — active = teal, inactive = dark */}
+                <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-2 transition-all duration-300">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <h2 className="text-lg font-semibold text-amber-400/90">Alchemy bench</h2>
-                    <span className="text-sm text-amber-400/80 flex items-center gap-1.5 relative">
-                      <span className="text-white/50">Stardust:</span>
-                      <span className={`tabular-nums font-semibold text-amber-200 relative ${stardustAnimClass}`}>
-                        {stardust}
-                        {stardustDelta !== null && (
-                          <span
-                            className={`absolute -top-1 left-[100%] ml-0.5 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold stardust-delta-pop pointer-events-none whitespace-nowrap ${
-                              stardustDelta > 0 ? "text-amber-300 bg-amber-500/25" : "text-purple-300 bg-purple-500/25"
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-lg font-semibold text-amber-400/90">Alchemy</h2>
+                      <div className="flex gap-1 rounded-lg border border-white/10 bg-white/[0.04] p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setAlchemySubTab("bench")}
+                          className={`min-h-[32px] px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                            alchemySubTab === "bench"
+                              ? "bg-cyan-500/25 text-white border border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                              : "bg-transparent text-white/50 hover:text-white/70 border border-transparent"
+                          }`}
+                        >
+                          Bench
+                        </button>
+                        {prismaticForgeUnlocked && (
+                          <button
+                            type="button"
+                            onClick={() => setAlchemySubTab("forge")}
+                            className={`min-h-[32px] px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                              alchemySubTab === "forge"
+                                ? "bg-cyan-500/25 text-white border border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                                : "bg-transparent text-white/50 hover:text-white/70 border border-transparent"
                             }`}
                           >
-                            {stardustDelta > 0 ? `+${stardustDelta}` : stardustDelta}
-                          </span>
+                            Prismatic Forge
+                            {prismaticCraftCardId && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300" />}
+                          </button>
                         )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm flex items-center gap-1.5 relative">
+                        <span className="text-white/50">Prisms:</span>
+                        <span className={`tabular-nums font-semibold text-cyan-200 relative ${prismAnimClass}`}>
+                          {prisms}
+                          {prismDelta !== null && (
+                            <span
+                              className={`absolute -top-1 left-[100%] ml-0.5 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold stardust-delta-pop pointer-events-none whitespace-nowrap ${
+                                prismDelta > 0 ? "text-cyan-300 bg-cyan-500/25" : "text-red-300 bg-red-500/25"
+                              }`}
+                            >
+                              {prismDelta > 0 ? `+${prismDelta}` : prismDelta}
+                            </span>
+                          )}
+                        </span>
+                        <span className="ml-0.5 text-cyan-400/80" aria-hidden>◆</span>
                       </span>
-                      <span className="stardust-star-rainbow ml-0.5" aria-hidden>★</span>
-                    </span>
+                      <span className="text-sm text-amber-400/80 flex items-center gap-1.5 relative">
+                        <span className="text-white/50">Stardust:</span>
+                        <span className={`tabular-nums font-semibold text-amber-200 relative ${stardustAnimClass}`}>
+                          {stardust}
+                          {stardustDelta !== null && (
+                            <span
+                              className={`absolute -top-1 left-[100%] ml-0.5 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold stardust-delta-pop pointer-events-none whitespace-nowrap ${
+                                stardustDelta > 0 ? "text-amber-300 bg-amber-500/25" : "text-purple-300 bg-purple-500/25"
+                              }`}
+                            >
+                              {stardustDelta > 0 ? `+${stardustDelta}` : stardustDelta}
+                            </span>
+                          )}
+                        </span>
+                        <span className="stardust-star-rainbow ml-0.5" aria-hidden>★</span>
+                      </span>
+                    </div>
                   </div>
+
+                  <div>
+                  {alchemySubTab === "bench" && (
+                  <>
                   <p className="text-sm text-white/60 mb-4">
-                    Place up to 5 cards from your inventory below. Holos → remove Holo for Stardust (card stays as normal). Normals → Pack-A-Punch to make them Holo. Same type only (like Trade up).
+                    Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Same type only. Forge tab: Prismatic crafting.
                   </p>
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className={`flex items-center gap-4 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                     <div className="flex gap-2">
                       {alchemyBenchSlots.map((cardId, i) => {
@@ -3165,7 +3480,7 @@ function CardsContent() {
                         return (
                           <div
                             key={`${cardId ?? "empty"}-${i}`}
-                            className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                            className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                               cardId && benchCard
                                 ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} alchemy-bench-slot-pop group ${showAsHolo ? "ring-2 ring-indigo-400/50 ring-inset alchemy-card-success-flash" : ""} ${showAsFailed ? "ring-2 ring-red-400/60 ring-inset alchemy-card-fail-flash" : ""}`
                                 : "border-dashed hover:opacity-90"
@@ -3201,7 +3516,7 @@ function CardsContent() {
                       })}
                     </div>
                     </div>
-                    <div className="w-[180px] shrink-0 flex flex-col items-end justify-center gap-2">
+                    <div className="w-[220px] shrink-0 flex flex-col items-end justify-center gap-2">
                       {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
                         <>
                           <span className="text-xs text-white/50 text-right">
@@ -3233,6 +3548,125 @@ function CardsContent() {
                       )}
                     </div>
                   </div>
+                  </>
+                  )}
+
+                {alchemySubTab === "forge" && (
+                  <>
+                    {!prismaticForgeUnlocked ? (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+                        <p className="text-amber-200/90 font-medium mb-1">Prismatic Forge is locked</p>
+                        <p className="text-white/70 text-sm">Complete 50% of sets in holo finish in the Codex, then use <strong>Prestige Codex</strong> to reset your TCG account and unlock the Prismatic Forge permanently.</p>
+                      </div>
+                    ) : (
+                  <>
+                    <p className="text-sm text-white/60 mb-4">
+                      Place a Holo Epic or Holo Legendary below. Epic Holo → disenchant for Prisms. Legendary Holo → apply Prisms to craft Prismatic.
+                      {alchemySettings && <> Legendary failure awards {alchemySettings.prismaticCraftFailureStardust} Stardust; Prisms are consumed.</>}
+                    </p>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+                        <div className="flex gap-2">
+                          <div
+                            className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                              prismaticCraftCardId
+                                ? `${SLOT_FILLED_STYLE[cards.find((c) => c.id === prismaticCraftCardId)?.rarity ?? "uncommon"] ?? SLOT_FILLED_STYLE.uncommon} group`
+                                : "border-dashed hover:opacity-90"
+                            }`}
+                            style={!prismaticCraftCardId ? {
+                              borderColor: "transparent",
+                              background: "linear-gradient(rgb(28,28,33), rgb(28,28,33)) padding-box, conic-gradient(from 180deg, #06b6d4, #8b5cf6, #ec4899, #06b6d4) border-box",
+                            } : undefined}
+                            onClick={() => {
+                              if (prismaticCraftCardId) {
+                                setPrismaticCraftCardId(null);
+                                setPrismaticCraftResult(null);
+                              }
+                            }}
+                          >
+                            {prismaticCraftCardId ? (() => {
+                              const c = cards.find((cc) => cc.id === prismaticCraftCardId);
+                              if (!c) return <span className="text-[10px] text-white/40">?</span>;
+                              return (
+                                <div className="w-full h-full relative bg-black/20 group-hover:opacity-60 group-hover:grayscale transition-all">
+                                  {c.profilePath ? (
+                                    <img src={c.profilePath} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">{(c.actorName || "?")[0]}</div>
+                                  )}
+                                </div>
+                              );
+                            })() : (
+                              <span className="text-[10px] text-white/40 text-center px-1">Holo Epic+</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-[220px] shrink-0 flex flex-col items-end justify-center gap-2">
+                        {prismaticCraftCardId && alchemySettings ? (() => {
+                          const forgeCard = cards.find((c) => c.id === prismaticCraftCardId);
+                          const isEpic = forgeCard?.rarity === "epic";
+                          const isLegendary = forgeCard?.rarity === "legendary";
+                          if (isEpic) {
+                            const prismsAwarded = alchemySettings.epicHoloForgePrisms ?? 1;
+                            return (
+                              <>
+                                <span className="text-xs text-white/50 text-right">
+                                  Epic Holo → {prismsAwarded} Prism(s)
+                                </span>
+                                <button
+                                  onClick={() => handleDisenchantEpicForge()}
+                                  disabled={disenchantEpicForgeLoading}
+                                  className="px-5 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-semibold hover:bg-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {disenchantEpicForgeLoading ? <span className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin inline-block" /> : "Disenchant for Prisms"}
+                                </button>
+                              </>
+                            );
+                          }
+                          if (isLegendary) {
+                            return (
+                              <>
+                                <span className="text-xs text-white/50 text-right">
+                                  Prisms: {prismaticCraftPrisms}
+                                </span>
+                                <span className="text-xs text-cyan-300/70 text-right">
+                                  Success: {Math.min(100, alchemySettings.prismaticCraftBaseChance + prismaticCraftPrisms * alchemySettings.prismaticCraftChancePerPrism)}%
+                                </span>
+                                <input
+                                  type="range"
+                                  min={1}
+                                  max={Math.min(alchemySettings.prismaticCraftMaxPrisms, prisms || 1)}
+                                  value={prismaticCraftPrisms}
+                                  onChange={(e) => setPrismaticCraftPrisms(Number(e.target.value))}
+                                  className="w-full accent-cyan-500"
+                                />
+                                <button
+                                  onClick={() => handlePrismaticCraft()}
+                                  disabled={prismaticCraftLoading || prisms < prismaticCraftPrisms}
+                                  className="px-5 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-semibold hover:bg-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {prismaticCraftLoading ? <span className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin inline-block" /> : "Craft Prismatic"}
+                                </button>
+                                {prismaticCraftResult && (
+                                  <span className={`text-xs font-medium text-right ${prismaticCraftResult.success ? "text-green-400" : "text-red-400"}`}>
+                                    {prismaticCraftResult.success ? "Prismatic crafted!" : `Failed — +${prismaticCraftResult.stardustAwarded} Stardust`}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          }
+                          return null;
+                        })(                        ) : (
+                          <span className="text-xs text-white/40 text-right">Click a Holo Epic or Holo Legendary from your inventory to place it here.</span>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                    )}
+                  </>
+                )}
+                  </div>
                 </div>
                 {alchemyError && (
                   <div
@@ -3246,10 +3680,10 @@ function CardsContent() {
 
             {inventorySubTab === "quicksell" && (
               <>
-                <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-4">
+                <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-2">
                   <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Quicksell</h2>
                   <p className="text-sm text-white/60 mb-4">
-                    Place up to 5 cards below to vendor for credits (uncommon 5cr, rare 20cr, epic 80cr). Legendary cannot be vendored.
+                    Vendor up to 5 non-legendary cards for credits (by rarity).
                   </p>
                   <div className="flex items-center gap-4 mb-4">
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
@@ -3259,7 +3693,7 @@ function CardsContent() {
                         return (
                           <div
                             key={`${cardId ?? "empty"}-${i}`}
-                            className={`w-16 h-24 sm:w-20 sm:h-28 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                            className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                               cardId && benchCard
                                 ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} group`
                                 : "border-sky-400/50 bg-sky-500/10 hover:border-sky-300/60 hover:bg-sky-500/20"
@@ -3432,12 +3866,15 @@ function CardsContent() {
                 const inRerollSlots = legendaryRerollCardIds.includes(card.id!);
                 const onAlchemyBench = alchemyBenchCardIds.includes(card.id!);
                 const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
+                const onPrismaticForge = prismaticCraftCardId === card.id;
+                const cardFinish = card.finish ?? (card.isFoil ? "holo" : "normal");
+                const canAddPrismaticForge = prismaticForgeUnlocked && inventorySubTab === "alchemy" && alchemySubTab === "forge" && !myListedCardIds.has(card.id!) && !onAlchemyBench && !onPrismaticForge && !prismaticCraftCardId && card.isFoil && (card.rarity === "epic" || card.rarity === "legendary") && cardFinish !== "prismatic" && cardFinish !== "darkMatter";
                 const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
                 const canAddReroll = inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
-                const canAddAlchemy = inventorySubTab === "alchemy" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const canAddAlchemy = inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
                 const canAddQuicksell = inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
                 const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
-                const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && inventorySubTab === "alchemy";
+                const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && !canAddPrismaticForge && !onPrismaticForge && inventorySubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
                 const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
                 const isNewCard = card.acquiredAt && (Date.now() - new Date(card.acquiredAt).getTime() < NEW_CARD_DAYS_MS);
@@ -3445,7 +3882,16 @@ function CardsContent() {
                 const handleClick = () => {
                   if (inventorySubTab === "alchemy") {
                     if (onAlchemyBench && card.id) { removeFromAlchemyBench(card.id); return; }
-                    if (canAddAlchemy && card.id) addToAlchemyBench(card.id);
+                    if (onPrismaticForge && card.id) { setPrismaticCraftCardId(null); setPrismaticCraftResult(null); return; }
+                    if (canAddAlchemy && card.id) { addToAlchemyBench(card.id); return; }
+                    if (canAddPrismaticForge && card.id) {
+                      setPrismaticCraftCardId(card.id);
+                      setPrismaticCraftPrisms(1);
+                      setPrismaticCraftResult(null);
+                      setShowPrismaticForgeTab(true);
+                      setAlchemySubTab("forge");
+                      return;
+                    }
                     return;
                   }
                   if (inventorySubTab === "quicksell") {
@@ -3458,8 +3904,8 @@ function CardsContent() {
                   if (inSlots && card.id) { removeFromTradeUpSlot(card.id); return; }
                   if (canAddTradeUp && card.id) addToTradeUpSlot(card.id!);
                 };
-                const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddReroll && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
-                const isOnBench = (inSlots && inventorySubTab === "tradeup") || (inRerollSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
+                const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddReroll && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddPrismaticForge && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
+                const isOnBench = (inSlots && inventorySubTab === "tradeup") || (inRerollSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onPrismaticForge && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
                 const isTrackedCard = card.characterId && (trackedCharacterIds.has(card.characterId) || ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)));
                 return (
                   <div
@@ -3481,6 +3927,11 @@ function CardsContent() {
                     {onAlchemyBench && inventorySubTab === "alchemy" && (
                       <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-purple-500/90 text-white text-[10px] font-bold">
                         In bench
+                      </span>
+                    )}
+                    {onPrismaticForge && inventorySubTab === "alchemy" && (
+                      <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-cyan-500/90 text-white text-[10px] font-bold">
+                        In forge
                       </span>
                     )}
                     {onQuicksellBench && inventorySubTab === "quicksell" && (
@@ -3526,7 +3977,12 @@ function CardsContent() {
                   for (const c of stackCards) {
                     if (myListedCardIds.has(c.id!)) continue;
                     if (inventorySubTab === "alchemy") {
-                      if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
+                      if (alchemySubTab === "forge") {
+                        const finish = c.finish ?? (c.isFoil ? "holo" : "normal");
+                        if (!prismaticCraftCardId && c.isFoil && (c.rarity === "epic" || c.rarity === "legendary") && finish !== "prismatic" && finish !== "darkMatter") return { card: c, target: "alchemy" };
+                      } else {
+                        if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
+                      }
                     } else if (inventorySubTab === "quicksell") {
                       if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return { card: c, target: "quicksell" };
                     } else {
@@ -3541,7 +3997,7 @@ function CardsContent() {
                 const canAct = eligibleResult !== null;
                 const isIneligible = (() => {
                   if (inventorySubTab === "tradeup") return (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0) && !canAct;
-                  if (inventorySubTab === "alchemy") return alchemyBenchCardIds.length > 0 && !canAct;
+                  if (inventorySubTab === "alchemy") return (alchemySubTab === "bench" ? alchemyBenchCardIds.length > 0 : !!prismaticCraftCardId) && !canAct;
                   if (inventorySubTab === "quicksell") return quicksellBenchCardIds.length > 0 && !canAct;
                   return false;
                 })();
@@ -3550,7 +4006,17 @@ function CardsContent() {
                 const handleStackClick = () => {
                   if (!eligibleResult) return;
                   const { card: eligible, target } = eligibleResult;
-                  if (target === "alchemy") addToAlchemyBench(eligible.id!);
+                  if (target === "alchemy") {
+                    if (alchemySubTab === "forge") {
+                      setPrismaticCraftCardId(eligible.id!);
+                      setPrismaticCraftPrisms(1);
+                      setPrismaticCraftResult(null);
+                      setShowPrismaticForgeTab(true);
+                      setAlchemySubTab("forge");
+                    } else {
+                      addToAlchemyBench(eligible.id!);
+                    }
+                  }
                   else if (target === "quicksell") addToQuicksellBench(eligible.id!);
                   else if (target === "reroll") addToLegendaryReroll(eligible.id!);
                   else addToTradeUpSlot(eligible.id!);
@@ -3697,7 +4163,7 @@ function CardsContent() {
           <>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
               <p className="text-white/50 text-sm">
-                {marketplaceSubTab === "listings" ? "Buy and sell character cards with other collectors." : "Request cards you want. Users who have them can trade to you in one click."}
+                {marketplaceSubTab === "listings" ? "Buy and sell cards." : "Request a card; owners can fulfill in one click."}
               </p>
               {marketplaceSubTab === "listings" ? (
                 <button
@@ -3974,7 +4440,7 @@ function CardsContent() {
                 >
                   <div className="p-6 flex flex-col flex-1 min-h-0 overflow-auto">
                     <h3 className="text-lg font-bold text-white/90 mb-4 shrink-0">Request a Card</h3>
-                    <p className="text-white/50 text-sm mb-4">Select a character from the pool. Others who have that card can fulfill your request in one click.</p>
+                    <p className="text-white/50 text-sm mb-4">Pick a card; owners can fulfill and get your offered credits.</p>
                     {!selectedOrderCharacter ? (
                       <div className="flex-1 min-h-0 overflow-auto pr-1">
                         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
@@ -4044,7 +4510,7 @@ function CardsContent() {
         {tab === "trivia" && (
           <div>
             <p className="text-white/50 text-sm mb-6">
-              Play trivia on winner movies to earn credits. Each movie can only be completed once.
+              Play trivia on winning movies for credits (once per movie). Quests give more.
             </p>
             {winners.length === 0 ? (
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
@@ -4441,6 +4907,125 @@ function CardsContent() {
               </div>
             )}
 
+            {/* History — past transactions (accepted / declined) */}
+            {tradeHistory.length > 0 && (
+              <div className="mt-10 mb-8">
+                <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-4">History</h3>
+                <p className="text-white/40 text-xs mb-4">Your past trade transactions (accepted and declined).</p>
+                <div className="space-y-2">
+                  {tradeHistory.map((t) => {
+                    const expanded = expandedHistoryTradeId === t.id;
+                    const isSent = t.initiatorUserId === user?.id;
+                    const otherUserId = isSent ? t.counterpartyUserId : t.initiatorUserId;
+                    const otherName = isSent ? t.counterpartyName : t.initiatorName;
+                    const otherBadge = isSent ? t.counterpartyDisplayedBadge : t.initiatorDisplayedBadge;
+                    const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString(undefined, { dateStyle: "short" }) : "";
+                    const timeStr = t.createdAt ? new Date(t.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
+                    return (
+                      <div
+                        key={t.id}
+                        className="rounded-xl border border-white/[0.12] bg-white/[0.04] backdrop-blur-2xl overflow-hidden"
+                      >
+                        {!expanded ? (
+                          <div className="flex items-center gap-3 p-3 min-h-0">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Link href={`/profile/${otherUserId}`} className="flex items-center gap-2 hover:opacity-80">
+                                {userAvatarMap[otherUserId] ? (
+                                  <img src={userAvatarMap[otherUserId]} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                    {otherName?.charAt(0) || "?"}
+                                  </div>
+                                )}
+                                <span className="text-sm font-medium text-white/80">{otherName || "Unknown"}</span>
+                              </Link>
+                              {otherBadge && <BadgePill movieTitle={otherBadge.movieTitle} isHolo={otherBadge.isHolo} />}
+                            </div>
+                            <div className="flex-1 flex justify-center items-center min-w-0 py-0.5">
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.offeredCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.offeredCards.length > 3 && <span className="text-[10px] text-white/40">+{t.offeredCards.length - 3}</span>}
+                                  {(t.offeredCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.offeredCredits ?? 0)} cr</span>}
+                                </div>
+                                <span className="text-white/30 text-xs shrink-0">↔</span>
+                                <div className="flex gap-1 shrink-0 items-center">
+                                  {t.requestedCards.slice(0, 3).map((c) => (
+                                    <div key={c.id} className="w-8 h-10 rounded overflow-hidden bg-white/5 border border-white/10 flex-shrink-0">
+                                      {c.profilePath ? <img src={c.profilePath} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{c.actorName?.[0]}</div>}
+                                    </div>
+                                  ))}
+                                  {t.requestedCards.length > 3 && <span className="text-[10px] text-white/40">+{t.requestedCards.length - 3}</span>}
+                                  {(t.requestedCredits ?? 0) > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-semibold">{(t.requestedCredits ?? 0)} cr</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-white/40 text-xs whitespace-nowrap">{dateStr} {timeStr}</span>
+                              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${t.status === "accepted" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/25"}`}>
+                                {t.status === "accepted" ? "Accepted" : "Declined"}
+                              </span>
+                              <button onClick={() => setExpandedHistoryTradeId(t.id)} className="px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 text-white/80 text-sm hover:bg-white/10 cursor-pointer">View</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/[0.08]">
+                              <span className="text-sm font-medium text-white/90">Trade with {otherName || "Unknown"} · {dateStr} {timeStr}</span>
+                              <button onClick={() => setExpandedHistoryTradeId(null)} className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 cursor-pointer transition-colors" aria-label="Close">&times;</button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] min-h-[180px]">
+                              <div className="p-4 bg-black/15 flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
+                                  {isSent && user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{user?.name?.charAt(0) || "?"}</div>)}
+                                  {!isSent && (userAvatarMap[otherUserId] ? <img src={userAvatarMap[otherUserId]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{(otherName || "?")[0]}</div>)}
+                                  <span className="text-[11px] font-semibold text-red-400/70 uppercase tracking-widest">{isSent ? "You gave" : "They gave"}</span>
+                                </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.offeredCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                  ))}
+                                </div>
+                                {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
+                              </div>
+                              <div className="hidden sm:flex flex-col items-center justify-center px-3 bg-black/20">
+                                <svg className="w-5 h-5 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
+                              </div>
+                              <div className="p-4 bg-black/15 flex flex-col border-t sm:border-t-0 border-white/[0.06]">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
+                                  {!isSent && user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{user?.name?.charAt(0) || "?"}</div>)}
+                                  {isSent && (userAvatarMap[otherUserId] ? <img src={userAvatarMap[otherUserId]} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10 shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">{(otherName || "?")[0]}</div>)}
+                                  <span className="text-[11px] font-semibold text-green-400/70 uppercase tracking-widest">{isSent ? "You received" : "You gave"}</span>
+                                </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
+                                  {t.requestedCards.map((c) => (
+                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                  ))}
+                                </div>
+                                {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
+                              </div>
+                            </div>
+                            <div className="px-4 py-3 bg-black/25 border-t border-white/[0.08] flex flex-wrap gap-2 items-center">
+                              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${t.status === "accepted" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/15 text-red-400 border border-red-500/25"}`}>
+                                {t.status === "accepted" ? "Accepted" : "Declined"}
+                              </span>
+                              <button onClick={() => setExpandedHistoryTradeId(null)} className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/[0.04] text-white/60 text-sm hover:bg-white/[0.08] cursor-pointer transition-colors">Collapse</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Trade Block - List Card Modal */}
             {showTradeBlockModal && (
                   <>
@@ -4453,7 +5038,7 @@ function CardsContent() {
                     >
                       <div className="p-6 flex flex-col flex-1 min-h-0 overflow-auto">
                         <h3 className="text-lg font-bold text-white/90 mb-2 shrink-0">List a Card on the Trade Block</h3>
-                        <p className="text-white/50 text-sm mb-4">Select a card from your collection that you&apos;re willing to trade. Other players can browse the trade block and send you offers.</p>
+                        <p className="text-white/50 text-sm mb-4">List a card; others can send offers.</p>
                         {!tradeBlockSelectedCard ? (
                           <div className="flex-1 min-h-0 overflow-auto pr-1">
                             {(() => {
@@ -4551,19 +5136,103 @@ function CardsContent() {
           <div>
             <div className="flex flex-col items-center gap-3 mb-4">
               <p className="text-white/50 text-sm text-center max-w-xl">
-                All cards in the game. Upload a card from your inventory to unlock it here (the card is removed from your inventory; legendaries re-enter the pool).
+                Upload cards to discover them (card leaves collection; legendaries re-enter pool). Complete a set for badge tiers.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCodexUploadModal(true);
-                  setCodexUploadSelectedIds(new Set());
-                }}
-                className="px-6 py-2 rounded-xl border-2 border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-bold hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
-              >
-                Upload to Codex
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCodexUploadModal(true);
+                    setCodexUploadSelectedIds(new Set());
+                  }}
+                  className="px-6 py-2 rounded-xl border-2 border-cyan-500/50 bg-cyan-500/20 text-cyan-300 font-bold hover:border-cyan-400 hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                >
+                  Upload to Codex
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleCodexSoundMuted}
+                  className={`p-2.5 rounded-xl border-2 transition-colors cursor-pointer ${
+                    codexSoundMuted
+                      ? "border-white/30 bg-white/10 text-white/50 hover:bg-white/15 hover:text-white/60"
+                      : "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:border-cyan-400 hover:bg-cyan-500/25"
+                  }`}
+                  title={codexSoundMuted ? "Unmute codex upload sound" : "Mute codex upload sound"}
+                  aria-label={codexSoundMuted ? "Unmute codex upload sound" : "Mute codex upload sound"}
+                >
+                  {codexSoundMuted ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                  )}
+                </button>
+                {winners.length > 0 && completedHoloBadgeWinnerIds.size >= Math.ceil(winners.length * 0.5) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPrestigeCodexConfirm(true)}
+                    className="px-6 py-2 rounded-xl border-2 border-amber-500/50 bg-amber-500/20 text-amber-300 font-bold hover:border-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                  >
+                    Prestige Codex
+                  </button>
+                )}
+              </div>
             </div>
+            {showPrestigeCodexConfirm && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/95 to-yellow-950/95 backdrop-blur-xl shadow-xl max-w-md w-full p-6 text-center">
+                  <h3 className="text-lg font-bold text-amber-200 mb-2">Prestige Codex</h3>
+                  <p className="text-white/80 text-sm mb-4">
+                    Reset your TCG account to fresh (all cards, credits, codex, stardust, prisms, etc. will be cleared) and <strong>unlock the Prismatic Forge</strong> permanently. This cannot be undone.
+                  </p>
+                  <p className="text-amber-200/90 text-sm mb-6">Are you sure you want to prestige?</p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => !prestigeCodexLoading && setShowPrestigeCodexConfirm(false)}
+                      disabled={prestigeCodexLoading}
+                      className="px-5 py-2.5 rounded-xl border border-white/20 text-white/80 font-medium hover:bg-white/10 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (prestigeCodexLoading) return;
+                        const uid = getUserId();
+                        if (!uid) return;
+                        setPrestigeCodexLoading(true);
+                        try {
+                          const res = await fetch("/api/cards/prestige-codex", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: uid }),
+                          });
+                          const data = await res.json().catch(() => ({}));
+                          if (res.ok) {
+                            setShowPrestigeCodexConfirm(false);
+                            setPrismaticForgeUnlocked(true);
+                            window.location.reload();
+                          } else {
+                            alert(data.error || "Prestige failed");
+                          }
+                        } finally {
+                          setPrestigeCodexLoading(false);
+                        }
+                      }}
+                      disabled={prestigeCodexLoading}
+                      className="px-5 py-2.5 rounded-xl border-2 border-amber-500/60 bg-amber-500/30 text-amber-100 font-bold hover:bg-amber-500/40 disabled:opacity-50"
+                    >
+                      {prestigeCodexLoading ? "Prestiging…" : "Yes, Prestige"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="min-w-0 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto overflow-y-hidden scrollbar-tabs">
               <div className="flex gap-0 flex-nowrap w-max min-w-full rounded-t-lg border border-white/[0.12] border-b-0 bg-white/[0.04] p-0.5">
               <button
@@ -4680,7 +5349,7 @@ function CardsContent() {
                                   ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
                                   : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
                               }`}
-                              title={isTrackedChar ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              title={isTrackedChar ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
                               disabled={!isTrackedChar && trackedCharacterIds.size >= MAX_TRACKED}
                             >
                               {isTrackedChar ? "Untrack" : "Track"}
@@ -4714,13 +5383,15 @@ function CardsContent() {
                         });
                       }
                       for (const alt of discoveredAltArts) {
+                        const altHolo = discoveredAltArtHoloCharacterIds.has(alt.characterId);
                         variants.push({
                           poolEntry: alt,
                           isAlt: true,
                           codexCard: {
                             id: alt.characterId,
                             rarity: alt.rarity,
-                            isFoil: false,
+                            isFoil: altHolo,
+                            finish: altHolo ? "holo" : "normal",
                             actorName: alt.actorName ?? "",
                             characterName: alt.characterName ?? "",
                             movieTitle: alt.movieTitle ?? "",
@@ -4773,7 +5444,7 @@ function CardsContent() {
                                   ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                                   : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
                               }`}
-                              title={isTrackedCodex ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              title={isTrackedCodex ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
                               disabled={!isTrackedCodex && trackedCharacterIds.size >= MAX_TRACKED}
                             >
                               {isTrackedCodex ? "Untrack" : "Track"}
@@ -4881,7 +5552,7 @@ function CardsContent() {
                                 : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
                             }`}
                             style={{ zIndex: variants.length + 4 }}
-                            title={isTrackedStack ? "Stop tracking" : trackedCharacterIds.size < MAX_TRACKED ? "Track this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                            title={isTrackedStack ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
                             disabled={!isTrackedStack && trackedCharacterIds.size >= MAX_TRACKED}
                           >
                             {isTrackedStack ? "Untrack" : "Track"}
@@ -4910,6 +5581,7 @@ function CardsContent() {
                         return n;
                       };
                       const setRarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                      const tierOrder = { darkMatter: 4, prismatic: 3, holo: 2, normal: 1 };
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => {
                           const title = entries[0]?.movieTitle ?? String(k);
@@ -4919,49 +5591,75 @@ function CardsContent() {
                           const winner = winners.find((w) => w.movieTitle === title);
                           const isComplete = winner ? completedBadgeWinnerIds.has(winner.id) : false;
                           const isHoloComplete = winner ? completedHoloBadgeWinnerIds.has(winner.id) : false;
+                          const isPrismaticComplete = winner ? completedPrismaticBadgeWinnerIds.has(winner.id) : false;
+                          const isDarkMatterComplete = winner ? completedDarkMatterBadgeWinnerIds.has(winner.id) : false;
+                          const badgeTier: "normal" | "holo" | "prismatic" | "darkMatter" = isDarkMatterComplete
+                            ? "darkMatter"
+                            : isPrismaticComplete
+                              ? "prismatic"
+                              : isHoloComplete
+                                ? "holo"
+                                : isComplete
+                                  ? "normal"
+                                  : "normal";
                           return {
                             title,
                             entries: sortedEntries,
                             completedCount: discoveredCount(entries),
                             isComplete,
                             isHoloComplete,
+                            isPrismaticComplete,
+                            isDarkMatterComplete,
+                            badgeTier,
                           };
                         })
                         .sort((a, b) => {
-                          if (a.isHoloComplete !== b.isHoloComplete) return a.isHoloComplete ? -1 : 1;
+                          const aTier = tierOrder[a.badgeTier];
+                          const bTier = tierOrder[b.badgeTier];
+                          if (aTier !== bTier) return bTier - aTier;
                           if (a.isComplete !== b.isComplete) return a.isComplete ? -1 : 1;
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
                       return sets.flatMap((set, setIndex) => {
-                        const setWrapperClass = set.isHoloComplete
-                          ? "col-span-full rounded-xl holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 mb-4"
-                          : set.isComplete
-                            ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
-                            : "col-span-full";
+                        const setWrapperClass = set.badgeTier === "darkMatter"
+                          ? "col-span-full rounded-xl dark-matter-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 mb-4"
+                          : set.badgeTier === "prismatic"
+                            ? "col-span-full rounded-xl prismatic-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 mb-4"
+                            : set.badgeTier === "holo"
+                              ? "col-span-full rounded-xl holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4 mb-4"
+                              : set.isComplete
+                                ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
+                                : "col-span-full";
+                        const tierLabel = set.badgeTier === "darkMatter" ? "Dark Matter" : set.badgeTier === "prismatic" ? "Prismatic" : set.badgeTier === "holo" ? "Holo" : "Complete";
+                        const titleClass = set.badgeTier !== "normal" ? "text-white/90" : set.isComplete ? "text-amber-200" : "text-white/70";
+                        const tierTagClass = set.badgeTier === "darkMatter"
+                          ? "bg-violet-900/90 border border-violet-400/50 text-violet-200"
+                          : set.badgeTier === "prismatic"
+                            ? "bg-amber-400/90 border border-amber-300/50 text-amber-950"
+                            : set.badgeTier === "holo"
+                              ? "text-white border border-white/40"
+                              : "bg-amber-500/90 text-amber-950";
+                        const tierTagStyle = set.badgeTier === "holo" ? {
+                          background: "linear-gradient(135deg, #ff6b6b, #ffd93d, #6bff6b, #6bd5ff, #b96bff, #ff6bb5)",
+                          backgroundSize: "200% 200%",
+                          animation: "holo-badge-shift 3s ease infinite",
+                        } : undefined;
                         return [
                           setIndex > 0 ? (
                             <div key={`codex-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                           ) : null,
                           <div key={`codex-set-wrap-${setIndex}`} className={setWrapperClass}>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className={`text-sm font-semibold ${set.isHoloComplete ? "text-white/90" : set.isComplete ? "text-amber-200" : "text-white/70"}`}>
+                              <span className={`text-sm font-semibold ${titleClass}`}>
                                 {set.title}
                               </span>
-                              {set.isHoloComplete ? (
+                              {set.isComplete ? (
                                 <span
-                                  className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm text-white"
-                                  style={{
-                                    background: "linear-gradient(135deg, #ff6b6b, #ffd93d, #6bff6b, #6bd5ff, #b96bff, #ff6bb5)",
-                                    backgroundSize: "200% 200%",
-                                    animation: "holo-badge-shift 3s ease infinite",
-                                  }}
+                                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`}
+                                  style={tierTagStyle}
                                 >
-                                  Holo Complete
-                                </span>
-                              ) : set.isComplete ? (
-                                <span className="px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                                  Complete
+                                  {tierLabel}
                                 </span>
                               ) : null}
                             </div>
@@ -5054,7 +5752,7 @@ function CardsContent() {
                                   ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
                                   : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
                               }`}
-                              title={isTrackedBoys ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                              title={isTrackedBoys ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
                               disabled={!isTrackedBoys && trackedCharacterIds.size >= MAX_TRACKED}
                             >
                               {isTrackedBoys ? "Untrack" : "Track"}
@@ -5111,7 +5809,7 @@ function CardsContent() {
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                                 : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
                             }`}
-                            title={isTrackedBoysCodex ? "Stop tracking this card" : trackedCharacterIds.size < MAX_TRACKED ? "Track — get notified when you pull this card" : `Tracking limit (${MAX_TRACKED}) reached`}
+                            title={isTrackedBoysCodex ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
                             disabled={!isTrackedBoysCodex && trackedCharacterIds.size >= MAX_TRACKED}
                           >
                             {isTrackedBoysCodex ? "Untrack" : "Track"}
@@ -5207,23 +5905,50 @@ function CardsContent() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {[...winners]
                 .sort((a, b) => {
-                  const aDone = completedBadgeWinnerIds.has(a.id);
-                  const bDone = completedBadgeWinnerIds.has(b.id);
-                  if (aDone && !bDone) return -1;
-                  if (!aDone && bDone) return 1;
+                  const tierOrder = { darkMatter: 4, prismatic: 3, holo: 2, normal: 1 };
+                  const tier = (w: { id: string }) =>
+                    completedDarkMatterBadgeWinnerIds.has(w.id) ? "darkMatter" : completedPrismaticBadgeWinnerIds.has(w.id) ? "prismatic" : completedHoloBadgeWinnerIds.has(w.id) ? "holo" : completedBadgeWinnerIds.has(w.id) ? "normal" : null;
+                  const aTier = tier(a);
+                  const bTier = tier(b);
+                  if (aTier && !bTier) return -1;
+                  if (!aTier && bTier) return 1;
+                  if (aTier && bTier && aTier !== bTier) return (tierOrder[bTier] ?? 0) - (tierOrder[aTier] ?? 0);
                   return 0;
                 })
                 .map((w) => {
                 const collected = completedBadgeWinnerIds.has(w.id);
+                const badgeTier: "normal" | "holo" | "prismatic" | "darkMatter" = collected
+                  ? (completedDarkMatterBadgeWinnerIds.has(w.id) ? "darkMatter" : completedPrismaticBadgeWinnerIds.has(w.id) ? "prismatic" : completedHoloBadgeWinnerIds.has(w.id) ? "holo" : "normal")
+                  : "normal";
+                const collectedWrapperClass = collected
+                  ? badgeTier === "darkMatter"
+                    ? "dark-matter-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                    : badgeTier === "prismatic"
+                      ? "prismatic-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                      : badgeTier === "holo"
+                        ? "holo-set-complete bg-gradient-to-b from-white/[0.06] to-white/[0.02]"
+                        : "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30"
+                  : "border-white/10 bg-white/[0.04]";
+                const tierTagClass = badgeTier === "darkMatter"
+                  ? "bg-violet-900/90 border border-violet-400/50 text-violet-200"
+                  : badgeTier === "prismatic"
+                    ? "bg-amber-400/90 border border-amber-300/50 text-amber-950"
+                    : badgeTier === "holo"
+                      ? "text-white border border-white/40"
+                      : "bg-amber-500/90 text-amber-950";
+                const tierTagStyle = badgeTier === "holo" ? {
+                  background: "linear-gradient(135deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
+                  boxShadow: "0 0 6px rgba(255,255,255,0.4)",
+                } : undefined;
+                const tierLabel = badgeTier === "darkMatter" ? "Dark Matter" : badgeTier === "prismatic" ? "Prismatic" : badgeTier === "holo" ? "Holo" : "Complete";
+                const checkBgClass = badgeTier === "darkMatter" ? "bg-violet-400" : badgeTier === "prismatic" ? "bg-amber-300" : badgeTier === "holo" ? "bg-white/90" : "bg-amber-400";
+                const checkTextClass = badgeTier === "darkMatter" ? "text-violet-950" : badgeTier === "prismatic" ? "text-amber-950" : badgeTier === "holo" ? "text-violet-900" : "text-amber-950";
+                const fallbackIconClass = badgeTier === "darkMatter" ? "text-violet-400/80" : badgeTier === "prismatic" ? "text-amber-300/80" : badgeTier === "holo" ? "text-white/80" : "text-amber-400/80";
                 return (
                   <Link
                     key={w.id}
                     href={`/winners/${w.id}`}
-                    className={`block rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${
-                      collected
-                        ? "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30"
-                        : "border-white/10 bg-white/[0.04]"
-                    }`}
+                    className={`block rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${collectedWrapperClass}`}
                     style={{ aspectRatio: "1" }}
                   >
                     <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
@@ -5238,8 +5963,8 @@ function CardsContent() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
                           </>
                         ) : (
-                          <div className="w-full h-full absolute inset-0 bg-amber-500/20 flex items-center justify-center">
-                            <svg className="w-10 h-10 text-amber-400/80" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <div className={`w-full h-full absolute inset-0 flex items-center justify-center ${badgeTier === "normal" ? "bg-amber-500/20" : "bg-white/[0.06]"}`}>
+                            <svg className={`w-10 h-10 ${fallbackIconClass}`} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                               <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                             </svg>
                           </div>
@@ -5259,11 +5984,11 @@ function CardsContent() {
                       )}
                       {collected && (
                         <>
-                          <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center" aria-hidden>
-                            <svg className="w-3 h-3 text-amber-950" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
+                            <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                           </span>
-                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-sm" aria-hidden>
-                            Complete
+                          <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`} style={tierTagStyle} aria-hidden>
+                            {tierLabel}
                           </span>
                         </>
                       )}
@@ -5368,7 +6093,7 @@ function CardsContent() {
                             type="button"
                             onClick={() => !isDisabled && card.id && toggleCodexUploadSelection(card.id)}
                             disabled={isDisabled}
-                            title={needsRegular ? "Upload the regular version to the codex first" : undefined}
+                            title={needsRegular ? "Upload regular version first" : undefined}
                             className={`relative text-left rounded-xl overflow-hidden transition-all border-2 ${
                               isDisabled
                                 ? "opacity-60 cursor-not-allowed border-white/5 grayscale"

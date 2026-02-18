@@ -9,6 +9,7 @@ import {
   getCardFinish,
   nextFinishTier,
   CARD_FINISH_LABELS,
+  getAlchemySettings,
 } from "@/lib/data";
 import type { CardFinish } from "@/lib/data";
 import { getUpgradeCost, getUpgradeSuccessChance } from "@/lib/alchemy";
@@ -74,7 +75,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const successChance = getUpgradeSuccessChance(targetFinish);
+  const settings = getAlchemySettings();
+  const successChance = getUpgradeSuccessChance(targetFinish, settings);
   const success = Math.random() < successChance;
   if (success) {
     const updates: { isFoil: boolean; finish: CardFinish } = {

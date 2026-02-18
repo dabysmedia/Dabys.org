@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  getNotificationsForUser,
+  getVisibleNotificationsForUser,
   getUnreadNotificationCount,
   getReadUpTo,
 } from "@/lib/data";
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  const notifications = getNotificationsForUser(userId);
+  const notifications = getVisibleNotificationsForUser(userId);
   const unreadCount = getUnreadNotificationCount(userId);
   const readUpTo = getReadUpTo(userId);
 

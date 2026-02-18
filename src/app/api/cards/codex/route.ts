@@ -5,7 +5,9 @@ import {
   getCodexUnlockedPrismaticCharacterIds,
   getCodexUnlockedDarkMatterCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedAltArtHoloCharacterIds,
   getCodexUnlockedBoysCharacterIds,
+  getPrismaticForgeUnlocked,
 } from "@/lib/data";
 
 export async function GET(request: Request) {
@@ -21,13 +23,17 @@ export async function GET(request: Request) {
   const prismaticCharacterIds = getCodexUnlockedPrismaticCharacterIds(userId);
   const darkMatterCharacterIds = getCodexUnlockedDarkMatterCharacterIds(userId);
   const altArtCharacterIds = getCodexUnlockedAltArtCharacterIds(userId);
+  const altArtHoloCharacterIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
   const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
+  const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
   return NextResponse.json({
     characterIds,
     holoCharacterIds,
     prismaticCharacterIds,
     darkMatterCharacterIds,
     altArtCharacterIds,
+    altArtHoloCharacterIds,
     boysCharacterIds,
+    prismaticForgeUnlocked,
   });
 }

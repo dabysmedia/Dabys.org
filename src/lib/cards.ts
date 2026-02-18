@@ -56,6 +56,7 @@ function rollCardFinish(opts?: {
   allowDarkMatter?: boolean;
   prismaticChance?: number;
   darkMatterChance?: number;
+  holoChance?: number;
 }): { isFoil: boolean; finish: CardFinish } {
   const dmChance = opts?.allowDarkMatter
     ? (typeof opts.darkMatterChance === "number" ? opts.darkMatterChance : 0.5) / 100
@@ -69,7 +70,8 @@ function rollCardFinish(opts?: {
   if (prismChance > 0 && Math.random() < prismChance) {
     return { isFoil: true, finish: "prismatic" };
   }
-  if (Math.random() < FOIL_CHANCE) {
+  const effectiveHoloChance = typeof opts?.holoChance === "number" ? opts.holoChance / 100 : FOIL_CHANCE;
+  if (Math.random() < effectiveHoloChance) {
     return { isFoil: true, finish: "holo" };
   }
   return { isFoil: false, finish: "normal" };
@@ -468,82 +470,45 @@ export function buyPack(
   });
   if (!deducted) return { success: false, error: "Failed to deduct credits" };
 
-  // Resolve custom drop weights from the pack (read from file so they always override defaults)
-  let effectiveWeights: { legendary: number; epic: number; rare: number; uncommon: number } | undefined;
+  // Resolve drop weights: custom from pack config, or global defaults.
+  // Each card independently rolls its rarity from the weight distribution.
+  let weights: { legendary: number; epic: number; rare: number; uncommon: number } = DEFAULT_RARITY_WEIGHTS;
   if (packId) {
     const rawPacks = getPacksRaw();
     const rawPack = rawPacks.find((p) => p.id === packId);
     const rw = rawPack?.rarityWeights;
     if (rw && typeof rw === "object") {
-      const l = Math.max(0, Number(rw.legendary));
-      const e = Math.max(0, Number(rw.epic));
-      const r = Math.max(0, Number(rw.rare));
-      const u = Math.max(0, Number(rw.uncommon));
-      if (l + e + r + u > 0) effectiveWeights = { legendary: l, epic: e, rare: r, uncommon: u };
+      const safeNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+      const l = safeNum(rw.legendary);
+      const e = safeNum(rw.epic);
+      const r = safeNum(rw.rare);
+      const u = safeNum(rw.uncommon);
+      if (l + e + r + u > 0) weights = { legendary: l, epic: e, rare: r, uncommon: u };
     }
   }
 
-  // #region agent log
-  if (effectiveWeights) {
-    const byRarity = { legendary: 0, epic: 0, rare: 0, uncommon: 0 };
-    availablePool().forEach((c) => { const t = normRarity(c.rarity); if (t in byRarity) byRarity[t as keyof typeof byRarity]++; });
-    const ordered = [effectiveWeights.legendary, effectiveWeights.epic, effectiveWeights.rare, effectiveWeights.uncommon];
-    const total = ordered.reduce((s, v) => s + v, 0) || 1;
-    const cumulative = ordered.reduce<number[]>((acc, w, i) => { acc.push((acc[i - 1] ?? 0) + w / total); return acc; }, []);
-    if (cumulative.length > 0) cumulative[cumulative.length - 1] = 1;
-    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:effectiveWeights',message:'custom weights and cumulative',data:{packId,effectiveWeights,total,cumulative},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:poolCounts',message:'pool counts by rarity',data:byRarity,hypothesisId:'H5',timestamp:Date.now()})}).catch(()=>{});
-  }
-  // #endregion
+  // Zero out weights for rarities absent from the pool so rolls land on available tiers
+  const poolCounts = { legendary: 0, epic: 0, rare: 0, uncommon: 0 };
+  availablePool().forEach((c) => {
+    const t = normRarity(c.rarity);
+    if (t in poolCounts) poolCounts[t as keyof typeof poolCounts]++;
+  });
+  const adjustedWeights = {
+    legendary: poolCounts.legendary > 0 ? weights.legendary : 0,
+    epic: poolCounts.epic > 0 ? weights.epic : 0,
+    rare: poolCounts.rare > 0 ? weights.rare : 0,
+    uncommon: poolCounts.uncommon > 0 ? weights.uncommon : 0,
+  };
+  const adjSum = adjustedWeights.legendary + adjustedWeights.epic + adjustedWeights.rare + adjustedWeights.uncommon;
+  const rollWeights = adjSum > 0 ? adjustedWeights : weights;
 
-  // When pack has custom weights: use pool-aware weights and cap slot requests by pool so granted % = set %
-  let raritySlots: Rarity[];
-  if (effectiveWeights) {
-    const poolCounts = { legendary: 0, epic: 0, rare: 0, uncommon: 0 };
-    availablePool().forEach((c) => {
-      const t = normRarity(c.rarity);
-      if (t in poolCounts) poolCounts[t as keyof typeof poolCounts]++;
-    });
-    const poolAware = {
-      legendary: poolCounts.legendary > 0 ? effectiveWeights.legendary : 0,
-      epic: poolCounts.epic > 0 ? effectiveWeights.epic : 0,
-      rare: poolCounts.rare > 0 ? effectiveWeights.rare : 0,
-      uncommon: poolCounts.uncommon > 0 ? effectiveWeights.uncommon : 0,
-    };
-    const sum = poolAware.legendary + poolAware.epic + poolAware.rare + poolAware.uncommon;
-    const baseWeights = sum > 0 ? poolAware : effectiveWeights;
-
-    if (sum > 0) {
-      // Cap slot requests by pool so we never request more than available → no cascade, granted % = set %
-      const remaining = { ...poolCounts };
-      const slots: Rarity[] = [];
-      for (let s = 0; s < cardsToGive; s++) {
-        const w = {
-          legendary: remaining.legendary > 0 ? baseWeights.legendary : 0,
-          epic: remaining.epic > 0 ? baseWeights.epic : 0,
-          rare: remaining.rare > 0 ? baseWeights.rare : 0,
-          uncommon: remaining.uncommon > 0 ? baseWeights.uncommon : 0,
-        };
-        const total = w.legendary + w.epic + w.rare + w.uncommon;
-        const weightsToUse = total > 0 ? w : { legendary: remaining.legendary, epic: remaining.epic, rare: remaining.rare, uncommon: remaining.uncommon };
-        const tier = rollPackTier(weightsToUse);
-        slots.push(tier);
-        remaining[tier] = Math.max(0, remaining[tier] - 1);
-      }
-      raritySlots = shuffleArray(slots);
-    } else {
-      // User only wanted rarities not in pool (e.g. 100% legendary, 0 in pool): request those, cascade gives best available
-      raritySlots = shuffleArray(Array.from({ length: cardsToGive }, () => rollPackTier(effectiveWeights)));
-    }
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:rollWeights',message:'weights used for roll (pool-aware)',data:{baseWeights},hypothesisId:'H5',runId:'post-fix',timestamp:Date.now()})}).catch(()=>{});
-    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:raritySlots',message:'requested rarities per slot',data:{cardsToGive,raritySlotsLength:raritySlots.length,raritySlots},hypothesisId:'H4',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  } else {
-    const packTier = rollPackTier(undefined);
-    raritySlots = getRaritySlotsForPack(packTier);
-    raritySlots = shuffleArray(raritySlots).slice(0, cardsToGive);
-  }
+  // Per-pack model: one roll = hit tier (the set %s are chance per pack for that hit). Rest = bulk (20% rare, 80% uncommon).
+  const hitTier = rollPackTier(rollWeights);
+  const bulkRarity = (): Rarity => (Math.random() < 0.2 ? "rare" : "uncommon");
+  const hitSlot = hitTier;
+  const bulkSlots: Rarity[] = Array.from({ length: Math.max(0, cardsToGive - 1) }, bulkRarity);
+  let raritySlots: Rarity[] = [hitSlot, ...bulkSlots];
+  raritySlots = shuffleArray(raritySlots);
 
   const cards: ReturnType<typeof addCard>[] = [];
   const pickedCharacterIds = new Set<string>();
@@ -554,23 +519,25 @@ export function buyPack(
 
     const wantedRarity = raritySlots[i];
     const char = pickCardOfRarity(pool, wantedRarity, ownedSlotsThisPack);
-    // #region agent log
-    if (effectiveWeights && wantedRarity !== char.rarity) fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:pickCard',message:'cascade: wanted vs granted',data:{slotIndex:i,wantedRarity,grantedRarity:char.rarity},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const packAllowsPrismatic = !!selectedPack?.allowPrismatic;
     const packAllowsDarkMatter = !!selectedPack?.allowDarkMatter;
     const packPrismaticChance = selectedPack?.prismaticChance;
     const packDarkMatterChance = selectedPack?.darkMatterChance;
+    const packHoloChance = selectedPack?.holoChance;
     const { isFoil, finish } = rollCardFinish({
       allowPrismatic: packAllowsPrismatic,
       allowDarkMatter: packAllowsDarkMatter,
       prismaticChance: packAllowsPrismatic && typeof packPrismaticChance === "number" ? packPrismaticChance : undefined,
       darkMatterChance: packAllowsDarkMatter && typeof packDarkMatterChance === "number" ? packDarkMatterChance : undefined,
+      holoChance: typeof packHoloChance === "number" ? packHoloChance : undefined,
     });
+    // Use the rolled rarity so the granted rate exactly matches the set weight,
+    // even when the pool is too small and the character's natural rarity differs.
+    const grantedRarity = wantedRarity;
     const card = addCard({
       userId,
       characterId: char.characterId,
-      rarity: char.rarity,
+      rarity: grantedRarity,
       isFoil,
       finish,
       actorName: char.actorName,
@@ -582,14 +549,10 @@ export function buyPack(
     });
     cards.push(card);
     pickedCharacterIds.add(char.characterId);
-    if (char.rarity === "legendary") {
+    if (grantedRarity === "legendary") {
       ownedSlotsThisPack.add(char.altArtOfCharacterId ?? char.characterId);
     }
   }
-
-  // #region agent log
-  if (effectiveWeights && cards.length > 0) fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cards.ts:granted',message:'granted rarities this pack',data:{grantedRarities:cards.map(c=>c.rarity)},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   return { success: true, cards };
 }

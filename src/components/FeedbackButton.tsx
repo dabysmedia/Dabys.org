@@ -80,7 +80,7 @@ export function FeedbackButton({ inline = false }: { inline?: boolean }) {
       className={
         inline
           ? "flex flex-col gap-2"
-          : "fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
+          : "fixed bottom-6 left-6 z-40 flex flex-col items-start gap-2"
       }
     >
       {open && (

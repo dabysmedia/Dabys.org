@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getCardById,
   removeCard,
+  cancelPendingTradesInvolvingCards,
   addCredits,
   getCredits,
   getListings,
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
   for (const cardId of toRemove) {
     removeCard(cardId);
   }
+  cancelPendingTradesInvolvingCards(toRemove);
   addCredits(userId, totalCredits, "quicksell", { cardIds: toRemove });
   const balance = getCredits(userId);
 

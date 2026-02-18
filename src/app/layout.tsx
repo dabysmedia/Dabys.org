@@ -4,6 +4,7 @@ import { ScrollingWinnersBg } from "@/components/ScrollingWinnersBg";
 import { AppWithFriends } from "@/components/AppWithFriends";
 import { Footer } from "@/components/Footer";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { MessagesPanel } from "@/components/MessagesPanel";
 import Header from "@/components/Header";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { PwaRegister } from "@/components/PwaRegister";
@@ -45,6 +46,7 @@ export default function RootLayout({
           <Header />
           {children}
           <Footer />
+          <MessagesPanel />
           <FeedbackButton />
           <ActivityToast />
         </AppWithFriends>

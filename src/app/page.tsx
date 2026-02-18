@@ -42,6 +42,7 @@ interface Winner {
   backdropUrl?: string;
   submitterAvatarUrl?: string;
   submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
+  voteCount?: number;
 }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
 interface TmdbMovieDetail { tmdbId: number; title: string; year: string; overview: string; posterUrl: string; backdropUrl: string; trailerUrl: string; letterboxdUrl: string; }
@@ -335,7 +336,7 @@ export default function HomePage() {
                 {/* Glass overlay full-bleed so border aligns with bg art */}
                 <div className="relative px-6 py-8 sm:px-10 sm:py-10 flex flex-col md:flex-row items-center gap-8 bg-white/[0.08] backdrop-blur-lg min-h-[200px]">
                   {/* Trophy + copy on small screens */}
-                  <div className="md:hidden w-full flex items-center justify-between mb-2">
+                    <div className="md:hidden w-full flex items-center justify-between mb-2">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30">
                       <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
@@ -345,6 +346,9 @@ export default function HomePage() {
                       </span>
                     </div>
                     <span className="text-[11px] text-white/40">
+                      {typeof thisWeekWinner.voteCount === "number" && thisWeekWinner.voteCount >= 0
+                        ? `${thisWeekWinner.voteCount} vote${thisWeekWinner.voteCount !== 1 ? "s" : ""} · `
+                        : ""}
                       {new Date(thisWeekWinner.publishedAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -363,13 +367,20 @@ export default function HomePage() {
 
                   {/* Copy */}
                   <div className="flex-1 min-w-0">
-                    <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 mb-3">
-                      <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
-                      </svg>
-                      <span className="text-[11px] font-semibold tracking-widest text-amber-400 uppercase">
-                        This Week&apos;s Winner
-                      </span>
+                    <div className="hidden md:flex md:flex-wrap md:items-center md:gap-3 mb-3">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30">
+                        <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516" />
+                        </svg>
+                        <span className="text-[11px] font-semibold tracking-widest text-amber-400 uppercase">
+                          This Week&apos;s Winner
+                        </span>
+                      </div>
+                      {typeof thisWeekWinner.voteCount === "number" && thisWeekWinner.voteCount >= 0 && (
+                        <span className="text-sm text-white/50">
+                          {thisWeekWinner.voteCount} vote{thisWeekWinner.voteCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white/95 mb-2 sm:mb-3 leading-tight line-clamp-2">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry, addPendingPoolEntry } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
 import type { CardType, CharacterPortrayal } from "@/lib/data";
 
@@ -76,7 +76,6 @@ export async function POST(request: Request) {
     movieTitle = winner.movieTitle?.trim() || "Unknown";
   }
 
-  const pool = getCharacterPool();
   const characterId = `custom-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const newEntry = {
     characterId,
@@ -90,6 +89,15 @@ export async function POST(request: Request) {
     cardType,
     ...(altArtOfCharacterId != null && { altArtOfCharacterId }),
   };
+
+  const addToPending = body.addToPending === true && body.winnerId;
+  if (addToPending) {
+    const winnerIdForPending = (body.winnerId as string).trim();
+    addPendingPoolEntry(winnerIdForPending, newEntry);
+    return NextResponse.json(newEntry, { status: 201 });
+  }
+
+  const pool = getCharacterPool();
   pool.push(newEntry);
   saveCharacterPool(pool);
   return NextResponse.json(newEntry, { status: 201 });

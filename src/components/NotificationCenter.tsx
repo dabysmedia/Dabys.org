@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface NotificationEntry {
   id: string;
@@ -75,6 +76,12 @@ const PERSONAL_TYPES = new Set([
   "free_packs_restock",
 ]);
 
+const TRADE_NOTIFICATION_TYPES = new Set([
+  "trade_received",
+  "trade_accepted",
+  "trade_denied",
+]);
+
 function timeAgo(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
   const secs = Math.floor(diff / 1000);
@@ -90,6 +97,7 @@ function timeAgo(ts: string): string {
 type Tab = "all" | "personal" | "activity";
 
 export function NotificationCenter() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -180,6 +188,21 @@ export function NotificationCenter() {
     return new Date(n.timestamp).getTime() > new Date(readUpTo).getTime();
   };
 
+  const handleClearAll = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch("/api/notifications/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) return;
+      setNotifications([]);
+      setUnreadCount(0);
+      setReadUpTo(new Date().toISOString());
+    } catch {}
+  };
+
   return (
     <div className="relative">
       <button
@@ -219,11 +242,23 @@ export function NotificationCenter() {
             <h3 className="text-sm font-semibold text-white/90">
               Notifications
             </h3>
-            {notifications.length > 0 && (
-              <span className="text-[11px] text-white/35">
-                {notifications.length} total
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {notifications.length > 0 && (
+                <span className="text-[11px] text-white/35">
+                  {notifications.length} total
+                </span>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-[11px] font-medium text-amber-400 hover:text-amber-300 transition-colors cursor-pointer whitespace-nowrap"
+                  title="Mark all as read"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tabs */}
@@ -288,12 +323,24 @@ export function NotificationCenter() {
                   label: "Update",
                 };
                 const unread = isUnread(n);
+                const isTradeOffer = TRADE_NOTIFICATION_TYPES.has(n.type);
+                const tradeId = isTradeOffer && n.meta && typeof n.meta.tradeId === "string" ? n.meta.tradeId : null;
+                const handleClick = tradeId
+                  ? () => {
+                      setOpen(false);
+                      router.push(`/cards?trade=${encodeURIComponent(tradeId)}`);
+                    }
+                  : undefined;
                 return (
                   <div
                     key={n.id}
+                    role={handleClick ? "button" : undefined}
+                    tabIndex={handleClick ? 0 : undefined}
+                    onClick={handleClick}
+                    onKeyDown={handleClick ? (e) => e.key === "Enter" && handleClick() : undefined}
                     className={`flex items-start gap-3 px-4 py-3 border-b border-white/[0.06] transition-colors hover:bg-white/[0.04] ${
                       unread ? "bg-amber-500/[0.06]" : ""
-                    }`}
+                    } ${handleClick ? "cursor-pointer" : ""}`}
                   >
                     <span
                       className="text-base mt-0.5 shrink-0"

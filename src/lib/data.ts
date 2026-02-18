@@ -418,7 +418,7 @@ export interface CreditSettings {
   feedbackAccepted: number;
   /** Credits awarded when a player completes a set (collects all cards for a movie) and claims the quest. */
   setCompletionReward: number;
-  /** Credits awarded when a player completes a full holo set (all main codex slots holo-upgraded) and claims the quest. */
+  /** Credits awarded when a player completes a full holo set and claims the quest. */
   holoSetCompletionReward: number;
   /** Credits awarded when a player completes a full prismatic set and claims the quest. */
   prismaticSetCompletionReward: number;
@@ -826,6 +826,121 @@ export function setStardust(userId: string, balance: number): void {
   saveStardustRaw(entries);
 }
 
+// ──── Prisms (premium alchemy currency) ──────────────────
+interface PrismEntry {
+  userId: string;
+  balance: number;
+  updatedAt: string;
+}
+
+export function getPrismsRaw(): PrismEntry[] {
+  try {
+    return readJson<PrismEntry[]>("prisms.json");
+  } catch {
+    return [];
+  }
+}
+
+function savePrismsRaw(entries: PrismEntry[]) {
+  writeJson("prisms.json", entries);
+}
+
+export function getPrisms(userId: string): number {
+  const entries = getPrismsRaw();
+  const entry = entries.find((e) => e.userId === userId);
+  return entry?.balance ?? 0;
+}
+
+export function addPrisms(userId: string, amount: number): void {
+  const entries = getPrismsRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const current = idx >= 0 ? entries[idx].balance : 0;
+  const newBalance = current + amount;
+  const entry: PrismEntry = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  savePrismsRaw(entries);
+}
+
+export function deductPrisms(userId: string, amount: number): boolean {
+  const current = getPrisms(userId);
+  if (current < amount) return false;
+  const entries = getPrismsRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const newBalance = current - amount;
+  const entry: PrismEntry = { userId, balance: newBalance, updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  savePrismsRaw(entries);
+  return true;
+}
+
+/** Set a user's prism balance (admin). */
+export function setPrisms(userId: string, balance: number): void {
+  const entries = getPrismsRaw();
+  const idx = entries.findIndex((e) => e.userId === userId);
+  const now = new Date().toISOString();
+  const entry: PrismEntry = { userId, balance: Math.max(0, Math.floor(balance)), updatedAt: now };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  savePrismsRaw(entries);
+}
+
+// ──── Alchemy Settings (admin-configurable) ──────────────
+export interface AlchemySettings {
+  /** Number of epic holo cards required for prism transmute */
+  prismTransmuteEpicHoloCount: number;
+  /** Success chance (0–100) for prism transmute */
+  prismTransmuteSuccessChance: number;
+  /** Prisms awarded per successful transmute */
+  prismsPerTransmute: number;
+  /** Base success chance (0–100) for prismatic crafting with 0 extra prisms */
+  prismaticCraftBaseChance: number;
+  /** Additional chance (0–100) per prism applied */
+  prismaticCraftChancePerPrism: number;
+  /** Max prisms that can be applied to a single craft */
+  prismaticCraftMaxPrisms: number;
+  /** Stardust awarded on prismatic craft failure */
+  prismaticCraftFailureStardust: number;
+  /** Prisms awarded when disenchanting one Epic Holo in the forge */
+  epicHoloForgePrisms: number;
+  /** Pack-A-Punch (normal→holo) success chance (0–100) */
+  holoUpgradeChance: number;
+  /** Holo→Prismatic upgrade success chance (0–100) */
+  prismaticUpgradeChance: number;
+  /** Prismatic→Dark Matter upgrade success chance (0–100) */
+  darkMatterUpgradeChance: number;
+}
+
+const DEFAULT_ALCHEMY_SETTINGS: AlchemySettings = {
+  prismTransmuteEpicHoloCount: 3,
+  prismTransmuteSuccessChance: 50,
+  prismsPerTransmute: 1,
+  prismaticCraftBaseChance: 5,
+  prismaticCraftChancePerPrism: 10,
+  prismaticCraftMaxPrisms: 10,
+  prismaticCraftFailureStardust: 25,
+  epicHoloForgePrisms: 1,
+  holoUpgradeChance: 50,
+  prismaticUpgradeChance: 35,
+  darkMatterUpgradeChance: 20,
+};
+
+export function getAlchemySettings(): AlchemySettings {
+  try {
+    const raw = readJson<Partial<AlchemySettings>>("alchemySettings.json");
+    return { ...DEFAULT_ALCHEMY_SETTINGS, ...raw };
+  } catch {
+    return { ...DEFAULT_ALCHEMY_SETTINGS };
+  }
+}
+
+export function saveAlchemySettings(settings: AlchemySettings): void {
+  writeJson("alchemySettings.json", settings);
+}
+
 // ──── Card Finish (visual tier: normal < holo < prismatic < darkMatter) ────
 export type CardFinish = "normal" | "holo" | "prismatic" | "darkMatter";
 
@@ -1026,6 +1141,15 @@ export function removePendingPoolEntry(winnerId: string, characterId: string): b
   else pending[winnerId] = filtered;
   savePendingPoolRaw(pending);
   return true;
+}
+
+/** Add a single entry to the pending pool for a winner (e.g. new character or alt-art before publish). */
+export function addPendingPoolEntry(winnerId: string, entry: CharacterPortrayal): void {
+  const pending = getPendingPoolRaw();
+  const prev = pending[winnerId] ?? [];
+  const normalized = withDefaultCardType(entry);
+  pending[winnerId] = [...prev, normalized];
+  savePendingPoolRaw(pending);
 }
 
 /** CharacterIds of legendary cards already owned by any user. Legendaries are 1-of-1 and can't drop again. */
@@ -1337,6 +1461,7 @@ export function resetDarkMatterCodexUnlocks(): void {
 
 // ──── Alt-Art Codex (unlock by uploading an alt-art card; same lock-in behavior) ────
 const ALTART_CODEX_UNLOCKS_FILE = "altArtCodexUnlocks.json";
+const ALTART_HOLO_CODEX_UNLOCKS_FILE = "altArtHoloCodexUnlocks.json";
 
 function getAltArtCodexUnlocksRaw(): Record<string, string[]> {
   try {
@@ -1350,17 +1475,51 @@ function saveAltArtCodexUnlocksRaw(data: Record<string, string[]>) {
   writeJson(ALTART_CODEX_UNLOCKS_FILE, data);
 }
 
+function getAltArtHoloCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(ALTART_HOLO_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveAltArtHoloCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(ALTART_HOLO_CODEX_UNLOCKS_FILE, data);
+}
+
 export function getCodexUnlockedAltArtCharacterIds(userId: string): string[] {
   const data = getAltArtCodexUnlocksRaw();
   return Array.isArray(data[userId]) ? data[userId] : [];
 }
 
-export function addCodexUnlockAltArt(userId: string, characterId: string): void {
+/** Character IDs for alt arts that were uploaded as holo (show holo in codex). */
+export function getCodexUnlockedAltArtHoloCharacterIds(userId: string): string[] {
+  const data = getAltArtHoloCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockAltArt(userId: string, characterId: string, isHolo?: boolean): void {
   const data = getAltArtCodexUnlocksRaw();
   const list = Array.isArray(data[userId]) ? data[userId] : [];
-  if (list.includes(characterId)) return;
+  if (list.includes(characterId)) {
+    if (isHolo) {
+      const holoData = getAltArtHoloCodexUnlocksRaw();
+      const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
+      if (!holoList.includes(characterId)) {
+        holoData[userId] = [...holoList, characterId];
+        saveAltArtHoloCodexUnlocksRaw(holoData);
+      }
+    }
+    return;
+  }
   data[userId] = [...list, characterId];
   saveAltArtCodexUnlocksRaw(data);
+  if (isHolo) {
+    const holoData = getAltArtHoloCodexUnlocksRaw();
+    const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
+    holoData[userId] = [...holoList, characterId];
+    saveAltArtHoloCodexUnlocksRaw(holoData);
+  }
 }
 
 export function removeCodexUnlockAltArt(userId: string, characterId: string): void {
@@ -1368,10 +1527,15 @@ export function removeCodexUnlockAltArt(userId: string, characterId: string): vo
   const list = Array.isArray(data[userId]) ? data[userId] : [];
   data[userId] = list.filter((id) => id !== characterId);
   saveAltArtCodexUnlocksRaw(data);
+  const holoData = getAltArtHoloCodexUnlocksRaw();
+  const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
+  holoData[userId] = holoList.filter((id) => id !== characterId);
+  saveAltArtHoloCodexUnlocksRaw(holoData);
 }
 
 export function resetAltArtCodexUnlocks(): void {
   saveAltArtCodexUnlocksRaw({});
+  saveAltArtHoloCodexUnlocksRaw({});
 }
 
 // ──── Boys Codex (unlock by uploading a character-type card; same lock-in behavior) ────
@@ -1411,6 +1575,52 @@ export function removeCodexUnlockBoys(userId: string, characterId: string): void
 
 export function resetBoysCodexUnlocks(): void {
   saveBoysCodexUnlocksRaw({});
+}
+
+/** Clear all codex unlocks for a single user (used by Prestige Codex). */
+export function clearCodexForUser(userId: string): void {
+  for (const [getRaw, saveRaw] of [
+    [getCodexUnlocksRaw, saveCodexUnlocksRaw] as const,
+    [getHoloCodexUnlocksRaw, saveHoloCodexUnlocksRaw] as const,
+    [getPrismaticCodexUnlocksRaw, savePrismaticCodexUnlocksRaw] as const,
+    [getDarkMatterCodexUnlocksRaw, saveDarkMatterCodexUnlocksRaw] as const,
+    [getAltArtCodexUnlocksRaw, saveAltArtCodexUnlocksRaw] as const,
+    [getBoysCodexUnlocksRaw, saveBoysCodexUnlocksRaw] as const,
+  ]) {
+    const data = getRaw();
+    delete data[userId];
+    saveRaw(data);
+  }
+}
+
+// ──── Prestige: Prismatic Forge unlock (unlocked after Prestige Codex) ────
+const PRESTIGE_PRISMATIC_FORGE_FILE = "prestigePrismaticForge.json";
+
+function getPrestigePrismaticForgeRaw(): Record<string, boolean> {
+  try {
+    return readJson<Record<string, boolean>>(PRESTIGE_PRISMATIC_FORGE_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function savePrestigePrismaticForgeRaw(data: Record<string, boolean>) {
+  writeJson(PRESTIGE_PRISMATIC_FORGE_FILE, data);
+}
+
+export function getPrismaticForgeUnlocked(userId: string): boolean {
+  const data = getPrestigePrismaticForgeRaw();
+  return data[userId] === true;
+}
+
+export function setPrismaticForgeUnlocked(userId: string, unlocked: boolean): void {
+  const data = getPrestigePrismaticForgeRaw();
+  if (unlocked) {
+    data[userId] = true;
+  } else {
+    delete data[userId];
+  }
+  savePrestigePrismaticForgeRaw(data);
 }
 
 // ──── Trivia ────────────────────────────────────────────
@@ -1695,6 +1905,72 @@ export function deleteFeedback(id: string): boolean {
   if (entries.length === getFeedbackRaw().length) return false;
   saveFeedbackRaw(entries);
   return true;
+}
+
+// ──── Direct messages (player-to-player) ───
+export interface DirectMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  message: string;
+  createdAt: string;
+}
+
+function getDirectMessagesRaw(): DirectMessage[] {
+  try {
+    return readJson<DirectMessage[]>("directMessages.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveDirectMessagesRaw(entries: DirectMessage[]) {
+  writeJson("directMessages.json", entries);
+}
+
+export function getDirectMessages(userId: string): DirectMessage[] {
+  return getDirectMessagesRaw().filter(
+    (m) => m.senderId === userId || m.recipientId === userId
+  );
+}
+
+export function getConversation(userId: string, otherUserId: string): DirectMessage[] {
+  return getDirectMessagesRaw()
+    .filter(
+      (m) =>
+        (m.senderId === userId && m.recipientId === otherUserId) ||
+        (m.senderId === otherUserId && m.recipientId === userId)
+    )
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export function addDirectMessage(input: {
+  senderId: string;
+  senderName: string;
+  recipientId: string;
+  recipientName: string;
+  message: string;
+}): DirectMessage {
+  const entries = getDirectMessagesRaw();
+  const trimmed = input.message.trim();
+  if (!trimmed) throw new Error("Message is required");
+  if (!input.senderId || !input.recipientId) throw new Error("Sender and recipient required");
+  if (input.senderId === input.recipientId) throw new Error("Cannot message yourself");
+  const now = new Date().toISOString();
+  const entry: DirectMessage = {
+    id: `dm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    senderId: input.senderId,
+    senderName: input.senderName,
+    recipientId: input.recipientId,
+    recipientName: input.recipientName,
+    message: trimmed,
+    createdAt: now,
+  };
+  entries.push(entry);
+  saveDirectMessagesRaw(entries);
+  return entry;
 }
 
 // ──── Set completion quests (one per winner, claimable once) ───
@@ -2034,6 +2310,26 @@ export function updateTradeStatus(
   return trades[idx];
 }
 
+/** Cancel all pending trades that involve any of the given card IDs (e.g. card was codexed or quicksold). Returns count cancelled. */
+export function cancelPendingTradesInvolvingCards(cardIds: string[]): number {
+  if (cardIds.length === 0) return 0;
+  const idSet = new Set(cardIds);
+  const trades = getTradesRaw();
+  let cancelled = 0;
+  for (let i = 0; i < trades.length; i++) {
+    const t = trades[i];
+    if (t.status !== "pending") continue;
+    const offered = t.offeredCardIds?.some((c) => idSet.has(c)) ?? false;
+    const requested = t.requestedCardIds?.some((c) => idSet.has(c)) ?? false;
+    if (offered || requested) {
+      trades[i] = { ...t, status: "denied" as const };
+      cancelled++;
+    }
+  }
+  if (cancelled > 0) saveTradesRaw(trades);
+  return cancelled;
+}
+
 // ──── Store Packs (configurable card packs) ──────────────
 export interface Pack {
   id: string;
@@ -2078,6 +2374,8 @@ export interface Pack {
   prismaticChance?: number;
   /** Dark Matter drop chance (0–100). Used when allowDarkMatter is true. Default 0.5. */
   darkMatterChance?: number;
+  /** Holo drop chance (0–100). If omitted, uses global default (8%). */
+  holoChance?: number;
 }
 
 export function getPacksRaw(): Pack[] {
@@ -2148,6 +2446,7 @@ export function getPacks(): Pack[] {
     allowDarkMatter: !!(p as Pack).allowDarkMatter,
     prismaticChance: typeof (p as Pack).prismaticChance === "number" ? Math.min(100, Math.max(0, (p as Pack).prismaticChance!)) : undefined,
     darkMatterChance: typeof (p as Pack).darkMatterChance === "number" ? Math.min(100, Math.max(0, (p as Pack).darkMatterChance!)) : undefined,
+    holoChance: typeof (p as Pack).holoChance === "number" ? Math.min(100, Math.max(0, (p as Pack).holoChance!)) : undefined,
   }));
 }
 
@@ -2214,6 +2513,7 @@ export function upsertPack(
     allowDarkMatter: !!(input as Pack).allowDarkMatter,
     prismaticChance: typeof (input as Pack).prismaticChance === "number" ? Math.min(100, Math.max(0, (input as Pack).prismaticChance!)) : undefined,
     darkMatterChance: typeof (input as Pack).darkMatterChance === "number" ? Math.min(100, Math.max(0, (input as Pack).darkMatterChance!)) : undefined,
+    holoChance: typeof (input as Pack).holoChance === "number" ? Math.min(100, Math.max(0, (input as Pack).holoChance!)) : undefined,
   };
   packs.push(newPack);
   savePacks(packs);
@@ -2387,6 +2687,7 @@ export function wipeUserInventory(userId: string): {
   saveCreditsRaw(getCreditsRaw().filter((c) => c.userId !== userId));
   saveCreditLedgerRaw(getCreditLedgerRaw().filter((e) => e.userId !== userId));
   saveStardustRaw(getStardustRaw().filter((e) => e.userId !== userId));
+  savePrismsRaw(getPrismsRaw().filter((e) => e.userId !== userId));
 
   const attempts = getTriviaAttemptsRaw();
   const attemptsFiltered = attempts.filter((a) => a.userId !== userId);
@@ -2424,6 +2725,7 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
   writeJson("credits.json", []);
   writeJson("creditLedger.json", []);
   writeJson("stardust.json", []);
+  writeJson("prisms.json", []);
   writeJson("cards.json", []);
   writeJson("triviaAttempts.json", []);
   writeJson("triviaSessions.json", []);
@@ -2663,6 +2965,8 @@ export interface NotificationReadState {
   userId: string;
   /** ISO timestamp – notifications on or before this time are "read" */
   readUpTo: string;
+  /** ISO timestamp – notifications on or before this time are cleared (hidden from list) */
+  clearedUpTo?: string;
 }
 
 export function getNotificationReadStates(): NotificationReadState[] {
@@ -2702,11 +3006,47 @@ export function getReadUpTo(userId: string): string | null {
 }
 
 /**
- * Count unread notifications for a user.
+ * Get the "cleared up to" timestamp for a user (notifications before this are hidden).
+ */
+export function getClearedUpTo(userId: string): string | null {
+  const states = getNotificationReadStates();
+  const entry = states.find((s) => s.userId === userId);
+  return entry?.clearedUpTo ?? null;
+}
+
+/**
+ * Clear all notifications for a user (hide them from the list and mark read).
+ */
+export function clearNotificationsForUser(userId: string): void {
+  const states = getNotificationReadStates();
+  const now = new Date().toISOString();
+  const idx = states.findIndex((s) => s.userId === userId);
+  if (idx >= 0) {
+    states[idx].readUpTo = now;
+    states[idx].clearedUpTo = now;
+  } else {
+    states.push({ userId, readUpTo: now, clearedUpTo: now });
+  }
+  saveNotificationReadStates(states);
+}
+
+/**
+ * Get notifications visible to a user (after clearedUpTo). Sorted newest-first.
+ */
+export function getVisibleNotificationsForUser(userId: string): Notification[] {
+  const all = getNotificationsForUser(userId);
+  const clearedUpTo = getClearedUpTo(userId);
+  if (!clearedUpTo) return all;
+  const clearedMs = new Date(clearedUpTo).getTime();
+  return all.filter((n) => new Date(n.timestamp).getTime() > clearedMs);
+}
+
+/**
+ * Count unread notifications for a user (among visible notifications only).
  */
 export function getUnreadNotificationCount(userId: string): number {
   const readUpTo = getReadUpTo(userId);
-  const notifications = getNotificationsForUser(userId);
+  const notifications = getVisibleNotificationsForUser(userId);
   if (!readUpTo) return notifications.length;
   const readMs = new Date(readUpTo).getTime();
   return notifications.filter((n) => new Date(n.timestamp).getTime() > readMs).length;
