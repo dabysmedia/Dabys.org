@@ -215,7 +215,8 @@ export default function Header() {
           const arr = Array.isArray(data) ? data : [];
           const incoming = arr.some((t) => t.counterpartyUserId === user.id);
           setHasIncomingTrade(incoming);
-          window.dispatchEvent(new CustomEvent("dabys-trades-poll", { detail: { pending: arr } }));
+          // Do NOT dispatch dabys-trades-poll — cards page is single source of truth for trades.
+          // Dispatching would overwrite fresh data from refreshTrades with stale poll data.
         })
         .catch(() => setHasIncomingTrade(false));
     };

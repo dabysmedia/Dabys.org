@@ -340,6 +340,7 @@ export default function AdminCardsCreditsPage() {
     isFree: boolean;
     discounted: boolean;
     discountPercent: string;
+    comingSoon: boolean;
     useCustomWeights: boolean;
     rarityWeights: { legendary: string; epic: string; rare: string; uncommon: string };
     allowPrismatic: boolean;
@@ -362,6 +363,7 @@ export default function AdminCardsCreditsPage() {
     isFree: false,
     discounted: false,
     discountPercent: "",
+    comingSoon: false,
     useCustomWeights: false,
     rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
     allowPrismatic: false,
@@ -728,6 +730,7 @@ export default function AdminCardsCreditsPage() {
       isFree: false,
       discounted: false,
       discountPercent: "",
+      comingSoon: false,
       useCustomWeights: false,
       rarityWeights: { legendary: "1", epic: "10", rare: "25", uncommon: "64" },
       allowPrismatic: false,
@@ -757,6 +760,7 @@ export default function AdminCardsCreditsPage() {
       isFree: !!pack.isFree,
       discounted: !!pack.discounted,
       discountPercent: pack.discountPercent != null ? String(pack.discountPercent) : "",
+      comingSoon: !!(pack as { comingSoon?: boolean }).comingSoon,
       useCustomWeights: !!w,
       rarityWeights: w
         ? { legendary: String(w.legendary), epic: String(w.epic), rare: String(w.rare), uncommon: String(w.uncommon) }
@@ -809,6 +813,7 @@ export default function AdminCardsCreditsPage() {
         isActive: packForm.isActive,
         isFree: packForm.isFree,
         discounted: packForm.discounted,
+        comingSoon: packForm.comingSoon,
         discountPercent: packForm.discounted && packForm.discountPercent.trim() !== ""
           ? Math.min(100, Math.max(0, parseInt(packForm.discountPercent, 10) || 0))
           : undefined,
@@ -2069,6 +2074,7 @@ export default function AdminCardsCreditsPage() {
               </div>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.isActive} onChange={(e) => setPackForm((f) => ({ ...f, isActive: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Active in store</label>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.discounted} onChange={(e) => setPackForm((f) => ({ ...f, discounted: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Discounted (show &quot;Sale&quot; label in shop)</label>
+              <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.comingSoon} onChange={(e) => setPackForm((f) => ({ ...f, comingSoon: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Coming soon (visible in shop, not purchasable)</label>
               {packForm.discounted && ( <div><label className="block text-xs text-white/40 mb-1">Discount %</label><input type="number" min={0} max={100} placeholder="e.g. 20" value={packForm.discountPercent} onChange={(e) => setPackForm((f) => ({ ...f, discountPercent: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 placeholder:text-white/30" /><p className="text-[10px] text-white/40 mt-0.5">Optional. Shows e.g. &quot;Sale 20%&quot; on the pack.</p></div> )}
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.useCustomWeights} onChange={(e) => setPackForm((f) => ({ ...f, useCustomWeights: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Custom drop rates</label>
               {packForm.useCustomWeights && (() => { const vals = { legendary: parseFloat(packForm.rarityWeights.legendary) || 0, epic: parseFloat(packForm.rarityWeights.epic) || 0, rare: parseFloat(packForm.rarityWeights.rare) || 0, uncommon: parseFloat(packForm.rarityWeights.uncommon) || 0 }; const total = vals.legendary + vals.epic + vals.rare + vals.uncommon; const pct = (v: number) => total > 0 ? ((v / total) * 100).toFixed(1) : "0.0"; return ( <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3 space-y-2"><p className="text-[10px] text-white/50 mb-1">Set relative weights for each rarity tier. They are normalised to percentages automatically.</p><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{(["legendary", "epic", "rare", "uncommon"] as const).map((r) => ( <div key={r}><label className="block text-[11px] text-white/50 mb-0.5 capitalize">{r}</label><input type="number" min={0} step="any" value={packForm.rarityWeights[r]} onChange={(e) => setPackForm((f) => ({ ...f, rarityWeights: { ...f.rarityWeights, [r]: e.target.value } }))} className="w-full px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" /><span className="text-[10px] text-white/40">{pct(vals[r])}%</span></div> ))}</div><div className="flex items-center gap-2 mt-1"><span className={`text-[11px] font-medium ${total > 0 ? "text-white/60" : "text-red-400"}`}>Total weight: {total} {total > 0 ? `(${(["legendary", "epic", "rare", "uncommon"] as const).map((r) => `${r[0].toUpperCase()}:${pct(vals[r])}%`).join(" ")})` : "— add at least one non-zero weight"}</span></div></div> ); })()}
@@ -2124,7 +2130,7 @@ export default function AdminCardsCreditsPage() {
                     </div>
                     <div className="w-16 h-16 rounded-md overflow-hidden bg-black/40 flex-shrink-0">{pack.imageUrl ? ( <img src={pack.imageUrl} alt={pack.name} className="w-full h-full object-cover" /> ) : ( <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">No image</div> )}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1"><p className="text-sm font-semibold text-white/90 truncate">{pack.name}</p>{!pack.isActive && ( <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.06] text-white/60">Inactive</span> )}</div>
+                      <div className="flex items-center gap-2 mb-1"><p className="text-sm font-semibold text-white/90 truncate">{pack.name}</p>{!pack.isActive && ( <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/[0.06] text-white/60">Inactive</span> )}{(pack as { comingSoon?: boolean }).comingSoon && ( <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/20 text-amber-300">Coming soon</span> )}</div>
                       <p className="text-xs text-white/60">{pack.isFree ? ( <span className="text-green-400 font-semibold">Free</span> ) : ( <span className="text-amber-300 font-semibold">{pack.price}</span> )}{" "}{pack.isFree ? "" : "credits · "}{pack.cardsPerPack} cards{pack.maxPurchasesPerDay != null && pack.maxPurchasesPerDay > 0 && ( <> · <span className="text-white/50">{pack.maxPurchasesPerDay}/{typeof pack.restockIntervalHours === "number" && pack.restockIntervalHours > 0 ? `${pack.restockIntervalHours}h` : "day"} limit</span></> )}</p>
                       <p className="text-[11px] text-white/40 mt-0.5 truncate">Drops{" "}{pack.allowedRarities.slice().sort((a, b) => ["legendary", "epic", "rare", "uncommon"].indexOf(a) - ["legendary", "epic", "rare", "uncommon"].indexOf(b)).join(", ")}{" "}({pack.allowedCardTypes.join(", ")})</p>
                       {pack.rarityWeights && (() => { const w = pack.rarityWeights; const t = w.legendary + w.epic + w.rare + w.uncommon || 1; const p = (v: number) => ((v / t) * 100).toFixed(1); return ( <p className="text-[10px] text-purple-300/70 mt-0.5">Rates: L:{p(w.legendary)}% E:{p(w.epic)}% R:{p(w.rare)}% U:{p(w.uncommon)}%</p> ); })()}

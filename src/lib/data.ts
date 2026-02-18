@@ -2368,6 +2368,8 @@ export interface Pack {
   };
   /** When true, cards from this pack can roll Prismatic finish. */
   allowPrismatic?: boolean;
+  /** When true, pack shows in shop with "Coming soon" label and cannot be purchased. */
+  comingSoon?: boolean;
   /** When true, cards from this pack can roll Dark Matter finish. */
   allowDarkMatter?: boolean;
   /** Prismatic drop chance (0–100). Used when allowPrismatic is true. Default 2. */
@@ -2509,6 +2511,7 @@ export function upsertPack(
           uncommon: typeof input.rarityWeights.uncommon === "number" ? input.rarityWeights.uncommon : 64,
         }
       : undefined,
+    comingSoon: !!((input as Pack).comingSoon),
     allowPrismatic: !!(input as Pack).allowPrismatic,
     allowDarkMatter: !!(input as Pack).allowDarkMatter,
     prismaticChance: typeof (input as Pack).prismaticChance === "number" ? Math.min(100, Math.max(0, (input as Pack).prismaticChance!)) : undefined,

@@ -448,6 +448,7 @@ interface Pack {
   nextRestockAt?: string;
   discounted?: boolean;
   discountPercent?: number;
+  comingSoon?: boolean;
 }
 
 function formatRestockCountdown(nextRestockAt: string, now: number): string {
@@ -1262,14 +1263,19 @@ function CardsContent() {
     window.dispatchEvent(new CustomEvent("dabys-incoming-trades", { detail: { hasIncoming: incoming.length > 0 } }));
   }, [trades, user]);
 
-  // Listen for trade poll events from Header (single source of polling) and also poll accepted trades
+  // Cards page is single source of truth for trades: poll pending + accepted when mounted and visible.
+  // Header no longer dispatches dabys-trades-poll (avoids race where stale poll overwrites refreshTrades).
   useEffect(() => {
     const cached = localStorage.getItem("dabys_user");
     if (!cached) return;
     const u = JSON.parse(cached) as { id: string };
-    const onTradesPoll = (e: Event) => {
-      const detail = (e as CustomEvent<{ pending: TradeOfferEnriched[] }>).detail;
-      if (detail?.pending) setTrades(Array.isArray(detail.pending) ? detail.pending : []);
+    const checkPending = () => {
+      fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=pending`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data: TradeOfferEnriched[]) => {
+          if (Array.isArray(data)) setTrades(data);
+        })
+        .catch(() => {});
     };
     const checkAccepted = () => {
       fetch(`/api/trades?userId=${encodeURIComponent(u.id)}&status=accepted`)
@@ -1289,22 +1295,24 @@ function CardsContent() {
         })
         .catch(() => {});
     };
-    checkAccepted();
-    let id = setInterval(checkAccepted, 20000);
+    const runBoth = () => {
+      checkPending();
+      checkAccepted();
+    };
+    runBoth();
+    let id = setInterval(runBoth, 20000);
     const onVisibility = () => {
       if (document.hidden) {
         clearInterval(id);
       } else {
-        checkAccepted();
-        id = setInterval(checkAccepted, 20000);
+        runBoth();
+        id = setInterval(runBoth, 20000);
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("dabys-trades-poll", onTradesPoll);
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("dabys-trades-poll", onTradesPoll);
     };
   }, []);
 
@@ -2140,7 +2148,7 @@ function CardsContent() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const eligible = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
-      return c && c.characterId != null && !myTradeBlockCardIds.has(cardId) && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
+      return c && c.characterId != null && !inTradeCardIds.has(cardId) && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
     });
     // One card per codex slot — never upload duplicates (e.g. multiple copies of same character regular).
     const seenSlots = new Set<string>();
@@ -2482,6 +2490,10 @@ function CardsContent() {
   const pendingTradeOfferedIds = useMemo(() => new Set(
     trades.filter((t) => t.initiatorUserId === user?.id && t.status === "pending").flatMap((t) => t.offeredCardIds)
   ), [trades, user?.id]);
+  const inTradeCardIds = useMemo(() => new Set([
+    ...myTradeBlockCardIds,
+    ...pendingTradeOfferedIds,
+  ]), [myTradeBlockCardIds, pendingTradeOfferedIds]);
   const availableForOffer = useMemo(() => cards.filter(
     (c) => !myListedCardIds.has(c.id!) && !pendingTradeOfferedIds.has(c.id!)
   ), [cards, myListedCardIds, pendingTradeOfferedIds]);
@@ -2823,7 +2835,9 @@ function CardsContent() {
                   typeof pack.maxPurchasesPerDay === "number" &&
                   pack.maxPurchasesPerDay > 0 &&
                   (pack.purchasesToday ?? 0) >= pack.maxPurchasesPerDay;
+                const isComingSoon = !!pack.comingSoon;
                 const disabled =
+                  isComingSoon ||
                   atDailyLimit ||
                   poolCount < pack.cardsPerPack ||
                   (effectivePrice > 0 && creditBalance < effectivePrice) ||
@@ -2841,7 +2855,7 @@ function CardsContent() {
                   <div
                     key={pack.id}
                     className={`relative rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.01] backdrop-blur-2xl shadow-[0_18px_45px_rgba(0,0,0,0.45)] group transform transition-all duration-300 ${
-                      atDailyLimit
+                      atDailyLimit || isComingSoon
                         ? "hover:translate-y-0"
                         : "hover:-translate-y-1.5 hover:shadow-[0_24px_70px_rgba(0,0,0,0.65)]"
                     }`}
@@ -2861,11 +2875,18 @@ function CardsContent() {
                           </span>
                         </div>
                       )}
+                      {isComingSoon && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                          <span className="w-full py-3 text-center bg-amber-950/55 backdrop-blur-md text-amber-200/95 text-xs font-medium tracking-[0.25em] uppercase border-y border-amber-900/40 shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+                            Coming soon
+                          </span>
+                        </div>
+                      )}
                       {pack.imageUrl ? (
                         <img
                           src={pack.imageUrl}
                           alt={pack.name}
-                          className={`w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02] ${atDailyLimit ? "grayscale opacity-70" : ""}`}
+                          className={`w-full h-auto object-contain block transition-transform duration-500 group-hover:scale-[1.02] ${atDailyLimit || isComingSoon ? "grayscale opacity-70" : ""}`}
                         />
                       ) : (
                         <div className="w-full h-40 flex items-center justify-center text-white/20 text-lg">
@@ -2898,7 +2919,7 @@ function CardsContent() {
                         </div>
                       </div>
                     </div>
-                    <div className={`p-4 space-y-3 ${atDailyLimit ? "opacity-70" : ""}`}>
+                    <div className={`p-4 space-y-3 ${atDailyLimit || isComingSoon ? "opacity-70" : ""}`}>
                       <div className="flex flex-wrap gap-2 text-[11px]">
                         <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-white/60 border border-white/[0.12]">
                           {rarityText}
@@ -2908,10 +2929,10 @@ function CardsContent() {
                         </span>
                       </div>
                       <button
-                        onClick={() => !atDailyLimit && handleBuyPack(pack)}
+                        onClick={() => !atDailyLimit && !isComingSoon && handleBuyPack(pack)}
                         disabled={disabled}
                         className={`w-full px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                          atDailyLimit
+                          atDailyLimit || isComingSoon
                             ? "border-white/20 bg-white/[0.06] text-white/50 cursor-not-allowed"
                             : "border-amber-500/40 bg-amber-500/15 text-amber-200 hover:border-amber-400 hover:bg-amber-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
                         }`}
@@ -2921,6 +2942,8 @@ function CardsContent() {
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Opening...
                           </>
+                        ) : isComingSoon ? (
+                          <span className="text-amber-300/70">Coming soon</span>
                         ) : atDailyLimit ? (
                           <span className="text-white/50">
                             {pack.nextRestockAt
@@ -3904,15 +3927,16 @@ function CardsContent() {
                 const onQuicksellBench = quicksellBenchCardIds.includes(card.id!);
                 const onPrismaticForge = prismaticCraftCardId === card.id;
                 const cardFinish = card.finish ?? (card.isFoil ? "holo" : "normal");
-                const canAddPrismaticForge = prismaticForgeUnlocked && inventorySubTab === "alchemy" && alchemySubTab === "forge" && !myListedCardIds.has(card.id!) && !onAlchemyBench && !onPrismaticForge && !prismaticCraftCardId && card.isFoil && (card.rarity === "epic" || card.rarity === "legendary") && cardFinish !== "prismatic" && cardFinish !== "darkMatter";
-                const canAddTradeUp = card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
-                const canAddReroll = inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
-                const canAddAlchemy = inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
-                const canAddQuicksell = inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
+                const inTrade = inTradeCardIds.has(card.id!);
+                const canAddPrismaticForge = !inTrade && prismaticForgeUnlocked && inventorySubTab === "alchemy" && alchemySubTab === "forge" && !myListedCardIds.has(card.id!) && !onAlchemyBench && !onPrismaticForge && !prismaticCraftCardId && card.isFoil && (card.rarity === "epic" || card.rarity === "legendary") && cardFinish !== "prismatic" && cardFinish !== "darkMatter";
+                const canAddTradeUp = !inTrade && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
+                const canAddReroll = !inTrade && inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
+                const canAddAlchemy = !inTrade && inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
                 const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && !canAddPrismaticForge && !onPrismaticForge && inventorySubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
-                const ineligible = ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
+                const ineligible = inTrade || ineligibleTradeUp || ineligibleAlchemy || ineligibleQuicksell;
                 const isNewCard = card.acquiredAt && (Date.now() - new Date(card.acquiredAt).getTime() < NEW_CARD_DAYS_MS);
                 const showNewDot = isNewCard && card.id && !seenCardIds.has(card.id);
                 const handleClick = () => {
@@ -3979,6 +4003,11 @@ function CardsContent() {
                         Listed
                       </span>
                     )}
+                    {inTrade && !myListedCardIds.has(card.id!) && (
+                      <span className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-xl text-xs text-white/60">
+                        In trade
+                      </span>
+                    )}
                     <div className={`relative rounded-xl ${isTrackedCard ? "ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]" : ""}`}>
                       {isTrackedCard && (
                         <span className="absolute top-1.5 right-1.5 z-10 px-1.5 py-0.5 rounded bg-amber-500/90 text-amber-950 text-[9px] font-bold uppercase tracking-wider pointer-events-none">
@@ -4010,7 +4039,7 @@ function CardsContent() {
 
                 const findEligible = (): { card: Card; target: "tradeup" | "reroll" | "alchemy" | "quicksell" } | null => {
                   for (const c of stackCards) {
-                    if (myListedCardIds.has(c.id!)) continue;
+                    if (myListedCardIds.has(c.id!) || inTradeCardIds.has(c.id!)) continue;
                     if (inventorySubTab === "alchemy") {
                       if (alchemySubTab === "forge") {
                         const finish = c.finish ?? (c.isFoil ? "holo" : "normal");
@@ -6119,7 +6148,7 @@ function CardsContent() {
                     {(() => {
                       const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                       const isHolo = (c: { isFoil?: boolean; finish?: string }) => !!(c.isFoil || c.finish === "holo" || c.finish === "prismatic" || c.finish === "darkMatter");
-                      const filtered = cards.filter((c) => !myListedCardIds.has(c.id!) && !myTradeBlockCardIds.has(c.id!));
+                      const filtered = cards.filter((c) => !myListedCardIds.has(c.id!) && !inTradeCardIds.has(c.id!));
                       const sorted =
                         codexUploadSort === "holo"
                           ? [...filtered].sort((a, b) => {
@@ -6137,7 +6166,8 @@ function CardsContent() {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
                         const alreadyInCodex = isCardSlotAlreadyInCodex(card);
                         const needsRegular = isHoloMissingRegularPrereq(card);
-                        const isDisabled = alreadyInCodex || needsRegular;
+                        const inTrade = inTradeCardIds.has(card.id!);
+                        const isDisabled = alreadyInCodex || needsRegular || inTrade;
                         return (
                           <button
                             key={card.id}
@@ -6159,7 +6189,12 @@ function CardsContent() {
                                 <span className="text-[10px] uppercase tracking-wider text-white/80 font-medium px-2 py-1 rounded bg-white/10">In Codex</span>
                               </span>
                             )}
-                            {needsRegular && !alreadyInCodex && (
+                            {inTrade && !alreadyInCodex && (
+                              <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">
+                                <span className="text-[10px] uppercase tracking-wider text-white/80 font-medium px-2 py-1 rounded bg-white/10">In trade</span>
+                              </span>
+                            )}
+                            {needsRegular && !alreadyInCodex && !inTrade && (
                               <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">
                                 <span className="text-[10px] uppercase tracking-wider text-amber-300/90 font-medium px-2 py-1 rounded bg-black/40 text-center leading-tight">Regular needed first</span>
                               </span>
@@ -6184,7 +6219,7 @@ function CardsContent() {
                   </span>
                   {(() => {
                     const eligibleCards = cards.filter(
-                      (c) => c.id != null && !myListedCardIds.has(c.id) && !myTradeBlockCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
+                      (c) => c.id != null && !myListedCardIds.has(c.id) && !inTradeCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
                     );
                     const onePerSlot: string[] = [];
                     const seenSlots = new Set<string>();

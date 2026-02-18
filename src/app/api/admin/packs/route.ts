@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   const rawAllowedRarities = Array.isArray(body.allowedRarities) ? body.allowedRarities : [];
   const rawAllowedCardTypes = Array.isArray(body.allowedCardTypes) ? body.allowedCardTypes : [];
   const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
+  const comingSoon = !!body.comingSoon;
 
   if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
     allowedRarities,
     allowedCardTypes,
     isActive,
+    comingSoon,
     maxPurchasesPerDay: maxPerDay,
     isFree,
     restockIntervalHours: effectiveRestockIntervalHours,
@@ -204,6 +206,8 @@ export async function PATCH(request: Request) {
 
   const isActive =
     typeof body.isActive === "boolean" ? body.isActive : existing.isActive;
+  const comingSoon =
+    body.comingSoon !== undefined ? !!body.comingSoon : !!(existing as { comingSoon?: boolean }).comingSoon;
 
   const isFree = body.isFree !== undefined ? !!body.isFree : (existing as { isFree?: boolean }).isFree;
   const effectivePrice = isFree ? 0 : (price >= 0 ? price : existing.price);
@@ -301,6 +305,7 @@ export async function PATCH(request: Request) {
     allowedRarities,
     allowedCardTypes,
     isActive,
+    comingSoon,
     maxPurchasesPerDay: maxPerDay,
     isFree,
     restockIntervalHours: effectiveRestockIntervalHours,

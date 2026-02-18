@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") ?? undefined;
 
-  const rawPacks = getPacks().filter((p) => p.isActive);
+  const rawPacks = getPacks().filter((p) => p.isActive || p.comingSoon);
   const packs = userId
     ? rawPacks.map((p) => {
         const restockOptions = {

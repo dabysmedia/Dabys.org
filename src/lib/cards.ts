@@ -387,7 +387,7 @@ export function buyPack(
   migrateCommonToUncommon();
   const allPacks = getPacks();
   const selectedPack: Pack | undefined = packId
-    ? allPacks.find((p) => p.id === packId && p.isActive)
+    ? allPacks.find((p) => p.id === packId && p.isActive && !p.comingSoon)
     : undefined;
 
   if (packId && !selectedPack) {
