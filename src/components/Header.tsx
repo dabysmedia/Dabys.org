@@ -309,6 +309,7 @@ export default function Header() {
   const isStats = pathname === "/stats";
   const isCards = pathname === "/cards";
   const isCasino = pathname === "/casino";
+  const isVault = pathname === "/vault";
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -449,6 +450,7 @@ export default function Header() {
           ) : (
             <div className="flex items-center gap-5 sm:gap-6">
               <NavLink href="/stats" label="Stats" active={isStats} />
+              <NavLink href="/vault" label="Vault" active={isVault} />
               <NavLink href="/casino" label="Casino" active={isCasino} />
               <NavLink href="/cards" label="TCG" active={isCards} dot={hasIncomingTrade} />
               <NotificationCenter />
@@ -510,6 +512,13 @@ export default function Header() {
                 className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isStats ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
               >
                 Stats
+              </Link>
+              <Link
+                href="/vault"
+                onClick={closeMenu}
+                className={`min-h-[48px] flex items-center px-5 py-4 rounded-xl text-left text-base font-medium transition-colors touch-manipulation ${isVault ? "bg-purple-500/20 text-purple-300" : "text-white/80 hover:bg-white/10"}`}
+              >
+                Vault
               </Link>
               <Link
                 href="/casino"

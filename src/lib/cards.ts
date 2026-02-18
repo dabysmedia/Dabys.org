@@ -22,6 +22,7 @@ import {
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedAltArtHoloCharacterIds,
   getCodexUnlockedPrismaticCharacterIds,
   getCodexUnlockedDarkMatterCharacterIds,
   getCardFinish,
@@ -777,12 +778,13 @@ export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): bo
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const holoIds = new Set(getCodexUnlockedHoloCharacterIds(userId));
+  const altArtHoloIds = new Set(getCodexUnlockedAltArtHoloCharacterIds(userId));
   const mainEntries = pool.filter((c) => (c.altArtOfCharacterId ?? null) == null && (c.cardType ?? "actor") !== "character");
   if (mainEntries.length === 0) return false;
   for (const entry of mainEntries) {
     const slotFilledAsHolo =
       holoIds.has(entry.characterId) ||
-      pool.some((p) => p.altArtOfCharacterId === entry.characterId && holoIds.has(p.characterId));
+      pool.some((p) => p.altArtOfCharacterId === entry.characterId && altArtHoloIds.has(p.characterId));
     if (!slotFilledAsHolo) return false;
   }
   return true;

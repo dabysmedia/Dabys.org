@@ -335,6 +335,33 @@ export function saveWheelHistory(history: WheelHistoryEntry[]) {
   writeJson("wheelHistory.json", history);
 }
 
+// ──── Vault (original Dabys Media YouTube content) ────
+export interface VaultVideo {
+  id: string;
+  title: string;
+  description: string;
+  youtubeId: string;
+  thumbnailUrl?: string;
+  order: number;
+  featured: boolean;
+}
+
+function getVaultVideosRaw(): VaultVideo[] {
+  try {
+    return readJson<VaultVideo[]>("vaultVideos.json");
+  } catch {
+    return [];
+  }
+}
+
+export function getVaultVideos(): VaultVideo[] {
+  return getVaultVideosRaw().sort((a, b) => a.order - b.order);
+}
+
+export function saveVaultVideos(videos: VaultVideo[]) {
+  writeJson("vaultVideos.json", videos);
+}
+
 // ──── Watchlist (per-user: movies to suggest in the future) ────
 export interface WatchlistItem {
   id: string;
@@ -424,6 +451,10 @@ export interface CreditSettings {
   prismaticSetCompletionReward: number;
   /** Credits awarded when a player completes a full dark matter set and claims the quest. */
   darkMatterSetCompletionReward: number;
+  /** Credits awarded for first watch of a Vault video (original Dabys Media content). */
+  vaultWatch: number;
+  /** Minimum watch time in minutes for Vault video credit claim (timer only runs while playing). */
+  vaultMinWatchMinutes: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -442,6 +473,8 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   holoSetCompletionReward: 1500,
   prismaticSetCompletionReward: 3000,
   darkMatterSetCompletionReward: 5000,
+  vaultWatch: 25,
+  vaultMinWatchMinutes: 1,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -463,6 +496,8 @@ function getCreditSettingsRaw(): CreditSettings {
       holoSetCompletionReward: typeof raw.holoSetCompletionReward === "number" ? raw.holoSetCompletionReward : DEFAULT_CREDIT_SETTINGS.holoSetCompletionReward,
       prismaticSetCompletionReward: typeof raw.prismaticSetCompletionReward === "number" ? raw.prismaticSetCompletionReward : DEFAULT_CREDIT_SETTINGS.prismaticSetCompletionReward,
       darkMatterSetCompletionReward: typeof raw.darkMatterSetCompletionReward === "number" ? raw.darkMatterSetCompletionReward : DEFAULT_CREDIT_SETTINGS.darkMatterSetCompletionReward,
+      vaultWatch: typeof raw.vaultWatch === "number" ? raw.vaultWatch : DEFAULT_CREDIT_SETTINGS.vaultWatch,
+      vaultMinWatchMinutes: typeof raw.vaultMinWatchMinutes === "number" ? raw.vaultMinWatchMinutes : DEFAULT_CREDIT_SETTINGS.vaultMinWatchMinutes,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };
@@ -548,6 +583,20 @@ export function hasReceivedCreditsForCommentLike(userId: string, commentId: stri
       e.metadata &&
       typeof e.metadata.commentId === "string" &&
       e.metadata.commentId === commentId
+  );
+}
+
+/** Returns true if user has already received credits for watching this Vault video (first watch per user per video). */
+export function hasReceivedCreditsForVaultWatch(userId: string, videoId: string): boolean {
+  const ledger = getCreditLedgerRaw();
+  return ledger.some(
+    (e) =>
+      e.userId === userId &&
+      e.reason === "vault_watch" &&
+      e.amount > 0 &&
+      e.metadata &&
+      typeof e.metadata.videoId === "string" &&
+      e.metadata.videoId === videoId
   );
 }
 

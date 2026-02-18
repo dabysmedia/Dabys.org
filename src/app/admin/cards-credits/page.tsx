@@ -287,6 +287,8 @@ export default function AdminCardsCreditsPage() {
     holoSetCompletionReward: number;
     prismaticSetCompletionReward: number;
     darkMatterSetCompletionReward: number;
+    vaultWatch: number;
+    vaultMinWatchMinutes: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -304,6 +306,8 @@ export default function AdminCardsCreditsPage() {
     holoSetCompletionReward: "1500",
     prismaticSetCompletionReward: "3000",
     darkMatterSetCompletionReward: "5000",
+    vaultWatch: "25",
+    vaultMinWatchMinutes: "1",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
@@ -475,6 +479,8 @@ export default function AdminCardsCreditsPage() {
           holoSetCompletionReward: String(d.holoSetCompletionReward ?? 1500),
           prismaticSetCompletionReward: String(d.prismaticSetCompletionReward ?? 3000),
           darkMatterSetCompletionReward: String(d.darkMatterSetCompletionReward ?? 5000),
+          vaultWatch: String(d.vaultWatch ?? 25),
+          vaultMinWatchMinutes: String(d.vaultMinWatchMinutes ?? 1),
         });
       }
     } catch {
@@ -884,6 +890,8 @@ export default function AdminCardsCreditsPage() {
         holoSetCompletionReward: parseInt(creditSettingsForm.holoSetCompletionReward, 10) ?? 0,
         prismaticSetCompletionReward: parseInt(creditSettingsForm.prismaticSetCompletionReward, 10) ?? 0,
         darkMatterSetCompletionReward: parseInt(creditSettingsForm.darkMatterSetCompletionReward, 10) ?? 0,
+        vaultWatch: parseInt(creditSettingsForm.vaultWatch, 10) ?? 0,
+        vaultMinWatchMinutes: Math.max(0, parseInt(creditSettingsForm.vaultMinWatchMinutes, 10) ?? 1),
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -2399,6 +2407,8 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full holo set and claims the quest">Holo set completion</label><input type="number" min={0} value={creditSettingsForm.holoSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, holoSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full prismatic set and claims the quest">Prismatic set completion</label><input type="number" min={0} value={creditSettingsForm.prismaticSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, prismaticSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full dark matter set and claims the quest">Dark matter set completion</label><input type="number" min={0} value={creditSettingsForm.darkMatterSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, darkMatterSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="First watch of a Vault video (original Dabys Media content)">Vault video watch</label><input type="number" min={0} value={creditSettingsForm.vaultWatch} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultWatch: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="Minimum watch time in minutes for Vault video credit claim (timer only runs while playing)">Vault min watch</label><input type="number" min={0} value={creditSettingsForm.vaultMinWatchMinutes} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultMinWatchMinutes: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">min</span></div>
             <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
               <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>

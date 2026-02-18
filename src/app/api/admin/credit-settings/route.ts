@@ -48,6 +48,8 @@ export async function PATCH(request: Request) {
     holoSetCompletionReward: parse(body.holoSetCompletionReward, current.holoSetCompletionReward),
     prismaticSetCompletionReward: parse(body.prismaticSetCompletionReward, current.prismaticSetCompletionReward),
     darkMatterSetCompletionReward: parse(body.darkMatterSetCompletionReward, current.darkMatterSetCompletionReward),
+    vaultWatch: parse(body.vaultWatch, current.vaultWatch),
+    vaultMinWatchMinutes: Math.max(0, parse(body.vaultMinWatchMinutes, current.vaultMinWatchMinutes)),
   };
 
   saveCreditSettings(settings);
