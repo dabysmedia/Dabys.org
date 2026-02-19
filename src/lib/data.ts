@@ -2183,6 +2183,15 @@ export function wipeAllSetCompletionQuests(): void {
   saveSetCompletionQuestsRaw({});
 }
 
+/** Wipe all set completion quests for a specific user. Admin only. */
+export function wipeAllSetCompletionQuestsForUser(userId: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  if (!(userId in store)) return false;
+  delete store[userId];
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
 /** Wipe set completion quests for a specific user and set (winner). Removes regular, holo, prismatic, and dark matter quests for that winner. Admin only. */
 export function wipeSetCompletionQuestForUser(userId: string, winnerId: string): boolean {
   const store = getSetCompletionQuestsRaw();

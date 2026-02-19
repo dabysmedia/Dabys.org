@@ -47,6 +47,7 @@ export default function AdminQuestsPage() {
   } | null>(null);
   const [wipeUserId, setWipeUserId] = useState("");
   const [wipeWinnerId, setWipeWinnerId] = useState("");
+  const [wipingAllForUserId, setWipingAllForUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/quests")
@@ -155,6 +156,33 @@ export default function AdminQuestsPage() {
       setWipeSetCompletionData(data);
     } catch {
       setError("Failed to load set completion data");
+    }
+  }
+
+  async function handleWipeAllForUser(userId: string, userName: string) {
+    if (!confirm(`Wipe all set completion quests for ${userName}?`)) return;
+    setWipingAllForUserId(userId);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/quests/wipe-set-completion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, wipeAll: true }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.wiped) {
+          const fresh = await fetch("/api/admin/quests/set-completion-data").then((r) => r.json());
+          setWipeSetCompletionData(fresh);
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to wipe");
+      }
+    } catch {
+      setError("Failed to wipe");
+    } finally {
+      setWipingAllForUserId(null);
     }
   }
 
@@ -309,6 +337,27 @@ export default function AdminQuestsPage() {
           </div>
           {(wipeSetCompletionData?.setCompletionByUser?.length ?? 0) === 0 && (
             <p className="text-xs text-white/40">No set completion quests exist.</p>
+          )}
+          {/* Wipe all per user */}
+          {wipeSetCompletionData && wipeSetCompletionData.setCompletionByUser.length > 0 && (
+            <div className="pt-4 border-t border-white/10">
+              <p className="text-xs text-white/50 mb-2">Wipe all set completion quests for a user:</p>
+              <div className="flex flex-wrap gap-2">
+                {[...new Map(
+                  wipeSetCompletionData.setCompletionByUser.map((s) => [s.userId, { userId: s.userId, userName: s.userName }])
+                ).values()].map(({ userId, userName }) => (
+                  <button
+                    key={userId}
+                    type="button"
+                    onClick={() => handleWipeAllForUser(userId, userName)}
+                    disabled={wipingAllForUserId === userId}
+                    className="px-3 py-1.5 rounded-lg border border-amber-400/30 bg-amber-500/10 text-amber-400/90 text-xs font-medium hover:bg-amber-500/20 disabled:opacity-50 cursor-pointer"
+                  >
+                    {wipingAllForUserId === userId ? "…" : `Wipe all (${userName})`}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
