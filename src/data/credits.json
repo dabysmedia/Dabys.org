@@ -18,5 +18,10 @@
     "userId": "9",
     "balance": 350,
     "updatedAt": "2026-02-15T19:11:18.243Z"
+  },
+  {
+    "userId": "1",
+    "balance": 50,
+    "updatedAt": "2026-02-19T03:04:42.732Z"
   }
 ]

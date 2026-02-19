@@ -6,13 +6,13 @@
     "Sci-Fi",
     "2000's"
   ],
-  "lastResult": "Sci-Fi",
-  "lastSpunAt": "2026-02-16T08:28:55.450Z",
+  "lastResult": "Horror",
+  "lastSpunAt": "2026-02-19T03:04:01.218Z",
   "spinning": false,
-  "spinStartedAt": "2026-02-16T08:28:55.450Z",
-  "winnerIndex": 3,
-  "fullSpins": 19,
-  "duration": 10000,
-  "lastConfirmedResult": null,
-  "lastConfirmedAt": null
+  "spinStartedAt": null,
+  "winnerIndex": 0,
+  "fullSpins": null,
+  "duration": null,
+  "lastConfirmedResult": "Horror",
+  "lastConfirmedAt": "2026-02-19T03:04:20.215Z"
 }

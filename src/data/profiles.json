@@ -22,7 +22,8 @@
       "backdropUrl": "https://image.tmdb.org/t/p/w1280/g2yTT9lB5I1DA1uBWT7m4wrYuVz.jpg",
       "year": "2006",
       "letterboxdUrl": "https://letterboxd.com/film/nacho-libre-2006/"
-    }
+    },
+    "skipsUsed": 1
   },
   {
     "userId": "1",

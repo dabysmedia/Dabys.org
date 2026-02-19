@@ -120,5 +120,17 @@
     },
     "id": "ntf_1771379643941_0o0zs2",
     "timestamp": "2026-02-18T01:54:03.941Z"
+  },
+  {
+    "type": "new_set_added",
+    "message": "New set added to the pool: The Housemaid (7 cards)",
+    "meta": {
+      "winnerId": "8",
+      "movieTitle": "The Housemaid",
+      "count": 7
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771470395604_ba510v",
+    "timestamp": "2026-02-19T03:06:35.604Z"
   }
 ]

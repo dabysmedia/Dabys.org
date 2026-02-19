@@ -97,5 +97,16 @@
       "weekId": "10"
     },
     "createdAt": "2026-02-15T19:11:18.243Z"
+  },
+  {
+    "id": "cl-1771470282733-pvp8w2m",
+    "userId": "1",
+    "amount": 50,
+    "reason": "submission",
+    "metadata": {
+      "submissionId": "24",
+      "weekId": "11"
+    },
+    "createdAt": "2026-02-19T03:04:42.732Z"
   }
 ]

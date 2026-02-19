@@ -3236,17 +3236,17 @@ function CardsContent() {
                   {tradeUpAutofillError}
                 </div>
               )}
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                 <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                 {/* Input slots - 4 cards */}
-                <div className="flex gap-2">
+                <div className="flex flex-1 min-w-0 gap-2">
                   {tradeUpSlots.map((cardId, i) => {
                     const slotCard = cardId ? cards.find((x) => x.id === cardId) : null;
                     const filledStyle = slotCard?.rarity ? (SLOT_FILLED_STYLE[slotCard.rarity] ?? SLOT_FILLED_STYLE.uncommon) : "";
                     return (
                       <div
                         key={`${cardId ?? "empty"}-${i}`}
-                        className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
                           cardId
                             ? `group ${filledStyle} tradeup-slot-pop`
                             : currentRarity ? SLOT_EMPTY_STYLE[currentRarity] ?? SLOT_EMPTY_STYLE.uncommon : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
@@ -3279,11 +3279,11 @@ function CardsContent() {
                   })}
                 </div>
                 {/* Arrow */}
-                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">
+                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse shrink-0">
                   →
                 </div>
                 {/* Output slot */}
-                <div className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                <div className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
                   canTradeUp ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : currentRarity ? SLOT_OUTPUT_STYLE[currentRarity] ?? SLOT_OUTPUT_STYLE.uncommon : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canTradeUp ? (
@@ -3302,7 +3302,7 @@ function CardsContent() {
                   )}
                 </div>
                 </div>
-                <div className="w-[180px] shrink-0 flex items-center justify-end">
+                <div className="w-full sm:w-[180px] shrink-0 flex items-center justify-center sm:justify-end pt-2 sm:pt-0">
                   {canTradeUp ? (
                     <button
                       onClick={() => handleTradeUp()}
@@ -3348,14 +3348,14 @@ function CardsContent() {
               <p className="text-sm text-white/60 mb-4">
                 2 legendaries → 1 new legendary.
               </p>
-              <div className="flex flex-wrap items-center gap-4 mb-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4 mb-4">
+                <div className="flex flex-1 min-w-0 gap-2">
                   {legendaryRerollSlots.map((cardId, i) => {
                     const slotCard = cardId ? cards.find((x) => x.id === cardId) : null;
                     return (
                       <div
                         key={`reroll-${cardId ?? "empty"}-${i}`}
-                        className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 overflow-hidden flex items-center justify-center cursor-pointer transition-all duration-200 ${
                           cardId
                             ? `group ${SLOT_FILLED_STYLE.legendary} tradeup-slot-pop`
                             : "border-dashed border-amber-500/40 bg-white/[0.04] hover:border-amber-500/60 hover:bg-white/[0.06]"
@@ -3379,10 +3379,10 @@ function CardsContent() {
                     );
                   })}
                 </div>
-                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse">
+                <div className="flex items-center justify-center text-amber-400/80 text-2xl font-bold tradeup-arrow-pulse shrink-0">
                   →
                 </div>
-                <div className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                <div className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
                   canLegendaryReroll ? "bg-amber-500/20 border-amber-400/60 animate-pulse" : "bg-white/[0.04] border-amber-500/40"
                 }`}>
                   {canLegendaryReroll ? (
@@ -3395,7 +3395,7 @@ function CardsContent() {
                   <button
                     onClick={() => handleLegendaryReroll()}
                     disabled={legendaryRerolling}
-                    className="ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
+                    className="w-full sm:w-auto sm:ml-auto px-5 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-semibold hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(251,191,36,0.2)]"
                   >
                     {legendaryRerolling ? (
                       <span className="flex items-center gap-2">
@@ -3536,9 +3536,9 @@ function CardsContent() {
                   <p className="text-sm text-white/60 mb-4">
                     Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Prismatic and Dark Matter upgrades are Forge-only (with Prisms). Same type only.
                   </p>
-                  <div className={`flex items-center gap-4 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-4 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
-                    <div className="flex gap-2">
+                    <div className="flex flex-1 min-w-0 gap-2">
                       {alchemyBenchSlots.map((cardId, i) => {
                         const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
                         const showAsHolo = cardId != null && alchemyPunchHoloCardIds.includes(cardId);
@@ -3546,7 +3546,7 @@ function CardsContent() {
                         return (
                           <div
                             key={`${cardId ?? "empty"}-${i}`}
-                            className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                            className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                               cardId && benchCard
                                 ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} alchemy-bench-slot-pop group ${showAsHolo ? "ring-2 ring-indigo-400/50 ring-inset alchemy-card-success-flash" : ""} ${showAsFailed ? "ring-2 ring-red-400/60 ring-inset alchemy-card-fail-flash" : ""}`
                                 : "border-dashed hover:opacity-90"
@@ -3582,7 +3582,7 @@ function CardsContent() {
                       })}
                     </div>
                     </div>
-                    <div className="w-[220px] shrink-0 flex flex-col items-end justify-center gap-2">
+                    <div className="w-full sm:w-[220px] shrink-0 flex flex-col items-center sm:items-end justify-center gap-2 pt-2 sm:pt-0">
                       {alchemyBenchType === "foil" && alchemyBenchCards.filter((c) => (c.finish ?? (c.isFoil ? "holo" : "normal")) === "holo").length > 0 ? (
                         <>
                           <span className="text-xs text-white/50 text-right">
@@ -3637,7 +3637,7 @@ function CardsContent() {
                       Place a Holo Epic or Holo Legendary below. Epic Holo → disenchant for Prisms. Legendary Holo → apply Prisms to craft Prismatic.
                       {alchemySettings && <> Legendary failure awards {alchemySettings.prismaticCraftFailureStardust} Stardust; Prisms are consumed.</>}
                     </p>
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                       <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                         <div className="flex gap-2">
                           <div
@@ -3675,7 +3675,7 @@ function CardsContent() {
                           </div>
                         </div>
                       </div>
-                      <div className="w-[220px] shrink-0 flex flex-col items-end justify-center gap-2">
+                      <div className="w-full sm:w-[220px] shrink-0 flex flex-col items-center sm:items-end justify-center gap-2 pt-2 sm:pt-0">
                         {prismaticCraftCardId && alchemySettings ? (() => {
                           const forgeCard = cards.find((c) => c.id === prismaticCraftCardId);
                           const isEpic = forgeCard?.rarity === "epic";
@@ -3758,15 +3758,15 @@ function CardsContent() {
                   <p className="text-sm text-white/60 mb-4">
                     Vendor up to 5 non-legendary cards for credits (by rarity).
                   </p>
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
-                    <div className="flex gap-2">
+                    <div className="flex flex-1 min-w-0 gap-2">
                       {quicksellBenchSlots.map((cardId, i) => {
                         const benchCard = cardId ? cards.find((c) => c.id === cardId) : null;
                         return (
                           <div
                             key={`${cardId ?? "empty"}-${i}`}
-                            className={`w-20 h-28 sm:w-24 sm:h-36 flex-shrink-0 rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
+                            className={`flex-1 min-w-0 aspect-[5/7] sm:flex-none sm:w-24 sm:h-36 sm:aspect-auto rounded-xl border-2 overflow-hidden flex flex-col items-center justify-center cursor-pointer transition-all duration-200 ${
                               cardId && benchCard
                                 ? `${SLOT_FILLED_STYLE[benchCard.rarity] ?? SLOT_FILLED_STYLE.uncommon} group`
                                 : "border-sky-400/50 bg-sky-500/10 hover:border-sky-300/60 hover:bg-sky-500/20"
@@ -3797,7 +3797,7 @@ function CardsContent() {
                       })}
                     </div>
                     </div>
-                    <div className="w-[180px] shrink-0 flex flex-col items-end justify-center gap-2">
+                    <div className="w-full sm:w-[180px] shrink-0 flex flex-col items-center sm:items-end justify-center gap-2 pt-2 sm:pt-0">
                       {quicksellBenchCards.length > 0 ? (
                         <>
                           <span className="text-xs text-white/50 text-right">
