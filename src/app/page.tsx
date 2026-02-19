@@ -37,6 +37,7 @@ interface Winner {
   submittedBy: string;
   publishedAt: string;
   year?: string;
+  screeningAt?: string;
   weekTheme?: string;
   submittedByUserId?: string;
   backdropUrl?: string;
@@ -46,6 +47,100 @@ interface Winner {
 }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
 interface TmdbMovieDetail { tmdbId: number; title: string; year: string; overview: string; posterUrl: string; backdropUrl: string; trailerUrl: string; letterboxdUrl: string; }
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "Screening ended";
+  const sec = Math.floor(ms / 1000);
+  const min = Math.floor(sec / 60);
+  const hr = Math.floor(min / 60);
+  const day = Math.floor(hr / 24);
+  if (day > 0) return `in ${day} day${day !== 1 ? "s" : ""}, ${hr % 24} hr`;
+  if (hr > 0) return `in ${hr} hr ${min % 60} min`;
+  if (min > 0) return `in ${min} min`;
+  return `in ${sec} sec`;
+}
+
+function ScreeningBanner({ screeningAt, className = "", compact }: { screeningAt: string; className?: string; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <svg className="w-4 h-4 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span className="text-xs text-white/90">
+          {new Date(screeningAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className={`mb-4 w-fit max-w-full mx-auto flex items-center justify-center gap-3 px-6 py-5 rounded-2xl border border-sky-400/20 bg-white/[0.03] backdrop-blur-xl ${className}`}>
+      <svg className="w-6 h-6 text-sky-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+        <span className="text-sm font-semibold text-white/60 uppercase tracking-widest">Screening</span>
+        <span className="text-base text-white/90">
+          {new Date(screeningAt).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+const HOUR_48_MS = 48 * 60 * 60 * 1000;
+const HOUR_12_MS = 12 * 60 * 60 * 1000;
+const HOUR_36_MS = 36 * 60 * 60 * 1000;
+
+function screeningFillPct(remaining: number): number {
+  if (remaining >= HOUR_48_MS) return 100;
+  if (remaining >= HOUR_12_MS) return 75 + (25 * (remaining - HOUR_12_MS)) / HOUR_36_MS;
+  return (75 * remaining) / HOUR_12_MS;
+}
+
+function ScreeningCountdown({ screeningAt, compact }: { screeningAt: string; compact?: boolean }) {
+  const [now, setNow] = useState(() => Date.now());
+  const screeningMs = new Date(screeningAt).getTime();
+  const remaining = screeningMs - now;
+  const countdown = formatCountdown(remaining);
+  const fillPct = Math.min(100, Math.max(0, screeningFillPct(remaining)));
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [screeningAt]);
+
+  if (remaining <= 0) return null;
+
+  if (compact) {
+    return (
+      <div className="w-full min-w-0">
+        <span className="text-[10px] font-semibold text-sky-300 tabular-nums block mb-1">{countdown}</span>
+        <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-sky-400/60 to-sky-500/60 transition-all duration-700"
+            style={{ width: `${fillPct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 px-6 py-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-4 mb-2">
+        <span className="text-sm font-semibold text-white/60 uppercase tracking-widest">Countdown</span>
+        <span className="text-base font-semibold text-sky-300 tabular-nums">{countdown}</span>
+      </div>
+      <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-sky-400/60 to-sky-500/60 transition-all duration-700"
+          style={{ width: `${fillPct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 const PHASE_META: Record<string, { label: string; color: string; desc: string }> = {
   subs_open:        { label: "Submissions Open",   color: "text-green-400 border-green-500/30 bg-green-500/10", desc: "Submit your movie pick below!" },
@@ -519,6 +614,14 @@ export default function HomePage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Screening — top right, top flush with content (movie art) */}
+                  {thisWeekWinner.screeningAt && (
+                    <div className="absolute top-8 right-6 sm:top-10 sm:right-10 w-72 min-w-[240px] flex flex-col items-start gap-2 px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md text-left">
+                      <ScreeningBanner screeningAt={thisWeekWinner.screeningAt} compact />
+                      <ScreeningCountdown screeningAt={thisWeekWinner.screeningAt} compact />
+                    </div>
+                  )}
                 </div>
               </Link>
             )}
@@ -881,8 +984,8 @@ export default function HomePage() {
                         : "bg-amber-900/[0.06] hover:bg-amber-900/[0.1]";
                     const badgeClass =
                       place === 2
-                        ? "bg-slate-400/90 text-black border-white/20"
-                        : "bg-amber-700/90 text-amber-100 border-amber-500/20";
+                        ? "bg-gradient-to-br from-gray-300 to-gray-500 text-black shadow-lg shadow-slate-400/30 border border-white/30"
+                        : "bg-gradient-to-br from-amber-600 to-amber-800 text-amber-100 shadow-lg shadow-amber-600/30 border border-amber-400/30";
 
                     return (
                       <div
@@ -891,7 +994,7 @@ export default function HomePage() {
                       >
                         {/* Place badge */}
                         <div
-                          className={`shrink-0 w-10 h-10 rounded-xl border backdrop-blur-sm flex items-center justify-center text-sm font-bold ${badgeClass}`}
+                          className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold ${badgeClass}`}
                         >
                           {place}
                         </div>

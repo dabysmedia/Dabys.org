@@ -196,6 +196,8 @@ export interface Winner {
   trailerUrl?: string;
   backdropUrl?: string;
   runtime?: number; // minutes (from TMDB)
+  /** When the movie will be screened (ISO date string). Shown when winner is published. */
+  screeningAt?: string;
 }
 
 export function getWinners(): Winner[] {
@@ -2174,6 +2176,26 @@ export function addSetCompletionQuest(userId: string, winnerId: string, movieTit
 export function getSetCompletionQuests(userId: string): SetCompletionQuest[] {
   const store = getSetCompletionQuestsRaw();
   return store[userId] ?? [];
+}
+
+/** Wipe all set completion quests (regular, holo, prismatic, dark matter) for all users. Admin only. */
+export function wipeAllSetCompletionQuests(): void {
+  saveSetCompletionQuestsRaw({});
+}
+
+/** Wipe set completion quests for a specific user and set (winner). Removes regular, holo, prismatic, and dark matter quests for that winner. Admin only. */
+export function wipeSetCompletionQuestForUser(userId: string, winnerId: string): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const filtered = userQuests.filter((q) => q.winnerId !== winnerId);
+  if (filtered.length === userQuests.length) return false;
+  if (filtered.length === 0) {
+    delete store[userId];
+  } else {
+    store[userId] = filtered;
+  }
+  saveSetCompletionQuestsRaw(store);
+  return true;
 }
 
 /** Claim a set completion quest. Returns { reward, didClaim }. Reward is 0 if not first completion. */

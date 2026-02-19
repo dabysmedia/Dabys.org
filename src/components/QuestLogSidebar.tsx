@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { formatUtcTimeInHalifax } from "@/lib/dateUtils";
 
@@ -222,6 +222,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   }, [fetchQuests]);
 
   // Countdown until quest reset (next occurrence of resetHourUTC UTC)
+  // Refetch when we cross the reset boundary so quests always reset at the timer
+  const prevCountdownSecsRef = useRef<number | null>(null);
   useEffect(() => {
     const update = () => {
       const now = new Date();
@@ -235,11 +237,17 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
       if (hh > 0) setCountdown(`${hh}h ${m}m`);
       else if (m > 0) setCountdown(`${m}m ${secs % 60}s`);
       else setCountdown(`${secs}s`);
+      // When we cross from last few seconds to next day (secs jumps from small to large), refetch for new quests
+      const prev = prevCountdownSecsRef.current;
+      prevCountdownSecsRef.current = secs;
+      if (prev !== null && prev <= 2 && secs > 3600) {
+        fetchQuests();
+      }
     };
     update();
     const t = setInterval(update, 1000);
     return () => clearInterval(t);
-  }, [resetHourUTC]);
+  }, [resetHourUTC, fetchQuests]);
 
   function unpinWinner(winnerId: string) {
     const next = trackedWinnerIds.filter((id) => id !== winnerId);

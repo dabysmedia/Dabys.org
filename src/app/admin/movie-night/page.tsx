@@ -53,6 +53,7 @@ interface Winner {
   submittedBy: string;
   publishedAt: string;
   year?: string;
+  screeningAt?: string;
 }
 
 interface TmdbSearchResult {
@@ -185,6 +186,7 @@ export default function MovieNightPage() {
   const [winnerAddWeekId, setWinnerAddWeekId] = useState("");
   const [winnerAddUserId, setWinnerAddUserId] = useState("");
   const [winnerAddWatchedDate, setWinnerAddWatchedDate] = useState("");
+  const [winnerAddScreeningAt, setWinnerAddScreeningAt] = useState("");
   const [addingWinner, setAddingWinner] = useState(false);
   const [winnerAddError, setWinnerAddError] = useState("");
   const [showWinnerCreateWeek, setShowWinnerCreateWeek] = useState(false);
@@ -196,6 +198,7 @@ export default function MovieNightPage() {
   const [editWinnerWeekId, setEditWinnerWeekId] = useState("");
   const [editWinnerUserId, setEditWinnerUserId] = useState("");
   const [editWinnerWatchedDate, setEditWinnerWatchedDate] = useState("");
+  const [editWinnerScreeningAt, setEditWinnerScreeningAt] = useState("");
   const [editWinnerSearchQuery, setEditWinnerSearchQuery] = useState("");
   const [editWinnerSearchResults, setEditWinnerSearchResults] = useState<TmdbSearchResult[]>([]);
   const [editWinnerSelectedMovie, setEditWinnerSelectedMovie] = useState<TmdbMovieDetail | null>(null);
@@ -212,6 +215,8 @@ export default function MovieNightPage() {
   const [deletingWinnerId, setDeletingWinnerId] = useState<string | null>(null);
   const [draggingWinnerId, setDraggingWinnerId] = useState<string | null>(null);
   const [reorderingWinners, setReorderingWinners] = useState(false);
+  const [weeksTabScreeningAt, setWeeksTabScreeningAt] = useState("");
+  const [weeksTabScreeningSaving, setWeeksTabScreeningSaving] = useState(false);
   const winnerSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winnerDropdownRef = useRef<HTMLDivElement>(null);
   const editWinnerDropdownRef = useRef<HTMLDivElement>(null);
@@ -271,6 +276,26 @@ export default function MovieNightPage() {
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
+
+  /* ── Sync Weeks tab screening from current week winner ── */
+  const currentWeekWinner = useMemo(
+    () => (currentWeek && currentWeek.phase === "winner_published" ? winners.find((w) => w.weekId === currentWeek.id) : null),
+    [currentWeek, winners]
+  );
+  useEffect(() => {
+    if (currentWeekWinner) {
+      const val = currentWeekWinner.screeningAt
+        ? (() => {
+            const d = new Date(currentWeekWinner.screeningAt!);
+            const pad = (n: number) => String(n).padStart(2, "0");
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          })()
+        : "";
+      setWeeksTabScreeningAt(val);
+    } else {
+      setWeeksTabScreeningAt("");
+    }
+  }, [currentWeekWinner?.id, currentWeekWinner?.screeningAt]);
 
   /* ── TMDB search: submissions add ── */
   useEffect(() => {
@@ -428,6 +453,19 @@ export default function MovieNightPage() {
       setTiedSubmissions(null);
       loadAllData();
     } finally { setResolvingTie(false); }
+  }
+
+  async function saveWeeksTabScreening() {
+    if (!currentWeekWinner) return;
+    setWeeksTabScreeningSaving(true);
+    try {
+      const res = await fetch(`/api/winners/${currentWeekWinner.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ screeningAt: weeksTabScreeningAt ? new Date(weeksTabScreeningAt).toISOString() : null }),
+      });
+      if (res.ok) loadAllData();
+    } finally { setWeeksTabScreeningSaving(false); }
   }
 
   function handleRandomPick() {
@@ -714,6 +752,7 @@ export default function MovieNightPage() {
           submittedBy: chosenUser?.name || "",
           weekId: winnerAddWeekId || "",
           publishedAt: winnerAddWatchedDate ? new Date(winnerAddWatchedDate).toISOString() : undefined,
+          screeningAt: winnerAddScreeningAt ? new Date(winnerAddScreeningAt).toISOString() : undefined,
           tmdbId: winnerSelectedMovie.tmdbId,
           year: winnerSelectedMovie.year,
           overview: winnerSelectedMovie.overview,
@@ -724,7 +763,7 @@ export default function MovieNightPage() {
         }),
       });
       if (res.ok) {
-        setWinnerSelectedMovie(null); setWinnerSearchQuery(""); setWinnerAddWeekId(""); setWinnerAddUserId(""); setWinnerAddWatchedDate("");
+        setWinnerSelectedMovie(null); setWinnerSearchQuery(""); setWinnerAddWeekId(""); setWinnerAddUserId(""); setWinnerAddWatchedDate(""); setWinnerAddScreeningAt("");
         setShowWinnerAddForm(false);
         loadAllData();
       } else { const d = await res.json(); setWinnerAddError(d.error || "Failed to add winner"); }
@@ -737,6 +776,7 @@ export default function MovieNightPage() {
     setEditWinnerWeekId(winner.weekId || "");
     setEditWinnerUserId(users.find((u) => u.name === winner.submittedBy)?.id || "");
     setEditWinnerWatchedDate(winner.publishedAt ? winner.publishedAt.slice(0, 10) : "");
+    setEditWinnerScreeningAt(winner.screeningAt ? (() => { const d = new Date(winner.screeningAt!); const pad = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; })() : "");
     setEditWinnerSelectedMovie(null);
     setEditWinnerSearchQuery("");
     setEditWinnerSearchMode(false);
@@ -819,6 +859,7 @@ export default function MovieNightPage() {
         weekId: editWinnerWeekId || "",
         submittedBy: chosenUser?.name || "",
         publishedAt: editWinnerWatchedDate ? new Date(editWinnerWatchedDate).toISOString() : editingWinner.publishedAt,
+        screeningAt: editWinnerScreeningAt ? new Date(editWinnerScreeningAt).toISOString() : null,
       };
       if (editWinnerSelectedMovie) {
         payload.movieTitle = editWinnerSelectedMovie.title;
@@ -1103,6 +1144,37 @@ export default function MovieNightPage() {
                 </div>
               </div>
 
+              {/* Screening date/time — when winner is published */}
+              {currentWeek?.phase === "winner_published" && currentWeekWinner && (
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-6">
+                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Screening Date & Time</h3>
+                  <p className="text-[11px] text-white/40 mb-3">When the movie will be screened — shown on the main page for &quot;{currentWeekWinner.movieTitle}&quot;</p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex gap-2 flex-1 min-w-0">
+                      <input
+                        type="date"
+                        value={weeksTabScreeningAt ? weeksTabScreeningAt.slice(0, 10) : ""}
+                        onChange={(e) => setWeeksTabScreeningAt(e.target.value + "T" + (weeksTabScreeningAt?.slice(11, 16) || "00:00"))}
+                        className="flex-1 min-w-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]"
+                      />
+                      <input
+                        type="time"
+                        value={weeksTabScreeningAt ? weeksTabScreeningAt.slice(11, 16) : ""}
+                        onChange={(e) => setWeeksTabScreeningAt((weeksTabScreeningAt?.slice(0, 10) || "2026-01-01") + "T" + e.target.value)}
+                        className="w-28 shrink-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]"
+                      />
+                    </div>
+                    <button
+                      onClick={saveWeeksTabScreening}
+                      disabled={weeksTabScreeningSaving}
+                      className="px-4 py-2.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30 transition-colors cursor-pointer disabled:opacity-40 text-sm font-medium"
+                    >
+                      {weeksTabScreeningSaving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Past weeks */}
               {allWeeks.length > 1 && (
                 <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
@@ -1369,6 +1441,14 @@ export default function MovieNightPage() {
                       <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Watched Date</label>
                       <input type="date" value={winnerAddWatchedDate} onChange={(e) => setWinnerAddWatchedDate(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Screening Date & Time</label>
+                    <div className="flex gap-2">
+                      <input type="date" value={winnerAddScreeningAt ? winnerAddScreeningAt.slice(0, 10) : ""} onChange={(e) => setWinnerAddScreeningAt(e.target.value + "T" + (winnerAddScreeningAt?.slice(11, 16) || "00:00"))} className="flex-1 min-w-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
+                      <input type="time" value={winnerAddScreeningAt ? winnerAddScreeningAt.slice(11, 16) : ""} onChange={(e) => setWinnerAddScreeningAt((winnerAddScreeningAt?.slice(0, 10) || "2026-01-01") + "T" + e.target.value)} className="w-28 shrink-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
+                    </div>
+                    <p className="text-[10px] text-white/30 mt-1">When the movie will be screened (shown on main page when winner is published)</p>
                   </div>
                   {showWinnerCreateWeek && (
                     <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 space-y-3">
@@ -1723,6 +1803,14 @@ export default function MovieNightPage() {
                   <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Watched Date</label>
                   <input type="date" value={editWinnerWatchedDate} onChange={(e) => setEditWinnerWatchedDate(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
                 </div>
+              </div>
+              <div>
+                <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Screening Date & Time</label>
+                <div className="flex gap-2">
+                  <input type="date" value={editWinnerScreeningAt ? editWinnerScreeningAt.slice(0, 10) : ""} onChange={(e) => setEditWinnerScreeningAt(e.target.value + "T" + (editWinnerScreeningAt?.slice(11, 16) || "00:00"))} className="flex-1 min-w-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
+                  <input type="time" value={editWinnerScreeningAt ? editWinnerScreeningAt.slice(11, 16) : ""} onChange={(e) => setEditWinnerScreeningAt((editWinnerScreeningAt?.slice(0, 10) || "2026-01-01") + "T" + e.target.value)} className="w-28 shrink-0 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors [color-scheme:dark]" />
+                </div>
+                <p className="text-[10px] text-white/30 mt-1">When the movie will be screened (shown on main page when winner is published)</p>
               </div>
               {editWinnerShowCreateWeek && (
                 <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 space-y-3">

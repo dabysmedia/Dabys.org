@@ -57,6 +57,7 @@ interface WinnerDetail {
   submittedBy: string;
   publishedAt: string;
   year?: string;
+  screeningAt?: string;
   overview?: string;
   trailerUrl?: string;
   backdropUrl?: string;
@@ -531,7 +532,7 @@ export default function WinnerDetailPage() {
             )}
 
             {winner.submittedBy && (
-              <p className="text-white/40 text-sm mb-4">
+              <p className="text-white/40 text-sm mb-2">
                 Picked by{" "}
                 {winner.submittedByUserId ? (
                   <Link href={`/profile/${winner.submittedByUserId}`} className="text-white/60 hover:text-purple-400 transition-colors">
@@ -540,6 +541,15 @@ export default function WinnerDetailPage() {
                 ) : (
                   <span className="text-white/60">{winner.submittedBy}</span>
                 )}
+              </p>
+            )}
+
+            {winner.screeningAt && (
+              <p className="text-white/50 text-sm mb-4 flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-400/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Screening {new Date(winner.screeningAt).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}
               </p>
             )}
 
@@ -635,7 +645,13 @@ export default function WinnerDetailPage() {
               Also in the Running
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {winner.runnerUps.map((ru, i) => (
+              {winner.runnerUps.map((ru, i) => {
+                const place = i + 2;
+                const badgeClass =
+                  place === 2
+                    ? "bg-gradient-to-br from-gray-300 to-gray-500 text-black shadow-lg shadow-slate-400/30 border border-white/30"
+                    : "bg-gradient-to-br from-amber-600 to-amber-800 text-amber-100 shadow-lg shadow-amber-600/30 border border-amber-400/30";
+                return (
                 <div key={i} className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
                   <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                     {ru.posterUrl ? (
@@ -644,6 +660,11 @@ export default function WinnerDetailPage() {
                       <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl font-bold">{ru.movieTitle.charAt(0)}</div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div
+                      className={`absolute top-2 left-2 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${badgeClass}`}
+                    >
+                      {place}
+                    </div>
                   </div>
                   <div className="p-3 relative z-0">
                     <h4 className="text-sm font-semibold text-white/90 truncate">{ru.movieTitle}</h4>
@@ -656,7 +677,8 @@ export default function WinnerDetailPage() {
                     </p>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         )}

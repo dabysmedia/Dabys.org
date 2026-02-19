@@ -138,6 +138,7 @@ export async function PATCH(
   if (typeof body.backdropUrl === "string") w.backdropUrl = body.backdropUrl || undefined;
   if (typeof body.tmdbId === "number") w.tmdbId = body.tmdbId;
   if (typeof body.runtime === "number" && body.runtime >= 0) w.runtime = body.runtime;
+  if (body.screeningAt !== undefined) w.screeningAt = (typeof body.screeningAt === "string" && body.screeningAt.trim()) ? body.screeningAt.trim() : undefined;
 
   winners[idx] = w;
   saveWinners(winners);

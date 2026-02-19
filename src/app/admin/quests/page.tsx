@@ -39,6 +39,14 @@ export default function AdminQuestsPage() {
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [wipingSetCompletion, setWipingSetCompletion] = useState(false);
+  const [wipeSetCompletionOpen, setWipeSetCompletionOpen] = useState(false);
+  const [wipeSetCompletionData, setWipeSetCompletionData] = useState<{
+    users: { id: string; name: string }[];
+    setCompletionByUser: { userId: string; userName: string; winnerId: string; movieTitle: string }[];
+  } | null>(null);
+  const [wipeUserId, setWipeUserId] = useState("");
+  const [wipeWinnerId, setWipeWinnerId] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/quests")
@@ -104,6 +112,49 @@ export default function AdminQuestsPage() {
       setError("Failed to reset quests");
     } finally {
       setResetting(false);
+    }
+  }
+
+  async function handleWipeSetCompletionQuests() {
+    if (!wipeUserId || !wipeWinnerId) return;
+    setWipingSetCompletion(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/quests/wipe-set-completion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: wipeUserId, winnerId: wipeWinnerId }),
+      });
+      if (res.ok) {
+        setWipeUserId("");
+        setWipeWinnerId("");
+        setWipeSetCompletionOpen(false);
+        const data = await res.json().catch(() => ({}));
+        if (data.wiped) {
+          const fresh = await fetch("/api/admin/quests/set-completion-data").then((r) => r.json());
+          setWipeSetCompletionData(fresh);
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to wipe set completion quests");
+      }
+    } catch {
+      setError("Failed to wipe set completion quests");
+    } finally {
+      setWipingSetCompletion(false);
+    }
+  }
+
+  async function openWipeSetCompletion() {
+    setWipeSetCompletionOpen(true);
+    setWipeUserId("");
+    setWipeWinnerId("");
+    setError("");
+    try {
+      const data = await fetch("/api/admin/quests/set-completion-data").then((r) => r.json());
+      setWipeSetCompletionData(data);
+    } catch {
+      setError("Failed to load set completion data");
     }
   }
 
@@ -177,12 +228,88 @@ export default function AdminQuestsPage() {
               </button>
             </span>
           )}
+          <button
+            type="button"
+            onClick={openWipeSetCompletion}
+            className="px-4 py-2.5 rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-400 text-sm font-medium hover:bg-amber-500/20 transition-all cursor-pointer"
+          >
+            Wipe Set Completion Quests
+          </button>
         </div>
       </div>
 
       {error && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-400 text-sm">
           {error}
+        </div>
+      )}
+
+      {/* Wipe set completion modal */}
+      {wipeSetCompletionOpen && (
+        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/5 p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-amber-400/90">Wipe Set Completion Quest</h3>
+          <p className="text-xs text-white/50">Remove set bonus quest(s) for a specific user and set. This clears regular, holo, prismatic, and dark matter quests for that set.</p>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-xs text-white/50 mb-1">User</label>
+              <select
+                value={wipeUserId}
+                onChange={(e) => {
+                  setWipeUserId(e.target.value);
+                  setWipeWinnerId("");
+                }}
+                className="min-w-[160px] px-3 py-2 rounded-lg border border-white/10 bg-white/[0.06] text-sm text-white/80 outline-none focus:border-amber-400/50 [color-scheme:dark] cursor-pointer"
+              >
+                <option value="">Select user</option>
+                {(wipeSetCompletionData?.users ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-white/50 mb-1">Set</label>
+              <select
+                value={wipeWinnerId}
+                onChange={(e) => setWipeWinnerId(e.target.value)}
+                disabled={!wipeUserId}
+                className="min-w-[200px] px-3 py-2 rounded-lg border border-white/10 bg-white/[0.06] text-sm text-white/80 outline-none focus:border-amber-400/50 [color-scheme:dark] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Select set</option>
+                {wipeUserId &&
+                  [...new Map(
+                    (wipeSetCompletionData?.setCompletionByUser ?? [])
+                      .filter((s) => s.userId === wipeUserId)
+                      .map((s) => [s.winnerId, { winnerId: s.winnerId, movieTitle: s.movieTitle }])
+                  ).values()].map(({ winnerId, movieTitle }) => (
+                    <option key={winnerId} value={winnerId}>{movieTitle}</option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleWipeSetCompletionQuests}
+                disabled={wipingSetCompletion || !wipeUserId || !wipeWinnerId}
+                className="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400 text-sm font-medium hover:bg-amber-500/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {wipingSetCompletion ? (
+                  <span className="inline-block w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                ) : (
+                  "Wipe"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setWipeSetCompletionOpen(false); setWipeUserId(""); setWipeWinnerId(""); }}
+                className="px-4 py-2 rounded-lg border border-white/20 text-white/60 text-sm hover:bg-white/10 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          {(wipeSetCompletionData?.setCompletionByUser?.length ?? 0) === 0 && (
+            <p className="text-xs text-white/40">No set completion quests exist.</p>
+          )}
         </div>
       )}
 

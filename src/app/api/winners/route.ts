@@ -78,6 +78,7 @@ export async function POST(request: Request) {
     trailerUrl: body.trailerUrl || undefined,
     backdropUrl: body.backdropUrl || undefined,
     runtime: typeof body.runtime === "number" && body.runtime >= 0 ? body.runtime : undefined,
+    screeningAt: typeof body.screeningAt === "string" && body.screeningAt.trim() ? body.screeningAt.trim() : undefined,
   };
 
   winners.push(newWinner);
