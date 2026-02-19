@@ -1078,6 +1078,8 @@ export interface CharacterPortrayal {
   cardType?: CardType; // optional for migration; defaults to "actor"
   /** When set, this pool entry is an alt-art; owning a card with this characterId counts as owning this character for set completion. */
   altArtOfCharacterId?: string;
+  /** For Boys (cardType "character"): custom set name to group by in codex instead of movie. */
+  customSetId?: string;
 }
 
 export interface Card {

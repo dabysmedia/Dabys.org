@@ -193,6 +193,7 @@ export default function AdminCardsCreditsPage() {
   const [customRarity, setCustomRarity] = useState<"uncommon" | "rare" | "epic" | "legendary">("uncommon");
   const [customCardType, setCustomCardType] = useState<CardType>("actor");
   const [customAltArtOfCharacterId, setCustomAltArtOfCharacterId] = useState("");
+  const [customSetId, setCustomSetId] = useState("");
   const [customAddToPending, setCustomAddToPending] = useState(false);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editForm, setEditForm] = useState<Partial<Card>>({});
@@ -204,6 +205,7 @@ export default function AdminCardsCreditsPage() {
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [rebuildConfirmInput, setRebuildConfirmInput] = useState("");
   const [poolSort, setPoolSort] = useState<"rarity" | "movie">("rarity");
+  const [poolSortBoys, setPoolSortBoys] = useState<"rarity" | "set">("rarity");
   const [showImagePickerForAdd, setShowImagePickerForAdd] = useState(false);
   const [showImagePickerForEdit, setShowImagePickerForEdit] = useState(false);
   const [pastingImage, setPastingImage] = useState(false);
@@ -1400,6 +1402,7 @@ export default function AdminCardsCreditsPage() {
           rarity: customRarity,
           cardType: customCardType,
           ...(customAltArtOfCharacterId.trim() && { altArtOfCharacterId: customAltArtOfCharacterId.trim() }),
+          ...(customCardType === "character" && customSetId.trim() && { customSetId: customSetId.trim() }),
         }),
       });
       const data = await res.json();
@@ -1410,6 +1413,7 @@ export default function AdminCardsCreditsPage() {
         setCustomProfilePath("");
         setCustomWinnerId("");
         setCustomAltArtOfCharacterId("");
+        setCustomSetId("");
       } else {
         setError(data.error || "Failed to add to pool");
       }
@@ -1454,6 +1458,7 @@ export default function AdminCardsCreditsPage() {
       rarity: entry.rarity,
       cardType: (entry.cardType ?? "actor") as CardType,
       altArtOfCharacterId: entry.altArtOfCharacterId ?? "",
+      customSetId: entry.customSetId ?? "",
     });
     setError("");
   }
@@ -2387,35 +2392,79 @@ export default function AdminCardsCreditsPage() {
                 <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={customRarity} onChange={(e) => setCustomRarity(e.target.value as typeof customRarity)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
                 <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={customCardType} onChange={(e) => setCustomCardType(e.target.value as CardType)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
               </div>
+              {customCardType === "character" && (
+                <div><label className="block text-xs text-white/40 mb-1">Custom Set</label><input type="text" value={customSetId} onChange={(e) => setCustomSetId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="e.g. Summer 2025, Favorites" /><p className="text-[10px] text-white/40 mt-1">Optional. Groups Boys in the codex by this label instead of movie.</p></div>
+              )}
               <button type="submit" disabled={!customActorName.trim() || !customProfilePath.trim() || (customCardType !== "character" && !customWinnerId) || addingToPool} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer">{addingToPool ? "Adding..." : customAddToPending ? "Add to Pending" : "Add to Pool"}</button>
             </form>
               </>
             )}
           </div>
-          <div className="w-full min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <h3 className="text-sm font-medium text-white/80">Pool</h3>
-              <select value={poolSort} onChange={(e) => setPoolSort(e.target.value as "rarity" | "movie")} className="px-3 py-1.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="rarity">Sort by rarity</option><option value="movie">Sort by movie</option></select>
-            </div>
-            {poolLoading ? ( <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" /></div> ) : (
-              <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
-                {poolSort === "rarity" ? (
-                  RARITY_ORDER.map((r) => { const entries = pool.filter((c) => c.rarity === r); if (entries.length === 0) return null; return (
-                      <div key={r}>
-                        <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${r === "legendary" ? "bg-amber-400" : r === "epic" ? "bg-purple-400" : r === "rare" ? "bg-blue-400" : "bg-white/40"}`} />{r} ({entries.length})</h4>
-                        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+          <div className="w-full min-w-0 space-y-6">
+            {(() => {
+              const actorPool = pool.filter((c) => (c.cardType ?? "actor") !== "character");
+              const boysPool = pool.filter((c) => (c.cardType ?? "actor") === "character");
+              return (
+                <>
+                  <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <h3 className="text-sm font-medium text-blue-300/90">Actor Pool</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-white/40">{actorPool.length} cards</span>
+                        <select value={poolSort} onChange={(e) => setPoolSort(e.target.value as "rarity" | "movie")} className="px-3 py-1.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-blue-500/50 [color-scheme:dark]"><option value="rarity">Sort by rarity</option><option value="movie">Sort by movie</option></select>
                       </div>
-                  ); })
-                ) : (
-                  (() => { const byMovie = new Map<string, typeof pool>(); for (const c of pool) { const m = c.movieTitle || "(No movie)"; if (!byMovie.has(m)) byMovie.set(m, []); byMovie.get(m)!.push(c); } const movies = Array.from(byMovie.keys()).sort(); return movies.map((movieTitle) => { const entries = byMovie.get(movieTitle)!; return (
-                        <div key={movieTitle}>
-                          <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{movieTitle} ({entries.length})</h4>
-                          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
-                        </div>
-                  ); }); })()
-                )}
-              </div>
-            )}
+                    </div>
+                    {poolLoading ? ( <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" /></div> ) : (
+                      <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
+                        {poolSort === "rarity" ? (
+                          RARITY_ORDER.map((r) => { const entries = actorPool.filter((c) => c.rarity === r); if (entries.length === 0) return null; return (
+                            <div key={r}>
+                              <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${r === "legendary" ? "bg-amber-400" : r === "epic" ? "bg-purple-400" : r === "rare" ? "bg-blue-400" : "bg-white/40"}`} />{r} ({entries.length})</h4>
+                              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                            </div>
+                          ); })
+                        ) : (
+                          (() => { const byMovie = new Map<string, typeof actorPool>(); for (const c of actorPool) { const m = c.movieTitle || "(No movie)"; if (!byMovie.has(m)) byMovie.set(m, []); byMovie.get(m)!.push(c); } const movies = Array.from(byMovie.keys()).sort(); return movies.map((movieTitle) => { const entries = byMovie.get(movieTitle)!; return (
+                            <div key={movieTitle}>
+                              <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{movieTitle} ({entries.length})</h4>
+                              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                            </div>
+                          ); }); })()
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <h3 className="text-sm font-medium text-amber-300/90">Boys Pool</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-white/40">{boysPool.length} cards</span>
+                        <select value={poolSortBoys} onChange={(e) => setPoolSortBoys(e.target.value as "rarity" | "set")} className="px-3 py-1.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]"><option value="rarity">Sort by rarity</option><option value="set">Sort by set</option></select>
+                      </div>
+                    </div>
+                    {poolLoading ? ( <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" /></div> ) : (
+                      <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
+                        {poolSortBoys === "rarity" ? (
+                          RARITY_ORDER.map((r) => { const entries = boysPool.filter((c) => c.rarity === r); if (entries.length === 0) return null; return (
+                            <div key={r}>
+                              <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${r === "legendary" ? "bg-amber-400" : r === "epic" ? "bg-purple-400" : r === "rare" ? "bg-blue-400" : "bg-white/40"}`} />{r} ({entries.length})</h4>
+                              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                            </div>
+                          ); })
+                        ) : (
+                          (() => { const bySet = new Map<string, typeof boysPool>(); for (const c of boysPool) { const s = (c.customSetId ?? c.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(s)) bySet.set(s, []); bySet.get(s)!.push(c); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const entries = bySet.get(setName)!; return (
+                            <div key={setName}>
+                              <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{setName} ({entries.length})</h4>
+                              <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                            </div>
+                          ); }); })()
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -2670,6 +2719,9 @@ export default function AdminCardsCreditsPage() {
                   <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={poolEditForm.rarity ?? "uncommon"} onChange={(e) => setPoolEditForm((f) => ({ ...f, rarity: e.target.value }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
                   <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={poolEditForm.cardType ?? "actor"} onChange={(e) => setPoolEditForm((f) => ({ ...f, cardType: e.target.value as CardType }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
                 </div>
+                {(poolEditForm.cardType ?? "actor") === "character" && (
+                  <div><label className="block text-xs text-white/40 mb-1">Custom Set</label><input type="text" value={poolEditForm.customSetId ?? ""} onChange={(e) => setPoolEditForm((f) => ({ ...f, customSetId: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="e.g. Summer 2025" /><p className="text-[10px] text-white/40 mt-1">Groups Boys in the codex by this label instead of movie.</p></div>
+                )}
                 {editingPoolEntry && (
                   <div>
                     <label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label>

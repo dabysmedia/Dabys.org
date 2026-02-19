@@ -106,6 +106,8 @@ interface PoolEntry {
   rarity: string;
   cardType?: CardType;
   altArtOfCharacterId?: string;
+  /** For Boys: custom set name to group by in codex instead of movie. */
+  customSetId?: string;
 }
 type InventorySubTab = "tradeup" | "alchemy" | "quicksell";
 
@@ -5903,17 +5905,17 @@ function CardsContent() {
                       );
                     };
                     if (codexSort === "set") {
-                      const key = (e: PoolEntry) => e.movieTmdbId ?? e.movieTitle;
-                      const bySet = new Map<string | number, PoolEntry[]>();
+                      const key = (e: PoolEntry) => e.customSetId ?? e.movieTitle ?? e.movieTmdbId ?? "(Uncategorized)";
+                      const bySet = new Map<string, PoolEntry[]>();
                       for (const entry of boysEntries) {
-                        const k = key(entry);
+                        const k = String(key(entry));
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
                       const discoveredCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredBoysCharacterIds.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => ({
-                          title: entries[0]?.movieTitle ?? String(k),
+                          title: entries[0]?.customSetId ?? entries[0]?.movieTitle ?? k,
                           entries,
                           completedCount: discoveredCount(entries),
                         }))

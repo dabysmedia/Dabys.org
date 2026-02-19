@@ -45,6 +45,10 @@ export async function POST(request: Request) {
     typeof body.altArtOfCharacterId === "string" && body.altArtOfCharacterId.trim() !== ""
       ? body.altArtOfCharacterId.trim()
       : undefined;
+  const customSetId =
+    typeof body.customSetId === "string" && body.customSetId.trim() !== ""
+      ? body.customSetId.trim()
+      : undefined;
 
   if (!actorName || !profilePath) {
     return NextResponse.json(
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
     rarity,
     cardType,
     ...(altArtOfCharacterId != null && { altArtOfCharacterId }),
+    ...(isBoysCard && customSetId != null && { customSetId }),
   };
 
   const addToPending = body.addToPending === true && body.winnerId;
@@ -128,6 +133,12 @@ export async function PATCH(request: Request) {
     updates.altArtOfCharacterId =
       typeof body.altArtOfCharacterId === "string" && body.altArtOfCharacterId.trim() !== ""
         ? body.altArtOfCharacterId.trim()
+        : undefined;
+  }
+  if (body.customSetId !== undefined) {
+    updates.customSetId =
+      typeof body.customSetId === "string" && body.customSetId.trim() !== ""
+        ? body.customSetId.trim()
         : undefined;
   }
 

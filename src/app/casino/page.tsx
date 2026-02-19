@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK, handValue } from "@/lib/casino";
+import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK, handValue, type Card } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
 
@@ -566,7 +566,7 @@ function BlackjackGame({
                 <div className="flex gap-2 [perspective:600px]">
                   {hand.map((c, i) => renderCard(c, i, `p-${dealKey}-${hi}-${i}`))}
                 </div>
-                <p className="text-white/50 text-xs tabular-nums">Value: {handValue(hand as { suit: string; rank: string }[])}</p>
+                <p className="text-white/50 text-xs tabular-nums">Value: {handValue(hand as Card[])}</p>
               </div>
             ))}
           </div>
