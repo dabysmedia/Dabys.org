@@ -1,1 +1,30 @@
-{"prismTransmuteEpicHoloCount":3,"prismTransmuteSuccessChance":50,"prismsPerTransmute":1,"prismaticCraftBaseChance":5,"prismaticCraftChancePerPrism":10,"prismaticCraftMaxPrisms":10,"prismaticCraftFailureStardust":25,"epicHoloForgePrisms":1,"holoUpgradeChance":50,"prismaticUpgradeChance":35,"darkMatterUpgradeChance":20}
+{
+  "prismTransmuteEpicHoloCount": 3,
+  "prismTransmuteSuccessChance": 50,
+  "prismsPerTransmute": 1,
+  "prismaticCraftBaseChance": 5,
+  "prismaticCraftChancePerPrism": 10,
+  "prismaticCraftMaxPrisms": 10,
+  "prismaticCraftFailureStardust": 25,
+  "epicHoloForgePrisms": 1,
+  "holoUpgradeChance": {
+    "uncommon": 85,
+    "rare": 75,
+    "epic": 50,
+    "legendary": 33
+  },
+  "prismaticUpgradeChance": 35,
+  "darkMatterUpgradeChance": 20,
+  "disenchantHolo": {
+    "uncommon": 10,
+    "rare": 20,
+    "epic": 30,
+    "legendary": 50
+  },
+  "packAPunchCost": {
+    "uncommon": 30,
+    "rare": 60,
+    "epic": 90,
+    "legendary": 120
+  }
+}

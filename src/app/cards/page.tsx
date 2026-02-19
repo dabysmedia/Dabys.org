@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CardDisplay } from "@/components/CardDisplay";
 import { BadgePill } from "@/components/BadgePill";
-import { DISENCHANT_DUST, getPackAPunchCost, getQuicksellCredits } from "@/lib/alchemy";
+import { getDisenchantDust, getPackAPunchCost, getQuicksellCredits } from "@/lib/alchemy";
 import { RARITY_BADGE } from "@/lib/constants";
 
 interface User {
@@ -599,17 +599,19 @@ function CardsContent() {
   const prismInitializedRef = useRef(false);
   const prismAnimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [alchemySettings, setAlchemySettings] = useState<{
-    prismTransmuteEpicHoloCount: number;
-    prismTransmuteSuccessChance: number;
-    prismsPerTransmute: number;
-    prismaticCraftBaseChance: number;
-    prismaticCraftChancePerPrism: number;
-    prismaticCraftMaxPrisms: number;
-    prismaticCraftFailureStardust: number;
-    epicHoloForgePrisms: number;
-    holoUpgradeChance: number;
-    prismaticUpgradeChance: number;
-    darkMatterUpgradeChance: number;
+    prismTransmuteEpicHoloCount?: number;
+    prismTransmuteSuccessChance?: number;
+    prismsPerTransmute?: number;
+    prismaticCraftBaseChance?: number;
+    prismaticCraftChancePerPrism?: number;
+    prismaticCraftMaxPrisms?: number;
+    prismaticCraftFailureStardust?: number;
+    epicHoloForgePrisms?: number;
+    prismaticUpgradeChance?: number;
+    darkMatterUpgradeChance?: number;
+    disenchantHolo?: Record<string, number>;
+    packAPunchCost?: Record<string, number>;
+    holoUpgradeChance?: Record<string, number>;
   } | null>(null);
   const [prismaticCraftCardId, setPrismaticCraftCardId] = useState<string | null>(null);
   const [prismaticCraftPrisms, setPrismaticCraftPrisms] = useState(1);
@@ -832,7 +834,7 @@ function CardsContent() {
       fetch("/api/settings"),
       fetch("/api/trade-block"),
       fetch(`/api/alchemy/prisms?userId=${encodeURIComponent(u.id)}`),
-      fetch("/api/admin/alchemy-settings"),
+      fetch("/api/alchemy/settings"),
     ]);
 
     if (creditsRes.ok) {
@@ -1681,7 +1683,7 @@ function CardsContent() {
   }
 
   function getDustForRarity(rarity: string): number {
-    return DISENCHANT_DUST[rarity] ?? 0;
+    return getDisenchantDust(rarity, "holo", alchemySettings ?? undefined);
   }
 
   async function handleAlchemyDisenchant(card: Card) {
@@ -1715,13 +1717,14 @@ function CardsContent() {
 
   async function handleAlchemyPackAPunch(card: Card) {
     if (!user) return;
-    const cost = getPackAPunchCost(card.rarity);
+    const cost = getPackAPunchCost(card.rarity, alchemySettings ?? undefined);
     if (stardust < cost) {
       setAlchemyErrorFading(false);
       setAlchemyError(`You need ${cost} Stardust. You have ${stardust}.`);
       return;
     }
-    if (!confirm(`Spend ${cost} Stardust to attempt Pack-A-Punch? 50% success rate — Stardust is consumed either way.`)) return;
+    const chance = alchemySettings?.holoUpgradeChance?.[card.rarity] ?? (typeof alchemySettings?.holoUpgradeChance === "number" ? alchemySettings.holoUpgradeChance : 50);
+    if (!confirm(`Spend ${cost} Stardust to attempt Pack-A-Punch? ${chance}% success rate — Stardust is consumed either way.`)) return;
     setAlchemyError("");
     setAlchemyPunchingId(card.id);
     try {
@@ -1895,12 +1898,14 @@ function CardsContent() {
 
   async function handleAlchemyDisenchantAll() {
     if (!user || alchemyBenchCards.length === 0) return;
-    const totalDust = alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0);
-    if (!confirm(`Remove Holo from ${alchemyBenchCards.length} card(s) for ${totalDust} Stardust? Cards stay in your collection as normals.`)) return;
+    const holoCards = alchemyBenchCards.filter((c) => (c.finish ?? (c.isFoil ? "holo" : "normal")) === "holo");
+    if (holoCards.length === 0) return;
+    const totalDust = holoCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0);
+    if (!confirm(`Remove Holo from ${holoCards.length} card(s) for ${totalDust} Stardust? Cards stay in your collection as normals.`)) return;
     setAlchemyError("");
     setAlchemyDisenchantingId("_all");
     try {
-      for (const card of alchemyBenchCards) {
+      for (const card of holoCards) {
         const res = await fetch("/api/alchemy/disenchant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1926,13 +1931,13 @@ function CardsContent() {
 
   async function handleAlchemyPackAPunchAll() {
     if (!user || alchemyBenchCards.length === 0) return;
-    const totalCost = alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0);
+    const totalCost = alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity, alchemySettings ?? undefined), 0);
     if (stardust < totalCost) {
       setAlchemyErrorFading(false);
       setAlchemyError(`You need ${totalCost} Stardust. You have ${stardust}.`);
       return;
     }
-    if (!confirm(`Spend ${totalCost} Stardust to Pack-A-Punch ${alchemyBenchCards.length} card(s)? 50% success per card — Stardust is consumed either way.`)) return;
+    if (!confirm(`Spend ${totalCost} Stardust to Pack-A-Punch ${alchemyBenchCards.length} card(s)? Success varies by rarity — Stardust is consumed either way.`)) return;
     setAlchemyError("");
     setAlchemyPunchingId("_all");
     try {
@@ -1989,8 +1994,8 @@ function CardsContent() {
       setAlchemyError(`Not enough Prisms. Need ${amount}, have ${prisms}.`);
       return;
     }
-    const chance = Math.min(100, alchemySettings.prismaticCraftBaseChance + amount * alchemySettings.prismaticCraftChancePerPrism);
-    if (!confirm(`Apply ${amount} Prism(s) for a ${chance}% chance to craft Prismatic? Prisms are consumed. Failure awards ${alchemySettings.prismaticCraftFailureStardust} Stardust.`)) return;
+    const chance = Math.min(100, (alchemySettings.prismaticCraftBaseChance ?? 5) + amount * (alchemySettings.prismaticCraftChancePerPrism ?? 10));
+    if (!confirm(`Apply ${amount} Prism(s) for a ${chance}% chance to craft Prismatic? Prisms are consumed. Failure awards ${alchemySettings.prismaticCraftFailureStardust ?? 25} Stardust.`)) return;
     setAlchemyError("");
     setPrismaticCraftLoading(true);
     setPrismaticCraftResult(null);
@@ -3527,7 +3532,7 @@ function CardsContent() {
                   {alchemySubTab === "bench" && (
                   <>
                   <p className="text-sm text-white/60 mb-4">
-                    Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Same type only. Forge tab: Prismatic crafting.
+                    Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Prismatic and Dark Matter upgrades are Forge-only (with Prisms). Same type only.
                   </p>
                   <div className={`flex items-center gap-4 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
@@ -3576,10 +3581,10 @@ function CardsContent() {
                     </div>
                     </div>
                     <div className="w-[220px] shrink-0 flex flex-col items-end justify-center gap-2">
-                      {alchemyBenchType === "foil" && alchemyBenchCards.length > 0 ? (
+                      {alchemyBenchType === "foil" && alchemyBenchCards.filter((c) => (c.finish ?? (c.isFoil ? "holo" : "normal")) === "holo").length > 0 ? (
                         <>
                           <span className="text-xs text-white/50 text-right">
-                            Holo → Remove Holo from all for {alchemyBenchCards.reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
+                            Holo → Remove Holo from all for {alchemyBenchCards.filter((c) => (c.finish ?? (c.isFoil ? "holo" : "normal")) === "holo").reduce((sum, c) => sum + getDustForRarity(c.rarity), 0)} Stardust
                           </span>
                           <button
                             onClick={() => handleAlchemyDisenchantAll()}
@@ -3592,15 +3597,22 @@ function CardsContent() {
                       ) : alchemyBenchType === "normal" && alchemyBenchCards.length > 0 ? (
                         <>
                           <span className="text-xs text-white/50 text-right">
-                            Normal → Pack-A-Punch all ({alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)} Stardust)
+                            Normal → Pack-A-Punch all ({alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity, alchemySettings ?? undefined), 0)} Stardust)
                           </span>
                           <button
                             onClick={() => handleAlchemyPackAPunchAll()}
-                            disabled={alchemyPunchingId === "_all" || stardust < alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity), 0)}
+                            disabled={alchemyPunchingId === "_all" || stardust < alchemyBenchCards.reduce((sum, c) => sum + getPackAPunchCost(c.rarity, alchemySettings ?? undefined), 0)}
                             className="px-5 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/15 text-purple-300 font-semibold hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {alchemyPunchingId === "_all" ? <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin inline-block" /> : "Pack-A-Punch all"}
                           </button>
+                          <span className="text-xs font-semibold text-purple-300/95 text-right">
+                            Success: {[...new Set(alchemyBenchCards.map((c) => c.rarity))].sort((a, b) => ["uncommon", "rare", "epic", "legendary"].indexOf(a) - ["uncommon", "rare", "epic", "legendary"].indexOf(b)).map((r) => {
+                              const pct = typeof alchemySettings?.holoUpgradeChance === "number" ? alchemySettings.holoUpgradeChance : (alchemySettings?.holoUpgradeChance as Record<string, number>|undefined)?.[r] ?? 50;
+                              const label = r === "uncommon" ? "UC" : r === "rare" ? "R" : r === "epic" ? "E" : "L";
+                              return `${label} ${pct}%`;
+                            }).join(" · ")}
+                          </span>
                         </>
                       ) : (
                         <span className="text-xs text-white/40 text-right">Add cards from inventory below. Holos or normals only (same type).</span>
@@ -3690,12 +3702,12 @@ function CardsContent() {
                                   Prisms: {prismaticCraftPrisms}
                                 </span>
                                 <span className="text-xs text-cyan-300/70 text-right">
-                                  Success: {Math.min(100, alchemySettings.prismaticCraftBaseChance + prismaticCraftPrisms * alchemySettings.prismaticCraftChancePerPrism)}%
+                                  Success: {Math.min(100, (alchemySettings.prismaticCraftBaseChance ?? 5) + prismaticCraftPrisms * (alchemySettings.prismaticCraftChancePerPrism ?? 10))}%
                                 </span>
                                 <input
                                   type="range"
                                   min={1}
-                                  max={Math.min(alchemySettings.prismaticCraftMaxPrisms, prisms || 1)}
+                                  max={Math.min(alchemySettings.prismaticCraftMaxPrisms ?? 10, prisms || 1)}
                                   value={prismaticCraftPrisms}
                                   onChange={(e) => setPrismaticCraftPrisms(Number(e.target.value))}
                                   className="w-full accent-cyan-500"
@@ -3931,7 +3943,7 @@ function CardsContent() {
                 const canAddPrismaticForge = !inTrade && prismaticForgeUnlocked && inventorySubTab === "alchemy" && alchemySubTab === "forge" && !myListedCardIds.has(card.id!) && !onAlchemyBench && !onPrismaticForge && !prismaticCraftCardId && card.isFoil && (card.rarity === "epic" || card.rarity === "legendary") && cardFinish !== "prismatic" && cardFinish !== "darkMatter";
                 const canAddTradeUp = !inTrade && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
                 const canAddReroll = !inTrade && inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
-                const canAddAlchemy = !inTrade && inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && card.isFoil) || (alchemyBenchType === "normal" && !card.isFoil));
+                const canAddAlchemy = !inTrade && inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!card.isFoil || (card.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && card.isFoil && (card.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !card.isFoil));
                 const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
                 const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && !canAddPrismaticForge && !onPrismaticForge && inventorySubTab === "alchemy";
@@ -4045,7 +4057,7 @@ function CardsContent() {
                         const finish = c.finish ?? (c.isFoil ? "holo" : "normal");
                         if (!prismaticCraftCardId && c.isFoil && (c.rarity === "epic" || c.rarity === "legendary") && finish !== "prismatic" && finish !== "darkMatter") return { card: c, target: "alchemy" };
                       } else {
-                        if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && (alchemyBenchType === null || (alchemyBenchType === "foil" && c.isFoil) || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
+                        if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!c.isFoil || (c.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && c.isFoil && (c.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
                       }
                     } else if (inventorySubTab === "quicksell") {
                       if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return { card: c, target: "quicksell" };

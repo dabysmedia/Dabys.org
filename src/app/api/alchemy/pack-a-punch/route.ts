@@ -7,8 +7,6 @@ import {
   getStardust,
   getListings,
   getCardFinish,
-  nextFinishTier,
-  CARD_FINISH_LABELS,
   getAlchemySettings,
 } from "@/lib/data";
 import type { CardFinish } from "@/lib/data";
@@ -39,13 +37,13 @@ export async function POST(request: Request) {
   }
 
   const currentFinish = getCardFinish(card);
-  const targetFinish = nextFinishTier(currentFinish);
-  if (!targetFinish) {
+  if (currentFinish !== "normal") {
     return NextResponse.json(
-      { error: `Card is already at maximum tier (${CARD_FINISH_LABELS[currentFinish]})` },
+      { error: "Pack-A-Punch only upgrades Normal→Holo. Prismatic and Dark Matter upgrades require the Forge with Prisms." },
       { status: 400 }
     );
   }
+  const targetFinish = "holo" as CardFinish;
 
   const listings = getListings();
   const isListed = listings.some((l) => l.cardId === cardId);
@@ -56,7 +54,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const cost = getUpgradeCost(card.rarity, targetFinish);
+  const settings = getAlchemySettings();
+  const cost = getUpgradeCost(card.rarity, targetFinish, settings);
   const balance = getStardust(userId);
   if (balance < cost) {
     return NextResponse.json(
@@ -75,8 +74,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const settings = getAlchemySettings();
-  const successChance = getUpgradeSuccessChance(targetFinish, settings);
+  const successChance = getUpgradeSuccessChance(targetFinish, settings, card.rarity);
   const success = Math.random() < successChance;
   if (success) {
     const updates: { isFoil: boolean; finish: CardFinish } = {

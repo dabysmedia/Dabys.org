@@ -320,9 +320,20 @@ export default function AdminCardsCreditsPage() {
     prismaticCraftMaxPrisms: "10",
     prismaticCraftFailureStardust: "25",
     epicHoloForgePrisms: "1",
-    holoUpgradeChance: "50",
+    holoUpgradeChanceUncommon: "50",
+    holoUpgradeChanceRare: "50",
+    holoUpgradeChanceEpic: "50",
+    holoUpgradeChanceLegendary: "50",
     prismaticUpgradeChance: "35",
     darkMatterUpgradeChance: "20",
+    disenchantHoloUncommon: "10",
+    disenchantHoloRare: "20",
+    disenchantHoloEpic: "30",
+    disenchantHoloLegendary: "50",
+    packAPunchCostUncommon: "30",
+    packAPunchCostRare: "60",
+    packAPunchCostEpic: "90",
+    packAPunchCostLegendary: "120",
   });
   const [savingAlchemySettings, setSavingAlchemySettings] = useState(false);
   const [alchemySettingsLoading, setAlchemySettingsLoading] = useState(true);
@@ -496,6 +507,8 @@ export default function AdminCardsCreditsPage() {
       const res = await fetch("/api/admin/alchemy-settings");
       if (res.ok) {
         const d = await res.json();
+        const dh = d.disenchantHolo ?? {};
+        const pap = d.packAPunchCost ?? {};
         setAlchemySettingsForm({
           prismTransmuteEpicHoloCount: String(d.prismTransmuteEpicHoloCount ?? 3),
           prismTransmuteSuccessChance: String(d.prismTransmuteSuccessChance ?? 50),
@@ -505,9 +518,20 @@ export default function AdminCardsCreditsPage() {
           prismaticCraftMaxPrisms: String(d.prismaticCraftMaxPrisms ?? 10),
           prismaticCraftFailureStardust: String(d.prismaticCraftFailureStardust ?? 25),
           epicHoloForgePrisms: String(d.epicHoloForgePrisms ?? 1),
-          holoUpgradeChance: String(d.holoUpgradeChance ?? 50),
+          holoUpgradeChanceUncommon: String((typeof d.holoUpgradeChance === "object" && d.holoUpgradeChance ? d.holoUpgradeChance.uncommon : typeof d.holoUpgradeChance === "number" ? d.holoUpgradeChance : 50)),
+          holoUpgradeChanceRare: String((typeof d.holoUpgradeChance === "object" && d.holoUpgradeChance ? d.holoUpgradeChance.rare : typeof d.holoUpgradeChance === "number" ? d.holoUpgradeChance : 50)),
+          holoUpgradeChanceEpic: String((typeof d.holoUpgradeChance === "object" && d.holoUpgradeChance ? d.holoUpgradeChance.epic : typeof d.holoUpgradeChance === "number" ? d.holoUpgradeChance : 50)),
+          holoUpgradeChanceLegendary: String((typeof d.holoUpgradeChance === "object" && d.holoUpgradeChance ? d.holoUpgradeChance.legendary : typeof d.holoUpgradeChance === "number" ? d.holoUpgradeChance : 50)),
           prismaticUpgradeChance: String(d.prismaticUpgradeChance ?? 35),
           darkMatterUpgradeChance: String(d.darkMatterUpgradeChance ?? 20),
+          disenchantHoloUncommon: String(dh.uncommon ?? 10),
+          disenchantHoloRare: String(dh.rare ?? 20),
+          disenchantHoloEpic: String(dh.epic ?? 30),
+          disenchantHoloLegendary: String(dh.legendary ?? 50),
+          packAPunchCostUncommon: String(pap.uncommon ?? 30),
+          packAPunchCostRare: String(pap.rare ?? 60),
+          packAPunchCostEpic: String(pap.epic ?? 90),
+          packAPunchCostLegendary: String(pap.legendary ?? 120),
         });
       }
     } catch {
@@ -926,9 +950,26 @@ export default function AdminCardsCreditsPage() {
         prismaticCraftMaxPrisms: parseInt(alchemySettingsForm.prismaticCraftMaxPrisms, 10) || 10,
         prismaticCraftFailureStardust: parseInt(alchemySettingsForm.prismaticCraftFailureStardust, 10) || 25,
         epicHoloForgePrisms: parseInt(alchemySettingsForm.epicHoloForgePrisms, 10) || 1,
-        holoUpgradeChance: parseFloat(alchemySettingsForm.holoUpgradeChance) || 50,
+        holoUpgradeChance: {
+          uncommon: parseFloat(alchemySettingsForm.holoUpgradeChanceUncommon) || 50,
+          rare: parseFloat(alchemySettingsForm.holoUpgradeChanceRare) || 50,
+          epic: parseFloat(alchemySettingsForm.holoUpgradeChanceEpic) || 50,
+          legendary: parseFloat(alchemySettingsForm.holoUpgradeChanceLegendary) || 50,
+        },
         prismaticUpgradeChance: parseFloat(alchemySettingsForm.prismaticUpgradeChance) || 35,
         darkMatterUpgradeChance: parseFloat(alchemySettingsForm.darkMatterUpgradeChance) || 20,
+        disenchantHolo: {
+          uncommon: parseInt(alchemySettingsForm.disenchantHoloUncommon, 10) || 10,
+          rare: parseInt(alchemySettingsForm.disenchantHoloRare, 10) || 20,
+          epic: parseInt(alchemySettingsForm.disenchantHoloEpic, 10) || 30,
+          legendary: parseInt(alchemySettingsForm.disenchantHoloLegendary, 10) || 50,
+        },
+        packAPunchCost: {
+          uncommon: parseInt(alchemySettingsForm.packAPunchCostUncommon, 10) || 30,
+          rare: parseInt(alchemySettingsForm.packAPunchCostRare, 10) || 60,
+          epic: parseInt(alchemySettingsForm.packAPunchCostEpic, 10) || 90,
+          legendary: parseInt(alchemySettingsForm.packAPunchCostLegendary, 10) || 120,
+        },
       };
       const res = await fetch("/api/admin/alchemy-settings", {
         method: "PUT",
@@ -2445,9 +2486,8 @@ export default function AdminCardsCreditsPage() {
         {alchemySettingsLoading ? ( <div className="flex items-center gap-2 text-sm text-white/50"><div className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />Loading...</div> ) : (
           <form onSubmit={handleSaveAlchemySettings} className="space-y-5">
             <div>
-              <span className="text-xs text-white/50 font-medium block mb-2">Pack-A-Punch / Upgrade Success Chances</span>
+              <span className="text-xs text-white/50 font-medium block mb-2">Upgrade Success Chances (Forge only)</span>
               <div className="flex flex-wrap gap-4">
-                <div><label className="block text-[11px] text-white/40 mb-1">Holo upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
                 <div><label className="block text-[11px] text-white/40 mb-1">Prismatic upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
                 <div><label className="block text-[11px] text-white/40 mb-1">Dark Matter upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.darkMatterUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, darkMatterUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
               </div>
@@ -2470,6 +2510,39 @@ export default function AdminCardsCreditsPage() {
                 <div><label className="block text-[11px] text-white/40 mb-1">Epic Holo forge prisms</label><input type="number" min={0} max={100} value={alchemySettingsForm.epicHoloForgePrisms} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, epicHoloForgePrisms: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
               </div>
               <p className="text-[10px] text-white/30 mt-2">Chance = base + (prisms applied × per-prism). Epic Holo in forge = disenchant for prisms; only Legendary Holo can be crafted to Prismatic.</p>
+            </div>
+            <div className="border-t border-white/[0.06] pt-4">
+              <span className="text-xs text-white/50 font-medium block mb-2">Stardust / Alchemy Bench Values</span>
+              <p className="text-[10px] text-white/30 mb-3">Stardust from disenchanting Holo by rarity; Stardust cost for Pack-A-Punch (Normal→Holo). Prismatic and Dark Matter upgrades are Forge-only with Prisms.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <span className="text-[11px] text-cyan-400/80 font-medium">Disenchant Holo</span>
+                  <div className="flex flex-wrap gap-2">
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">UC</label><input type="number" min={0} max={10000} value={alchemySettingsForm.disenchantHoloUncommon} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, disenchantHoloUncommon: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">R</label><input type="number" min={0} max={10000} value={alchemySettingsForm.disenchantHoloRare} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, disenchantHoloRare: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">E</label><input type="number" min={0} max={10000} value={alchemySettingsForm.disenchantHoloEpic} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, disenchantHoloEpic: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">L</label><input type="number" min={0} max={10000} value={alchemySettingsForm.disenchantHoloLegendary} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, disenchantHoloLegendary: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-[11px] text-amber-400/80 font-medium">Pack-A-Punch cost</span>
+                  <div className="flex flex-wrap gap-2">
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">UC</label><input type="number" min={0} max={10000} value={alchemySettingsForm.packAPunchCostUncommon} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, packAPunchCostUncommon: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">R</label><input type="number" min={0} max={10000} value={alchemySettingsForm.packAPunchCostRare} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, packAPunchCostRare: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">E</label><input type="number" min={0} max={10000} value={alchemySettingsForm.packAPunchCostEpic} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, packAPunchCostEpic: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">L</label><input type="number" min={0} max={10000} value={alchemySettingsForm.packAPunchCostLegendary} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, packAPunchCostLegendary: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-[11px] text-amber-400/80 font-medium">Pack-A-Punch success %</span>
+                  <div className="flex flex-wrap gap-2">
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">UC</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChanceUncommon} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChanceUncommon: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">R</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChanceRare} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChanceRare: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">E</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChanceEpic} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChanceEpic: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                    <div><label className="block text-[10px] text-white/40 mb-0.5">L</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.holoUpgradeChanceLegendary} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, holoUpgradeChanceLegendary: e.target.value }))} className="w-14 px-1.5 py-1 rounded bg-white/[0.06] border border-white/[0.08] text-white/90 text-xs outline-none focus:border-cyan-500/40" /></div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex items-end pt-2"><button type="submit" disabled={savingAlchemySettings} className="px-5 py-2.5 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-40 cursor-pointer">{savingAlchemySettings ? "Saving..." : "Save Alchemy Settings"}</button></div>
           </form>

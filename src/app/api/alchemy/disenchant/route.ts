@@ -6,6 +6,7 @@ import {
   getStardust,
   getListings,
   getCardFinish,
+  getAlchemySettings,
   CARD_FINISH_LABELS,
 } from "@/lib/data";
 import { getDisenchantDust } from "@/lib/alchemy";
@@ -35,9 +36,9 @@ export async function POST(request: Request) {
   }
 
   const finish = getCardFinish(card);
-  if (finish === "normal") {
+  if (finish !== "holo") {
     return NextResponse.json(
-      { error: "Only enhanced cards (Holo, Prismatic, Dark Matter) can be disenchanted" },
+      { error: "Only Holo cards can be disenchanted. Prismatic and Dark Matter cannot be disenchanted." },
       { status: 400 }
     );
   }
@@ -51,7 +52,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const amount = getDisenchantDust(card.rarity, finish);
+  const settings = getAlchemySettings();
+  const amount = getDisenchantDust(card.rarity, finish, settings);
   if (amount <= 0) {
     return NextResponse.json(
       { error: "Invalid rarity for disenchant" },

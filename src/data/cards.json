@@ -1,1 +1,77 @@
-[]
+[
+  {
+    "userId": "2",
+    "characterId": "actor-1158-111",
+    "rarity": "uncommon",
+    "isFoil": false,
+    "finish": "normal",
+    "actorName": "Al Pacino",
+    "characterName": "Tony Montana",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/m8HAAjq1T75JypKk0v1FFQn4ysZ.jpg",
+    "cardType": "actor",
+    "id": "card-1771462489933-pdkdcbq",
+    "acquiredAt": "2026-02-19T00:54:49.933Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1158-111",
+    "rarity": "uncommon",
+    "isFoil": true,
+    "finish": "holo",
+    "actorName": "Al Pacino",
+    "characterName": "Tony Montana",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/m8HAAjq1T75JypKk0v1FFQn4ysZ.jpg",
+    "cardType": "actor",
+    "id": "card-1771462493814-eswz6vx",
+    "acquiredAt": "2026-02-19T00:54:53.814Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": false,
+    "finish": "normal",
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1771462495726-9yootmo",
+    "acquiredAt": "2026-02-19T00:54:55.726Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1162-111",
+    "rarity": "rare",
+    "isFoil": false,
+    "finish": "normal",
+    "actorName": "Robert Loggia",
+    "characterName": "Frank Lopez",
+    "movieTitle": "Scarface",
+    "movieTmdbId": 111,
+    "profilePath": "https://image.tmdb.org/t/p/w500/mRSUgJnfprCNw83pyVfpfW7ryfK.jpg",
+    "cardType": "actor",
+    "id": "card-1771462497448-raxtryc",
+    "acquiredAt": "2026-02-19T00:54:57.448Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "custom-1770869738689-jilnomh",
+    "rarity": "epic",
+    "isFoil": false,
+    "finish": "normal",
+    "actorName": "alt art nacho",
+    "characterName": "Unknown",
+    "movieTitle": "Nacho Libre",
+    "movieTmdbId": 9353,
+    "profilePath": "https://image.tmdb.org/t/p/w500/59IhgCtiWI5yTfzPhsjzg7GjCjm.jpg",
+    "cardType": "actor",
+    "id": "card-1771462504732-t8lta6b",
+    "acquiredAt": "2026-02-19T00:55:04.732Z"
+  }
+]

@@ -938,6 +938,15 @@ export function setPrisms(userId: string, balance: number): void {
 }
 
 // ──── Alchemy Settings (admin-configurable) ──────────────
+/** Stardust values per rarity (uncommon, rare, epic, legendary) */
+export interface AlchemyStardustRarity {
+  uncommon: number;
+  rare: number;
+  epic: number;
+  legendary: number;
+  [key: string]: number;
+}
+
 export interface AlchemySettings {
   /** Number of epic holo cards required for prism transmute */
   prismTransmuteEpicHoloCount: number;
@@ -955,13 +964,21 @@ export interface AlchemySettings {
   prismaticCraftFailureStardust: number;
   /** Prisms awarded when disenchanting one Epic Holo in the forge */
   epicHoloForgePrisms: number;
-  /** Pack-A-Punch (normal→holo) success chance (0–100) */
-  holoUpgradeChance: number;
+  /** Pack-A-Punch (normal→holo) success chance (0–100) per rarity */
+  holoUpgradeChance: AlchemyStardustRarity;
   /** Holo→Prismatic upgrade success chance (0–100) */
   prismaticUpgradeChance: number;
   /** Prismatic→Dark Matter upgrade success chance (0–100) */
   darkMatterUpgradeChance: number;
+  /** Stardust from disenchanting Holo by rarity (only Holo can be disenchanted) */
+  disenchantHolo: AlchemyStardustRarity;
+  /** Stardust cost for Pack-A-Punch (normal→holo) by rarity */
+  packAPunchCost: AlchemyStardustRarity;
 }
+
+const DEFAULT_STARDUST_HOLO: AlchemyStardustRarity = { uncommon: 10, rare: 20, epic: 30, legendary: 50 };
+const DEFAULT_PACK_A_PUNCH: AlchemyStardustRarity = { uncommon: 30, rare: 60, epic: 90, legendary: 120 };
+const DEFAULT_HOLO_UPGRADE_CHANCE: AlchemyStardustRarity = { uncommon: 50, rare: 50, epic: 50, legendary: 50 };
 
 const DEFAULT_ALCHEMY_SETTINGS: AlchemySettings = {
   prismTransmuteEpicHoloCount: 3,
@@ -972,15 +989,38 @@ const DEFAULT_ALCHEMY_SETTINGS: AlchemySettings = {
   prismaticCraftMaxPrisms: 10,
   prismaticCraftFailureStardust: 25,
   epicHoloForgePrisms: 1,
-  holoUpgradeChance: 50,
+  holoUpgradeChance: DEFAULT_HOLO_UPGRADE_CHANCE,
   prismaticUpgradeChance: 35,
   darkMatterUpgradeChance: 20,
+  disenchantHolo: DEFAULT_STARDUST_HOLO,
+  packAPunchCost: DEFAULT_PACK_A_PUNCH,
 };
+
+function mergeStardustRarity(
+  def: AlchemyStardustRarity,
+  raw: Partial<AlchemyStardustRarity> | undefined
+): AlchemyStardustRarity {
+  if (!raw || typeof raw !== "object") return def;
+  return {
+    uncommon: typeof raw.uncommon === "number" ? raw.uncommon : def.uncommon,
+    rare: typeof raw.rare === "number" ? raw.rare : def.rare,
+    epic: typeof raw.epic === "number" ? raw.epic : def.epic,
+    legendary: typeof raw.legendary === "number" ? raw.legendary : def.legendary,
+  };
+}
 
 export function getAlchemySettings(): AlchemySettings {
   try {
     const raw = readJson<Partial<AlchemySettings>>("alchemySettings.json");
-    return { ...DEFAULT_ALCHEMY_SETTINGS, ...raw };
+    const merged = { ...DEFAULT_ALCHEMY_SETTINGS, ...raw };
+    merged.disenchantHolo = mergeStardustRarity(DEFAULT_STARDUST_HOLO, raw.disenchantHolo);
+    merged.packAPunchCost = mergeStardustRarity(DEFAULT_PACK_A_PUNCH, raw.packAPunchCost);
+    if (typeof raw.holoUpgradeChance === "number") {
+      merged.holoUpgradeChance = { uncommon: raw.holoUpgradeChance, rare: raw.holoUpgradeChance, epic: raw.holoUpgradeChance, legendary: raw.holoUpgradeChance };
+    } else {
+      merged.holoUpgradeChance = mergeStardustRarity(DEFAULT_HOLO_UPGRADE_CHANCE, raw.holoUpgradeChance);
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_ALCHEMY_SETTINGS };
   }
