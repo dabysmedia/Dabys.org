@@ -1064,6 +1064,57 @@ export function nextFinishTier(current: CardFinish): CardFinish | null {
 // ──── Card Types (multi-type pool) ───────────────────────
 export type CardType = "actor" | "director" | "character" | "scene";
 
+export interface CustomCardType {
+  id: string;
+  label: string;
+}
+
+const CUSTOM_CARD_TYPES_FILE = "customCardTypes.json";
+
+function getCustomCardTypesRaw(): CustomCardType[] {
+  try {
+    return readJson<CustomCardType[]>(CUSTOM_CARD_TYPES_FILE);
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCardTypesRaw(types: CustomCardType[]) {
+  writeJson(CUSTOM_CARD_TYPES_FILE, types);
+}
+
+export function getCustomCardTypes(): CustomCardType[] {
+  return getCustomCardTypesRaw();
+}
+
+/** All card type IDs (base + custom) for validation. */
+export function getAllowedCardTypeIds(): string[] {
+  const base: CardType[] = ["actor", "director", "character", "scene"];
+  const custom = getCustomCardTypesRaw().map((t) => t.id);
+  return [...base, ...custom];
+}
+
+export function addCustomCardType(id: string, label: string): CustomCardType | null {
+  const idNorm = id.trim().toLowerCase().replace(/\s+/g, "-");
+  if (!idNorm || /[^a-z0-9-]/.test(idNorm)) return null;
+  const existing = getCustomCardTypesRaw();
+  if (existing.some((t) => t.id === idNorm)) return null;
+  const base: CardType[] = ["actor", "director", "character", "scene"];
+  if (base.includes(idNorm as CardType)) return null;
+  const entry: CustomCardType = { id: idNorm, label: label.trim() || idNorm };
+  existing.push(entry);
+  saveCustomCardTypesRaw(existing);
+  return entry;
+}
+
+export function removeCustomCardType(id: string): boolean {
+  const existing = getCustomCardTypesRaw();
+  const filtered = existing.filter((t) => t.id !== id);
+  if (filtered.length === existing.length) return false;
+  saveCustomCardTypesRaw(filtered);
+  return true;
+}
+
 // ──── Character Pool (TCG: actor as character in movie) ──
 export interface CharacterPortrayal {
   characterId: string;
@@ -1075,7 +1126,7 @@ export interface CharacterPortrayal {
   movieTitle: string;
   popularity: number;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
-  cardType?: CardType; // optional for migration; defaults to "actor"
+  cardType?: CardType | string; // optional for migration; defaults to "actor". string for custom types.
   /** When set, this pool entry is an alt-art; owning a card with this characterId counts as owning this character for set completion. */
   altArtOfCharacterId?: string;
   /** For Boys (cardType "character"): custom set name to group by in codex instead of movie. */
@@ -1096,7 +1147,7 @@ export interface Card {
   movieTmdbId: number;
   profilePath: string;
   acquiredAt: string;
-  cardType?: CardType; // optional for migration; defaults to "actor"
+  cardType?: CardType | string; // optional for migration; defaults to "actor". string for custom types.
 }
 
 function getCharacterPoolRaw(): CharacterPortrayal[] {
@@ -1146,7 +1197,7 @@ function saveCardsRaw(cards: Card[]) {
   writeJson("cards.json", cards);
 }
 
-function withDefaultCardType<T extends { cardType?: CardType }>(entry: T): T & { cardType: CardType } {
+function withDefaultCardType<T extends { cardType?: CardType | string }>(entry: T): T & { cardType: CardType | string } {
   return { ...entry, cardType: entry.cardType ?? "actor" };
 }
 
@@ -2436,8 +2487,8 @@ export interface Pack {
   cardsPerPack: number;
   /** Allowed rarities for cards in this pack. Empty = all rarities. */
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
-  /** Allowed card types for this pack. Empty = all card types. */
-  allowedCardTypes: CardType[];
+  /** Allowed card types for this pack. Empty = all card types. Includes custom types. */
+  allowedCardTypes: (CardType | string)[];
   isActive: boolean;
   /** Max purchases per user per restock window. Omit or 0 = no limit. */
   maxPurchasesPerDay?: number;
@@ -2497,7 +2548,7 @@ export function getPacks(): Pack[] {
     "epic",
     "legendary",
   ];
-  const ALL_CARD_TYPES: CardType[] = ["actor", "director", "character", "scene"];
+  const ALL_CARD_TYPE_IDS = getAllowedCardTypeIds();
 
   return packs.map((p) => ({
     ...p,
@@ -2508,8 +2559,8 @@ export function getPacks(): Pack[] {
         : ALL_RARITIES,
     allowedCardTypes:
       Array.isArray(p.allowedCardTypes) && p.allowedCardTypes.length > 0
-        ? (p.allowedCardTypes.filter((t) => ALL_CARD_TYPES.includes(t)) as Pack["allowedCardTypes"])
-        : ALL_CARD_TYPES,
+        ? (p.allowedCardTypes.filter((t) => ALL_CARD_TYPE_IDS.includes(String(t))) as Pack["allowedCardTypes"])
+        : (ALL_CARD_TYPE_IDS as Pack["allowedCardTypes"]),
     isActive: typeof p.isActive === "boolean" ? p.isActive : true,
     maxPurchasesPerDay:
       typeof (p as Pack).maxPurchasesPerDay === "number" && (p as Pack).maxPurchasesPerDay! > 0
@@ -2568,7 +2619,7 @@ export function upsertPack(
 
   const id = input.id || `pack-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const ALL_RARITIES: Pack["allowedRarities"] = ["uncommon", "rare", "epic", "legendary"];
-  const ALL_CARD_TYPES: Pack["allowedCardTypes"] = ["actor", "director", "character", "scene"];
+  const ALL_CARD_TYPE_IDS = getAllowedCardTypeIds() as Pack["allowedCardTypes"];
   const newPack: Pack = {
     id,
     name: input.name,
@@ -2581,8 +2632,8 @@ export function upsertPack(
         : ALL_RARITIES,
     allowedCardTypes:
       Array.isArray(input.allowedCardTypes) && input.allowedCardTypes.length > 0
-        ? (input.allowedCardTypes as Pack["allowedCardTypes"])
-        : ALL_CARD_TYPES,
+        ? (input.allowedCardTypes.filter((t) => getAllowedCardTypeIds().includes(String(t))) as Pack["allowedCardTypes"])
+        : ALL_CARD_TYPE_IDS,
     isActive: typeof input.isActive === "boolean" ? input.isActive : true,
     maxPurchasesPerDay:
       typeof (input as Pack).maxPurchasesPerDay === "number" && (input as Pack).maxPurchasesPerDay! > 0

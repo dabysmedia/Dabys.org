@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry, addPendingPoolEntry } from "@/lib/data";
+import { getCharacterPool, saveCharacterPool, getPendingPool, getWinners, migrateCommonToUncommon, updateCardsByCharacterId, updatePendingPoolEntry, removePendingPoolEntry, addPendingPoolEntry, getAllowedCardTypeIds, getCustomCardTypes } from "@/lib/data";
 import { cleanupGenericPoolEntries } from "@/lib/cards";
 import type { CardType, CharacterPortrayal } from "@/lib/data";
 
@@ -27,7 +27,8 @@ export async function GET(request: Request) {
 
   const pool = getCharacterPool();
   const pendingByWinner = getPendingPool();
-  return NextResponse.json({ pool, pendingByWinner });
+  const customCardTypes = getCustomCardTypes();
+  return NextResponse.json({ pool, pendingByWinner, customCardTypes });
 }
 
 export async function POST(request: Request) {
@@ -40,7 +41,8 @@ export async function POST(request: Request) {
   const profilePath = (body.profilePath as string)?.trim();
   const winnerId = (body.winnerId as string)?.trim();
   const rarity = ["uncommon", "rare", "epic", "legendary"].includes(body.rarity) ? body.rarity : "uncommon";
-  const cardType: CardType = ["actor", "director", "character", "scene"].includes(body.cardType) ? body.cardType : "actor";
+  const allowedIds = getAllowedCardTypeIds();
+  const cardType = typeof body.cardType === "string" && allowedIds.includes(body.cardType) ? body.cardType : "actor";
   const altArtOfCharacterId =
     typeof body.altArtOfCharacterId === "string" && body.altArtOfCharacterId.trim() !== ""
       ? body.altArtOfCharacterId.trim()
@@ -56,9 +58,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  // Boys cards (cardType "character") do not require a winner/movie link
-  const isBoysCard = cardType === "character";
-  if (!isBoysCard && !winnerId) {
+  // Boys (character) and custom pool types do not require a winner/movie link
+  const isCustomPoolType = cardType === "character" || getCustomCardTypes().some((t) => t.id === cardType);
+  if (!isCustomPoolType && !winnerId) {
     return NextResponse.json(
       { error: "winnerId is required (select a winner/movie)" },
       { status: 400 }
@@ -67,9 +69,9 @@ export async function POST(request: Request) {
 
   let movieTmdbId: number;
   let movieTitle: string;
-  if (isBoysCard && !winnerId) {
+  if (isCustomPoolType && !winnerId) {
     movieTmdbId = 0;
-    movieTitle = (body.movieTitle as string)?.trim() || "Boys";
+    movieTitle = (body.movieTitle as string)?.trim() || (cardType === "character" ? "Boys" : cardType);
   } else {
     const winners = getWinners();
     const winner = winners.find((w) => w.id === winnerId);
@@ -92,19 +94,12 @@ export async function POST(request: Request) {
     rarity,
     cardType,
     ...(altArtOfCharacterId != null && { altArtOfCharacterId }),
-    ...(isBoysCard && customSetId != null && { customSetId }),
+    ...(isCustomPoolType && customSetId != null && { customSetId }),
   };
 
-  const addToPending = body.addToPending === true && body.winnerId;
-  if (addToPending) {
-    const winnerIdForPending = (body.winnerId as string).trim();
-    addPendingPoolEntry(winnerIdForPending, newEntry);
-    return NextResponse.json(newEntry, { status: 201 });
-  }
-
-  const pool = getCharacterPool();
-  pool.push(newEntry);
-  saveCharacterPool(pool);
+  // Always add to pending first; admin pushes to pool when ready
+  const bucketKey = isCustomPoolType ? cardType : winnerId;
+  addPendingPoolEntry(bucketKey, newEntry);
   return NextResponse.json(newEntry, { status: 201 });
 }
 
@@ -127,7 +122,7 @@ export async function PATCH(request: Request) {
   if (typeof body.movieTmdbId === "number") updates.movieTmdbId = body.movieTmdbId;
   else if (body.movieTmdbId !== undefined) updates.movieTmdbId = parseInt(String(body.movieTmdbId), 10) || 0;
   if (["uncommon", "rare", "epic", "legendary"].includes(body.rarity)) updates.rarity = body.rarity as CharacterPortrayal["rarity"];
-  if (["actor", "director", "character", "scene"].includes(body.cardType)) updates.cardType = body.cardType as CardType;
+  if (typeof body.cardType === "string" && getAllowedCardTypeIds().includes(body.cardType)) updates.cardType = body.cardType as CharacterPortrayal["cardType"];
   if (typeof body.popularity === "number") updates.popularity = body.popularity;
   if (body.altArtOfCharacterId !== undefined) {
     updates.altArtOfCharacterId =

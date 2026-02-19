@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { pushPendingToPool, getWinners, addGlobalNotification } from "@/lib/data";
+import { pushPendingToPool, getWinners, getCustomCardTypes, addGlobalNotification } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -11,27 +11,34 @@ async function requireAdmin() {
   return null;
 }
 
+function getBucketDisplayName(bucketKey: string): string {
+  const winners = getWinners();
+  const winner = winners.find((w) => w.id === bucketKey);
+  if (winner) return winner.movieTitle ?? "a movie";
+  if (bucketKey === "character") return "Boys";
+  const custom = getCustomCardTypes().find((t) => t.id === bucketKey);
+  return custom?.label ?? bucketKey;
+}
+
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if (auth) return auth;
 
   const body = await request.json().catch(() => ({}));
-  const winnerId = typeof body.winnerId === "string" ? body.winnerId.trim() : "";
-  if (!winnerId) {
+  const bucketKey = (typeof body.winnerId === "string" ? body.winnerId : body.bucketKey)?.trim() ?? "";
+  if (!bucketKey) {
     return NextResponse.json({ error: "winnerId is required" }, { status: 400 });
   }
 
-  const pushed = pushPendingToPool(winnerId);
+  const pushed = pushPendingToPool(bucketKey);
 
   // Notify everyone about the new set
   if (pushed > 0) {
-    const winners = getWinners();
-    const winner = winners.find((w) => w.id === winnerId);
-    const movieTitle = winner?.movieTitle || "a movie";
+    const displayName = getBucketDisplayName(bucketKey);
     addGlobalNotification({
       type: "new_set_added",
-      message: `New set added to the pool: ${movieTitle} (${pushed} card${pushed !== 1 ? "s" : ""})`,
-      meta: { winnerId, movieTitle, count: pushed },
+      message: `New set added to the pool: ${displayName} (${pushed} card${pushed !== 1 ? "s" : ""})`,
+      meta: { winnerId: bucketKey, movieTitle: displayName, count: pushed },
     });
   }
 

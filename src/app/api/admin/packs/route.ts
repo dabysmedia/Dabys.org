@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getPacks, upsertPack, deletePack } from "@/lib/data";
+import { getPacks, upsertPack, deletePack, getAllowedCardTypeIds } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -62,8 +62,9 @@ export async function POST(request: Request) {
   const allowedRarities = rawAllowedRarities.filter((r: string) =>
     ["uncommon", "rare", "epic", "legendary"].includes(r)
   );
+  const allowedIds = getAllowedCardTypeIds();
   const allowedCardTypes = rawAllowedCardTypes.filter((t: string) =>
-    ["actor", "director", "character", "scene"].includes(t)
+    allowedIds.includes(String(t))
   );
 
   const rawRestockIntervalHours = body.restockIntervalHours;
@@ -200,8 +201,9 @@ export async function PATCH(request: Request) {
   const rawAllowedCardTypes = Array.isArray(body.allowedCardTypes)
     ? body.allowedCardTypes
     : existing.allowedCardTypes;
+  const allowedIds = getAllowedCardTypeIds();
   const allowedCardTypes = rawAllowedCardTypes.filter((t: string) =>
-    ["actor", "director", "character", "scene"].includes(t)
+    allowedIds.includes(String(t))
   );
 
   const isActive =

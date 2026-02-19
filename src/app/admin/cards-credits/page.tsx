@@ -34,13 +34,18 @@ function getFinish(card: { isFoil?: boolean; finish?: CardFinish }): CardFinish 
 
 type CardType = "actor" | "director" | "character" | "scene";
 
+interface CustomCardType {
+  id: string;
+  label: string;
+}
+
 interface CharacterPortrayal {
   characterId: string;
   actorName: string;
   characterName: string;
   movieTitle: string;
   rarity: string;
-  cardType?: CardType;
+  cardType?: CardType | string;
   profilePath?: string;
   movieTmdbId?: number;
   altArtOfCharacterId?: string;
@@ -54,7 +59,7 @@ interface Pack {
   price: number;
   cardsPerPack: number;
   allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
-  allowedCardTypes: CardType[];
+  allowedCardTypes: (CardType | string)[];
   isActive: boolean;
   maxPurchasesPerDay?: number;
   isFree?: boolean;
@@ -84,8 +89,10 @@ interface ShopItem {
   order: number;
 }
 
-function cardTypeDisplayLabel(t: CardType): string {
+function cardTypeDisplayLabel(t: string, customTypes?: CustomCardType[]): string {
   if (t === "character") return "Boys";
+  const custom = customTypes?.find((c) => c.id === t);
+  if (custom) return custom.label;
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
@@ -171,6 +178,7 @@ export default function AdminCardsCreditsPage() {
   const [savingStardust, setSavingStardust] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [pool, setPool] = useState<CharacterPortrayal[]>([]);
+  const [customCardTypes, setCustomCardTypes] = useState<CustomCardType[]>([]);
   const [pendingByWinner, setPendingByWinner] = useState<Record<string, CharacterPortrayal[]>>({});
   const [pushingWinnerId, setPushingWinnerId] = useState<string | null>(null);
   const [editingPendingWinnerId, setEditingPendingWinnerId] = useState<string | null>(null);
@@ -192,10 +200,11 @@ export default function AdminCardsCreditsPage() {
   const [customWinnerId, setCustomWinnerId] = useState("");
   const [customProfilePath, setCustomProfilePath] = useState("");
   const [customRarity, setCustomRarity] = useState<"uncommon" | "rare" | "epic" | "legendary">("uncommon");
-  const [customCardType, setCustomCardType] = useState<CardType>("actor");
+  const [customCardType, setCustomCardType] = useState<CardType | string>("actor");
   const [customAltArtOfCharacterId, setCustomAltArtOfCharacterId] = useState("");
   const [customSetId, setCustomSetId] = useState("");
-  const [customAddToPending, setCustomAddToPending] = useState(false);
+  const [customSetSelectOther, setCustomSetSelectOther] = useState(false);
+  const [customSetSelectOtherEdit, setCustomSetSelectOtherEdit] = useState(false);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [editForm, setEditForm] = useState<Partial<Card>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -207,6 +216,11 @@ export default function AdminCardsCreditsPage() {
   const [rebuildConfirmInput, setRebuildConfirmInput] = useState("");
   const [poolSort, setPoolSort] = useState<"rarity" | "movie">("rarity");
   const [poolSortBoys, setPoolSortBoys] = useState<"rarity" | "set">("rarity");
+  const [poolSortCustom, setPoolSortCustom] = useState<"rarity" | "set">("rarity");
+  const [showAddPoolModal, setShowAddPoolModal] = useState(false);
+  const [newPoolTypeId, setNewPoolTypeId] = useState("");
+  const [newPoolTypeLabel, setNewPoolTypeLabel] = useState("");
+  const [addingPoolType, setAddingPoolType] = useState(false);
   const [showImagePickerForAdd, setShowImagePickerForAdd] = useState(false);
   const [showImagePickerForEdit, setShowImagePickerForEdit] = useState(false);
   const [pastingImage, setPastingImage] = useState(false);
@@ -349,7 +363,7 @@ export default function AdminCardsCreditsPage() {
     price: string;
     cardsPerPack: string;
     allowedRarities: ("uncommon" | "rare" | "epic" | "legendary")[];
-    allowedCardTypes: CardType[];
+    allowedCardTypes: (CardType | string)[];
     isActive: boolean;
     maxPurchasesPerDay: string;
     restockIntervalHours: string;
@@ -424,6 +438,17 @@ export default function AdminCardsCreditsPage() {
     return () => document.removeEventListener("paste", handlePaste);
   }, [showImagePickerForAdd, showImagePickerForEdit, showImagePickerForPack, editingPoolEntry]);
 
+  useEffect(() => {
+    if (!editingPoolEntry) {
+      setCustomSetSelectOtherEdit(false);
+      return;
+    }
+    const editCt = editingPoolEntry.cardType ?? "actor";
+    const val = (editingPoolEntry.customSetId ?? "").trim();
+    const existingSets = [...new Set([...pool, ...Object.values(pendingByWinner).flat()].filter((c) => (c.cardType ?? "actor") === editCt && (c.customSetId ?? "").trim()).map((c) => (c.customSetId ?? "").trim()))].filter(Boolean);
+    setCustomSetSelectOtherEdit(!!val && !existingSets.includes(val));
+  }, [editingPoolEntry, pool, pendingByWinner]);
+
   const loadPool = useCallback(async () => {
     setPoolLoading(true);
     try {
@@ -432,6 +457,7 @@ export default function AdminCardsCreditsPage() {
         const d = await res.json();
         setPool(Array.isArray(d) ? d : (d?.pool ?? []));
         setPendingByWinner(d?.pendingByWinner ?? {});
+        setCustomCardTypes(d?.customCardTypes ?? []);
       }
     } catch {
       setError("Failed to load pool");
@@ -1384,10 +1410,11 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
+  const isCustomPoolType = customCardType === "character" || customCardTypes.some((t) => t.id === customCardType);
+
   async function handleAddToPool(e: React.FormEvent) {
     e.preventDefault();
-    const isBoys = customCardType === "character";
-    if (!customActorName.trim() || !customProfilePath.trim() || (!isBoys && !customWinnerId) || addingToPool) return;
+    if (!customActorName.trim() || !customProfilePath.trim() || (!isCustomPoolType && !customWinnerId) || addingToPool) return;
     setAddingToPool(true);
     setError("");
     try {
@@ -1398,12 +1425,11 @@ export default function AdminCardsCreditsPage() {
           actorName: customActorName.trim(),
           characterName: customCharacterName.trim() || "Unknown",
           profilePath: customProfilePath.trim(),
-          ...(customCardType !== "character" && customWinnerId && { winnerId: customWinnerId }),
-          ...(customAddToPending && customWinnerId && { addToPending: true }),
+          ...(!isCustomPoolType && customWinnerId && { winnerId: customWinnerId }),
           rarity: customRarity,
           cardType: customCardType,
           ...(customAltArtOfCharacterId.trim() && { altArtOfCharacterId: customAltArtOfCharacterId.trim() }),
-          ...(customCardType === "character" && customSetId.trim() && { customSetId: customSetId.trim() }),
+          ...(isCustomPoolType && customSetId.trim() && { customSetId: customSetId.trim() }),
         }),
       });
       const data = await res.json();
@@ -1415,6 +1441,7 @@ export default function AdminCardsCreditsPage() {
         setCustomWinnerId("");
         setCustomAltArtOfCharacterId("");
         setCustomSetId("");
+        setCustomSetSelectOther(false);
       } else {
         setError(data.error || "Failed to add to pool");
       }
@@ -1447,6 +1474,34 @@ export default function AdminCardsCreditsPage() {
     }
   }
 
+  async function handleAddPoolType(e: React.FormEvent) {
+    e.preventDefault();
+    const id = newPoolTypeId.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!id || addingPoolType) return;
+    setAddingPoolType(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/custom-card-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, label: newPoolTypeLabel.trim() || id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await loadPool();
+        setShowAddPoolModal(false);
+        setNewPoolTypeId("");
+        setNewPoolTypeLabel("");
+      } else {
+        setError(data.error || "Failed to add pool type");
+      }
+    } catch {
+      setError("Failed to add pool type");
+    } finally {
+      setAddingPoolType(false);
+    }
+  }
+
   function openEditPoolEntry(entry: CharacterPortrayal, pendingWinnerId?: string) {
     setEditingPoolEntry(entry);
     setEditingPendingWinnerId(pendingWinnerId ?? null);
@@ -1457,7 +1512,7 @@ export default function AdminCardsCreditsPage() {
       profilePath: entry.profilePath ?? "",
       movieTmdbId: entry.movieTmdbId ?? 0,
       rarity: entry.rarity,
-      cardType: (entry.cardType ?? "actor") as CardType,
+      cardType: entry.cardType ?? "actor",
       altArtOfCharacterId: entry.altArtOfCharacterId ?? "",
       customSetId: entry.customSetId ?? "",
     });
@@ -2125,7 +2180,7 @@ export default function AdminCardsCreditsPage() {
               </div>
               <div className="flex flex-wrap gap-4">
                 <div><label className="block text-xs text-white/40 mb-1">Rarities this pack can drop</label><div className="flex flex-wrap gap-2">{["uncommon", "rare", "epic", "legendary"].map((r) => { const selected = packForm.allowedRarities.includes(r as any); return ( <button key={r} type="button" onClick={() => setPackForm((f) => { const current = f.allowedRarities; const has = current.includes(r as any); if (has) { const next = current.filter((x) => x !== r); return { ...f, allowedRarities: next.length ? next : ["uncommon", "rare", "epic", "legendary"] }; } return { ...f, allowedRarities: [...current, r as any] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-amber-400/70 bg-amber-500/20 text-amber-200" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-amber-400/40 hover:text-amber-200"}`}>{r}</button> ); })}</div></div>
-                <div><label className="block text-xs text-white/40 mb-1">Card types this pack can drop</label><div className="flex flex-wrap gap-2">{(["actor", "director", "character", "scene"] as CardType[]).map((t) => { const selected = packForm.allowedCardTypes.includes(t); return ( <button key={t} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t); if (has) { const next = current.filter((x) => x !== t); return { ...f, allowedCardTypes: next.length ? next : ["actor", "director", "character", "scene"] }; } return { ...f, allowedCardTypes: [...current, t] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{cardTypeDisplayLabel(t)}</button> ); })}</div></div>
+                <div><label className="block text-xs text-white/40 mb-1">Card types this pack can drop</label><div className="flex flex-wrap gap-2">{(["actor", "director", "character", "scene"] as CardType[]).map((t) => { const selected = packForm.allowedCardTypes.includes(t); return ( <button key={t} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t); const fallback = ["actor", "director", "character", "scene", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{cardTypeDisplayLabel(t, customCardTypes)}</button> ); })}{customCardTypes.map((t) => { const selected = packForm.allowedCardTypes.includes(t.id); return ( <button key={t.id} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t.id); const fallback = ["actor", "director", "character", "scene", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t.id); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t.id] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{t.label}</button> ); })}</div></div>
               </div>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.isActive} onChange={(e) => setPackForm((f) => ({ ...f, isActive: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Active in store</label>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.discounted} onChange={(e) => setPackForm((f) => ({ ...f, discounted: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Discounted (show &quot;Sale&quot; label in shop)</label>
@@ -2332,10 +2387,10 @@ export default function AdminCardsCreditsPage() {
             </div>
           </div>
           <div className="space-y-6">
-            {Object.entries(pendingByWinner).map(([winnerId, entries]) => { const winner = winners.find((w) => w.id === winnerId); const movieTitle = winner?.movieTitle ?? `Winner #${winnerId}`; return (
-                <div key={winnerId} className="rounded-lg border border-amber-500/15 bg-white/[0.03] overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-amber-500/10"><div className="min-w-0"><p className="text-sm font-medium text-white/80 truncate">{movieTitle}</p><p className="text-xs text-white/40">{entries.length} card{entries.length !== 1 ? "s" : ""} pending — edit below, then push to pool</p></div><button type="button" onClick={() => handlePushToPool(winnerId)} disabled={pushingWinnerId === winnerId} className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">{pushingWinnerId === winnerId ? "Pushing…" : "Push to pool"}</button></div>
-                  <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c, winnerId)} /> ))}</div>
+            {Object.entries(pendingByWinner).map(([bucketKey, entries]) => { const winner = winners.find((w) => w.id === bucketKey); const displayName = winner?.movieTitle ?? (bucketKey === "character" ? "Boys" : (customCardTypes.find((t) => t.id === bucketKey)?.label ?? bucketKey)); return (
+                <div key={bucketKey} className="rounded-lg border border-amber-500/15 bg-white/[0.03] overflow-hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-amber-500/10"><div className="min-w-0"><p className="text-sm font-medium text-white/80 truncate">{displayName}</p><p className="text-xs text-white/40">{entries.length} card{entries.length !== 1 ? "s" : ""} pending — edit below, then push to pool</p></div><button type="button" onClick={() => handlePushToPool(bucketKey)} disabled={pushingWinnerId === bucketKey} className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">{pushingWinnerId === bucketKey ? "Pushing…" : "Push to pool"}</button></div>
+                  <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c, bucketKey)} /> ))}</div>
                 </div>
             ); })}
           </div>
@@ -2344,14 +2399,17 @@ export default function AdminCardsCreditsPage() {
 
       {/* Manage Card Pool */}
       <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" /></svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white/70">Manage Card Pool</h2>
+              <p className="text-[11px] text-white/30">{pool.length} cards in pool</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-white/70">Manage Card Pool</h2>
-            <p className="text-[11px] text-white/30">{pool.length} cards in pool</p>
-          </div>
+          <button type="button" onClick={() => { setShowAddPoolModal(true); setNewPoolTypeId(""); setNewPoolTypeLabel(""); }} className="px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 cursor-pointer">Add pool</button>
         </div>
         <div className="mb-5 grid grid-cols-4 gap-2">
           {[
@@ -2378,32 +2436,44 @@ export default function AdminCardsCreditsPage() {
                 <div><label className="block text-xs text-white/40 mb-1">Actor / Name *</label><input type="text" value={customActorName} onChange={(e) => setCustomActorName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="Al Pacino" required /></div>
                 <div><label className="block text-xs text-white/40 mb-1">Character / Role</label><input type="text" value={customCharacterName} onChange={(e) => setCustomCharacterName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="Tony Montana" /></div>
               </div>
-              {customCardType !== "character" && (
+              {!isCustomPoolType && (
               <div><label className="block text-xs text-white/40 mb-1">Winner / Movie *</label><select value={customWinnerId} onChange={(e) => { setCustomWinnerId(e.target.value); setCustomAltArtOfCharacterId(""); }} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" required><option value="">-- Select winner (movie) --</option>{winners.map((w) => ( <option key={w.id} value={w.id}>{w.movieTitle}</option> ))}</select></div>
               )}
-              {customWinnerId && customCardType !== "character" && (() => { const winner = winners.find((w) => w.id === customWinnerId); const sameMoviePool = pool.filter((c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (winner?.tmdbId ?? 0)); return ( <div><label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label><select value={customAltArtOfCharacterId} onChange={(e) => setCustomAltArtOfCharacterId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="">— None (normal pool entry) —</option>{sameMoviePool.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}</select><p className="text-[10px] text-white/40 mt-1">If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.</p></div> ); })()}
-              {customCardType !== "character" && customWinnerId && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={customAddToPending} onChange={(e) => setCustomAddToPending(e.target.checked)} className="rounded border-white/30 bg-white/[0.06] text-amber-500 focus:ring-amber-500/40" />
-                  <span className="text-xs text-white/70">Add to Pending (for this winner) — edit and push to pool when ready</span>
-                </label>
-              )}
+              {customWinnerId && !isCustomPoolType && (() => { const winner = winners.find((w) => w.id === customWinnerId); const sameMoviePool = pool.filter((c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (winner?.tmdbId ?? 0)); return ( <div><label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label><select value={customAltArtOfCharacterId} onChange={(e) => setCustomAltArtOfCharacterId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="">— None (normal pool entry) —</option>{sameMoviePool.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}</select><p className="text-[10px] text-white/40 mt-1">If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.</p></div> ); })()}
+              <p className="text-[10px] text-white/40">New cards go to Pending first. Edit below, then push to pool when ready.</p>
               <div><label className="block text-xs text-white/40 mb-1">Image *</label><div className="flex gap-2"><input type="text" value={customProfilePath} onChange={(e) => setCustomProfilePath(e.target.value)} className="flex-1 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="URL, or paste image (Ctrl+V) / click button" /><button type="button" onClick={() => setShowImagePickerForAdd(true)} disabled={pastingImage} className="px-3 py-2 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm font-medium hover:bg-purple-500/20 transition-colors cursor-pointer disabled:opacity-50">{pastingImage ? "Uploading..." : "Upload or paste"}</button></div></div>
               <div className="flex flex-wrap gap-3">
                 <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={customRarity} onChange={(e) => setCustomRarity(e.target.value as typeof customRarity)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
-                <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={customCardType} onChange={(e) => setCustomCardType(e.target.value as CardType)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
+                <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={customCardType} onChange={(e) => setCustomCardType(e.target.value)} className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option>{customCardTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
               </div>
-              {customCardType === "character" && (
-                <div><label className="block text-xs text-white/40 mb-1">Custom Set</label><input type="text" value={customSetId} onChange={(e) => setCustomSetId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="e.g. Summer 2025, Favorites" /><p className="text-[10px] text-white/40 mt-1">Optional. Groups Boys in the codex by this label instead of movie.</p></div>
-              )}
-              <button type="submit" disabled={!customActorName.trim() || !customProfilePath.trim() || (customCardType !== "character" && !customWinnerId) || addingToPool} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer">{addingToPool ? "Adding..." : customAddToPending ? "Add to Pending" : "Add to Pool"}</button>
+              {isCustomPoolType && (() => {
+                const existingSets = [...new Set([...pool, ...Object.values(pendingByWinner).flat()].filter((c) => (c.cardType ?? "actor") === customCardType && (c.customSetId ?? "").trim()).map((c) => (c.customSetId ?? "").trim()))].filter(Boolean).sort();
+                const selectVal = customSetSelectOther ? "__other__" : (existingSets.includes(customSetId.trim()) ? customSetId.trim() : (customSetId.trim() ? "__other__" : ""));
+                return (
+                  <div>
+                    <label className="block text-xs text-white/40 mb-1">Custom Set</label>
+                    <select value={selectVal} onChange={(e) => { const v = e.target.value; setCustomSetSelectOther(v === "__other__"); setCustomSetId(v === "__other__" ? customSetId : v); }} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]">
+                      <option value="">— None —</option>
+                      {existingSets.map((s) => <option key={s} value={s}>{s}</option>)}
+                      <option value="__other__">— Other (type new) —</option>
+                    </select>
+                    {selectVal === "__other__" && <input type="text" value={customSetId} onChange={(e) => setCustomSetId(e.target.value)} placeholder="e.g. Summer 2025" className="w-full mt-2 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" />}
+                    <p className="text-[10px] text-white/40 mt-1">Optional. Groups cards in the codex by this label instead of movie.</p>
+                  </div>
+                );
+              })()}
+              <button type="submit" disabled={!customActorName.trim() || !customProfilePath.trim() || (!isCustomPoolType && !customWinnerId) || addingToPool} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-40 cursor-pointer">{addingToPool ? "Adding..." : "Add to Pending"}</button>
             </form>
               </>
             )}
           </div>
           <div className="w-full min-w-0 space-y-6">
             {(() => {
-              const actorPool = pool.filter((c) => (c.cardType ?? "actor") !== "character");
+              const customIds = new Set(customCardTypes.map((t) => t.id));
+              const actorPool = pool.filter((c) => {
+                const ct = c.cardType ?? "actor";
+                return ct !== "character" && !customIds.has(ct);
+              });
               const boysPool = pool.filter((c) => (c.cardType ?? "actor") === "character");
               return (
                 <>
@@ -2463,6 +2533,45 @@ export default function AdminCardsCreditsPage() {
                       </div>
                     )}
                   </div>
+                  {customCardTypes.map((ct) => {
+                    const customPool = pool.filter((c) => (c.cardType ?? "actor") === ct.id);
+                    const bySet = new Map<string, typeof customPool>();
+                    for (const c of customPool) {
+                      const s = (c.customSetId ?? c.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)";
+                      if (!bySet.has(s)) bySet.set(s, []); bySet.get(s)!.push(c);
+                    }
+                    const sets = Array.from(bySet.keys()).sort();
+                    return (
+                      <div key={ct.id} className="rounded-lg border border-teal-500/20 bg-teal-500/5 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                          <h3 className="text-sm font-medium text-teal-300/90">{ct.label} Pool</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-white/40">{customPool.length} cards</span>
+                            <select value={poolSortCustom} onChange={(e) => setPoolSortCustom(e.target.value as "rarity" | "set")} className="px-3 py-1.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-teal-500/50 [color-scheme:dark]"><option value="rarity">Sort by rarity</option><option value="set">Sort by set</option></select>
+                          </div>
+                        </div>
+                        {poolLoading ? ( <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-teal-400/30 border-t-teal-400 rounded-full animate-spin" /></div> ) : (
+                          <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
+                            {poolSortCustom === "rarity" ? (
+                              RARITY_ORDER.map((r) => { const entries = customPool.filter((c) => c.rarity === r); if (entries.length === 0) return null; return (
+                                <div key={r}>
+                                  <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${r === "legendary" ? "bg-amber-400" : r === "epic" ? "bg-purple-400" : r === "rare" ? "bg-blue-400" : "bg-white/40"}`} />{r} ({entries.length})</h4>
+                                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                                </div>
+                              ); })
+                            ) : (
+                              sets.map((setName) => { const entries = bySet.get(setName)!; return (
+                                <div key={`${ct.id}-${setName}`}>
+                                  <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{setName} ({entries.length})</h4>
+                                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                                </div>
+                              ); })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </>
               );
             })()}
@@ -2718,17 +2827,32 @@ export default function AdminCardsCreditsPage() {
                 <div className="flex flex-wrap gap-3">
                   <div><label className="block text-xs text-white/40 mb-1">TMDB Movie ID</label><input type="number" value={poolEditForm.movieTmdbId ?? ""} onChange={(e) => setPoolEditForm((f) => ({ ...f, movieTmdbId: parseInt(e.target.value, 10) || 0 }))} className="w-20 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" /></div>
                   <div><label className="block text-xs text-white/40 mb-1">Rarity</label><select value={poolEditForm.rarity ?? "uncommon"} onChange={(e) => setPoolEditForm((f) => ({ ...f, rarity: e.target.value }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="uncommon">Uncommon</option><option value="rare">Rare</option><option value="epic">Epic</option><option value="legendary">Legendary</option></select></div>
-                  <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={poolEditForm.cardType ?? "actor"} onChange={(e) => setPoolEditForm((f) => ({ ...f, cardType: e.target.value as CardType }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option></select></div>
+                  <div><label className="block text-xs text-white/40 mb-1">Card Type</label><select value={poolEditForm.cardType ?? "actor"} onChange={(e) => setPoolEditForm((f) => ({ ...f, cardType: e.target.value }))} className="px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]"><option value="actor">Actor</option><option value="director">Director</option><option value="character">Boys</option><option value="scene">Scene</option>{customCardTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select></div>
                 </div>
-                {(poolEditForm.cardType ?? "actor") === "character" && (
-                  <div><label className="block text-xs text-white/40 mb-1">Custom Set</label><input type="text" value={poolEditForm.customSetId ?? ""} onChange={(e) => setPoolEditForm((f) => ({ ...f, customSetId: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" placeholder="e.g. Summer 2025" /><p className="text-[10px] text-white/40 mt-1">Groups Boys in the codex by this label instead of movie.</p></div>
-                )}
+                {((poolEditForm.cardType ?? "actor") === "character" || customCardTypes.some((t) => t.id === (poolEditForm.cardType ?? "actor"))) && (() => {
+                  const editCt = poolEditForm.cardType ?? "actor";
+                  const existingSets = [...new Set([...pool, ...Object.values(pendingByWinner).flat()].filter((c) => (c.cardType ?? "actor") === editCt && (c.customSetId ?? "").trim()).map((c) => (c.customSetId ?? "").trim()))].filter(Boolean).sort();
+                  const val = poolEditForm.customSetId ?? "";
+                  const selectVal = customSetSelectOtherEdit ? "__other__" : (existingSets.includes(val.trim()) ? val.trim() : (val.trim() ? "__other__" : ""));
+                  return (
+                    <div>
+                      <label className="block text-xs text-white/40 mb-1">Custom Set</label>
+                      <select value={selectVal} onChange={(e) => { const v = e.target.value; setCustomSetSelectOtherEdit(v === "__other__"); setPoolEditForm((f) => ({ ...f, customSetId: v === "__other__" ? (f.customSetId ?? "") : v })); }} className="w-full px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]">
+                        <option value="">— None —</option>
+                        {existingSets.map((s) => <option key={s} value={s}>{s}</option>)}
+                        <option value="__other__">— Other (type new) —</option>
+                      </select>
+                      {selectVal === "__other__" && <input type="text" value={val} onChange={(e) => setPoolEditForm((f) => ({ ...f, customSetId: e.target.value }))} placeholder="e.g. Summer 2025" className="w-full mt-2 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40" />}
+                      <p className="text-[10px] text-white/40 mt-1">Groups Boys in the codex by this label instead of movie.</p>
+                    </div>
+                  );
+                })()}
                 {editingPoolEntry && (
                   <div>
                     <label className="block text-xs text-white/40 mb-1">Alt-art: counts as character</label>
                     <select value={poolEditForm.altArtOfCharacterId ?? ""} onChange={(e) => setPoolEditForm((f) => ({ ...f, altArtOfCharacterId: e.target.value }))} className="w-full px-3 py-2 rounded-lg bg-[#1a1a24] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]">
                       <option value="">— None (normal pool entry) —</option>
-                      {(() => { const sameMoviePool = pool.filter((c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)); const sameMoviePending = editingPendingWinnerId ? (pendingByWinner[editingPendingWinnerId] ?? []).filter((c) => (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)) : []; const combined = [...sameMoviePool]; sameMoviePending.forEach((c) => { if (!combined.some((x) => x.characterId === c.characterId)) combined.push(c); }); return combined.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> )); })()}
+                      {(() => { const isEditCustomType = (editingPoolEntry.cardType ?? "actor") === "character" || customCardTypes.some((t) => t.id === (editingPoolEntry.cardType ?? "actor")); const sameMoviePool = isEditCustomType ? pool.filter((c) => c.profilePath?.trim() && (c.cardType ?? "actor") === (editingPoolEntry.cardType ?? "actor")) : pool.filter((c) => c.profilePath?.trim() && (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)); const sameMoviePending = editingPendingWinnerId ? (pendingByWinner[editingPendingWinnerId] ?? []).filter((c) => isEditCustomType ? (c.cardType ?? "actor") === (editingPoolEntry.cardType ?? "actor") : (c.movieTmdbId ?? 0) === (editingPoolEntry.movieTmdbId ?? 0)) : []; const combined = [...sameMoviePool]; sameMoviePending.forEach((c) => { if (!combined.some((x) => x.characterId === c.characterId)) combined.push(c); }); return combined.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> )); })()}
                     </select>
                     <p className="text-[10px] text-white/40 mt-1">If set, this pool entry is an alt-art; any card with this image counts as that character for set completion.</p>
                   </div>
@@ -2736,6 +2860,26 @@ export default function AdminCardsCreditsPage() {
                 <div className="flex flex-col gap-2 pt-2">
                   <div className="flex gap-2"><button type="button" onClick={() => { setEditingPoolEntry(null); setEditingPendingWinnerId(null); }} disabled={savingPoolEdit} className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer">Cancel</button><button type="submit" disabled={savingPoolEdit} className="flex-1 px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 disabled:opacity-40 cursor-pointer">{savingPoolEdit ? "Saving..." : "Save"}</button></div>
                   <button type="button" onClick={() => editingPoolEntry && handleRemoveFromPool(editingPoolEntry.characterId, editingPendingWinnerId ?? undefined, () => { setEditingPoolEntry(null); setEditingPendingWinnerId(null); })} disabled={savingPoolEdit || removingFromPoolId === editingPoolEntry?.characterId} className="w-full px-4 py-2 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-40 cursor-pointer text-sm">{removingFromPoolId === editingPoolEntry?.characterId ? "Removing..." : "Remove from pool"}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {showAddPoolModal && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => !addingPoolType && setShowAddPoolModal(false)} aria-hidden />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/[0.08] bg-[#12121a] shadow-2xl overflow-hidden" role="dialog" aria-label="Add pool category">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white/90 mb-4">Add Pool Category</h3>
+              <p className="text-xs text-white/50 mb-4">Creates a new card type and pool section (e.g. Girls, Villains). Also adds it to pack &quot;Drops&quot; options.</p>
+              <form onSubmit={handleAddPoolType} className="space-y-3">
+                <div><label className="block text-xs text-white/40 mb-1">ID (lowercase, hyphens only)</label><input type="text" value={newPoolTypeId} onChange={(e) => setNewPoolTypeId(e.target.value)} placeholder="e.g. girls" className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-emerald-500/40" /><p className="text-[10px] text-white/40 mt-1">Used internally. &quot;Girls&quot; → girls</p></div>
+                <div><label className="block text-xs text-white/40 mb-1">Display label</label><input type="text" value={newPoolTypeLabel} onChange={(e) => setNewPoolTypeLabel(e.target.value)} placeholder="e.g. Girls" className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-emerald-500/40" /></div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setShowAddPoolModal(false)} disabled={addingPoolType} className="flex-1 px-4 py-2 rounded-lg border border-white/[0.08] text-white/70 hover:bg-white/[0.04] disabled:opacity-40 cursor-pointer">Cancel</button>
+                  <button type="submit" disabled={!newPoolTypeId.trim() || addingPoolType} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-40 cursor-pointer">{addingPoolType ? "Adding..." : "Add"}</button>
                 </div>
               </form>
             </div>
