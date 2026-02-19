@@ -44,6 +44,7 @@ interface CharacterPortrayal {
   profilePath?: string;
   movieTmdbId?: number;
   altArtOfCharacterId?: string;
+  customSetId?: string;
 }
 
 interface Pack {
