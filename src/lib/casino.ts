@@ -3,14 +3,17 @@
 export const SLOT_SYMBOLS = ["7", "BAR", "cherry", "star", "bell"] as const;
 export type SlotSymbol = (typeof SLOT_SYMBOLS)[number];
 
-// Paytable: 3-of-a-kind multiplier
+// Paytable: 3-of-a-kind multiplier (reduced slightly to offset 2oak; keeps ~16% house edge)
 export const SLOT_PAYTABLE: Record<SlotSymbol, number> = {
-  "7": 50,
-  BAR: 25,
-  star: 15,
-  bell: 10,
-  cherry: 5,
+  "7": 43,
+  BAR: 21,
+  star: 13,
+  bell: 9,
+  cherry: 4,
 };
+
+// 2-of-a-kind pays (same for all symbols)
+export const SLOT_PAYTABLE_2OAK = 0.25;
 
 export function pickSlotSymbols(): [SlotSymbol, SlotSymbol, SlotSymbol] {
   const symbols = [...SLOT_SYMBOLS];
@@ -29,6 +32,10 @@ export function getSlotsPayout(
   if (a === b && b === c) {
     const mult = SLOT_PAYTABLE[a];
     return Math.floor(bet * mult);
+  }
+  // 2-of-a-kind
+  if (a === b || b === c || a === c) {
+    return Math.floor(bet * SLOT_PAYTABLE_2OAK);
   }
   return 0;
 }

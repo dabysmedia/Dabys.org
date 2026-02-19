@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RED_NUMBERS } from "@/lib/casino";
+import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
 
@@ -183,7 +183,6 @@ function CasinoContent() {
 }
 
 const SLOT_BETS = [5, 10, 25, 50, 100];
-const SLOT_SYMBOLS = ["7", "BAR", "cherry", "star", "bell"];
 
 const SLOT_ICONS: Record<string, string> = {
   "7": "7️⃣",
@@ -309,18 +308,36 @@ function SlotsGame({
         <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
       </div>
 
-      {/* Reels */}
-      <div className="flex justify-center gap-2 sm:gap-4 mb-10">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden shadow-inner"
-          >
-            <span className={`capitalize ${spinning ? "opacity-90" : ""}`}>
-              {slotIcon((spinning ? spinDisplaySymbols : symbols)?.[i] ?? "—")}
-            </span>
+      {/* Slots machine: reels centered, paytable fixed to right */}
+      <div className="relative mb-8">
+        {/* Reels — centered, paytable doesn't affect position */}
+        <div className="flex justify-center gap-2 sm:gap-4">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden shadow-inner"
+            >
+              <span className={`capitalize ${spinning ? "opacity-90" : ""}`}>
+                {slotIcon((spinning ? spinDisplaySymbols : symbols)?.[i] ?? "—")}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Vertical paytable — positioned far right, doesn't offset reels */}
+        <div className="absolute right-0 top-0 flex flex-col py-2 px-3 rounded-lg border border-white/[0.08] bg-white/[0.02] text-[11px] text-white/50 min-w-[80px]">
+          {SLOT_SYMBOLS.map((sym) => (
+            <div key={sym} className="flex items-center justify-between gap-3 py-0.5">
+              <span>{slotIcon(sym)}×3</span>
+              <span className="text-amber-400/80 font-medium">{SLOT_PAYTABLE[sym]}×</span>
+            </div>
+          ))}
+          <div className="border-t border-white/[0.06] my-1" />
+          <div className="flex items-center justify-between gap-3 py-0.5">
+            <span>Pair</span>
+            <span className="text-amber-400/80 font-medium">{SLOT_PAYTABLE_2OAK}×</span>
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Bet selector */}
