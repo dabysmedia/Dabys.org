@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK } from "@/lib/casino";
+import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK, handValue } from "@/lib/casino";
 
 type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
 
@@ -425,12 +425,14 @@ function BlackjackGame({
 }) {
   const [betInput, setBetInput] = useState("10");
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState<{ status: string; bet: number } | null>(null);
+  const [session, setSession] = useState<{ status: string; bet: number; offerInsurance?: boolean; currentHandIndex?: number; playerHands?: { suit: string; rank: string }[][] } | null>(null);
   const [playerHand, setPlayerHand] = useState<{ suit: string; rank: string }[]>([]);
+  const [playerHands, setPlayerHands] = useState<{ suit: string; rank: string }[][] | null>(null);
   const [dealerHand, setDealerHand] = useState<{ suit: string; rank: string }[]>([]);
   const [playerValue, setPlayerValue] = useState(0);
   const [dealerValue, setDealerValue] = useState(0);
   const [dealKey, setDealKey] = useState(0);
+  const [balanceFromApi, setBalanceFromApi] = useState<number | null>(null);
 
   async function loadSession() {
     try {
@@ -438,14 +440,18 @@ function BlackjackGame({
       const data = await res.json();
       if (data.session) {
         setSession(data.session);
+        setPlayerHands(data.playerHands || null);
         setPlayerHand(data.playerHand || []);
         setDealerHand(data.dealerHand || []);
-        setPlayerValue(data.playerValue || 0);
-        setDealerValue(data.dealerValue || 0);
+        setPlayerValue(data.playerValue ?? 0);
+        setDealerValue(data.dealerValue ?? 0);
+        onCreditsChange();
       } else {
         setSession(null);
         setPlayerHand([]);
+        setPlayerHands(null);
         setDealerHand([]);
+        setBalanceFromApi(null);
         onResult(null);
       }
     } catch {
@@ -457,7 +463,7 @@ function BlackjackGame({
     loadSession();
   }, [userId]);
 
-  async function handleAction(action: "deal" | "hit" | "stand") {
+  async function handleAction(action: "deal" | "hit" | "stand" | "insurance" | "split", takeInsurance?: boolean) {
     if (loading) return;
     if (action === "deal") {
       const parsed = parseInt(betInput, 10);
@@ -481,6 +487,7 @@ function BlackjackGame({
       const betVal = action === "deal" ? Math.max(2, Math.min(500, parseInt(betInput, 10) || 0)) : 0;
       const body: Record<string, unknown> = { userId, action };
       if (action === "deal") body.bet = betVal;
+      if (action === "insurance") body.takeInsurance = takeInsurance;
       const res = await fetch("/api/casino/blackjack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -493,11 +500,23 @@ function BlackjackGame({
         return;
       }
       setSession(data.session);
-      setPlayerHand(data.playerHand || []);
+      setPlayerHands(data.playerHands || null);
+      const curHand = data.playerHands
+        ? (data.playerHands[data.session?.currentHandIndex ?? 0] ?? data.playerHand)
+        : (data.playerHand || []);
+      setPlayerHand(curHand);
       setDealerHand(data.dealerHand || []);
       setPlayerValue(data.playerValue ?? 0);
       setDealerValue(data.dealerValue ?? 0);
-      if (action === "deal") setDealKey((k) => k + 1);
+      if (typeof data.newBalance === "number") setBalanceFromApi(data.newBalance);
+      if (action === "deal") {
+        setDealKey((k) => k + 1);
+        setPlayerHands(null);
+        onCreditsChange();
+      }
+      if (action === "split") {
+        onCreditsChange();
+      }
       if (data.result !== null && data.result !== undefined) {
         onResult({
           result: data.result,
@@ -532,14 +551,34 @@ function BlackjackGame({
         )}
       </div>
 
-      {/* Player hand */}
+      {/* Player hand(s) */}
       <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 mb-6">
-        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">Your hand</p>
-        <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
-          {playerHand.map((c, i) => renderCard(c, i, `p-${dealKey}-${i}`))}
-        </div>
-        {playerValue > 0 && (
-          <p className="text-white/50 text-xs mt-2 tabular-nums text-center">Value: {playerValue}</p>
+        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">
+          {playerHands ? `Hand ${(session?.currentHandIndex ?? 0) + 1} of ${playerHands.length}` : "Your hand"}
+        </p>
+        {playerHands && playerHands.length > 1 ? (
+          <div className="flex flex-wrap justify-center gap-6">
+            {playerHands.map((hand, hi) => (
+              <div
+                key={hi}
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg ${hi === (session?.currentHandIndex ?? 0) ? "ring-2 ring-amber-400/50 bg-amber-500/5" : "opacity-70"}`}
+              >
+                <div className="flex gap-2 [perspective:600px]">
+                  {hand.map((c, i) => renderCard(c, i, `p-${dealKey}-${hi}-${i}`))}
+                </div>
+                <p className="text-white/50 text-xs tabular-nums">Value: {handValue(hand as { suit: string; rank: string }[])}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
+              {playerHand.map((c, i) => renderCard(c, i, `p-${dealKey}-${i}`))}
+            </div>
+            {playerValue > 0 && (
+              <p className="text-white/50 text-xs mt-2 tabular-nums text-center">Value: {playerValue}</p>
+            )}
+          </>
         )}
       </div>
 
@@ -595,8 +634,41 @@ function BlackjackGame({
             {loading ? "…" : "Deal"}
           </button>
         </>
+      ) : session?.status === "insurance" ? (
+        <>
+          <p className="text-sm text-white/60 mr-2">Dealer shows Ace. Insurance? (Pays 2:1 if dealer has blackjack)</p>
+          <button
+            onClick={() => handleAction("insurance", true)}
+            disabled={loading || balance < Math.floor((session?.bet ?? 0) / 2)}
+            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            Yes ({Math.floor((session?.bet ?? 0) / 2)} cr)
+          </button>
+          <button
+            onClick={() => handleAction("insurance", false)}
+            disabled={loading}
+            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-white/20 bg-white/5 text-white/70 font-medium hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            No
+          </button>
+        </>
       ) : (
         <>
+          {playerHand.length === 2 && !playerHands && (() => {
+            const normRank = (r: string) => (["10", "J", "Q", "K"].includes(r) ? "10" : r);
+            const isPair = playerHand[0] && playerHand[1] && normRank(playerHand[0].rank) === normRank(playerHand[1].rank);
+            const effectiveBalance = balanceFromApi ?? balance;
+            const canAffordSplit = effectiveBalance >= (session?.bet ?? 0);
+            return (
+              <button
+                onClick={() => handleAction("split")}
+                disabled={loading || !isPair || !canAffordSplit}
+                className="min-w-[90px] px-6 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+              >
+                Split
+              </button>
+            );
+          })()}
           <button
             onClick={() => handleAction("hit")}
             disabled={loading || playerValue >= 21}

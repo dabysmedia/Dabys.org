@@ -93,6 +93,23 @@ export async function POST(request: Request) {
     const playerVal = handValue(session.playerHand.map(fromDataCard));
     const dealerShow = session.dealerHand[0];
     const dealerVal = handValue([fromDataCard(dealerShow)]);
+    const dealerHasAce = dealerShow.rank === "A";
+
+    // If dealer shows Ace, offer insurance before resolving
+    if (dealerHasAce) {
+      session.status = "insurance";
+      saveBlackjackSession(session);
+      return NextResponse.json({
+        action: "deal",
+        session: { status: "insurance", bet: session.bet, offerInsurance: true },
+        playerHand: session.playerHand,
+        dealerHand: [dealerShow, { suit: "?", rank: "?" }],
+        playerValue: playerVal,
+        dealerValue: dealerVal,
+        result: null,
+        newBalance: getCredits(userId),
+      });
+    }
 
     // Check for immediate blackjack
     if (playerVal === 21) {
@@ -152,6 +169,141 @@ export async function POST(request: Request) {
     });
   }
 
+  if (action === "insurance") {
+    const session = getBlackjackSession(userId);
+    if (!session || session.status !== "insurance") {
+      return NextResponse.json(
+        { error: "Insurance not offered." },
+        { status: 400 }
+      );
+    }
+    const takeInsurance = !!body.takeInsurance;
+    const insuranceAmount = takeInsurance ? Math.floor(session.bet / 2) : 0;
+    if (takeInsurance && insuranceAmount > 0) {
+      const balance = getCredits(userId);
+      if (balance < insuranceAmount) {
+        return NextResponse.json(
+          { error: "Not enough credits for insurance." },
+          { status: 400 }
+        );
+      }
+      deductCredits(userId, insuranceAmount, "casino_blackjack", { bet: session.bet, insurance: insuranceAmount });
+      session.insurance = insuranceAmount;
+    }
+    session.status = "player_turn";
+    const dealerValFull = handValue(session.dealerHand.map(fromDataCard));
+    const dealerHasBlackjack = session.dealerHand.length === 2 && dealerValFull === 21;
+    if (dealerHasBlackjack) {
+      session.status = "resolved";
+      let payout = session.bet; // Main bet pushes
+      if (session.insurance && session.insurance > 0) {
+        const insurancePayout = session.insurance * 2;
+        addCredits(userId, insurancePayout, "casino_blackjack_win", { bet: session.bet, insurance: session.insurance });
+        payout += insurancePayout;
+      }
+      addCredits(userId, session.bet, "casino_blackjack_push", { bet: session.bet });
+      removeBlackjackSession(userId);
+      const playerVal = handValue(session.playerHand.map(fromDataCard));
+      const netChg = (session.insurance ? session.insurance * 2 : 0) - (session.insurance || 0);
+      return NextResponse.json({
+        action: "insurance",
+        session: null,
+        playerHand: session.playerHand,
+        dealerHand: session.dealerHand,
+        playerValue: playerVal,
+        dealerValue: dealerValFull,
+        result: netChg > 0 ? "win" : "push",
+        payout: netChg > 0 ? netChg : session.bet,
+        newBalance: getCredits(userId),
+        netChange: netChg,
+      });
+    }
+    const playerVal = handValue(session.playerHand.map(fromDataCard));
+    const playerHasBlackjack = session.playerHand.length === 2 && playerVal === 21;
+    if (playerHasBlackjack) {
+      session.status = "resolved";
+      session.result = "win";
+      session.payout = Math.floor(session.bet * 2.5);
+      addCredits(userId, session.payout, "casino_blackjack_win", { bet: session.bet, result: "win" });
+      removeBlackjackSession(userId);
+      return NextResponse.json({
+        action: "insurance",
+        session: null,
+        playerHand: session.playerHand,
+        dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
+        playerValue: 21,
+        dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
+        result: "win",
+        payout: session.payout,
+        newBalance: getCredits(userId),
+        netChange: session.payout - session.bet,
+      });
+    }
+    saveBlackjackSession(session);
+    return NextResponse.json({
+      action: "insurance",
+      session: { status: "player_turn", bet: session.bet },
+      playerHand: session.playerHand,
+      dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
+      playerValue: playerVal,
+      dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
+      result: null,
+      newBalance: getCredits(userId),
+    });
+  }
+
+  if (action === "split") {
+    const session = getBlackjackSession(userId);
+    if (!session || session.status !== "player_turn") {
+      return NextResponse.json(
+        { error: "No active hand. Cannot split." },
+        { status: 400 }
+      );
+    }
+    const hands = session.playerHands ?? [session.playerHand];
+    if (hands.length !== 1 || session.playerHand.length !== 2) {
+      return NextResponse.json(
+        { error: "Can only split on initial two-card hand." },
+        { status: 400 }
+      );
+    }
+    const [c1, c2] = session.playerHand;
+    const normRank = (r: string) => (["10", "J", "Q", "K"].includes(r) ? "10" : r);
+    if (normRank(c1.rank) !== normRank(c2.rank)) {
+      return NextResponse.json(
+        { error: "Can only split pairs (same rank)." },
+        { status: 400 }
+      );
+    }
+    const balance = getCredits(userId);
+    if (balance < session.bet) {
+      return NextResponse.json(
+        { error: "Not enough credits to split (need another bet)." },
+        { status: 400 }
+      );
+    }
+    deductCredits(userId, session.bet, "casino_blackjack", { bet: session.bet, action: "split" });
+    const { card: card1, rest: deck1 } = draw(session.deck);
+    const { card: card2, rest: deck2 } = draw(deck1);
+    session.deck = deck2;
+    session.playerHands = [[c1, card1], [c2, card2]];
+    session.playerHand = session.playerHands[0];
+    session.currentHandIndex = 0;
+    saveBlackjackSession(session);
+    const playerVal = handValue(session.playerHands[0].map(fromDataCard));
+    return NextResponse.json({
+      action: "split",
+      session: { status: "player_turn", bet: session.bet, currentHandIndex: 0, playerHands: session.playerHands },
+      playerHand: session.playerHands[0],
+      playerHands: session.playerHands,
+      dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
+      playerValue: playerVal,
+      dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
+      result: null,
+      newBalance: getCredits(userId),
+    });
+  }
+
   if (action === "hit" || action === "stand") {
     const session = getBlackjackSession(userId);
     if (!session || session.status !== "player_turn") {
@@ -161,34 +313,62 @@ export async function POST(request: Request) {
       );
     }
 
+    const hands = session.playerHands ?? [session.playerHand];
+    const handIdx = session.currentHandIndex ?? 0;
+    const currentHand = hands[handIdx];
+    const betPerHand = session.bet;
+
     if (action === "hit") {
       const { card, rest } = draw(session.deck);
       session.deck = rest;
-      session.playerHand.push(card);
-      const playerVal = handValue(session.playerHand.map(fromDataCard));
+      currentHand.push(card);
+      if (hands.length > 1) {
+        session.playerHands![handIdx] = currentHand;
+        session.playerHand = currentHand;
+      }
+      const playerVal = handValue(currentHand.map(fromDataCard));
       if (playerVal > 21) {
+        if (hands.length > 1 && handIdx < hands.length - 1) {
+          session.currentHandIndex = handIdx + 1;
+          session.playerHand = hands[handIdx + 1];
+          saveBlackjackSession(session);
+          return NextResponse.json({
+            action: "hit",
+            session: { status: "player_turn", bet: session.bet, currentHandIndex: handIdx + 1, playerHands: session.playerHands },
+            playerHand: hands[handIdx + 1],
+            playerHands: session.playerHands,
+            dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
+            playerValue: handValue(hands[handIdx + 1].map(fromDataCard)),
+            dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
+            result: null,
+            newBalance: getCredits(userId),
+          });
+        }
         session.status = "resolved";
         session.result = "loss";
         session.payout = 0;
         removeBlackjackSession(userId);
+        const totalBet = betPerHand * hands.length;
         return NextResponse.json({
           action: "hit",
           session: null,
-          playerHand: session.playerHand,
+          playerHand: currentHand,
+          playerHands: hands.length > 1 ? session.playerHands : undefined,
           dealerHand: session.dealerHand,
           playerValue: playerVal,
           dealerValue: handValue(session.dealerHand.map(fromDataCard)),
           result: "loss",
           payout: 0,
           newBalance: getCredits(userId),
-          netChange: -session.bet,
+          netChange: -totalBet,
         });
       }
       saveBlackjackSession(session);
       return NextResponse.json({
         action: "hit",
-        session: { status: session.status, bet: session.bet },
-        playerHand: session.playerHand,
+        session: { status: session.status, bet: session.bet, currentHandIndex: handIdx, playerHands: hands.length > 1 ? session.playerHands : undefined },
+        playerHand: currentHand,
+        playerHands: hands.length > 1 ? session.playerHands : undefined,
         dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
         playerValue: playerVal,
         dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
@@ -198,6 +378,23 @@ export async function POST(request: Request) {
     }
 
     // stand
+    if (hands.length > 1 && handIdx < hands.length - 1) {
+      session.currentHandIndex = handIdx + 1;
+      session.playerHand = hands[handIdx + 1];
+      saveBlackjackSession(session);
+      return NextResponse.json({
+        action: "stand",
+        session: { status: "player_turn", bet: session.bet, currentHandIndex: handIdx + 1, playerHands: session.playerHands },
+        playerHand: hands[handIdx + 1],
+        playerHands: session.playerHands,
+        dealerHand: [session.dealerHand[0], { suit: "?", rank: "?" }],
+        playerValue: handValue(hands[handIdx + 1].map(fromDataCard)),
+        dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
+        result: null,
+        newBalance: getCredits(userId),
+      });
+    }
+
     session.status = "dealer_turn";
     let dealerVal = handValue(session.dealerHand.map(fromDataCard));
     while (dealerVal < 17) {
@@ -206,50 +403,60 @@ export async function POST(request: Request) {
       session.dealerHand.push(card);
       dealerVal = handValue(session.dealerHand.map(fromDataCard));
     }
-    const playerVal = handValue(session.playerHand.map(fromDataCard));
 
+    const allHands = session.playerHands ?? [session.playerHand];
+    let totalPayout = 0;
+    let netChange = 0;
+    const perHandBet = session.bet;
+    for (let i = 0; i < allHands.length; i++) {
+      const playerVal = handValue(allHands[i].map(fromDataCard));
+      let result: "win" | "loss" | "push" = "push";
+      let payout = 0;
+      if (playerVal > 21) {
+        result = "loss";
+      } else if (dealerVal > 21) {
+        result = "win";
+        payout = perHandBet * 2;
+      } else if (playerVal > dealerVal) {
+        result = "win";
+        payout = perHandBet * 2;
+      } else if (playerVal < dealerVal) {
+        result = "loss";
+      } else {
+        payout = perHandBet;
+      }
+      if (payout > 0) {
+        addCredits(userId, payout, "casino_blackjack_win", { bet: perHandBet, result, payout });
+        totalPayout += payout;
+      } else if (result === "push") {
+        addCredits(userId, perHandBet, "casino_blackjack_push", { bet: perHandBet });
+        totalPayout += perHandBet;
+      }
+    }
+    const totalBet = session.bet * allHands.length;
+    netChange = totalPayout - totalBet;
     session.status = "resolved";
-    let result: "win" | "loss" | "push" = "push";
-    let payout = 0;
-    if (dealerVal > 21) {
-      result = "win";
-      payout = session.bet * 2;
-    } else if (playerVal > dealerVal) {
-      result = "win";
-      payout = session.bet * 2;
-    } else if (playerVal < dealerVal) {
-      result = "loss";
-    }
-    session.result = result;
-    session.payout = payout;
-
-    if (payout > 0) {
-      addCredits(userId, payout, "casino_blackjack_win", {
-        bet: session.bet,
-        result,
-        payout,
-      });
-    } else if (result === "push") {
-      addCredits(userId, session.bet, "casino_blackjack_push", { bet: session.bet });
-    }
+    session.result = netChange > 0 ? "win" : netChange < 0 ? "loss" : "push";
+    session.payout = totalPayout;
     removeBlackjackSession(userId);
 
     return NextResponse.json({
       action: "stand",
       session: null,
-      playerHand: session.playerHand,
+      playerHand: allHands[allHands.length - 1],
+      playerHands: allHands.length > 1 ? allHands : undefined,
       dealerHand: session.dealerHand,
-      playerValue: playerVal,
+      playerValue: handValue(allHands[allHands.length - 1].map(fromDataCard)),
       dealerValue: dealerVal,
-      result,
-      payout: result === "push" ? session.bet : payout,
+      result: session.result,
+      payout: totalPayout,
       newBalance: getCredits(userId),
-      netChange: result === "push" ? 0 : payout - session.bet,
+      netChange,
     });
   }
 
   return NextResponse.json(
-    { error: "action must be deal, hit, or stand" },
+    { error: "action must be deal, hit, stand, insurance, or split" },
     { status: 400 }
   );
 }
@@ -267,17 +474,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ session: null });
   }
 
-  const dealerHidden = session.dealerHand.length > 1;
+  const hands = session.playerHands ?? [session.playerHand];
+  const currentHand = hands[session.currentHandIndex ?? 0];
+  const dealerHidden = session.dealerHand.length > 1 && session.status !== "resolved";
   return NextResponse.json({
     session: {
       status: session.status,
       bet: session.bet,
+      offerInsurance: session.status === "insurance",
+      currentHandIndex: session.currentHandIndex,
+      playerHands: session.playerHands,
     },
-    playerHand: session.playerHand,
+    playerHand: currentHand,
+    playerHands: session.playerHands,
     dealerHand: dealerHidden
       ? [session.dealerHand[0], { suit: "?", rank: "?" }]
       : session.dealerHand,
-    playerValue: handValue(session.playerHand.map(fromDataCard)),
+    playerValue: handValue(currentHand.map(fromDataCard)),
     dealerValue: handValue([fromDataCard(session.dealerHand[0])]),
   });
 }

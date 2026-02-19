@@ -1833,9 +1833,15 @@ export interface BlackjackSession {
   userId: string;
   deck: BlackjackCard[];
   playerHand: BlackjackCard[];
+  /** When split: array of hands; otherwise derived from playerHand */
+  playerHands?: BlackjackCard[][];
   dealerHand: BlackjackCard[];
   bet: number;
-  status: "dealing" | "player_turn" | "dealer_turn" | "resolved";
+  /** Insurance bet (half of main bet); pays 2:1 if dealer has blackjack */
+  insurance?: number;
+  status: "dealing" | "insurance" | "player_turn" | "dealer_turn" | "resolved";
+  /** Index of hand being played when split */
+  currentHandIndex?: number;
   result?: "win" | "loss" | "push";
   payout?: number;
   createdAt: string;
