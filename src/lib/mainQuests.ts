@@ -141,7 +141,8 @@ export function incrementUserLifetimeStat(
     byRarity[rarity] = (byRarity[rarity] ?? 0) + amount;
     user.tradeUpsByRarity = byRarity;
   } else if (stat !== "tradeUpsByRarity") {
-    (user as Record<string, unknown>)[stat] = ((user as Record<string, unknown>)[stat] as number) + amount;
+    const u = user as unknown as Record<string, number>;
+    u[stat] = (u[stat] ?? 0) + amount;
   }
   store[userId] = user;
   saveLifetimeStatsStore(store);

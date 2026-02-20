@@ -856,6 +856,23 @@ export default function HomePage() {
                                   <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl font-bold">{sub.movieTitle.charAt(0)}</div>
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                {/* Pitch — Instagram reel style, shown on hover */}
+                                {sub.pitch && (
+                                  <div className="absolute bottom-0 left-0 right-0 z-10 flex items-end gap-2 p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none">
+                                    <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden bg-white/10">
+                                      {sub.avatarUrl ? (
+                                        <img src={sub.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white/80 text-xs font-semibold">
+                                          {(sub.userName || "?")[0].toUpperCase()}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="pitch-bubble min-w-0 flex-1 rounded-2xl rounded-bl-sm bg-white/90 backdrop-blur-sm border border-white/30 px-3 py-2 shadow-lg max-h-14 overflow-hidden flex items-center">
+                                      <p className="pitch-text text-neutral-800 leading-snug break-words w-full" style={{ fontSize: 13 }}>{sub.pitch}</p>
+                                    </div>
+                                  </div>
+                                )}
                                 {isMyVote && (
                                   <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-blue-500/30 backdrop-blur-sm flex items-center justify-center border border-blue-400/40">
                                     <svg className="w-4 h-4 text-blue-300" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" /></svg>
