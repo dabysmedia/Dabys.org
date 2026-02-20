@@ -32,6 +32,10 @@ export async function POST(request: Request) {
 
   // Track quest progress: trade_up with the input rarity
   recordQuestProgress(body.userId, "trade_up", { rarity: inputRarity });
+  if (inputRarity) {
+    const { incrementUserLifetimeStat } = await import("@/lib/mainQuests");
+    incrementUserLifetimeStat(body.userId, "tradeUpsByRarity", 1, inputRarity);
+  }
 
   // Log legendary pulls from trade-up
   if (result.card && result.card.rarity === "legendary") {

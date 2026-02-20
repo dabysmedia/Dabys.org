@@ -60,6 +60,8 @@ export async function POST(request: Request) {
   if (prismsAwarded > 0) {
     addPrisms(userId, prismsAwarded);
   }
+  const { incrementUserLifetimeStat } = await import("@/lib/mainQuests");
+  incrementUserLifetimeStat(userId, "cardsDisenchanted");
 
   const prismBalance = getPrisms(userId);
   return NextResponse.json({

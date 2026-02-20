@@ -23,6 +23,8 @@ export async function POST(request: Request) {
   }
 
   recordQuestProgress(body.userId, "trade_up", { rarity: "legendary" });
+  const { incrementUserLifetimeStat } = await import("@/lib/mainQuests");
+  incrementUserLifetimeStat(body.userId, "tradeUpsByRarity", 1, "legendary");
 
   if (result.card) {
     const users = getUsers();

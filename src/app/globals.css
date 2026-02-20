@@ -98,6 +98,30 @@ select option {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Casino premium animations */
+@keyframes casino-glow-pulse {
+  0%, 100% { opacity: 0.4; filter: blur(140px); }
+  50% { opacity: 0.6; filter: blur(160px); }
+}
+@keyframes casino-card-hover {
+  0% { transform: translateY(0) scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+  100% { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 40px rgba(245,158,11,0.15), 0 0 0 1px rgba(255,255,255,0.08); }
+}
+@keyframes casino-reel-spin {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+.casino-premium-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.casino-premium-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(245,158,11,0.2);
+}
+.casino-premium-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
 .casino-bet-input {
   -moz-appearance: textfield;
   appearance: textfield;

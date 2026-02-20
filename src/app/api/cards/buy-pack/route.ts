@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buyPack, getCompletedWinnerIds } from "@/lib/cards";
 import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
+import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   const pack = allPacks.find((p) => p.id === packId);
   const isFree = !!pack?.isFree;
   recordQuestProgress(body.userId, "open_pack", { packIsFree: isFree });
+  if (!isFree) incrementUserLifetimeStat(body.userId, "packsOpened");
 
   // Track quest progress: find_rarity_in_pack (check each card's rarity)
   if (result.cards) {

@@ -2,6 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { formatUtcTimeInHalifax } from "@/lib/dateUtils";
+import type { MainQuestDefinition, MainQuestType } from "@/lib/mainQuests";
+
+const MAIN_QUEST_TYPES: { value: MainQuestType; label: string }[] = [
+  { value: "complete_sets", label: "Complete Sets" },
+  { value: "open_packs", label: "Open Packs" },
+  { value: "disenchant_cards", label: "Disenchant Cards" },
+  { value: "pack_a_punch", label: "Pack-a-Punch Cards" },
+  { value: "trade_up_rarity", label: "Trade Up (by Rarity)" },
+  { value: "complete_dailies", label: "Complete Dailies" },
+];
+
+const RARITIES = ["uncommon", "rare", "epic", "legendary"] as const;
+
+function generateMainQuestId(): string {
+  return `mq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
 
 interface QuestDefinition {
   label: string;
@@ -48,6 +64,9 @@ export default function AdminQuestsPage() {
   const [wipeUserId, setWipeUserId] = useState("");
   const [wipeWinnerId, setWipeWinnerId] = useState("");
   const [wipingAllForUserId, setWipingAllForUserId] = useState<string | null>(null);
+  const [mainQuestDefinitions, setMainQuestDefinitions] = useState<MainQuestDefinition[]>([]);
+  const [dailySectionCollapsed, setDailySectionCollapsed] = useState(false);
+  const [mainSectionCollapsed, setMainSectionCollapsed] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/quests")
@@ -59,18 +78,32 @@ export default function AdminQuestsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/admin/main-quests")
+      .then((r) => r.json())
+      .then((data) => setMainQuestDefinitions(data.definitions ?? []))
+      .catch(() => {});
+  }, []);
+
   async function handleSave() {
     if (!settings) return;
     setSaving(true);
     setError("");
     setSaved(false);
     try {
-      const res = await fetch("/api/admin/quests", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      });
-      if (res.ok) {
+      const [questsRes, mainRes] = await Promise.all([
+        fetch("/api/admin/quests", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(settings),
+        }),
+        fetch("/api/admin/main-quests", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ definitions: mainQuestDefinitions }),
+        }),
+      ]);
+      if (questsRes.ok && mainRes.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       } else {
@@ -81,6 +114,34 @@ export default function AdminQuestsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function updateMainQuest(index: number, field: keyof MainQuestDefinition, value: unknown) {
+    setMainQuestDefinitions((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }
+
+  function addMainQuest() {
+    setMainQuestDefinitions((prev) => [
+      ...prev,
+      {
+        id: generateMainQuestId(),
+        type: "open_packs",
+        targetCount: 10,
+        reward: 100,
+        rewardType: "credits",
+        label: "New Main Quest",
+        description: "Reach the target to claim",
+        order: prev.length,
+      },
+    ]);
+  }
+
+  function removeMainQuest(index: number) {
+    setMainQuestDefinitions((prev) => prev.filter((_, i) => i !== index));
   }
 
   function updateQuest(questType: string, field: string, value: unknown) {
@@ -201,12 +262,12 @@ export default function AdminQuestsPage() {
   const questTypes = Object.keys(settings.questDefinitions);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-24">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white/90">Daily Quests</h1>
+          <h1 className="text-2xl font-bold text-white/90">Quests</h1>
           <p className="text-sm text-white/40 mt-1">
-            Configure quest rewards, descriptions, and how many quests appear each day.
+            Configure daily quests, main quests, and set completion.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -272,6 +333,24 @@ export default function AdminQuestsPage() {
         </div>
       )}
 
+      {/* ─── Daily Quests section ─── */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setDailySectionCollapsed((c) => !c)}
+          className="flex items-center gap-2 w-full px-5 py-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+          aria-expanded={!dailySectionCollapsed}
+        >
+          <span className="text-sm font-semibold text-white/80 uppercase tracking-wider">Daily Quests</span>
+          <span className="text-xs text-white/40">Reset daily · configurable rewards</span>
+          <span className={`ml-auto text-white/30 transition-transform ${dailySectionCollapsed ? "" : "rotate-180"}`} aria-hidden>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        {!dailySectionCollapsed && (
+          <div className="px-5 pb-5 pt-0 space-y-6 border-t border-white/[0.06]">
       {/* Wipe set completion modal */}
       {wipeSetCompletionOpen && (
         <div className="rounded-2xl border border-amber-400/20 bg-amber-500/5 p-5 space-y-4">
@@ -529,6 +608,182 @@ export default function AdminQuestsPage() {
             </div>
           );
         })}
+      </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Main Quests section ─── */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setMainSectionCollapsed((c) => !c)}
+          className="flex items-center gap-2 w-full px-5 py-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+          aria-expanded={!mainSectionCollapsed}
+        >
+          <span className="text-sm font-semibold text-white/80 uppercase tracking-wider">Main Quests</span>
+          <span className="text-xs text-white/40">Long-term · no time limit</span>
+          <span className={`ml-auto text-white/30 transition-transform ${mainSectionCollapsed ? "" : "rotate-180"}`} aria-hidden>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        {!mainSectionCollapsed && (
+          <div className="px-5 pb-5 pt-4 space-y-4 border-t border-white/[0.06]">
+            {mainQuestDefinitions.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-12 text-center">
+                <p className="text-white/40 text-sm mb-4">No main quests defined yet.</p>
+                <button
+                  type="button"
+                  onClick={addMainQuest}
+                  className="px-4 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-400 text-sm hover:bg-purple-500/20 cursor-pointer"
+                >
+                  Add your first main quest
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={addMainQuest}
+                    className="px-4 py-2 rounded-xl border border-white/20 bg-white/5 text-white/80 text-sm hover:bg-white/10 transition-all cursor-pointer"
+                  >
+                    Add Quest
+                  </button>
+                </div>
+                {mainQuestDefinitions.map((def, index) => (
+                  <div
+                    key={def.id}
+                    className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <span className="text-xs text-white/30 font-mono">{def.id}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeMainQuest(index)}
+                        className="px-2 py-1 rounded text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Type</label>
+                        <select
+                          value={def.type}
+                          onChange={(e) => updateMainQuest(index, "type", e.target.value)}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 cursor-pointer [color-scheme:dark]"
+                        >
+                          {MAIN_QUEST_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Target Count</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={def.targetCount}
+                          onChange={(e) => updateMainQuest(index, "targetCount", Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                        />
+                      </div>
+                      {def.type === "trade_up_rarity" && (
+                        <div>
+                          <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Rarity</label>
+                          <select
+                            value={def.rarity ?? ""}
+                            onChange={(e) => updateMainQuest(index, "rarity", e.target.value || undefined)}
+                            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 cursor-pointer [color-scheme:dark]"
+                          >
+                            <option value="">Any</option>
+                            {RARITIES.map((r) => (
+                              <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Reward</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={def.reward}
+                          onChange={(e) => updateMainQuest(index, "reward", Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Reward Type</label>
+                        <select
+                          value={def.rewardType}
+                          onChange={(e) => updateMainQuest(index, "rewardType", e.target.value)}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 cursor-pointer [color-scheme:dark]"
+                        >
+                          <option value="credits">Credits</option>
+                          <option value="stardust">Stardust</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Order</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={def.order ?? index}
+                          onChange={(e) => updateMainQuest(index, "order", parseInt(e.target.value) || 0)}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Label</label>
+                        <input
+                          type="text"
+                          value={def.label}
+                          onChange={(e) => updateMainQuest(index, "label", e.target.value)}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                          placeholder="e.g. Open 10 Packs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Description</label>
+                        <input
+                          type="text"
+                          value={def.description}
+                          onChange={(e) => updateMainQuest(index, "description", e.target.value)}
+                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                          placeholder="e.g. Open 10 packs to claim"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Sticky save bar — always visible when scrolling */}
+      <div className="sticky bottom-0 left-0 right-0 z-10 -mx-3 md:-mx-8 px-3 md:px-8 py-4 bg-black/80 backdrop-blur-xl border-t border-white/[0.06] flex justify-end">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600/90 to-indigo-600/90 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-purple-500/20"
+        >
+          {saving ? (
+            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : saved ? (
+            "Saved!"
+          ) : (
+            "Save Changes"
+          )}
+        </button>
       </div>
     </div>
   );

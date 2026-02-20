@@ -108,5 +108,98 @@
       "weekId": "11"
     },
     "createdAt": "2026-02-19T03:04:42.732Z"
+  },
+  {
+    "id": "cl-1771566941131-tbmz1yc",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:55:41.130Z"
+  },
+  {
+    "id": "cl-1771566944075-el3tvn2",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:55:44.075Z"
+  },
+  {
+    "id": "cl-1771566945406-xyuxjbo",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10,
+      "action": "split"
+    },
+    "createdAt": "2026-02-20T05:55:45.405Z"
+  },
+  {
+    "id": "cl-1771566947333-mp98xu3",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:55:47.333Z"
+  },
+  {
+    "id": "cl-1771566948779-hbeotzh",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_blackjack",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:55:48.779Z"
+  },
+  {
+    "id": "cl-1771566964414-y52jovz",
+    "userId": "1",
+    "amount": 20,
+    "reason": "casino_blackjack_win",
+    "metadata": {
+      "bet": 10,
+      "result": "win",
+      "payout": 20
+    },
+    "createdAt": "2026-02-20T05:56:04.413Z"
+  },
+  {
+    "id": "cl-1771566967196-fjc0ana",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:56:07.196Z"
+  },
+  {
+    "id": "cl-1771566969643-ocni88l",
+    "userId": "1",
+    "amount": -10,
+    "reason": "casino_slots",
+    "metadata": {
+      "bet": 10
+    },
+    "createdAt": "2026-02-20T05:56:09.643Z"
+  },
+  {
+    "id": "cl-1771567181510-s8v66p5",
+    "userId": "1",
+    "amount": 60,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "claimedCount": 2
+    },
+    "createdAt": "2026-02-20T05:59:41.509Z"
   }
 ]

@@ -122,5 +122,18 @@
     },
     "id": "act_1771377932144_xyierp",
     "timestamp": "2026-02-18T01:25:32.144Z"
+  },
+  {
+    "type": "trade_complete",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "completed a trade with Jerry (2 cards)",
+    "meta": {
+      "tradeId": "trd-1771564947095-8d32trm",
+      "counterpartyName": "Jerry",
+      "counterpartyUserId": "1"
+    },
+    "id": "act_1771565136764_gmradc",
+    "timestamp": "2026-02-20T05:25:36.764Z"
   }
 ]

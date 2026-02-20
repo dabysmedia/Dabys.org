@@ -1,0 +1,65 @@
+{
+  "definitions": [
+    {
+      "id": "mq_open_10",
+      "type": "open_packs",
+      "targetCount": 10,
+      "reward": 100,
+      "rewardType": "credits",
+      "label": "Open 10 Packs",
+      "description": "Open 10 packs (excluding free packs)",
+      "order": 0
+    },
+    {
+      "id": "mq_complete_1_set",
+      "type": "complete_sets",
+      "targetCount": 1,
+      "reward": 200,
+      "rewardType": "credits",
+      "label": "Complete Your First Set",
+      "description": "Complete and claim one movie set",
+      "order": 1
+    },
+    {
+      "id": "mq_disenchant_5",
+      "type": "disenchant_cards",
+      "targetCount": 5,
+      "reward": 75,
+      "rewardType": "stardust",
+      "label": "Disenchant 5 Cards",
+      "description": "Disenchant 5 holo cards",
+      "order": 2
+    },
+    {
+      "id": "mq_pap_3",
+      "type": "pack_a_punch",
+      "targetCount": 3,
+      "reward": 150,
+      "rewardType": "credits",
+      "label": "Pack-a-Punch 3 Cards",
+      "description": "Successfully Pack-a-Punch 3 cards",
+      "order": 3
+    },
+    {
+      "id": "mq_tradeup_rare",
+      "type": "trade_up_rarity",
+      "targetCount": 2,
+      "reward": 120,
+      "rewardType": "credits",
+      "label": "2 Rare Trade Ups",
+      "description": "Complete 2 rare trade-ups",
+      "rarity": "rare",
+      "order": 4
+    },
+    {
+      "id": "mq_dailies_7",
+      "type": "complete_dailies",
+      "targetCount": 7,
+      "reward": 250,
+      "rewardType": "credits",
+      "label": "Complete 7 Dailies",
+      "description": "Complete and claim 7 daily quests",
+      "order": 5
+    }
+  ]
+}

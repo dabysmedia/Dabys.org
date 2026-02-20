@@ -1,6 +1,6 @@
 [
   {
-    "userId": "2",
+    "userId": "1",
     "characterId": "actor-1158-111",
     "rarity": "uncommon",
     "isFoil": false,
@@ -105,7 +105,7 @@
     "acquiredAt": "2026-02-19T03:20:57.580Z"
   },
   {
-    "userId": "1",
+    "userId": "2",
     "characterId": "custom-1770993986099-ha56a75",
     "rarity": "legendary",
     "isFoil": true,

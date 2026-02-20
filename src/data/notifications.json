@@ -132,5 +132,41 @@
     "targetUserId": "__global__",
     "id": "ntf_1771470395604_ba510v",
     "timestamp": "2026-02-19T03:06:35.604Z"
+  },
+  {
+    "type": "trade_received",
+    "targetUserId": "1",
+    "message": "sent you a trade offer (2 cards)",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "tradeId": "trd-1771564947095-8d32trm"
+    },
+    "id": "ntf_1771564947096_rq17qq",
+    "timestamp": "2026-02-20T05:22:27.096Z"
+  },
+  {
+    "type": "trade_accepted",
+    "targetUserId": "2",
+    "message": "accepted your trade offer (2 cards)",
+    "actorUserId": "1",
+    "actorName": "Jerry",
+    "meta": {
+      "tradeId": "trd-1771564947095-8d32trm"
+    },
+    "id": "ntf_1771565136764_6vh4te",
+    "timestamp": "2026-02-20T05:25:36.764Z"
+  },
+  {
+    "type": "trade_complete",
+    "message": "completed a trade with Jerry (2 cards)",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "tradeId": "trd-1771564947095-8d32trm"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771565136765_2c7bck",
+    "timestamp": "2026-02-20T05:25:36.765Z"
   }
 ]

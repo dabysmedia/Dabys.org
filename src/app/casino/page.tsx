@@ -101,43 +101,43 @@ function CasinoContent() {
 
   return (
     <div className="min-h-screen">
-      {/* Ambient glow */}
+      {/* Ambient glow — stronger, animated */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
-        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
+        <div className="absolute -top-1/2 -left-1/4 w-[1000px] h-[1000px] rounded-full bg-purple-600/15 blur-[180px] animate-[casino-glow-pulse_6s_ease-in-out_infinite]" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-[700px] h-[700px] rounded-full bg-indigo-600/12 blur-[160px] animate-[casino-glow-pulse_8s_ease-in-out_infinite]" style={{ animationDelay: "-2s" }} />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-amber-600/10 blur-[140px] animate-[casino-glow-pulse_7s_ease-in-out_infinite]" style={{ animationDelay: "-1s" }} />
       </div>
 
-      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {/* Header block */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+      <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        {/* Header block — bigger, more premium */}
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl sm:text-5xl font-bold text-white/95 font-card-title tracking-tight" style={{ fontFamily: "'Libre Baskerville', serif" }}>
             Casino
           </h1>
-          <p className="text-white/50 text-sm mt-1">
+          <p className="text-white/50 text-base sm:text-lg mt-2 tracking-wide">
             Slots · Blackjack · Roulette · Dabys Bets
           </p>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex border-b border-white/[0.08] mb-8">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setTab(tab.key)}
-                  className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer ${
-                    activeTab === tab.key
-                      ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
-                      : "text-white/40 hover:text-white/60"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+        {/* Tab bar — pill style with hover */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setTab(tab.key)}
+              className={`px-6 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer casino-premium-btn ${
+                activeTab === tab.key
+                  ? "bg-amber-500/20 border-2 border-amber-400/60 text-amber-300 shadow-[0_0_24px_rgba(245,158,11,0.2)]"
+                  : "bg-white/[0.04] border border-white/[0.12] text-white/50 hover:bg-white/[0.08] hover:text-white/80 hover:border-amber-500/30"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Game content — main glass panel */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+        {/* Game content — main glass panel, bigger */}
+        <div className="rounded-3xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-8 sm:p-12 shadow-[0_16px_48px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)] transition-shadow duration-300 hover:shadow-[0_20px_56px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.06)]">
           {activeTab === "slots" && (
             <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
           )}
@@ -157,17 +157,17 @@ function CasinoContent() {
           )}
         </div>
 
-        {/* Blackjack result — outside container, same visual position, fades after 3s */}
+        {/* Blackjack result — premium, fades after 3s */}
         {activeTab === "blackjack" && blackjackLastResult && (
           <div
-            className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl transition-opacity duration-500 ${
+            className={`mt-8 text-center py-6 px-8 rounded-2xl border-2 backdrop-blur-xl transition-opacity duration-500 animate-in fade-in duration-300 ${
               blackjackResultFading ? "opacity-0" : "opacity-100"
             } ${
               blackjackLastResult.result === "win"
-                ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-200"
+                ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200 shadow-[0_8px_32px_rgba(34,197,94,0.15)]"
                 : blackjackLastResult.result === "push"
-                  ? "bg-white/[0.06] border-white/[0.12] text-white/70"
-                  : "bg-red-500/15 border-red-400/30 text-red-200"
+                  ? "bg-white/[0.08] border-white/[0.15] text-white/80 shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+                  : "bg-red-500/20 border-red-400/40 text-red-200 shadow-[0_8px_32px_rgba(239,68,68,0.15)]"
             }`}
           >
             {blackjackLastResult.result === "win" && (
@@ -308,24 +308,24 @@ function SlotsGame({
         <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
       </div>
 
-      {/* Slots machine: reels centered, paytable fixed to right */}
-      <div className="relative mb-8">
-        {/* Reels — centered, paytable doesn't affect position */}
-        <div className="flex justify-center gap-2 sm:gap-4">
+      {/* Slots machine: bigger reels, premium styling */}
+      <div className="relative mb-10">
+        {/* Reels — bigger, with hover glow */}
+        <div className="flex justify-center gap-3 sm:gap-5">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl flex items-center justify-center text-xl sm:text-2xl font-bold text-white/90 overflow-hidden shadow-inner"
+              className={`w-20 h-24 sm:w-28 sm:h-36 rounded-2xl border border-white/[0.12] bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-xl flex items-center justify-center text-2xl sm:text-4xl font-bold text-white/95 overflow-hidden shadow-[inset_0_2px_8px_rgba(0,0,0,0.2),0_4px_20px_rgba(0,0,0,0.15)] transition-all duration-300 ${spinning ? "ring-2 ring-amber-400/40 shadow-[inset_0_2px_8px_rgba(0,0,0,0.2),0_0_24px_rgba(245,158,11,0.15)]" : "hover:ring-2 hover:ring-amber-400/20 hover:shadow-[inset_0_2px_8px_rgba(0,0,0,0.2),0_8px_32px_rgba(0,0,0,0.2)]"}`}
             >
-              <span className={`capitalize ${spinning ? "opacity-90" : ""}`}>
+              <span className={`capitalize transition-opacity duration-150 ${spinning ? "opacity-95" : ""}`}>
                 {slotIcon((spinning ? spinDisplaySymbols : symbols)?.[i] ?? "—")}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Vertical paytable — positioned far right, doesn't offset reels */}
-        <div className="absolute right-0 top-0 flex flex-col py-2 px-3 rounded-lg border border-white/[0.08] bg-white/[0.02] text-[11px] text-white/50 min-w-[80px]">
+        {/* Vertical paytable — positioned far right */}
+        <div className="absolute right-0 top-0 flex flex-col py-3 px-4 rounded-xl border border-white/[0.1] bg-white/[0.04] text-xs text-white/50 min-w-[90px] backdrop-blur-sm">
           {SLOT_SYMBOLS.map((sym) => (
             <div key={sym} className="flex items-center justify-between gap-3 py-0.5">
               <span>{slotIcon(sym)}×3</span>
@@ -340,17 +340,17 @@ function SlotsGame({
         </div>
       </div>
 
-      {/* Bet selector */}
-      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-6">
+      {/* Bet selector — bigger chips with hover */}
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8">
         {SLOT_BETS.map((b) => (
           <button
             key={b}
             onClick={() => setBet(b)}
             disabled={spinning || balance < b}
-            className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`casino-premium-btn px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               bet === b
-                ? "border border-amber-500/30 bg-amber-500/10 text-amber-400"
-                : "border border-white/[0.12] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:border-white/[0.18]"
+                ? "border-2 border-amber-500/50 bg-amber-500/15 text-amber-300 shadow-[0_0_16px_rgba(245,158,11,0.15)]"
+                : "border border-white/[0.15] bg-white/[0.05] text-white/70 hover:bg-white/[0.1] hover:border-amber-500/30 hover:text-amber-200"
             }`}
           >
             {b}
@@ -358,12 +358,12 @@ function SlotsGame({
         ))}
       </div>
 
-      {/* Spin button */}
+      {/* Spin button — premium, bigger */}
       <div className="flex justify-center mb-6">
         <button
           onClick={handleSpin}
           disabled={spinning || balance < bet}
-          className="min-w-[160px] px-10 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          className="casino-premium-btn min-w-[200px] px-12 py-4 rounded-2xl border-2 border-amber-500/40 bg-amber-500/15 backdrop-blur-md text-amber-300 font-semibold text-lg hover:border-amber-400/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_20px_rgba(245,158,11,0.1)]"
         >
           {spinning ? (
             <span className="inline-flex items-center gap-2">
@@ -376,17 +376,17 @@ function SlotsGame({
         </button>
       </div>
 
-      {/* Result */}
+      {/* Result — premium */}
       {lastResult && (
         <div
-          className={
+          className={`text-center py-6 px-8 rounded-2xl border-2 backdrop-blur-xl animate-in fade-in duration-300 ${
             lastResult.win
-              ? "text-center py-4 px-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-xl text-emerald-400"
-              : "text-center py-4 px-5 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl text-white/60"
-          }
+              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 shadow-[0_8px_32px_rgba(34,197,94,0.15)]"
+              : "border-white/[0.1] bg-white/[0.05] text-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+          }`}
         >
           {lastResult.win ? (
-            <p className="font-medium text-sm">You won {lastResult.payout} credits!</p>
+            <p className="font-semibold text-base">You won {lastResult.payout} credits!</p>
           ) : (
             <p className="text-sm">No match. Better luck next time!</p>
           )}
@@ -404,7 +404,7 @@ function renderCard(c: { suit: string; rank: string }, idx: number, cardKey?: st
   return (
     <div
       key={cardKey ?? idx}
-      className={`card-reveal w-14 h-20 sm:w-20 sm:h-28 rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl flex items-center justify-center text-base sm:text-lg font-bold [transform-style:preserve-3d] ${color}`}
+      className={`card-reveal w-20 h-28 sm:w-24 sm:h-36 rounded-xl border-2 border-white/[0.12] bg-gradient-to-b from-white/[0.1] to-white/[0.04] backdrop-blur-xl flex items-center justify-center text-lg sm:text-xl font-bold [transform-style:preserve-3d] shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-transform duration-200 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(0,0,0,0.25)] ${color}`}
       style={{ animationDelay: `${idx * CARD_FLIP_DELAY_MS}ms` }}
     >
       {isHidden ? "?" : `${c.rank}${c.suit}`}
@@ -540,10 +540,10 @@ function BlackjackGame({
         <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
       </div>
 
-      {/* Dealer hand */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 mb-5">
-        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">Dealer</p>
-        <div className="flex gap-2 flex-wrap min-h-[7rem] justify-center [perspective:600px]">
+      {/* Dealer hand — premium card area */}
+      <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 mb-6 shadow-[0_4px_24px_rgba(0,0,0,0.15)]">
+        <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.2em] mb-4 text-center">Dealer</p>
+        <div className="flex gap-3 sm:gap-4 flex-wrap min-h-[8rem] justify-center [perspective:800px]">
           {dealerHand.map((c, i) => renderCard(c, i, `d-${dealKey}-${i}`))}
         </div>
         {dealerValue > 0 && (
@@ -551,9 +551,9 @@ function BlackjackGame({
         )}
       </div>
 
-      {/* Player hand(s) */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5 mb-6">
-        <p className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3 text-center">
+      {/* Player hand(s) — premium card area */}
+      <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 mb-8 shadow-[0_4px_24px_rgba(0,0,0,0.15)]">
+        <p className="text-sm font-semibold text-white/50 uppercase tracking-[0.2em] mb-4 text-center">
           {playerHands ? `Hand ${(session?.currentHandIndex ?? 0) + 1} of ${playerHands.length}` : "Your hand"}
         </p>
         {playerHands && playerHands.length > 1 ? (
@@ -629,7 +629,7 @@ function BlackjackGame({
           <button
             onClick={() => handleAction("deal")}
             disabled={loading || balance < (parseInt(betInput, 10) || 0)}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? "…" : "Deal"}
           </button>
@@ -640,14 +640,14 @@ function BlackjackGame({
           <button
             onClick={() => handleAction("insurance", true)}
             disabled={loading || balance < Math.floor((session?.bet ?? 0) / 2)}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Yes ({Math.floor((session?.bet ?? 0) / 2)} cr)
           </button>
           <button
             onClick={() => handleAction("insurance", false)}
             disabled={loading}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-white/20 bg-white/5 text-white/70 font-medium hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-white/25 bg-white/[0.06] text-white/70 font-semibold hover:bg-white/[0.1] hover:border-white/40 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             No
           </button>
@@ -663,7 +663,7 @@ function BlackjackGame({
               <button
                 onClick={() => handleAction("split")}
                 disabled={loading || !isPair || !canAffordSplit}
-                className="min-w-[90px] px-6 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-300 font-medium hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-purple-500/40 bg-purple-500/15 text-purple-300 font-semibold hover:border-purple-500/60 hover:bg-purple-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Split
               </button>
@@ -672,14 +672,14 @@ function BlackjackGame({
           <button
             onClick={() => handleAction("hit")}
             disabled={loading || playerValue >= 21}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-medium hover:border-emerald-500/50 hover:bg-emerald-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/15 text-emerald-400 font-semibold hover:border-emerald-500/60 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Hit
           </button>
           <button
             onClick={() => handleAction("stand")}
             disabled={loading}
-            className="min-w-[90px] px-6 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="casino-premium-btn min-w-[100px] px-8 py-3 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Stand
           </button>
@@ -702,6 +702,7 @@ function RouletteGame({
   const [betInput, setBetInput] = useState("10");
   const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
   const [spinning, setSpinning] = useState(false);
+  const QUICK_BETS = [5, 10, 25, 50, 100, 250, 500];
   const [lastResult, setLastResult] = useState<{
     result: number;
     resultColor: string;
@@ -713,14 +714,14 @@ function RouletteGame({
   const SPIN_DURATION_MS = 2000;
 
   async function handleSpin() {
-    const betVal = Math.max(2, Math.min(500, parseInt(betInput, 10) || 0));
+    const betVal = Math.max(5, Math.min(500, parseInt(betInput, 10) || 0));
     if (spinning || selection === null) return;
-    if (betVal < 2 || betVal > 500) {
-      alert("Please enter a bet between 2 and 500.");
+    if (betVal < 5 || betVal > 500) {
+      alert("Please enter a bet between 5 and 500.");
       return;
     }
-    if (betVal % 2 !== 0) {
-      alert("Please enter an even number for your bet.");
+    if (betVal % 5 !== 0) {
+      alert("Please enter a multiple of 5 for your bet.");
       return;
     }
     if (balance < betVal) {
@@ -765,9 +766,9 @@ function RouletteGame({
         <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
       </div>
 
-      <div className="flex flex-col items-center gap-8">
-        {/* Betting board — horizontal table layout */}
-        <div className="w-full max-w-3xl rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4 sm:p-5">
+      <div className="flex flex-col items-center gap-10">
+        {/* Betting board — premium, bigger */}
+        <div className="w-full max-w-3xl rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
           <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
             <label className="text-[11px] uppercase tracking-wider text-white/40 shrink-0">Bet</label>
             <div className="flex items-stretch rounded-lg border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl overflow-hidden focus-within:ring-2 focus-within:ring-white/20">
@@ -777,16 +778,16 @@ function RouletteGame({
                 pattern="[0-9]*"
                 value={betInput}
                 onChange={(e) => setBetInput(e.target.value.replace(/\D/g, ""))}
-                placeholder="2–500, even"
+                placeholder="5–500, ×5"
                 className="casino-bet-input w-20 bg-transparent px-3 py-2 text-white/90 text-center text-sm focus:outline-none placeholder:text-white/30"
-                title="Bet (even number, 2–500)"
+                title="Bet (multiple of 5, 5–500)"
               />
               <div className="flex flex-col border-l border-white/[0.1]">
                 <button
                   type="button"
                   onClick={() => {
                     const v = parseInt(betInput, 10) || 0;
-                    const next = Math.min(500, Math.max(2, v) + 2);
+                    const next = Math.min(500, Math.max(5, v) + 5);
                     setBetInput(String(next));
                   }}
                   disabled={(parseInt(betInput, 10) || 0) >= 500}
@@ -799,10 +800,10 @@ function RouletteGame({
                   type="button"
                   onClick={() => {
                     const v = parseInt(betInput, 10) || 0;
-                    const next = Math.max(2, Math.min(500, v) - 2);
+                    const next = Math.max(5, Math.min(500, v) - 5);
                     setBetInput(String(next));
                   }}
-                  disabled={(parseInt(betInput, 10) || 0) <= 2}
+                  disabled={(parseInt(betInput, 10) || 0) <= 5}
                   className="flex items-center justify-center w-6 h-4 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer border-t border-white/[0.08]"
                   aria-label="Decrease bet"
                 >
@@ -810,60 +811,76 @@ function RouletteGame({
                 </button>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {QUICK_BETS.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setBetInput(String(amt))}
+                  className={`casino-premium-btn px-3.5 py-2 rounded-xl text-sm font-semibold cursor-pointer ${
+                    (parseInt(betInput, 10) || 0) === amt
+                      ? "border-2 border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+                      : "border border-white/[0.15] bg-white/[0.06] text-white/70 hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-200"
+                  }`}
+                >
+                  {amt}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
               <button
                 onClick={() => setSelection(selection === "red" ? null : "red")}
-                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                className={`casino-premium-btn px-8 py-3 rounded-xl text-sm font-semibold cursor-pointer ${
                   selection === "red"
-                    ? "border border-red-500/50 bg-red-500/15 text-red-400 ring-2 ring-red-400/50"
-                    : "border border-red-500/30 bg-red-500/10 text-red-300 hover:border-red-500/50 hover:bg-red-500/15"
+                    ? "border-2 border-red-500/50 bg-red-500/20 text-red-400 ring-2 ring-red-400/50 shadow-[0_0_16px_rgba(239,68,68,0.2)]"
+                    : "border border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20"
                 }`}
               >
                 Red 2×
               </button>
               <button
                 onClick={() => setSelection(selection === "black" ? null : "black")}
-                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                className={`casino-premium-btn px-8 py-3 rounded-xl text-sm font-semibold cursor-pointer ${
                   selection === "black"
-                    ? "border border-white/40 bg-white/10 text-white ring-2 ring-white/30"
-                    : "border border-white/20 bg-white/[0.06] text-white/80 hover:border-white/30 hover:bg-white/[0.08]"
+                    ? "border-2 border-white/50 bg-white/15 text-white ring-2 ring-white/40 shadow-[0_0_16px_rgba(255,255,255,0.1)]"
+                    : "border border-white/[0.2] bg-white/[0.06] text-white/80 hover:border-white/40 hover:bg-white/[0.12]"
                 }`}
               >
                 Black 2×
               </button>
               <button
                 onClick={() => setSelection(selection === 0 ? null : 0)}
-                className={`w-12 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                className={`casino-premium-btn w-14 py-3 rounded-xl text-sm font-semibold cursor-pointer ${
                   selection === 0
-                    ? "border border-emerald-500/50 bg-emerald-500/15 text-emerald-400 ring-2 ring-emerald-400/50"
-                    : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/50 hover:bg-emerald-500/15"
+                    ? "border-2 border-emerald-500/50 bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_12px_rgba(34,197,94,0.2)]"
+                    : "border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/60 hover:bg-emerald-500/20"
                 }`}
               >
                 0
               </button>
             </div>
           </div>
-          {/* Horizontal number grid — 12 cols × 3 rows (real table layout) */}
-          <div className="grid grid-cols-12 gap-1">
+          {/* Horizontal number grid — bigger cells, hover effects */}
+          <div className="grid grid-cols-12 gap-1.5 sm:gap-2">
             {[0, 1, 2].map((row) =>
               Array.from({ length: 12 }, (_, col) => {
                 const n = col * 3 + row + 1;
                 const isRed = RED_NUMBERS.includes(n);
-                    const sel = selection === n;
+                const sel = selection === n;
                 return (
                   <button
                     key={n}
                     onClick={() => setSelection(selection === n ? null : n)}
-                    className={`aspect-[4/3] min-h-[28px] rounded text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                      sel ? "ring-2 ring-amber-400 ring-offset-1 ring-offset-[#0a0a0f]" : ""
+                    className={`aspect-[4/3] min-h-[32px] sm:min-h-[36px] rounded-lg text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer casino-premium-btn ${
+                      sel ? "ring-2 ring-amber-400 ring-offset-2 ring-offset-[#0a0a0f] scale-[1.02]" : ""
                     } ${
                       isRed
                         ? sel
-                          ? "border border-red-500/50 bg-red-500/20 text-red-300"
-                          : "border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/15"
+                          ? "border-2 border-red-500/50 bg-red-500/25 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.2)]"
+                          : "border border-red-500/35 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/50"
                         : sel
-                          ? "border border-white/30 bg-white/10 text-white/90"
-                          : "border border-white/[0.12] bg-white/[0.04] text-white/70 hover:bg-white/[0.08]"
+                          ? "border-2 border-white/40 bg-white/15 text-white shadow-[0_0_12px_rgba(255,255,255,0.1)]"
+                          : "border border-white/[0.15] bg-white/[0.05] text-white/70 hover:bg-white/[0.12] hover:border-white/[0.25]"
                     }`}
                   >
                     {n}
@@ -876,12 +893,12 @@ function RouletteGame({
         </div>
       </div>
 
-      {/* Spin button */}
-      <div className="flex justify-center mt-6 mb-4">
+      {/* Spin button — premium */}
+      <div className="flex justify-center mt-8 mb-4">
         <button
           onClick={handleSpin}
           disabled={spinning || balance < (parseInt(betInput, 10) || 0) || selection === null}
-          className="min-w-[160px] px-10 py-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-md text-amber-400 font-medium hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+          className="casino-premium-btn min-w-[200px] px-12 py-4 rounded-2xl border-2 border-amber-500/40 bg-amber-500/15 backdrop-blur-md text-amber-300 font-semibold text-lg hover:border-amber-400/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-[0_4px_20px_rgba(245,158,11,0.1)]"
         >
           {spinning ? (
             <span className="inline-flex items-center gap-2">
@@ -894,18 +911,18 @@ function RouletteGame({
         </button>
       </div>
 
-      {/* Result */}
+      {/* Result — premium */}
       {lastResult && (
         <div
-          className={`text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
+          className={`text-center py-6 px-8 rounded-2xl border-2 backdrop-blur-xl animate-in fade-in duration-300 ${
             lastResult.win
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-              : "bg-white/[0.03] border-white/[0.08] text-white/60"
+              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_8px_32px_rgba(34,197,94,0.15)]"
+              : "bg-white/[0.05] border-white/[0.1] text-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
           }`}
         >
-          <p className="text-[11px] uppercase tracking-wider text-white/45 mb-1">Landed on</p>
+          <p className="text-xs uppercase tracking-widest text-white/50 mb-2">Landed on</p>
           <p
-            className={`text-2xl font-bold tabular-nums ${
+            className={`text-3xl sm:text-4xl font-bold tabular-nums ${
               lastResult.resultColor === "red"
                 ? "text-red-400"
                 : lastResult.resultColor === "black"
@@ -1024,27 +1041,27 @@ function DabysBetsGame({
         <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {events.map((evt) => (
           <div
             key={evt.id}
-            className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-5"
+            className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.15)] transition-shadow duration-300 hover:shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
           >
-            <p className="text-white/90 font-medium text-sm mb-4">{evt.title}</p>
+            <p className="text-white/95 font-semibold text-base mb-5">{evt.title}</p>
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-              <div className="flex-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   onClick={() => placeBet(evt.id, "A")}
                   disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:border-purple-500/50 hover:bg-purple-500/15 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all backdrop-blur-md"
+                  className="casino-premium-btn flex-1 px-6 py-3.5 rounded-xl text-sm font-semibold border-2 border-purple-500/40 bg-purple-500/15 text-purple-300 hover:border-purple-500/60 hover:bg-purple-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer backdrop-blur-md"
                 >
                   {evt.sideA} <span className="text-white/50">({evt.oddsA}x)</span>
                 </button>
-                <span className="hidden sm:inline text-white/25 self-center text-xs">vs</span>
+                <span className="hidden sm:inline text-white/30 self-center text-sm font-medium">vs</span>
                 <button
                   onClick={() => placeBet(evt.id, "B")}
                   disabled={betting !== null || balance < (betAmount[evt.id] ?? evt.minBet)}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/15 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all backdrop-blur-md"
+                  className="casino-premium-btn flex-1 px-6 py-3.5 rounded-xl text-sm font-semibold border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer backdrop-blur-md"
                 >
                   {evt.sideB} <span className="text-white/50">({evt.oddsB}x)</span>
                 </button>
@@ -1075,14 +1092,14 @@ function DabysBetsGame({
 
       {lastResult && (
         <div
-          className={`mt-6 text-center py-4 px-5 rounded-xl border backdrop-blur-xl ${
+          className={`mt-8 text-center py-6 px-8 rounded-2xl border-2 backdrop-blur-xl animate-in fade-in duration-300 ${
             lastResult.userWon
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-              : "bg-red-500/10 border-red-500/30 text-red-400"
+              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 shadow-[0_8px_32px_rgba(34,197,94,0.15)]"
+              : "bg-red-500/15 border-red-500/40 text-red-300 shadow-[0_8px_32px_rgba(239,68,68,0.15)]"
           }`}
         >
-          <p className="font-medium text-sm">{lastResult.eventTitle}</p>
-          <p className="text-sm mt-0.5 text-white/80">
+          <p className="font-semibold text-base">{lastResult.eventTitle}</p>
+          <p className="text-sm mt-1 text-white/80">
             {lastResult.userWon ? `Won ${lastResult.payout} on ${lastResult.side}` : `Lost — ${lastResult.side}`}
           </p>
         </div>

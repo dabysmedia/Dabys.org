@@ -94,6 +94,10 @@ export async function POST(request: Request) {
   // Track quest progress: pack_a_punch (regardless of success/fail, you attempted it)
   const { recordQuestProgress } = await import("@/lib/quests");
   recordQuestProgress(userId, "pack_a_punch", { rarity: card.rarity as "uncommon" | "rare" | "epic" | "legendary" });
+  if (success) {
+    const { incrementUserLifetimeStat } = await import("@/lib/mainQuests");
+    incrementUserLifetimeStat(userId, "cardsPackAPunched");
+  }
 
   const newBalance = getStardust(userId);
   return NextResponse.json({

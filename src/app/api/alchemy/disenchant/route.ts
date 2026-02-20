@@ -73,6 +73,8 @@ export async function POST(request: Request) {
   // Track quest progress: disenchant_holo
   const { recordQuestProgress } = await import("@/lib/quests");
   recordQuestProgress(userId, "disenchant_holo", { rarity: cardRarity as "uncommon" | "rare" | "epic" | "legendary" });
+  const { incrementUserLifetimeStat } = await import("@/lib/mainQuests");
+  incrementUserLifetimeStat(userId, "cardsDisenchanted");
 
   return NextResponse.json({
     balance,

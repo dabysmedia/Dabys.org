@@ -82,7 +82,11 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [countdown, setCountdown] = useState<string>("");
   const [rerollingIndex, setRerollingIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
+  const [dailySectionCollapsed, setDailySectionCollapsed] = useState(false);
   const [setCompletionSectionCollapsed, setSetCompletionSectionCollapsed] = useState(true);
+  const [mainQuestSectionCollapsed, setMainQuestSectionCollapsed] = useState(false);
+  const [mainQuestProgress, setMainQuestProgress] = useState<Array<{ definition: { id: string; label: string; description: string; targetCount: number; reward: number; rewardType: string }; current: number; target: number; completed: boolean; claimed: boolean }>>([]);
+  const [claimingMainQuestId, setClaimingMainQuestId] = useState<string | null>(null);
 
   // Sync sleep preference from other sidebar (or same) when toggled
   useEffect(() => {
@@ -179,6 +183,10 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         setSetCompletionQuests(Array.isArray(data.setCompletionQuests) ? data.setCompletionQuests : []);
       })
       .catch(() => {});
+    fetch(`/api/main-quests?userId=${encodeURIComponent(currentUserId)}`)
+      .then((r) => r.json())
+      .then((data) => setMainQuestProgress(Array.isArray(data.progress) ? data.progress : []))
+      .catch(() => setMainQuestProgress([]));
   }, [currentUserId]);
 
   // Refetch when a set is completed (e.g. from codex upload)
@@ -356,14 +364,40 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const totalCount = dailyQuests.length;
   const dailyClaimable = dailyQuests.filter((q) => q.completed && !q.claimed).length;
   const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
-  const claimableCount = dailyClaimable + setCompletionClaimable;
+  const mainQuestClaimable = mainQuestProgress.filter((q) => q.completed && !q.claimed).length;
+  const claimableCount = dailyClaimable + setCompletionClaimable + mainQuestClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
-  // Auto-expand set completion section when there are claimable quests
+  // Auto-expand sections when there are claimable quests
   useEffect(() => {
+    if (dailyClaimable > 0) setDailySectionCollapsed(false);
     if (setCompletionClaimable > 0) setSetCompletionSectionCollapsed(false);
-  }, [setCompletionClaimable]);
+    if (mainQuestClaimable > 0) setMainQuestSectionCollapsed(false);
+  }, [dailyClaimable, setCompletionClaimable, mainQuestClaimable]);
   const rerollsRemaining = Math.max(0, 1 - rerollsUsed);
+
+  async function claimMainQuest(questId: string) {
+    setClaimingMainQuestId(questId);
+    try {
+      const res = await fetch("/api/main-quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, questId }),
+      });
+      if (res.ok) {
+        fetchQuests();
+        const data = await res.json();
+        const delta = data.reward ?? 0;
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingMainQuestId(null);
+    }
+  }
 
   async function handleReroll(questIndex: number) {
     setRerollingIndex(questIndex);
@@ -512,10 +546,10 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                   : "text-white/40 hover:text-white/60"
               }`}
             >
-              Daily Quests
-              {dailyClaimable > 0 && (
+              Quests
+              {claimableCount > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
-                  {dailyClaimable}
+                  {claimableCount}
                 </span>
               )}
             </button>
@@ -538,81 +572,106 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-autocomplete">
-            {/* ─── DAILY QUESTS TAB ─── */}
+            {/* ─── QUESTS TAB (unified: Daily, Set completion, Main) ─── */}
             {activeTab === "quests" && (
-              <div className="py-3">
-                {/* Progress summary + countdown */}
-                {dailyQuests.length > 0 && (
-                  <div className="px-4 mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] text-white/40 uppercase tracking-wider">
-                        {questDate ? `${questDate}` : "Today"}
+              <div className="py-3 space-y-4">
+                {/* ─── Daily section ─── */}
+                <div className="px-4">
+                  <button
+                    type="button"
+                    onClick={() => setDailySectionCollapsed((c) => !c)}
+                    className="flex items-center gap-2 w-full text-left group cursor-pointer"
+                    aria-expanded={!dailySectionCollapsed}
+                  >
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider">Daily</span>
+                    {dailyClaimable > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
+                        {dailyClaimable}
                       </span>
-                      <span className="text-[10px] text-white/50">
-                        {completedCount}/{totalCount} complete
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
-                        style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-                      />
-                    </div>
-                    {countdown && (
-                      <p className="text-[10px] text-white/35 mt-1.5">
-                        Resets in {countdown} · {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)
-                        {rerollsRemaining > 0 && (
-                          <span className="text-purple-400/70 ml-1">· 1 reroll left</span>
-                        )}
-                      </p>
                     )}
-                  </div>
-                )}
-
-                {/* Claim All button (daily quests only; set completion is in Collection tab) */}
-                {dailyClaimable > 1 && (
-                  <div className="px-4 mb-2">
-                    <button
-                      type="button"
-                      onClick={claimAllRewards}
-                      disabled={claimingAll}
-                      className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-400/20 border border-amber-400/30 text-amber-400 text-xs font-medium hover:from-amber-500/30 hover:to-amber-400/30 transition-all cursor-pointer disabled:opacity-50"
+                    <span className="text-[10px] text-white/35 ml-1">
+                      {completedCount}/{totalCount}
+                    </span>
+                    <span
+                      className={`ml-auto text-white/30 transition-transform ${dailySectionCollapsed ? "" : "rotate-180"}`}
+                      aria-hidden
                     >
-                      {claimingAll ? (
-                        <span className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-                      ) : (
-                        `Claim All (${dailyClaimable} rewards)`
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                  </button>
+                  {!dailySectionCollapsed && (
+                    <div className="mt-2">
+                      {/* Progress summary + countdown */}
+                      {dailyQuests.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] text-white/40 uppercase tracking-wider">
+                              {questDate ? `${questDate}` : "Today"}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+                              style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
+                            />
+                          </div>
+                          {countdown && (
+                            <p className="text-[10px] text-white/35 mt-1.5">
+                              Resets in {countdown} · {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)
+                              {rerollsRemaining > 0 && (
+                                <span className="text-purple-400/70 ml-1">· 1 reroll left</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </button>
-                  </div>
-                )}
 
-                {dailyQuests.length === 0 ? (
-                  <p className="px-4 py-6 text-sm text-white/40 text-center">
-                    Loading quests...
-                  </p>
-                ) : (
-                  <ul className="space-y-1 px-2">
-                    {dailyQuests.map((quest, idx) => {
-                      const isClaimable = quest.completed && !quest.claimed;
-                      const isClaiming = claimingIndex === idx;
-                      const canReroll = !quest.completed && !quest.claimed && rerollsRemaining > 0;
-                      const isRerolling = rerollingIndex === idx;
+                      {/* Claim All button (daily quests only) */}
+                      {dailyClaimable > 1 && (
+                        <div className="mb-2">
+                          <button
+                            type="button"
+                            onClick={claimAllRewards}
+                            disabled={claimingAll}
+                            className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-amber-400/20 border border-amber-400/30 text-amber-400 text-xs font-medium hover:from-amber-500/30 hover:to-amber-400/30 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {claimingAll ? (
+                              <span className="inline-block w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                            ) : (
+                              `Claim All (${dailyClaimable} rewards)`
+                            )}
+                          </button>
+                        </div>
+                      )}
 
-                      return (
-                        <li
-                          key={idx}
-                          className={`relative rounded-xl border transition-all duration-200 ${
-                            quest.claimed
-                              ? "border-white/[0.04] bg-white/[0.01] opacity-60"
-                              : isClaimable
-                              ? "border-amber-400/20 bg-amber-400/[0.04]"
-                              : "border-white/[0.06] bg-white/[0.02]"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 px-3 py-2.5">
-                            {/* Status icon */}
-                            <div className="flex-shrink-0 mt-0.5">
+                      {dailyQuests.length === 0 ? (
+                        <p className="py-6 text-sm text-white/40 text-center">
+                          Loading quests...
+                        </p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {dailyQuests.map((quest, idx) => {
+                            const isClaimable = quest.completed && !quest.claimed;
+                            const isClaiming = claimingIndex === idx;
+                            const canReroll = !quest.completed && !quest.claimed && rerollsRemaining > 0;
+                            const isRerolling = rerollingIndex === idx;
+
+                            return (
+                              <li
+                                key={idx}
+                                className={`relative rounded-xl border transition-all duration-200 ${
+                                  quest.claimed
+                                    ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                    : isClaimable
+                                      ? "border-amber-400/20 bg-amber-400/[0.04]"
+                                      : "border-white/[0.06] bg-white/[0.02]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3 px-3 py-2.5">
+                                  {/* Status icon */}
+                                  <div className="flex-shrink-0 mt-0.5">
                               {quest.claimed ? (
                                 <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
                                   <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -679,24 +738,118 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                         </li>
                       );
                     })}
-                  </ul>
-                )}
+                        </ul>
+                      )}
 
-                {/* All quests done message */}
-                {allClaimed && dailyQuests.length > 0 && (
-                  <div className="px-4 py-4 text-center">
-                    <p className="text-xs text-green-400/70">All daily quests completed!</p>
-                    <p className="text-[10px] text-amber-400/60 mt-1">Completion bonus awarded</p>
-                    <p className="text-[10px] text-white/30 mt-0.5">New quests at {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)</p>
-                  </div>
-                )}
+                      {/* All quests done message */}
+                      {allClaimed && dailyQuests.length > 0 && (
+                        <div className="py-4 text-center">
+                          <p className="text-xs text-green-400/70">All daily quests completed!</p>
+                          <p className="text-[10px] text-amber-400/60 mt-1">Completion bonus awarded</p>
+                          <p className="text-[10px] text-white/30 mt-0.5">New quests at {formatUtcTimeInHalifax(resetHourUTC)} (Halifax)</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ─── Main quests section ─── */}
+                <div className="px-4">
+                  <button
+                    type="button"
+                    onClick={() => setMainQuestSectionCollapsed((c) => !c)}
+                    className="flex items-center gap-2 w-full text-left group cursor-pointer"
+                    aria-expanded={!mainQuestSectionCollapsed}
+                  >
+                    <span className="text-[10px] text-white/40 uppercase tracking-wider">Main quests</span>
+                    {mainQuestClaimable > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-cyan-500/20 text-cyan-400 text-[9px] font-bold">
+                        {mainQuestClaimable}
+                      </span>
+                    )}
+                    <span
+                      className={`ml-auto text-white/30 transition-transform ${mainQuestSectionCollapsed ? "" : "rotate-180"}`}
+                      aria-hidden
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                  </button>
+                  {!mainQuestSectionCollapsed && (
+                    <div className="mt-2">
+                      {mainQuestProgress.length === 0 ? (
+                        <p className="text-[10px] text-white/30 py-2">No main quests yet. Admin can add them.</p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {mainQuestProgress.map((q) => {
+                            const isClaimable = q.completed && !q.claimed;
+                            const isClaiming = claimingMainQuestId === q.definition.id;
+                            const pct = q.target > 0 ? Math.min(100, (q.current / q.target) * 100) : 0;
+                            return (
+                              <li
+                                key={q.definition.id}
+                                className={`rounded-xl border transition-all ${
+                                  q.claimed
+                                    ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                    : isClaimable
+                                      ? "border-cyan-400/20 bg-cyan-400/[0.04]"
+                                      : "border-white/[0.06] bg-white/[0.02]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3 px-3 py-2.5">
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
+                                      {q.definition.label}
+                                    </span>
+                                    <p className="text-[10px] text-white/35 mt-0.5">{q.definition.description}</p>
+                                    <div className="mt-1.5 w-full h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] text-white/40 mt-0.5">
+                                      {q.current}/{q.target}
+                                    </span>
+                                  </div>
+                                  <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                    <span className="text-[10px] font-medium text-cyan-300/80">
+                                      +{q.definition.reward} {q.definition.rewardType === "stardust" ? "★" : "cr"}
+                                    </span>
+                                    {isClaimable ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => claimMainQuest(q.definition.id)}
+                                        disabled={isClaiming}
+                                        className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                      >
+                                        {isClaiming ? (
+                                          <span className="inline-block w-2.5 h-2.5 border border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+                                        ) : (
+                                          "Claim"
+                                        )}
+                                      </button>
+                                    ) : q.claimed ? (
+                                      <span className="text-[10px] font-medium text-cyan-300/60">✓</span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* ─── COLLECTION TAB ─── */}
             {activeTab === "collection" && (
               <div className="py-2">
-                {/* Set completion — collapsible; collapsed by default when no quests */}
+                {/* Set completion — collapsible */}
                 <div className="px-4 mb-4">
                   <button
                     type="button"
@@ -790,6 +943,8 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                     </div>
                   )}
                 </div>
+
+                {/* Pinned movie progress */}
                 {pinnedProgress.length === 0 ? (
                   <p className="px-4 py-6 text-sm text-white/40 text-center">
                     No collection quests pinned.

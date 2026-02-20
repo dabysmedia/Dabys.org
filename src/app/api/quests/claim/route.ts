@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { claimQuestReward, claimAllQuestRewards } from "@/lib/quests";
 import { addCredits, addStardust, claimSetCompletionQuest, claimHoloSetCompletionQuest } from "@/lib/data";
+import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     if (!result.didClaim) {
       return NextResponse.json({ error: "Quest not found or already claimed" }, { status: 400 });
     }
+    if (result.didClaim) incrementUserLifetimeStat(userId, "setsCompleted");
     if (result.reward > 0) {
       addCredits(userId, result.reward, "holo_set_completion_quest", { winnerId });
     }
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
     if (!result.didClaim) {
       return NextResponse.json({ error: "Quest not found or already claimed" }, { status: 400 });
     }
+    if (result.didClaim) incrementUserLifetimeStat(userId, "setsCompleted");
     if (result.reward > 0) {
       addCredits(userId, result.reward, "set_completion_quest", { winnerId });
     }
@@ -42,6 +45,7 @@ export async function POST(request: Request) {
     if (!result.success) {
       return NextResponse.json({ error: "No unclaimed completed quests" }, { status: 400 });
     }
+    incrementUserLifetimeStat(userId, "dailiesCompleted", result.claimedCount);
 
     // Award the rewards
     if (result.rewardType === "stardust") {
@@ -73,6 +77,7 @@ export async function POST(request: Request) {
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  incrementUserLifetimeStat(userId, "dailiesCompleted");
 
   // Award the reward
   if (result.rewardType === "stardust") {
