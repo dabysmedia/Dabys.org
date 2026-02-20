@@ -557,6 +557,25 @@ function CardsContent() {
   const [tradeRequestedCredits, setTradeRequestedCredits] = useState(0);
   const [tradeUsers, setTradeUsers] = useState<UserWithAvatar[]>([]);
   const [counterpartyCards, setCounterpartyCards] = useState<Card[]>([]);
+  const [counterpartyCodex, setCounterpartyCodex] = useState<{
+    characterIds: Set<string>;
+    holoCharacterIds: Set<string>;
+    prismaticCharacterIds: Set<string>;
+    darkMatterCharacterIds: Set<string>;
+    altArtCharacterIds: Set<string>;
+    altArtHoloCharacterIds: Set<string>;
+    boysCharacterIds: Set<string>;
+  } | null>(null);
+  /** Cache of other users' codexes for expanded trade views (sent/received/history). */
+  const [otherUserCodexMap, setOtherUserCodexMap] = useState<Record<string, {
+    characterIds: Set<string>;
+    holoCharacterIds: Set<string>;
+    prismaticCharacterIds: Set<string>;
+    darkMatterCharacterIds: Set<string>;
+    altArtCharacterIds: Set<string>;
+    altArtHoloCharacterIds: Set<string>;
+    boysCharacterIds: Set<string>;
+  }>>({});
   const [tradeLoading, setTradeLoading] = useState(false);
   const [tradeError, setTradeError] = useState("");
   const [tradeActionId, setTradeActionId] = useState<string | null>(null);
@@ -2488,11 +2507,104 @@ function CardsContent() {
 
   useEffect(() => {
     if (!showTradeModal || !tradeCounterparty) return;
-    fetch(`/api/cards?userId=${encodeURIComponent(tradeCounterparty.id)}`)
-      .then((r) => r.json())
-      .then((data: Card[]) => setCounterpartyCards(data))
-      .catch(() => setCounterpartyCards([]));
+    Promise.all([
+      fetch(`/api/cards?userId=${encodeURIComponent(tradeCounterparty.id)}`).then((r) => r.json()).then((data: Card[]) => data).catch(() => []),
+      fetch(`/api/cards/codex?userId=${encodeURIComponent(tradeCounterparty.id)}`).then((r) => r.json()).catch(() => null),
+    ]).then(([cardsData, codexData]) => {
+      setCounterpartyCards(Array.isArray(cardsData) ? cardsData : []);
+      if (codexData) {
+        setCounterpartyCodex({
+          characterIds: new Set(Array.isArray(codexData.characterIds) ? codexData.characterIds : []),
+          holoCharacterIds: new Set(Array.isArray(codexData.holoCharacterIds) ? codexData.holoCharacterIds : []),
+          prismaticCharacterIds: new Set(Array.isArray(codexData.prismaticCharacterIds) ? codexData.prismaticCharacterIds : []),
+          darkMatterCharacterIds: new Set(Array.isArray(codexData.darkMatterCharacterIds) ? codexData.darkMatterCharacterIds : []),
+          altArtCharacterIds: new Set(Array.isArray(codexData.altArtCharacterIds) ? codexData.altArtCharacterIds : []),
+          altArtHoloCharacterIds: new Set(Array.isArray(codexData.altArtHoloCharacterIds) ? codexData.altArtHoloCharacterIds : []),
+          boysCharacterIds: new Set(Array.isArray(codexData.boysCharacterIds) ? codexData.boysCharacterIds : []),
+        });
+      } else {
+        setCounterpartyCodex(null);
+      }
+    });
   }, [showTradeModal, tradeCounterparty?.id]);
+
+  type CodexSets = {
+    characterIds: Set<string>;
+    holoCharacterIds: Set<string>;
+    prismaticCharacterIds: Set<string>;
+    darkMatterCharacterIds: Set<string>;
+    altArtCharacterIds: Set<string>;
+    altArtHoloCharacterIds: Set<string>;
+    boysCharacterIds: Set<string>;
+  };
+  const myCodexSets = useMemo<CodexSets>(() => ({
+    characterIds: discoveredCharacterIds,
+    holoCharacterIds: discoveredHoloCharacterIds,
+    prismaticCharacterIds: discoveredPrismaticCharacterIds,
+    darkMatterCharacterIds: discoveredDarkMatterCharacterIds,
+    altArtCharacterIds: discoveredAltArtCharacterIds,
+    altArtHoloCharacterIds: discoveredAltArtHoloCharacterIds,
+    boysCharacterIds: discoveredBoysCharacterIds,
+  }), [discoveredCharacterIds, discoveredHoloCharacterIds, discoveredPrismaticCharacterIds, discoveredDarkMatterCharacterIds, discoveredAltArtCharacterIds, discoveredAltArtHoloCharacterIds, discoveredBoysCharacterIds]);
+  function isCardInCodex(card: Card, codex: CodexSets | null, poolEntries: PoolEntry[]): boolean {
+    if (!codex || !card.characterId) return false;
+    const cid = card.characterId;
+    const poolEntry = poolEntries.find((p) => p.characterId === cid);
+    const isAltArt = !!poolEntry?.altArtOfCharacterId;
+    const finish = card.finish ?? (card.isFoil ? "holo" : "normal");
+    const ct = card.cardType ?? "actor";
+    if (ct === "character") return codex.boysCharacterIds.has(cid);
+    if (isAltArt) return finish === "holo" || card.isFoil ? codex.altArtHoloCharacterIds.has(cid) : codex.altArtCharacterIds.has(cid);
+    if (finish === "darkMatter") return codex.darkMatterCharacterIds.has(cid);
+    if (finish === "prismatic") return codex.prismaticCharacterIds.has(cid);
+    if (finish === "holo" || card.isFoil) return codex.holoCharacterIds.has(cid);
+    return codex.characterIds.has(cid);
+  }
+
+  function getCodexForUser(userId: string): CodexSets | null {
+    if (userId === user?.id) return myCodexSets;
+    return otherUserCodexMap[userId] ?? null;
+  }
+
+  useEffect(() => {
+    const idsToFetch: string[] = [];
+    if (expandedSentTradeId) {
+      const t = trades.find((x) => x.id === expandedSentTradeId);
+      if (t?.counterpartyUserId && t.counterpartyUserId !== user?.id && !otherUserCodexMap[t.counterpartyUserId]) idsToFetch.push(t.counterpartyUserId);
+    }
+    if (expandedReceivedTradeId) {
+      const t = trades.find((x) => x.id === expandedReceivedTradeId);
+      if (t?.initiatorUserId && t.initiatorUserId !== user?.id && !otherUserCodexMap[t.initiatorUserId]) idsToFetch.push(t.initiatorUserId);
+    }
+    if (expandedHistoryTradeId) {
+      const t = tradeHistory.find((x) => x.id === expandedHistoryTradeId);
+      if (t) {
+        const otherId = t.initiatorUserId === user?.id ? t.counterpartyUserId : t.initiatorUserId;
+        if (otherId && otherId !== user?.id && !otherUserCodexMap[otherId]) idsToFetch.push(otherId);
+      }
+    }
+    [...new Set(idsToFetch)].forEach((uid) => {
+      fetch(`/api/cards/codex?userId=${encodeURIComponent(uid)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d && typeof d === "object") {
+            setOtherUserCodexMap((prev) => ({
+              ...prev,
+              [uid]: {
+                characterIds: new Set(Array.isArray(d.characterIds) ? d.characterIds : []),
+                holoCharacterIds: new Set(Array.isArray(d.holoCharacterIds) ? d.holoCharacterIds : []),
+                prismaticCharacterIds: new Set(Array.isArray(d.prismaticCharacterIds) ? d.prismaticCharacterIds : []),
+                darkMatterCharacterIds: new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []),
+                altArtCharacterIds: new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []),
+                altArtHoloCharacterIds: new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []),
+                boysCharacterIds: new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []),
+              },
+            }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [expandedSentTradeId, expandedReceivedTradeId, expandedHistoryTradeId, trades, tradeHistory, user?.id, otherUserCodexMap]);
 
   const pendingTradeOfferedIds = useMemo(() => new Set(
     trades.filter((t) => t.initiatorUserId === user?.id && t.status === "pending").flatMap((t) => t.offeredCardIds)
@@ -4819,7 +4931,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.offeredCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries) ? "In your codex" : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
@@ -4837,7 +4949,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.requestedCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries) ? `In ${t.counterpartyName}'s codex` : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
@@ -4938,7 +5050,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.offeredCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries) ? `In ${t.initiatorName}'s codex` : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
@@ -4955,7 +5067,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.requestedCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries) ? "In your codex" : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
@@ -5065,7 +5177,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.offeredCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries) ? (isSent ? "In your codex" : `In ${otherName}'s codex`) : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.initiatorUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.offeredCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.offeredCredits ?? 0)} credits</span></div>}
@@ -5082,7 +5194,7 @@ function CardsContent() {
                                 </div>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
                                   {t.requestedCards.map((c) => (
-                                    <div key={c.id} className="max-w-[80px]"><CardDisplay card={c} compact /></div>
+                                    <div key={c.id} className="max-w-[80px]" title={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries) ? (isSent ? `In ${otherName}'s codex` : "In your codex") : undefined}><CardDisplay card={c} compact inCodex={isCardInCodex(c, getCodexForUser(t.counterpartyUserId), poolEntries)} /></div>
                                   ))}
                                 </div>
                                 {(t.requestedCredits ?? 0) > 0 && <div className="mt-3 pt-2 border-t border-white/[0.06]"><span className="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-semibold">{(t.requestedCredits ?? 0)} credits</span></div>}
@@ -6342,7 +6454,7 @@ function CardsContent() {
                   </h3>
                   {tradeStep >= 2 && tradeCounterparty && (
                     <button
-                      onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); setMobileTradeTab("trade"); }}
+                      onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); setCounterpartyCodex(null); setMobileTradeTab("trade"); }}
                       className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 cursor-pointer transition-colors min-h-[44px] min-w-[44px] -m-2 p-2 inline-flex items-center"
                     >
                       Change user
@@ -6432,7 +6544,7 @@ function CardsContent() {
                           {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{user.name?.charAt(0) || "?"}</div>)}
                           <h4 className="text-sm font-semibold text-white/70">Your Collection</h4>
                         </div>
-                        <p className="text-[11px] text-white/25 mt-1">{availableForOffer.length} cards &mdash; click to add to trade</p>
+                        <p className="text-[11px] text-white/25 mt-1">{availableForOffer.length} cards &mdash; click to add to trade. Cyan bar = in your codex</p>
                       </div>
                       <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
                         {availableForOffer.length === 0 ? (
@@ -6441,13 +6553,15 @@ function CardsContent() {
                           <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
                             {availableForOffer.map((c) => {
                               const selected = tradeOfferedIds.has(c.id!);
+                              const inMyCodex = isCardInCodex(c, myCodexSets, poolEntries);
                               return (
                                 <button
                                   key={c.id}
                                   onClick={() => toggleTradeOffer(c.id!)}
                                   className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-red-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
+                                  title={inMyCodex ? "In your codex" : undefined}
                                 >
-                                  <CardDisplay card={c} compact />
+                                  <CardDisplay card={c} compact inCodex={inMyCodex} />
                                   {selected && (
                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                                       <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
@@ -6483,8 +6597,9 @@ function CardsContent() {
                                       key={c.id}
                                       onClick={() => toggleTradeOffer(c.id!)}
                                       className="relative rounded-xl overflow-hidden ring-1 ring-red-500/20 hover:ring-red-400/50 transition-all cursor-pointer group"
+                                      title={isCardInCodex(c, myCodexSets, poolEntries) ? "In your codex" : undefined}
                                     >
-                                      <CardDisplay card={c} compact />
+                                      <CardDisplay card={c} compact inCodex={isCardInCodex(c, myCodexSets, poolEntries)} />
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
                                         <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
                                       </div>
@@ -6539,8 +6654,9 @@ function CardsContent() {
                                       key={c.id}
                                       onClick={() => toggleTradeRequest(c.id!)}
                                       className="relative rounded-xl overflow-hidden ring-1 ring-green-500/20 hover:ring-green-400/50 transition-all cursor-pointer group"
+                                      title={isCardInCodex(c, counterpartyCodex, poolEntries) ? `In ${tradeCounterparty?.name}'s codex` : undefined}
                                     >
-                                      <CardDisplay card={c} compact />
+                                      <CardDisplay card={c} compact inCodex={isCardInCodex(c, counterpartyCodex, poolEntries)} />
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
                                         <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
                                       </div>
@@ -6591,7 +6707,7 @@ function CardsContent() {
                           {tradeCounterparty && (userAvatarMap[tradeCounterparty.id] ? <img src={userAvatarMap[tradeCounterparty.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{(tradeCounterparty?.name || "?")[0]}</div>)}
                           <h4 className="text-sm font-semibold text-white/70">{tradeCounterparty?.name}&apos;s Collection</h4>
                         </div>
-                        <p className="text-[11px] text-white/25 mt-1">{availableToRequest.length} cards &mdash; click to add to trade</p>
+                        <p className="text-[11px] text-white/25 mt-1">{availableToRequest.length} cards &mdash; click to add to trade. Cyan bar = in their codex</p>
                       </div>
                       <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
                         {availableToRequest.length === 0 ? (
@@ -6600,13 +6716,15 @@ function CardsContent() {
                           <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
                             {availableToRequest.map((c) => {
                               const selected = tradeRequestedIds.has(c.id!);
+                              const inTheirCodex = isCardInCodex(c, counterpartyCodex, poolEntries);
                               return (
                                 <button
                                   key={c.id}
                                   onClick={() => toggleTradeRequest(c.id!)}
                                   className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-green-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
+                                  title={inTheirCodex ? `In ${tradeCounterparty?.name}'s codex` : undefined}
                                 >
-                                  <CardDisplay card={c} compact />
+                                  <CardDisplay card={c} compact inCodex={inTheirCodex} />
                                   {selected && (
                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                                       <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>

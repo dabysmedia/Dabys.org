@@ -95,7 +95,7 @@ export async function GET() {
       const user = users.find((u) => u.id === userId);
       return { userName: user?.name ?? userId, value: stats.wagered, hands: stats.hands, netPnl: stats.netPnl };
     })
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => b.netPnl - a.netPnl)
     .slice(0, 10);
 
   // Failed legendary trade-ups (trade_up_epic gives credits = fail, no entry = success since card goes to inventory)

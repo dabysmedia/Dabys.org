@@ -252,6 +252,13 @@ export default function AdminVaultPage() {
                         className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40"
                         placeholder="Title"
                       />
+                      <textarea
+                        value={editForm.description ?? ""}
+                        onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                        placeholder="Short description"
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm placeholder-white/30 outline-none focus:border-purple-500/40 resize-none"
+                      />
                       <input
                         type="text"
                         value={editForm.youtubeId ?? ""}
