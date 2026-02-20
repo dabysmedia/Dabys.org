@@ -5800,10 +5800,17 @@ function CardsContent() {
                                 : isComplete
                                   ? "normal"
                                   : "normal";
+                          const totalCount = entries.length;
+                          const completedCount = discoveredCount(entries);
+                          const completionPct = totalCount > 0 ? completedCount / totalCount : 0;
+                          const hasLegendary = entries.some((e) => e.rarity === "legendary");
                           return {
                             title,
                             entries: sortedEntries,
-                            completedCount: discoveredCount(entries),
+                            completedCount,
+                            totalCount,
+                            completionPct,
+                            hasLegendary,
                             isComplete,
                             isHoloComplete,
                             isPrismaticComplete,
@@ -5812,10 +5819,11 @@ function CardsContent() {
                           };
                         })
                         .sort((a, b) => {
+                          if (a.completionPct !== b.completionPct) return b.completionPct - a.completionPct;
+                          if (a.hasLegendary !== b.hasLegendary) return a.hasLegendary ? -1 : 1;
                           const aTier = tierOrder[a.badgeTier];
                           const bTier = tierOrder[b.badgeTier];
                           if (aTier !== bTier) return bTier - aTier;
-                          if (a.isComplete !== b.isComplete) return a.isComplete ? -1 : 1;
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
@@ -6026,12 +6034,22 @@ function CardsContent() {
                       }
                       const discoveredCount = (entries: PoolEntry[]) => entries.filter((e) => discoveredBoysCharacterIds.has(e.characterId)).length;
                       const sets = Array.from(bySet.entries())
-                        .map(([k, entries]) => ({
-                          title: entries[0]?.customSetId ?? entries[0]?.movieTitle ?? k,
-                          entries,
-                          completedCount: discoveredCount(entries),
-                        }))
+                        .map(([k, entries]) => {
+                          const totalCount = entries.length;
+                          const completedCount = discoveredCount(entries);
+                          const completionPct = totalCount > 0 ? completedCount / totalCount : 0;
+                          const hasLegendary = entries.some((e) => e.rarity === "legendary");
+                          return {
+                            title: entries[0]?.customSetId ?? entries[0]?.movieTitle ?? k,
+                            entries,
+                            completedCount,
+                            completionPct,
+                            hasLegendary,
+                          };
+                        })
                         .sort((a, b) => {
+                          if (a.completionPct !== b.completionPct) return b.completionPct - a.completionPct;
+                          if (a.hasLegendary !== b.hasLegendary) return a.hasLegendary ? -1 : 1;
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });

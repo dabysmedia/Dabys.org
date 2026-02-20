@@ -70,11 +70,11 @@ export async function GET() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  // Casino stats per user (blackjack + slots)
+  // Casino stats per user (blackjack + slots + roulette)
   const casinoByUser = new Map<string, { hands: number; wagered: number; netPnl: number }>();
   let totalCasinoHands = 0;
   for (const e of ledger) {
-    if (e.reason === "casino_blackjack" || e.reason === "casino_slots") {
+    if (e.reason === "casino_blackjack" || e.reason === "casino_slots" || e.reason === "casino_roulette") {
       const cur = casinoByUser.get(e.userId) || { hands: 0, wagered: 0, netPnl: 0 };
       cur.hands += 1;
       cur.wagered += Math.abs(e.amount);
@@ -83,7 +83,9 @@ export async function GET() {
       totalCasinoHands++;
     } else if (
       e.reason === "casino_blackjack_win" ||
-      e.reason === "casino_blackjack_push"
+      e.reason === "casino_blackjack_push" ||
+      e.reason === "casino_slots_win" ||
+      e.reason === "casino_roulette_win"
     ) {
       const cur = casinoByUser.get(e.userId) || { hands: 0, wagered: 0, netPnl: 0 };
       cur.netPnl += e.amount; // positive = winnings returned
@@ -309,17 +311,15 @@ export async function GET() {
     .sort((a, b) => b.unlocked - a.unlocked)
     .slice(0, 10);
 
-  // Lifetime credits earned per user
-  const totalEarnedByUser = new Map<string, number>();
+  // Lifetime net per user: sum of ALL ledger entries (quests, vault, quicksells, casino, packs, marketplace, trivia, etc.)
+  const netCreditsByUser = new Map<string, number>();
   for (const entry of ledger) {
-    if (entry.amount > 0) {
-      totalEarnedByUser.set(entry.userId, (totalEarnedByUser.get(entry.userId) || 0) + entry.amount);
-    }
+    netCreditsByUser.set(entry.userId, (netCreditsByUser.get(entry.userId) || 0) + entry.amount);
   }
-  const totalCreditsEarned = Array.from(totalEarnedByUser.entries())
-    .map(([userId, total]) => {
+  const totalCreditsEarned = Array.from(netCreditsByUser.entries())
+    .map(([userId, net]) => {
       const user = users.find((u) => u.id === userId);
-      return { userName: user?.name ?? userId, value: total };
+      return { userName: user?.name ?? userId, value: net };
     })
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);

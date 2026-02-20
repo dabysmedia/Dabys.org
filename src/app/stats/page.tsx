@@ -226,7 +226,7 @@ function LeaderboardCard({
                       <div
                         className={`h-full rounded-full bg-gradient-to-r ${accentFrom} ${accentTo} transition-all duration-700 ease-out`}
                         style={{
-                          width: `${Math.max((entry.value / maxVal) * 100, 4)}%`,
+                          width: `${Math.max(4, Math.min(100, (entry.value / maxVal) * 100))}%`,
                           opacity: isFirst ? 1 : 0.6 + 0.4 * (1 - i / entries.length),
                         }}
                       />
@@ -640,16 +640,16 @@ export default function StatsPage() {
                     />
 
                     <LeaderboardCard
-                      title="Lifetime Earner"
+                      title="Lifetime Net"
                       icon={StatsIcons.sparkles()}
                       entries={data.totalCreditsEarned.map((e) => ({
                         name: e.userName,
                         value: e.value,
-                        displayValue: `${e.value.toLocaleString()} cr`,
+                        displayValue: `${e.value >= 0 ? "+" : ""}${e.value.toLocaleString()} cr`,
                       }))}
                       accentFrom="from-sky-400/60"
                       accentTo="to-sky-500/60"
-                      emptyText="No credits earned"
+                      emptyText="No credit activity yet"
                       glowColor="bg-sky-400"
                     />
 

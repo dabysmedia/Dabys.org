@@ -110,8 +110,8 @@ function CasinoContent() {
 
       <main className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {/* Header block — bigger, more premium */}
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white/95 font-card-title tracking-tight" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+        <div className="mb-10">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
             Casino
           </h1>
           <p className="text-white/50 text-base sm:text-lg mt-2 tracking-wide">
