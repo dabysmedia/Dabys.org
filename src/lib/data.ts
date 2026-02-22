@@ -998,6 +998,25 @@ export function rollbackUser(userId: string, rollbackDate: string): {
   };
 }
 
+/**
+ * Check if rollback undo is available for a user.
+ * Currently always returns false — rollback does not persist a snapshot for undo.
+ */
+export function hasRollbackUndoAvailable(_userId: string): boolean {
+  return false;
+}
+
+/**
+ * Undo the most recent rollback for a user.
+ * Currently not implemented — rollback is destructive and does not store state for restore.
+ */
+export function undoRollbackUser(userId: string): { success: boolean; error?: string } {
+  if (!hasRollbackUndoAvailable(userId)) {
+    return { success: false, error: "Undo not available" };
+  }
+  return { success: false, error: "Undo not implemented" };
+}
+
 // ──── Stardust (Alchemy) ────────────────────────────────
 export interface StardustEntry {
   userId: string;
