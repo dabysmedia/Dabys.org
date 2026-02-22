@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments, getCommentLikes, saveCommentLikes, addCredits, getCreditSettings, addNotification } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes, getCommentDislikes, saveCommentDislikes, addCredits, getCreditSettings, addNotification } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -99,6 +99,8 @@ export async function DELETE(
 
   const likes = getCommentLikes().filter((l) => !idsToRemove.has(l.commentId));
   saveCommentLikes(likes);
+  const dislikes = getCommentDislikes().filter((d) => !idsToRemove.has(d.commentId));
+  saveCommentDislikes(dislikes);
 
   return NextResponse.json({ success: true });
 }

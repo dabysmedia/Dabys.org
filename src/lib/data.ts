@@ -296,6 +296,24 @@ export function saveCommentLikes(likes: CommentLike[]) {
   writeJson("commentLikes.json", likes);
 }
 
+// ──── Comment dislikes (userId dislikes commentId; mutually exclusive with like; no credits) ───
+export interface CommentDislike {
+  commentId: string;
+  userId: string;
+}
+
+export function getCommentDislikes(): CommentDislike[] {
+  try {
+    return readJson<CommentDislike[]>("commentDislikes.json");
+  } catch {
+    return [];
+  }
+}
+
+export function saveCommentDislikes(dislikes: CommentDislike[]) {
+  writeJson("commentDislikes.json", dislikes);
+}
+
 // ──── Theme Wheel ───────────────────────────────────────
 export interface WheelData {
   entries: string[];

@@ -285,13 +285,20 @@ export function MessagesPanel() {
   }
 
   if (pathname?.startsWith("/admin")) return null;
-  if (isNarrow) return null;
   if (!user) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
       {open && (
-        <div className="w-80 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden max-h-[420px]">
+        <>
+          {isNarrow && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => setOpen(false)}
+              aria-hidden
+            />
+          )}
+        <div className={`relative z-50 flex flex-col overflow-hidden border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${isNarrow ? "fixed inset-4 rounded-2xl max-h-[calc(100dvh-2rem)]" : "w-80 rounded-xl max-h-[420px]"}`}>
           <div className="flex items-center justify-between p-3 border-b border-white/[0.08] shrink-0">
             <span className="text-sm font-medium text-white/80">Messages</span>
             <div className="flex items-center gap-1">
@@ -484,11 +491,12 @@ export function MessagesPanel() {
             )}
           </div>
         </div>
+        </>
       )}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.2)] px-4 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer flex items-center gap-2 relative"
+        className="min-h-[44px] rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.2)] px-4 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer flex items-center gap-2 relative touch-manipulation"
         aria-label={open ? "Close messages" : "Open messages"}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -3124,5 +3124,16 @@
       "drawId": "2026-02-23"
     },
     "createdAt": "2026-02-22T07:13:44.641Z"
+  },
+  {
+    "id": "cl-1771745918737-wpa7hiz",
+    "userId": "2",
+    "amount": 1,
+    "reason": "comment_like",
+    "metadata": {
+      "commentId": "2",
+      "winnerId": "2"
+    },
+    "createdAt": "2026-02-22T07:38:38.736Z"
   }
 ]

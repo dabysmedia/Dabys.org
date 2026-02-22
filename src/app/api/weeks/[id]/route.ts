@@ -15,6 +15,8 @@ import {
   saveComments,
   getCommentLikes,
   saveCommentLikes,
+  getCommentDislikes,
+  saveCommentDislikes,
 } from "@/lib/data";
 
 /** DELETE /api/weeks/[id] — Delete a past week and all its data (submissions, votes, winners, ratings, comments). */
@@ -47,10 +49,13 @@ export async function DELETE(
     comments.filter((c) => winnerIds.has(c.winnerId)).map((c) => c.id)
   );
 
-  // 1. Remove comment likes for comments we're deleting
+  // 1. Remove comment likes and dislikes for comments we're deleting
   const commentLikes = getCommentLikes();
   const filteredLikes = commentLikes.filter((l) => !commentIdsToRemove.has(l.commentId));
   saveCommentLikes(filteredLikes);
+  const commentDislikes = getCommentDislikes();
+  const filteredDislikes = commentDislikes.filter((d) => !commentIdsToRemove.has(d.commentId));
+  saveCommentDislikes(filteredDislikes);
 
   // 2. Remove comments for winners of this week
   const filteredComments = comments.filter((c) => !winnerIds.has(c.winnerId));

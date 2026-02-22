@@ -131,6 +131,7 @@ export default function WinnerDetailPage() {
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; userName: string } | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [dislikingId, setDislikingId] = useState<string | null>(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState("");
   const giphySearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -375,17 +376,35 @@ export default function WinnerDetailPage() {
     if (!user) return;
     setLikingId(commentId);
     try {
-      await fetch(`/api/winners/${winnerId}/comments/${commentId}/like`, {
+      const res = await fetch(`/api/winners/${winnerId}/comments/${commentId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      loadWinner();
+      if (data.liked) window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: 1 } }));
+    } catch {
+      console.error("Failed to toggle like");
+    } finally {
+      setLikingId(null);
+    }
+  }
+
+  async function toggleDislike(commentId: string) {
+    if (!user) return;
+    setDislikingId(commentId);
+    try {
+      await fetch(`/api/winners/${winnerId}/comments/${commentId}/dislike`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id }),
       });
       loadWinner();
-      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: 1 } }));
     } catch {
-      console.error("Failed to toggle like");
+      console.error("Failed to toggle dislike");
     } finally {
-      setLikingId(null);
+      setDislikingId(null);
     }
   }
 
@@ -1100,11 +1119,11 @@ export default function WinnerDetailPage() {
                         </div>
                       )}
 
-                      {/* Like + Reply actions */}
+                      {/* Like + Dislike + Reply actions */}
                       <div className="flex items-center gap-4 mt-2">
                         <button
                           onClick={() => toggleLike(comment.id)}
-                          disabled={likingId === comment.id}
+                          disabled={likingId === comment.id || dislikingId === comment.id}
                           className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${comment.likedByMe ? "text-red-400" : "text-white/40 hover:text-red-400/80"}`}
                           title={comment.likedByMe ? "Unlike" : "Like"}
                         >
@@ -1114,6 +1133,15 @@ export default function WinnerDetailPage() {
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
                           )}
                           <span>{comment.likeCount ?? 0}</span>
+                        </button>
+                        <button
+                          onClick={() => toggleDislike(comment.id)}
+                          disabled={likingId === comment.id || dislikingId === comment.id}
+                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${comment.dislikedByMe ? "text-slate-400" : "text-white/40 hover:text-slate-400/80"}`}
+                          title={comment.dislikedByMe ? "Remove dislike" : "Dislike"}
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.73 5.5h1.035A7.465 7.465 0 0118 9.625a7.465 7.465 0 01-1.235 4.125h-.148c-.806 0-1.534.446-2.031 1.08a9.04 9.04 0 01-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.499 4.499 0 00-.322 1.672v.633A.75.75 0 019 22a2.25 2.25 0 01-2.25-2.25c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282H3.622c-1.026 0-1.945-.694-2.054-1.715A12.137 12.137 0 011.5 12.25c0-2.848.992-5.464 2.649-7.521C4.537 4.247 5.136 4 5.754 4H9.77a4.5 4.5 0 011.423.23l3.114 1.04a4.5 4.5 0 001.423.23zM21.669 14.023c.536-1.362.831-2.845.831-4.398 0-1.22-.182-2.398-.52-3.507-.26-.85-1.084-1.368-1.973-1.368H19.1c-.445 0-.72.498-.523.898.591 1.2.924 2.55.924 3.977a8.958 8.958 0 01-1.302 4.666c-.245.403.028.959.5.959h1.053c.832 0 1.612-.453 1.918-1.227z" /></svg>
+                          <span>{comment.dislikeCount ?? 0}</span>
                         </button>
                         <button
                           onClick={() => setReplyingTo({ commentId: comment.id, userName: comment.userName })}

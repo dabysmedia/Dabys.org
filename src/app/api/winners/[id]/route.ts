@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
+import { getWinners, saveWinners, getRatings, saveRatings, getComments, saveComments, getCommentLikes, getCommentDislikes, getWeeks, getSubmissions, getUsers, getProfiles, computeDabysScorePct } from "@/lib/data";
 import { addPendingPoolEntriesForWinner, getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(
@@ -18,18 +18,22 @@ export async function GET(
   const profiles = getProfiles();
   const allComments = getComments().filter((c) => c.winnerId === id);
   const likes = getCommentLikes();
+  const dislikes = getCommentDislikes();
   const { searchParams } = new URL(_request.url);
   const currentUserId = searchParams.get("userId") || "";
 
   const commentMap = new Map(allComments.map((c) => [c.id, c]));
   const comments = allComments.map((c) => {
     const commentLikesForThis = likes.filter((l) => l.commentId === c.id);
+    const commentDislikesForThis = dislikes.filter((d) => d.commentId === c.id);
     const parent = c.parentId ? commentMap.get(c.parentId) : null;
     return {
       ...c,
       avatarUrl: profiles.find((p) => p.userId === c.userId)?.avatarUrl || "",
       likeCount: commentLikesForThis.length,
       likedByMe: currentUserId ? commentLikesForThis.some((l) => l.userId === currentUserId) : false,
+      dislikeCount: commentDislikesForThis.length,
+      dislikedByMe: currentUserId ? commentDislikesForThis.some((d) => d.userId === currentUserId) : false,
       displayedBadge: getDisplayedBadgeForUser(c.userId),
       ...(parent && { parentUserName: parent.userName }),
     };
