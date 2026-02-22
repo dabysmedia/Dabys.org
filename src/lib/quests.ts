@@ -158,6 +158,27 @@ export function resetUserDailyQuests(userId: string): void {
   }
 }
 
+/** Manually set completed/claimed for a daily quest. (Admin only.) */
+export function setUserDailyQuestState(
+  userId: string,
+  questIndex: number,
+  updates: { completed?: boolean; claimed?: boolean }
+): { success: boolean; error?: string } {
+  const today = getTodayDateStr();
+  const store = getDailyQuestsStore();
+  const userQuests = store[today]?.[userId];
+  if (!userQuests) return { success: false, error: "No quests found for today" };
+  if (questIndex < 0 || questIndex >= userQuests.quests.length) {
+    return { success: false, error: "Invalid quest index" };
+  }
+  const quest = userQuests.quests[questIndex];
+  if (updates.completed !== undefined) quest.completed = updates.completed;
+  if (updates.claimed !== undefined) quest.claimed = updates.claimed;
+  store[today][userId] = userQuests;
+  saveDailyQuestsStore(store);
+  return { success: true };
+}
+
 /**
  * Returns the current "quest day" as YYYY-MM-DD.
  * If the reset hour is e.g. 6, then between 00:00-05:59 UTC the quest day

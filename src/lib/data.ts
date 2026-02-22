@@ -3029,6 +3029,40 @@ export function claimDarkMatterSetCompletionQuest(userId: string, winnerId: stri
   return { reward, didClaim: true };
 }
 
+export type SetCompletionTier = "regular" | "holo" | "prismatic" | "darkMatter";
+
+function matchesTier(q: SetCompletionQuest, tier: SetCompletionTier): boolean {
+  if (tier === "regular") return !q.isHolo && !q.isPrismatic && !q.isDarkMatter;
+  if (tier === "holo") return q.isHolo === true;
+  if (tier === "prismatic") return q.isPrismatic === true;
+  if (tier === "darkMatter") return q.isDarkMatter === true;
+  return false;
+}
+
+/** Admin: Set claimed state for a set completion quest. Returns true if updated. */
+export function setSetCompletionQuestClaimed(userId: string, winnerId: string, tier: SetCompletionTier, claimed: boolean): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.winnerId === winnerId && matchesTier(q, tier));
+  if (idx < 0) return false;
+  userQuests[idx].claimed = claimed;
+  store[userId] = userQuests;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
+/** Admin: Remove a specific set completion quest (by tier). Returns true if removed. */
+export function removeSetCompletionQuestForUserByTier(userId: string, winnerId: string, tier: SetCompletionTier): boolean {
+  const store = getSetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const filtered = userQuests.filter((q) => !(q.winnerId === winnerId && matchesTier(q, tier)));
+  if (filtered.length === userQuests.length) return false;
+  if (filtered.length === 0) delete store[userId];
+  else store[userId] = filtered;
+  saveSetCompletionQuestsRaw(store);
+  return true;
+}
+
 // ──── Marketplace (listings) ─────────────────────────────
 export interface Listing {
   id: string;

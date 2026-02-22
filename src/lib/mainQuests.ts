@@ -128,6 +128,21 @@ function getOrCreateUserStats(userId: string): UserLifetimeStats {
   return { ...DEFAULT_STATS, ...store[userId] };
 }
 
+/** Set (merge) lifetime stats for a user. Admin only. */
+export function setUserLifetimeStats(userId: string, updates: Partial<UserLifetimeStats>): void {
+  const store = getLifetimeStatsStore();
+  const current = getOrCreateUserStats(userId);
+  const merged: UserLifetimeStats = {
+    ...current,
+    ...updates,
+    tradeUpsByRarity: updates.tradeUpsByRarity
+      ? { ...current.tradeUpsByRarity, ...updates.tradeUpsByRarity }
+      : current.tradeUpsByRarity,
+  };
+  store[userId] = merged;
+  saveLifetimeStatsStore(store);
+}
+
 export function incrementUserLifetimeStat(
   userId: string,
   stat: keyof UserLifetimeStats,
@@ -174,6 +189,17 @@ export function claimMainQuest(userId: string, questId: string): boolean {
   const list = store[userId] ?? [];
   if (list.includes(questId)) return false;
   list.push(questId);
+  store[userId] = list;
+  saveClaimedStore(store);
+  return true;
+}
+
+export function unclaimMainQuest(userId: string, questId: string): boolean {
+  const store = getClaimedStore();
+  const list = store[userId] ?? [];
+  const idx = list.indexOf(questId);
+  if (idx < 0) return false;
+  list.splice(idx, 1);
   store[userId] = list;
   saveClaimedStore(store);
   return true;

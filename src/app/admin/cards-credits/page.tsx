@@ -187,6 +187,14 @@ export default function AdminCardsCreditsPage() {
   const [savingCredits, setSavingCredits] = useState(false);
   const [restockingPack, setRestockingPack] = useState(false);
   const [resettingQuests, setResettingQuests] = useState(false);
+  const [questProgress, setQuestProgress] = useState<{
+    dailyQuests: { date: string; quests: { questType: string; rarity?: string; completed: boolean; claimed: boolean; reward: number; rewardType: string; label: string; description: string }[] };
+    lifetimeStats: { packsOpened: number; setsCompleted: number; cardsDisenchanted: number; cardsPackAPunched: number; tradeUpsByRarity: Record<string, number>; dailiesCompleted: number };
+    mainProgress: { definition: { id: string; type: string; targetCount: number; reward: number; rewardType: string; label: string; description: string }; current: number; target: number; completed: boolean; claimed: boolean }[];
+    claimedMainIds: string[];
+    setCompletionQuests: { winnerId: string; movieTitle: string; reward: number; claimed: boolean; isHolo?: boolean; isPrismatic?: boolean; isDarkMatter?: boolean }[];
+  } | null>(null);
+  const [questProgressBusy, setQuestProgressBusy] = useState<Record<string, boolean>>({});
   const [addingCard, setAddingCard] = useState(false);
   const [addingCardCharacterId, setAddingCardCharacterId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -616,13 +624,15 @@ export default function AdminCardsCreditsPage() {
   const loadData = useCallback(async () => {
     if (!selectedUserId) {
       setUserCodex(null);
+      setQuestProgress(null);
       return;
     }
     setLoading(true);
     setError("");
     setUserCodex(null);
+    setQuestProgress(null);
     try {
-      const [creditsRes, stardustRes, cardsRes, poolRes, attemptsRes, winnersRes, codexRes] = await Promise.all([
+      const [creditsRes, stardustRes, cardsRes, poolRes, attemptsRes, winnersRes, codexRes, questProgressRes] = await Promise.all([
         fetch(`/api/credits?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/alchemy/stardust?userId=${encodeURIComponent(selectedUserId)}`),
         fetch(`/api/admin/cards?userId=${encodeURIComponent(selectedUserId)}`),
@@ -630,6 +640,7 @@ export default function AdminCardsCreditsPage() {
         fetch(`/api/trivia/attempts?userId=${encodeURIComponent(selectedUserId)}`),
         fetch("/api/winners"),
         fetch(`/api/cards/codex?userId=${encodeURIComponent(selectedUserId)}`),
+        fetch(`/api/admin/quests/user-progress?userId=${encodeURIComponent(selectedUserId)}`),
       ]);
 
       if (creditsRes.ok) {
@@ -680,6 +691,18 @@ export default function AdminCardsCreditsPage() {
           altArtHoloCharacterIds: [],
           boysCharacterIds: [],
         });
+      }
+      if (questProgressRes.ok) {
+        const q = await questProgressRes.json();
+        setQuestProgress({
+          dailyQuests: q.dailyQuests ?? { date: "", quests: [] },
+          lifetimeStats: q.lifetimeStats ?? { packsOpened: 0, setsCompleted: 0, cardsDisenchanted: 0, cardsPackAPunched: 0, tradeUpsByRarity: {}, dailiesCompleted: 0 },
+          mainProgress: q.mainProgress ?? [],
+          claimedMainIds: q.claimedMainIds ?? [],
+          setCompletionQuests: q.setCompletionQuests ?? [],
+        });
+      } else {
+        setQuestProgress(null);
       }
     } catch {
       setError("Failed to load data");
@@ -1925,39 +1948,103 @@ export default function AdminCardsCreditsPage() {
                 <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>
               </div>
               <span className="text-sm font-medium text-white/70 flex-1">Quests</span>
-              <span className="text-[11px] text-white/30">Reset daily quests</span>
+              {questProgress && <span className="text-[11px] text-white/40 tabular-nums">{questProgress.dailyQuests.quests.filter((q) => q.completed).length}/{questProgress.dailyQuests.quests.length} daily · {questProgress.setCompletionQuests.length} set · {questProgress.mainProgress.filter((p) => p.claimed).length}/{questProgress.mainProgress.length} main</span>}
               <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.quests ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
             </button>
             {openUserSection.quests && (
-              <div className="px-5 pb-4 pt-1">
-                <p className="text-white/40 text-sm mb-3">Clear this user&apos;s daily quests for today. They will receive a fresh set next time they open the quest log.</p>
-                <button
-                  type="button"
-                  disabled={resettingQuests}
-                  onClick={async () => {
-                    if (!selectedUserId || resettingQuests) return;
-                    setResettingQuests(true);
-                    setError("");
-                    try {
-                      const res = await fetch("/api/admin/quests/reset", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ userId: selectedUserId }),
-                      });
-                      const data = await res.json().catch(() => ({}));
-                      if (res.ok) {
-                        alert("Quests reset for this user. They will get new daily quests on next open.");
-                      } else {
-                        setError(data.error || "Failed to reset quests");
-                      }
-                    } finally {
-                      setResettingQuests(false);
-                    }
-                  }}
-                  className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer"
-                >
-                  {resettingQuests ? "Resetting…" : "Reset quests for today (this user)"}
-                </button>
+              <div className="px-5 pb-4 pt-1 space-y-4">
+                {!questProgress ? (
+                  <p className="text-white/40 text-sm">Loading quest progress…</p>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-2">Daily quests ({questProgress.dailyQuests.date})</h4>
+                      <div className="space-y-2 mb-3">
+                        {questProgress.dailyQuests.quests.map((q, i) => {
+                          const busyKey = `daily-${i}`;
+                          return (
+                            <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                              <span className="text-white/80 text-sm flex-1 min-w-0 truncate" title={q.description}>{q.label}</span>
+                              <label className="flex items-center gap-1.5 text-xs text-white/60 shrink-0 cursor-pointer">
+                                <input type="checkbox" checked={q.completed} disabled={questProgressBusy[busyKey]} onChange={async () => { if (!selectedUserId) return; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "daily", questIndex: i, completed: !q.completed }) }); if (res.ok) { setQuestProgress((p) => p ? { ...p, dailyQuests: { ...p.dailyQuests, quests: p.dailyQuests.quests.map((qq, ii) => ii === i ? { ...qq, completed: !qq.completed } : qq) } } : null); loadData(); } } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="rounded border-white/30 bg-white/5" />
+                                Done
+                              </label>
+                              <label className="flex items-center gap-1.5 text-xs text-white/60 shrink-0 cursor-pointer">
+                                <input type="checkbox" checked={q.claimed} disabled={questProgressBusy[busyKey] || !q.completed} onChange={async () => { if (!selectedUserId || !q.completed) return; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "daily", questIndex: i, claimed: !q.claimed }) }); if (res.ok) { setQuestProgress((p) => p ? { ...p, dailyQuests: { ...p.dailyQuests, quests: p.dailyQuests.quests.map((qq, ii) => ii === i ? { ...qq, claimed: !qq.claimed } : qq) } } : null); loadData(); } } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="rounded border-white/30 bg-white/5" />
+                                Claimed
+                              </label>
+                              <span className="text-[10px] text-amber-400/80 shrink-0">{q.reward} {q.rewardType}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button type="button" disabled={resettingQuests} onClick={async () => { if (!selectedUserId || resettingQuests) return; setResettingQuests(true); try { const res = await fetch("/api/admin/quests/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId }) }); const data = await res.json().catch(() => ({})); if (res.ok) { alert("Quests reset. User will get new daily quests on next open."); loadData(); } else { setError(data.error || "Failed to reset"); } } finally { setResettingQuests(false); } }} className="px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400/90 text-xs font-medium hover:bg-amber-500/10 disabled:opacity-40 cursor-pointer">{resettingQuests ? "Resetting…" : "Reset daily quests"}</button>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-2">Main quests (lifetime stats)</h4>
+                      <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 mb-2 space-y-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {(["packsOpened", "setsCompleted", "cardsDisenchanted", "cardsPackAPunched", "dailiesCompleted"] as const).map((key) => (
+                            <div key={key}>
+                              <label className="block text-[10px] text-white/50 mb-0.5">{key.replace(/([A-Z])/g, " $1").trim()}</label>
+                              <input type="number" min={0} value={questProgress.lifetimeStats[key]} onChange={(e) => setQuestProgress((p) => p ? { ...p, lifetimeStats: { ...p.lifetimeStats, [key]: Math.max(0, parseInt(e.target.value, 10) || 0) } } : null)} onBlur={async (e) => { const v = Math.max(0, parseInt(e.target.value, 10) || 0); const busyKey = `stats-${key}`; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "main", stats: { [key]: v } }) }); if (res.ok) loadData(); } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="w-full px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white text-sm outline-none focus:border-amber-500/40" />
+                            </div>
+                          ))}
+                          {(["uncommon", "rare", "epic", "legendary"] as const).map((r) => (
+                            <div key={`tradeUp-${r}`}>
+                              <label className="block text-[10px] text-white/50 mb-0.5">Trade up {r}</label>
+                              <input type="number" min={0} value={questProgress.lifetimeStats.tradeUpsByRarity?.[r] ?? 0} onChange={(e) => setQuestProgress((p) => p ? { ...p, lifetimeStats: { ...p.lifetimeStats, tradeUpsByRarity: { ...p.lifetimeStats.tradeUpsByRarity, [r]: Math.max(0, parseInt(e.target.value, 10) || 0) } } } : null)} onBlur={async (e) => { const v = Math.max(0, parseInt(e.target.value, 10) || 0); const busyKey = `stats-tradeUp-${r}`; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "main", stats: { tradeUpsByRarity: { ...questProgress.lifetimeStats.tradeUpsByRarity, [r]: v } } }) }); if (res.ok) loadData(); } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="w-full px-2 py-1.5 rounded bg-white/[0.06] border border-white/[0.08] text-white text-sm outline-none focus:border-amber-500/40" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {questProgress.mainProgress.map((p) => {
+                          const busyKey = `main-claim-${p.definition.id}`;
+                          return (
+                            <div key={p.definition.id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                              <span className="text-white/80 text-sm flex-1 min-w-0">{p.definition.label}</span>
+                              <span className="text-amber-400/80 text-xs tabular-nums shrink-0">{p.current}/{p.target}</span>
+                              <label className="flex items-center gap-1.5 text-xs text-white/60 shrink-0 cursor-pointer">
+                                <input type="checkbox" checked={p.claimed} disabled={questProgressBusy[busyKey] || !p.completed} onChange={async () => { if (!selectedUserId) return; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "main_claim", questId: p.definition.id, claim: !p.claimed }) }); if (res.ok) { setQuestProgress((prev) => prev ? { ...prev, mainProgress: prev.mainProgress.map((mp) => mp.definition.id === p.definition.id ? { ...mp, claimed: !mp.claimed } : mp), claimedMainIds: !p.claimed ? [...prev.claimedMainIds, p.definition.id] : prev.claimedMainIds.filter((id) => id !== p.definition.id) } : null); loadData(); } } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="rounded border-white/30 bg-white/5" />
+                                Claimed
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider mb-2">Set completion (collection)</h4>
+                      <div className="flex flex-wrap gap-2 items-end mb-2">
+                        <select id="set-completion-add-winner" className="min-w-[160px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]" onChange={async (e) => { const winnerId = e.target.value; if (!winnerId || !selectedUserId) return; e.target.value = ""; const tier = (document.getElementById("set-completion-add-tier") as HTMLSelectElement)?.value as "regular" | "holo" | "prismatic" | "darkMatter" || "regular"; const busyKey = `set-add-${winnerId}-${tier}`; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "set_completion", action: "add", winnerId, tier }) }); const data = await res.json(); if (res.ok && data.added) loadData(); else if (!res.ok) setError(data.error || "Failed to add"); } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }}>
+                          <option value="">Add set completion…</option>
+                          {winners.filter((w) => w.tmdbId).map((w) => ( <option key={w.id} value={w.id}>{w.movieTitle}</option> ))}
+                        </select>
+                        <select id="set-completion-add-tier" className="px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]">
+                          <option value="regular">Regular</option>
+                          <option value="holo">Holo</option>
+                          <option value="prismatic">Prismatic</option>
+                          <option value="darkMatter">Dark Matter</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        {questProgress.setCompletionQuests.length === 0 ? ( <p className="text-white/30 text-sm py-2">None</p> ) : questProgress.setCompletionQuests.map((q) => { const tier: "regular" | "holo" | "prismatic" | "darkMatter" = q.isDarkMatter ? "darkMatter" : q.isPrismatic ? "prismatic" : q.isHolo ? "holo" : "regular"; const busyKey = `set-${q.winnerId}-${tier}`; return (
+                          <div key={`${q.winnerId}-${tier}`} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                            <span className="text-white/80 text-sm flex-1 min-w-0 truncate">{q.movieTitle}</span>
+                            <span className="text-[10px] text-white/50 shrink-0">{tier}</span>
+                            <span className="text-amber-400/80 text-xs shrink-0">{q.reward} cr</span>
+                            <label className="flex items-center gap-1.5 text-xs text-white/60 shrink-0 cursor-pointer">
+                              <input type="checkbox" checked={q.claimed} disabled={questProgressBusy[busyKey]} onChange={async () => { if (!selectedUserId) return; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "set_completion", action: "set_claimed", winnerId: q.winnerId, tier, claimed: !q.claimed }) }); if (res.ok) { setQuestProgress((p) => p ? { ...p, setCompletionQuests: p.setCompletionQuests.map((sq) => sq.winnerId === q.winnerId && (!!sq.isHolo) === (tier === "holo") && (!!sq.isPrismatic) === (tier === "prismatic") && (!!sq.isDarkMatter) === (tier === "darkMatter") ? { ...sq, claimed: !sq.claimed } : sq) } : null); loadData(); } } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="rounded border-white/30 bg-white/5" />
+                              Claimed
+                            </label>
+                            <button type="button" disabled={questProgressBusy[busyKey]} onClick={async () => { if (!selectedUserId) return; setQuestProgressBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/quests/user-progress", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, type: "set_completion", action: "remove", winnerId: q.winnerId, tier }) }); if (res.ok) loadData(); } finally { setQuestProgressBusy((b) => ({ ...b, [busyKey]: false })); } }} className="px-2 py-1 rounded text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 cursor-pointer shrink-0">Remove</button>
+                          </div>
+                        ); })}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </section>
