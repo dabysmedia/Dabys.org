@@ -11,6 +11,8 @@ import {
   getStardust,
   getAlchemySettings,
   CARD_FINISH_LABELS,
+  getUsers,
+  addEpicLegendaryTimelineEntry,
 } from "@/lib/data";
 import type { CardFinish } from "@/lib/data";
 import { getPrismaticCraftChance } from "@/lib/alchemy";
@@ -100,6 +102,20 @@ export async function POST(request: Request) {
       finish: "prismatic",
     };
     const updated = updateCard(cardId, updates);
+    if (updated) {
+      const users = getUsers();
+      const userName = users.find((u) => u.id === userId)?.name || "Someone";
+      addEpicLegendaryTimelineEntry({
+        userId,
+        userName,
+        source: "prismatic_craft",
+        rarity: "legendary",
+        cardId,
+        characterName: card.characterName,
+        actorName: card.actorName,
+        movieTitle: card.movieTitle,
+      });
+    }
     if (!updated) {
       addPrisms(userId, prismsToApply);
       return NextResponse.json(

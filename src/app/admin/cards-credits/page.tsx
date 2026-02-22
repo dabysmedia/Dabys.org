@@ -263,10 +263,16 @@ export default function AdminCardsCreditsPage() {
   const [userCodex, setUserCodex] = useState<{
     characterIds: string[];
     holoCharacterIds: string[];
+    prismaticCharacterIds: string[];
+    darkMatterCharacterIds: string[];
     altArtCharacterIds: string[];
+    altArtHoloCharacterIds: string[];
     boysCharacterIds: string[];
   } | null>(null);
   const [codexBusy, setCodexBusy] = useState<Record<string, boolean>>({});
+  const [showManageCodexModal, setShowManageCodexModal] = useState(false);
+  const [manageCodexModalTab, setManageCodexModalTab] = useState<"regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "boys">("regular");
+  const [codexAddAltArtAsHolo, setCodexAddAltArtAsHolo] = useState(false);
   const [openUserSection, setOpenUserSection] = useState<Record<string, boolean>>({
     credits: false,
     stardust: false,
@@ -274,7 +280,7 @@ export default function AdminCardsCreditsPage() {
     quests: false,
     trivia: false,
     collection: false,
-    codex: true,
+    codex: false,
   });
   const [wipeConfirmUser, setWipeConfirmUser] = useState("");
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
@@ -285,6 +291,9 @@ export default function AdminCardsCreditsPage() {
   const [rollbackLoading, setRollbackLoading] = useState(false);
   const [backfillDate, setBackfillDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [backfillLoading, setBackfillLoading] = useState(false);
+  const [timelineEntries, setTimelineEntries] = useState<{ id: string; timestamp: string; userId: string; userName: string; source: string; rarity: string; cardId: string; characterName?: string; actorName?: string; movieTitle?: string; packId?: string }[]>([]);
+  const [timelineFilterUserId, setTimelineFilterUserId] = useState("");
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
   const [wipingUserInvCurr, setWipingUserInvCurr] = useState(false);
@@ -359,7 +368,7 @@ export default function AdminCardsCreditsPage() {
   });
   const [savingAlchemySettings, setSavingAlchemySettings] = useState(false);
   const [alchemySettingsLoading, setAlchemySettingsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"users" | "packs" | "pool" | "economy" | "danger">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "packs" | "pool" | "economy" | "timeline" | "danger">("users");
   const [addAllCreditsInput, setAddAllCreditsInput] = useState("");
   const [addAllCreditsLoading, setAddAllCreditsLoading] = useState(false);
   const [packForm, setPackForm] = useState<{
@@ -655,11 +664,22 @@ export default function AdminCardsCreditsPage() {
         setUserCodex({
           characterIds: c.characterIds ?? [],
           holoCharacterIds: c.holoCharacterIds ?? [],
+          prismaticCharacterIds: c.prismaticCharacterIds ?? [],
+          darkMatterCharacterIds: c.darkMatterCharacterIds ?? [],
           altArtCharacterIds: c.altArtCharacterIds ?? [],
+          altArtHoloCharacterIds: c.altArtHoloCharacterIds ?? [],
           boysCharacterIds: c.boysCharacterIds ?? [],
         });
       } else {
-        setUserCodex({ characterIds: [], holoCharacterIds: [], altArtCharacterIds: [], boysCharacterIds: [] });
+        setUserCodex({
+          characterIds: [],
+          holoCharacterIds: [],
+          prismaticCharacterIds: [],
+          darkMatterCharacterIds: [],
+          altArtCharacterIds: [],
+          altArtHoloCharacterIds: [],
+          boysCharacterIds: [],
+        });
       }
     } catch {
       setError("Failed to load data");
@@ -681,6 +701,18 @@ export default function AdminCardsCreditsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (activeTab !== "timeline") return;
+    setTimelineLoading(true);
+    fetch(`/api/admin/timeline${timelineFilterUserId ? `?userId=${encodeURIComponent(timelineFilterUserId)}` : ""}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setTimelineEntries(d.entries ?? []);
+      })
+      .catch(() => setTimelineEntries([]))
+      .finally(() => setTimelineLoading(false));
+  }, [activeTab, timelineFilterUserId]);
 
   function resetShopItemForm() {
     setEditingShopItemId(null);
@@ -1670,6 +1702,7 @@ export default function AdminCardsCreditsPage() {
     { id: "packs" as const, label: "Packs & Shop", icon: "M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" },
     { id: "pool" as const, label: "Card Pool", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" },
     { id: "economy" as const, label: "Economy", icon: "M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+    { id: "timeline" as const, label: "Timeline", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
     { id: "danger" as const, label: "Danger Zone", icon: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" },
   ];
 
@@ -1797,7 +1830,7 @@ export default function AdminCardsCreditsPage() {
               </svg>
             </div>
             {userCodex ? (
-              <p className="text-2xl font-bold text-emerald-300 tabular-nums">{userCodex.characterIds.length}<span className="text-sm font-normal text-white/30 ml-1">/{userCodex.holoCharacterIds.length}/{userCodex.altArtCharacterIds.length}/{userCodex.boysCharacterIds.length}</span></p>
+              <p className="text-2xl font-bold text-emerald-300 tabular-nums">{userCodex.characterIds.length}<span className="text-sm font-normal text-white/30 ml-1">/{userCodex.holoCharacterIds.length}/{userCodex.prismaticCharacterIds?.length ?? 0}/{userCodex.darkMatterCharacterIds?.length ?? 0}/{userCodex.altArtCharacterIds.length}/{userCodex.boysCharacterIds.length}</span></p>
             ) : (
               <p className="text-lg text-white/30">--</p>
             )}
@@ -2080,61 +2113,28 @@ export default function AdminCardsCreditsPage() {
             )}
           </section>
 
-          <section>
-            <button type="button" onClick={() => setOpenUserSection((s) => ({ ...s, codex: !s.codex }))} className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-white/[0.03] transition-colors group">
-              <div className="w-6 h-6 rounded-md bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+          <section className="border-b border-white/[0.06]">
+            <div className="flex items-center justify-between px-5 py-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-md bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
+                </div>
+                <span className="text-sm font-medium text-white/70">Codex</span>
+                {userCodex && (
+                  <span className="text-[11px] text-white/40 tabular-nums">
+                    {userCodex.characterIds.length} reg · {userCodex.holoCharacterIds.length} holo · {userCodex.prismaticCharacterIds?.length ?? 0} prism · {userCodex.darkMatterCharacterIds?.length ?? 0} DM · {userCodex.altArtCharacterIds.length} alt · {userCodex.boysCharacterIds.length} boys
+                  </span>
+                )}
               </div>
-              <span className="text-sm font-medium text-white/70 flex-1">Codex</span>
-              {userCodex ? ( <span className="text-[11px] text-white/40 tabular-nums">{userCodex.characterIds.length} · {userCodex.holoCharacterIds.length} · {userCodex.altArtCharacterIds.length} · {userCodex.boysCharacterIds.length}</span> ) : ( <span className="text-[11px] text-white/30">—</span> )}
-              <svg className={`w-4 h-4 text-white/20 transition-transform ${openUserSection.codex ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
-            </button>
-            {openUserSection.codex && userCodex && selectedUserId && (
-              <div className="px-4 pb-4 pt-0 space-y-4">
-                {(["regular", "holo", "altart", "boys"] as const).map((variant) => {
-                  const key = variant === "regular" ? "characterIds" : variant === "holo" ? "holoCharacterIds" : variant === "altart" ? "altArtCharacterIds" : "boysCharacterIds";
-                  const ids = userCodex[key];
-                  const label = variant === "regular" ? "Regular" : variant === "holo" ? "Holo" : variant === "altart" ? "Alt-art" : "Boys";
-                  const poolForVariant = variant === "boys" ? pool.filter((c) => (c.cardType ?? "actor") === "character") : pool.filter((c) => c.profilePath?.trim());
-                  return (
-                    <div key={variant} className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
-                      <h4 className="text-xs font-semibold text-white/60 mb-2">{label}</h4>
-                      <div className="flex flex-wrap gap-2 items-end mb-2">
-                        <select id={`codex-add-${variant}`} className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" onChange={async (e) => { const characterId = e.target.value; if (!characterId) return; e.target.value = ""; const busyKey = `${variant}-add-${characterId}`; setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "add" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: [...prev[key], characterId] } : null); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }}>
-                          <option value="">Add {label}…</option>
-                          {poolForVariant.filter((c) => !ids.includes(c.characterId)).map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}
-                        </select>
-                      </div>
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {ids.length === 0 ? ( <p className="text-white/30 text-sm py-2">None</p> ) : ( (() => { const bySet = new Map<string, string[]>(); for (const characterId of ids) { const entry = pool.find((p) => p.characterId === characterId); const setKey = (entry?.customSetId ?? entry?.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(setKey)) bySet.set(setKey, []); bySet.get(setKey)!.push(characterId); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const setIds = bySet.get(setName)!; return (
-                            <div key={setName}>
-                              <h5 className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mb-1.5">{setName} ({setIds.length})</h5>
-                              <ul className="space-y-1.5">
-                                {setIds.map((characterId) => { const entry = pool.find((p) => p.characterId === characterId); const name = entry ? poolOptionLabel(entry) : characterId; const busyKey = `${variant}-remove-${characterId}`; const imgUrl = entry?.profilePath?.trim(); return (
-                                  <li key={characterId} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06]">
-                                    {imgUrl ? (
-                                      <div className="shrink-0 w-10 h-10 rounded-md overflow-hidden bg-white/5">
-                                        <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                                      </div>
-                                    ) : (
-                                      <div className="shrink-0 w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
-                                        <span className="text-white/30 text-xs">?</span>
-                                      </div>
-                                    )}
-                                    <span className="text-white/80 text-sm truncate flex-1 min-w-0">{name}</span>
-                                    <button type="button" disabled={codexBusy[busyKey]} onClick={async () => { setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId) } : null); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="shrink-0 px-2 py-1 rounded text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 cursor-pointer">{codexBusy[busyKey] ? "…" : "Remove"}</button>
-                                  </li>
-                                ); })}
-                              </ul>
-                            </div>
-                        ); }); })() )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {openUserSection.codex && !userCodex && ( <div className="px-4 pb-4 pt-0 text-white/40 text-sm">Loading codex…</div> )}
+              <button
+                type="button"
+                onClick={() => selectedUserId && setShowManageCodexModal(true)}
+                disabled={!selectedUserId}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                Manage Codex
+              </button>
+            </div>
           </section>
         </div>
         </>
@@ -2731,6 +2731,98 @@ export default function AdminCardsCreditsPage() {
       </>
       )}
 
+      {/* ═══════════ TAB: TIMELINE ═══════════ */}
+      {activeTab === "timeline" && (
+      <>
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white/90">Epic & Legendary Timeline</h2>
+            <p className="text-[11px] text-white/40">Pulls, rerolls, trade-ups, and prismatic crafts — by who and when</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <label className="text-xs text-white/50">Filter by user</label>
+          <select
+            value={timelineFilterUserId}
+            onChange={(e) => setTimelineFilterUserId(e.target.value)}
+            className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-cyan-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"
+          >
+            <option value="">All users</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.name} ({u.id})</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              setTimelineLoading(true);
+              fetch(`/api/admin/timeline${timelineFilterUserId ? `?userId=${encodeURIComponent(timelineFilterUserId)}` : ""}`)
+                .then((r) => r.json())
+                .then((d) => setTimelineEntries(d.entries ?? []))
+                .catch(() => setTimelineEntries([]))
+                .finally(() => setTimelineLoading(false));
+            }}
+            disabled={timelineLoading}
+            className="px-3 py-2 rounded-lg bg-cyan-600/80 text-white text-sm font-medium hover:bg-cyan-500/80 disabled:opacity-40 cursor-pointer"
+          >
+            {timelineLoading ? "Loading…" : "Refresh"}
+          </button>
+        </div>
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+          {timelineLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+            </div>
+          ) : timelineEntries.length === 0 ? (
+            <div className="py-12 text-center text-white/40 text-sm">No epic or legendary activity yet.</div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-[#0d0d12] border-b border-white/[0.08]">
+                  <tr>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-white/50 uppercase tracking-wider">Date/Time</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-white/50 uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-white/50 uppercase tracking-wider">Source</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-white/50 uppercase tracking-wider">Rarity</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-white/50 uppercase tracking-wider">Card</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timelineEntries.map((e) => (
+                    <tr key={e.id} className="border-b border-white/[0.04] hover:bg-white/[0.03]">
+                      <td className="px-4 py-2.5 text-white/70 font-mono text-xs whitespace-nowrap">{new Date(e.timestamp).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 text-white/80">{e.userName}</td>
+                      <td className="px-4 py-2.5">
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          e.source === "pull" ? "bg-blue-500/20 text-blue-300" :
+                          e.source === "reroll" ? "bg-amber-500/20 text-amber-300" :
+                          e.source === "trade_up" ? "bg-purple-500/20 text-purple-300" :
+                          "bg-cyan-500/20 text-cyan-300"
+                        }`}>
+                          {e.source === "pull" ? "Pull" : e.source === "reroll" ? "Reroll" : e.source === "trade_up" ? "Trade-up" : "Prismatic craft"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className={e.rarity === "legendary" ? "text-amber-400 font-medium" : "text-purple-400"}>{e.rarity}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-white/80">{e.characterName || e.actorName || e.cardId}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+      </>
+      )}
+
       {/* ═══════════ TAB: DANGER ZONE ═══════════ */}
       {activeTab === "danger" && (
       <>
@@ -2978,6 +3070,70 @@ export default function AdminCardsCreditsPage() {
                   <button type="submit" disabled={!newPoolTypeId.trim() || addingPoolType} className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-40 cursor-pointer">{addingPoolType ? "Adding..." : "Add"}</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Manage Codex modal */}
+      {showManageCodexModal && selectedUserId && userCodex && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setShowManageCodexModal(false)} aria-hidden />
+          <div className="fixed inset-4 z-50 rounded-xl border border-white/[0.08] bg-[#12121a] shadow-2xl overflow-hidden flex flex-col" role="dialog" aria-label="Manage Codex">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] flex-shrink-0">
+              <h2 className="text-lg font-semibold text-white">Manage Codex</h2>
+              <button type="button" onClick={() => setShowManageCodexModal(false)} className="p-2 rounded-lg text-white/50 hover:text-white hover:bg-white/[0.06]">✕</button>
+            </div>
+            <div className="flex gap-1 px-4 pt-2 border-b border-white/[0.06] flex-shrink-0 overflow-x-auto">
+              {(["regular", "holo", "prismatic", "darkMatter", "altart", "boys"] as const).map((tab) => (
+                <button key={tab} type="button" onClick={() => setManageCodexModalTab(tab)} className={`px-4 py-2.5 rounded-t-lg text-sm font-medium transition-colors whitespace-nowrap ${manageCodexModalTab === tab ? "bg-white/[0.08] text-white" : "text-white/50 hover:text-white/70 hover:bg-white/[0.04]"}`}>
+                  {tab === "regular" ? "Regular" : tab === "holo" ? "Holo" : tab === "prismatic" ? "Prismatic" : tab === "darkMatter" ? "Dark Matter" : tab === "altart" ? "Alt-art" : "Boys"}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {(() => {
+                const variant = manageCodexModalTab;
+                const key = variant === "regular" ? "characterIds" : variant === "holo" ? "holoCharacterIds" : variant === "prismatic" ? "prismaticCharacterIds" : variant === "darkMatter" ? "darkMatterCharacterIds" : variant === "altart" ? "altArtCharacterIds" : "boysCharacterIds";
+                const ids = userCodex[key] ?? [];
+                const label = variant === "regular" ? "Regular" : variant === "holo" ? "Holo" : variant === "prismatic" ? "Prismatic" : variant === "darkMatter" ? "Dark Matter" : variant === "altart" ? "Alt-art" : "Boys";
+                const poolForVariant = variant === "boys" ? pool.filter((c) => (c.cardType ?? "actor") === "character") : variant === "altart" ? pool.filter((c) => c.altArtOfCharacterId?.trim()) : pool.filter((c) => c.profilePath?.trim());
+                const available = poolForVariant.filter((c) => !ids.includes(c.characterId));
+                const finish: "normal" | "holo" | "prismatic" | "darkMatter" = variant === "darkMatter" ? "darkMatter" : variant === "prismatic" ? "prismatic" : variant === "holo" ? "holo" : "normal";
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2 items-end">
+                      <select id={`codex-modal-add-${variant}`} className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" onChange={async (e) => { const characterId = e.target.value; if (!characterId) return; e.target.value = ""; const isHolo = variant === "altart" && codexAddAltArtAsHolo; const busyKey = `${variant}-add-${characterId}`; setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), characterId], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), characterId] }) } : null); loadData(); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }}>
+                        <option value="">Add {label}…</option>
+                        {available.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}
+                      </select>
+                      {variant === "altart" && (
+                        <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                          <input type="checkbox" checked={codexAddAltArtAsHolo} onChange={(e) => setCodexAddAltArtAsHolo(e.target.checked)} className="rounded border-white/30 bg-white/5" />
+                          <span>Add as holo</span>
+                        </label>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      {ids.length === 0 ? ( <p className="text-white/30 text-sm py-8 text-center">None</p> ) : ( (() => { const bySet = new Map<string, string[]>(); for (const characterId of ids) { const entry = pool.find((p) => p.characterId === characterId); const setKey = (entry?.customSetId ?? entry?.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(setKey)) bySet.set(setKey, []); bySet.get(setKey)!.push(characterId); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const setIds = bySet.get(setName)!; return (
+                        <div key={setName} className="space-y-2">
+                          <h5 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{setName} ({setIds.length})</h5>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                            {setIds.map((characterId) => { const entry = pool.find((p) => p.characterId === characterId); const busyKey = `${variant}-remove-${characterId}`; const isAltHolo = variant === "altart" && (userCodex.altArtHoloCharacterIds ?? []).includes(characterId); const codexCard = entry ? { id: entry.characterId, rarity: entry.rarity, isFoil: variant === "holo" || variant === "prismatic" || variant === "darkMatter" || isAltHolo, finish: variant === "altart" ? (isAltHolo ? "holo" : "normal") : finish, actorName: entry.actorName ?? "", characterName: entry.characterName ?? "", movieTitle: entry.movieTitle ?? "", profilePath: entry.profilePath ?? "", cardType: entry.cardType ?? "actor", isAltArt: variant === "altart" } : null; if (!codexCard) return ( <div key={characterId} className="rounded-xl border border-white/10 bg-white/[0.04] aspect-[2/3.35] flex items-center justify-center"><span className="text-white/30 text-xs">?</span></div> ); return (
+                              <div key={characterId} className="relative group/codexcard w-full min-w-0">
+                                <CardDisplay card={codexCard} size="full" selectable />
+                                <button type="button" disabled={codexBusy[busyKey]} onClick={async (ev) => { ev.stopPropagation(); setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId), ...(variant === "altart" && { altArtHoloCharacterIds: (prev.altArtHoloCharacterIds ?? []).filter((id) => id !== characterId) }) } : null); loadData(); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 opacity-0 group-hover/codexcard:opacity-100 transition-opacity cursor-pointer border-2 border-red-500/50 hover:border-red-400">
+                                  <span className="px-3 py-1.5 rounded-lg bg-red-600/90 text-white text-sm font-medium">{codexBusy[busyKey] ? "…" : "Remove"}</span>
+                                </button>
+                              </div>
+                            ); })}
+                          </div>
+                        </div>
+                      ); }); })() )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buyPack, getCompletedWinnerIds } from "@/lib/cards";
-import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification } from "@/lib/data";
+import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
@@ -46,7 +46,23 @@ export async function POST(request: Request) {
   const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
 
   if (result.cards) {
-    // Log legendary pulls
+    // Log epic/legendary pulls to timeline
+    for (const card of result.cards) {
+      if (card.rarity === "epic" || card.rarity === "legendary") {
+        addEpicLegendaryTimelineEntry({
+          userId: body.userId,
+          userName,
+          source: "pull",
+          rarity: card.rarity as "epic" | "legendary",
+          cardId: card.id,
+          characterName: card.characterName,
+          actorName: card.actorName,
+          movieTitle: card.movieTitle,
+          packId,
+        });
+      }
+    }
+    // Log legendary pulls to activity
     for (const card of result.cards) {
       if (card.rarity === "legendary") {
         addActivity({

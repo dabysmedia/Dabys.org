@@ -3791,6 +3791,55 @@ export function addActivity(
   return full;
 }
 
+// ──── Epic/Legendary Timeline (admin: pull, reroll, trade-up, craft) ────
+export type EpicLegendarySource = "pull" | "reroll" | "trade_up" | "prismatic_craft";
+
+export interface EpicLegendaryTimelineEntry {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  source: EpicLegendarySource;
+  rarity: "epic" | "legendary";
+  cardId: string;
+  characterName?: string;
+  actorName?: string;
+  movieTitle?: string;
+  packId?: string;
+}
+
+function getEpicLegendaryTimelineRaw(): EpicLegendaryTimelineEntry[] {
+  try {
+    return readJson<EpicLegendaryTimelineEntry[]>("epicLegendaryTimeline.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveEpicLegendaryTimelineRaw(entries: EpicLegendaryTimelineEntry[]) {
+  writeJson("epicLegendaryTimeline.json", entries);
+}
+
+export function addEpicLegendaryTimelineEntry(
+  entry: Omit<EpicLegendaryTimelineEntry, "id" | "timestamp">
+): EpicLegendaryTimelineEntry {
+  const log = getEpicLegendaryTimelineRaw();
+  const full: EpicLegendaryTimelineEntry = {
+    ...entry,
+    id: `tl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    timestamp: new Date().toISOString(),
+  };
+  log.push(full);
+  saveEpicLegendaryTimelineRaw(log);
+  return full;
+}
+
+export function getEpicLegendaryTimeline(userId?: string): EpicLegendaryTimelineEntry[] {
+  const log = getEpicLegendaryTimelineRaw();
+  const filtered = userId ? log.filter((e) => e.userId === userId) : log;
+  return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
 /**
  * Derive status from a presence entry.
  * - online: heartbeat within 60s and not idle

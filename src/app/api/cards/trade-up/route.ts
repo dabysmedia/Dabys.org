@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tradeUp } from "@/lib/cards";
-import { getCardById, getUsers, addActivity, addGlobalNotification } from "@/lib/data";
+import { getCardById, getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import type { Rarity } from "@/lib/quests";
 
@@ -37,24 +37,35 @@ export async function POST(request: Request) {
     incrementUserLifetimeStat(body.userId, "tradeUpsByRarity", 1, inputRarity);
   }
 
-  // Log legendary pulls from trade-up
-  if (result.card && result.card.rarity === "legendary") {
+  if (result.card && (result.card.rarity === "epic" || result.card.rarity === "legendary")) {
     const users = getUsers();
     const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
-    addActivity({
-      type: "legendary_pull",
+    addEpicLegendaryTimelineEntry({
       userId: body.userId,
       userName,
-      message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
-      meta: { cardId: result.card.id, characterName: result.card.characterName, actorName: result.card.actorName, movieTitle: result.card.movieTitle },
+      source: "trade_up",
+      rarity: result.card.rarity as "epic" | "legendary",
+      cardId: result.card.id,
+      characterName: result.card.characterName,
+      actorName: result.card.actorName,
+      movieTitle: result.card.movieTitle,
     });
-    addGlobalNotification({
-      type: "legendary_pull",
-      message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
-      actorUserId: body.userId,
-      actorName: userName,
-      meta: { cardId: result.card.id, characterName: result.card.characterName, movieTitle: result.card.movieTitle },
-    });
+    if (result.card.rarity === "legendary") {
+      addActivity({
+        type: "legendary_pull",
+        userId: body.userId,
+        userName,
+        message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
+        meta: { cardId: result.card.id, characterName: result.card.characterName, actorName: result.card.actorName, movieTitle: result.card.movieTitle },
+      });
+      addGlobalNotification({
+        type: "legendary_pull",
+        message: `forged a Legendary via trade-up — ${result.card.characterName || result.card.actorName}`,
+        actorUserId: body.userId,
+        actorName: userName,
+        meta: { cardId: result.card.id, characterName: result.card.characterName, movieTitle: result.card.movieTitle },
+      });
+    }
   }
 
   return NextResponse.json(

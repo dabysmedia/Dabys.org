@@ -5,6 +5,10 @@ import {
   removeCodexUnlock,
   addCodexUnlockHolo,
   removeCodexUnlockHolo,
+  addCodexUnlockPrismatic,
+  removeCodexUnlockPrismatic,
+  addCodexUnlockDarkMatter,
+  removeCodexUnlockDarkMatter,
   addCodexUnlockAltArt,
   removeCodexUnlockAltArt,
   addCodexUnlockBoys,
@@ -20,7 +24,7 @@ async function requireAdmin() {
   return null;
 }
 
-type Variant = "regular" | "holo" | "altart" | "boys";
+type Variant = "regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "boys";
 
 export async function POST(request: Request) {
   const auth = await requireAdmin();
@@ -31,15 +35,16 @@ export async function POST(request: Request) {
   const characterId = body.characterId as string | undefined;
   const variant = body.variant as Variant | undefined;
   const action = body.action as "add" | "remove" | undefined;
+  const isHolo = body.isHolo as boolean | undefined; // for altart: add as holo
 
   if (!userId || !characterId?.trim() || !variant || !action) {
     return NextResponse.json(
-      { error: "userId, characterId, variant (regular|holo|altart|boys), and action (add|remove) required" },
+      { error: "userId, characterId, variant, and action (add|remove) required" },
       { status: 400 }
     );
   }
 
-  const validVariants: Variant[] = ["regular", "holo", "altart", "boys"];
+  const validVariants: Variant[] = ["regular", "holo", "prismatic", "darkMatter", "altart", "boys"];
   if (!validVariants.includes(variant)) {
     return NextResponse.json({ error: "Invalid variant" }, { status: 400 });
   }
@@ -56,8 +61,14 @@ export async function POST(request: Request) {
     case "holo":
       action === "add" ? addCodexUnlockHolo(userId, id) : removeCodexUnlockHolo(userId, id);
       break;
+    case "prismatic":
+      action === "add" ? addCodexUnlockPrismatic(userId, id) : removeCodexUnlockPrismatic(userId, id);
+      break;
+    case "darkMatter":
+      action === "add" ? addCodexUnlockDarkMatter(userId, id) : removeCodexUnlockDarkMatter(userId, id);
+      break;
     case "altart":
-      action === "add" ? addCodexUnlockAltArt(userId, id) : removeCodexUnlockAltArt(userId, id);
+      action === "add" ? addCodexUnlockAltArt(userId, id, isHolo) : removeCodexUnlockAltArt(userId, id);
       break;
     case "boys":
       action === "add" ? addCodexUnlockBoys(userId, id) : removeCodexUnlockBoys(userId, id);

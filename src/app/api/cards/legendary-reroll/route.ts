@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { legendaryReroll } from "@/lib/cards";
-import { getUsers, addActivity, addGlobalNotification } from "@/lib/data";
+import { getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 
 export async function POST(request: Request) {
@@ -29,6 +29,16 @@ export async function POST(request: Request) {
   if (result.card) {
     const users = getUsers();
     const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
+    addEpicLegendaryTimelineEntry({
+      userId: body.userId,
+      userName,
+      source: "reroll",
+      rarity: "legendary",
+      cardId: result.card.id,
+      characterName: result.card.characterName,
+      actorName: result.card.actorName,
+      movieTitle: result.card.movieTitle,
+    });
     addActivity({
       type: "legendary_pull",
       userId: body.userId,
