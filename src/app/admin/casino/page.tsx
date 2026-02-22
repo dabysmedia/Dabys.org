@@ -1058,6 +1058,7 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
   const [scratchOddsCLOVER, setScratchOddsCLOVER] = useState("15");
   const [scratchOddsLUCKY, setScratchOddsLUCKY] = useState("10");
   const [scratchLoseWeight, setScratchLoseWeight] = useState("4");
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -1156,6 +1157,25 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
       onError("Failed to save");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReset() {
+    if (!confirm("Clear all tickets for the current draw? Prize pool will reset to starting pool. This cannot be undone.")) return;
+    onError("");
+    setResetting(true);
+    try {
+      const res = await fetch("/api/admin/lottery/reset", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        onSuccess(data.message || "Lottery reset!");
+      } else {
+        onError(data.error || "Failed to reset");
+      }
+    } catch {
+      onError("Failed to reset");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -1310,6 +1330,16 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
               Scratch-off: {settings.scratchOff.cost} cr · 12 panels · Match 3+ · Per-symbol odds
             </p>
           )}
+          <div className="mt-6 pt-6 border-t border-white/[0.08]">
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="px-4 py-2 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-400 text-sm font-medium hover:bg-amber-500/20 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {resetting ? "Resetting…" : "Reset Weekly Lottery"}
+            </button>
+            <p className="text-xs text-white/40 mt-2">Clears all tickets for the current draw. Prize pool resets to starting pool.</p>
+          </div>
         </div>
       )}
     </div>

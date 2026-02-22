@@ -2341,6 +2341,14 @@ export function getLotteryTicketsForDraw(drawId: string): LotteryTicket[] {
   return getLotteryTicketsRaw().filter((t) => t.drawId === drawId);
 }
 
+/** Remove all tickets for a draw. Used by admin to reset the current lottery. */
+export function clearLotteryTicketsForDraw(drawId: string): number {
+  const tickets = getLotteryTicketsRaw().filter((t) => t.drawId !== drawId);
+  const removed = getLotteryTicketsRaw().length - tickets.length;
+  saveLotteryTicketsRaw(tickets);
+  return removed;
+}
+
 export function addLotteryTicket(
   drawId: string,
   userId: string,
