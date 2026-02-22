@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/casino/lottery",
+      "schedule": "0 16 * * 1"
+    }
+  ]
+}

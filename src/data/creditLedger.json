@@ -201,5 +201,2928 @@
       "claimedCount": 2
     },
     "createdAt": "2026-02-20T05:59:41.509Z"
+  },
+  {
+    "id": "cl-1771737304165-nu3ngkk",
+    "userId": "1",
+    "amount": -50,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 2,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T05:15:04.164Z"
+  },
+  {
+    "id": "cl-1771738171818-ijqt1wr",
+    "userId": "1",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T05:29:31.818Z"
+  },
+  {
+    "id": "cl-1771738211317-z0qc3qx",
+    "userId": "2",
+    "amount": 400,
+    "reason": "admin_add",
+    "metadata": {},
+    "createdAt": "2026-02-22T05:30:11.316Z"
+  },
+  {
+    "id": "cl-1771738238779-dho1wrl",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:30:38.778Z"
+  },
+  {
+    "id": "cl-1771738244981-400ca0b",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:30:44.980Z"
+  },
+  {
+    "id": "cl-1771738244982-c68im46",
+    "userId": "2",
+    "amount": 2,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "symbols": [
+        "7",
+        "7",
+        "BAR"
+      ],
+      "payout": 2
+    },
+    "createdAt": "2026-02-22T05:30:44.982Z"
+  },
+  {
+    "id": "cl-1771738420246-lul5vnt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:33:40.245Z"
+  },
+  {
+    "id": "cl-1771738420247-wqjs2s8",
+    "userId": "2",
+    "amount": 50,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "GOLD",
+        "LUCKY",
+        "DIAMOND",
+        "CLOVER",
+        "LUCKY",
+        "DIAMOND",
+        "STAR",
+        "LUCKY",
+        "JACKPOT",
+        "CLOVER",
+        "STAR"
+      ],
+      "payout": 50
+    },
+    "createdAt": "2026-02-22T05:33:40.247Z"
+  },
+  {
+    "id": "cl-1771738431073-bxp6y2f",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:33:51.073Z"
+  },
+  {
+    "id": "cl-1771738431075-rjff7f6",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "DIAMOND",
+        "JACKPOT",
+        "CLOVER",
+        "LUCKY",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "JACKPOT"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T05:33:51.074Z"
+  },
+  {
+    "id": "cl-1771738439704-1n6eopb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:33:59.703Z"
+  },
+  {
+    "id": "cl-1771738439706-qcl6yx1",
+    "userId": "2",
+    "amount": 100,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "GOLD",
+        "CLOVER",
+        "DIAMOND",
+        "LUCKY",
+        "GOLD",
+        "STAR",
+        "DIAMOND",
+        "CLOVER",
+        "GOLD",
+        "CLOVER",
+        "LUCKY"
+      ],
+      "payout": 100
+    },
+    "createdAt": "2026-02-22T05:33:59.705Z"
+  },
+  {
+    "id": "cl-1771738514479-rpsk0yb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:35:14.478Z"
+  },
+  {
+    "id": "cl-1771738514480-okobe8i",
+    "userId": "2",
+    "amount": 50,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "CLOVER",
+        "GOLD",
+        "LUCKY",
+        "STAR",
+        "CLOVER",
+        "GOLD",
+        "STAR",
+        "LUCKY",
+        "CLOVER",
+        "DIAMOND",
+        "STAR"
+      ],
+      "payout": 50
+    },
+    "createdAt": "2026-02-22T05:35:14.479Z"
+  },
+  {
+    "id": "cl-1771738725453-jkbc0d2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:38:45.452Z"
+  },
+  {
+    "id": "cl-1771738725456-itqcen9",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "JACKPOT",
+        "LUCKY",
+        "STAR",
+        "JACKPOT",
+        "DIAMOND",
+        "CLOVER",
+        "DIAMOND",
+        "LUCKY",
+        "JACKPOT",
+        "STAR",
+        "CLOVER"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T05:38:45.455Z"
+  },
+  {
+    "id": "cl-1771738737608-khmz5on",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:38:57.607Z"
+  },
+  {
+    "id": "cl-1771738737609-5accyzn",
+    "userId": "2",
+    "amount": 50,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "STAR",
+        "DIAMOND",
+        "GOLD",
+        "CLOVER",
+        "STAR",
+        "CLOVER",
+        "JACKPOT",
+        "STAR",
+        "CLOVER",
+        "STAR",
+        "DIAMOND"
+      ],
+      "payout": 50
+    },
+    "createdAt": "2026-02-22T05:38:57.608Z"
+  },
+  {
+    "id": "cl-1771738743828-rl46fk6",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:39:03.827Z"
+  },
+  {
+    "id": "cl-1771738743829-laufjdm",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "STAR",
+        "CLOVER",
+        "JACKPOT",
+        "GOLD",
+        "JACKPOT",
+        "CLOVER",
+        "STAR",
+        "CLOVER",
+        "JACKPOT",
+        "CLOVER",
+        "DIAMOND"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T05:39:03.829Z"
+  },
+  {
+    "id": "cl-1771739176332-gplwngd",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:46:16.332Z"
+  },
+  {
+    "id": "cl-1771739176334-qa6vxf4",
+    "userId": "2",
+    "amount": 50,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "LUCKY",
+        "STAR",
+        "CLOVER",
+        "DIAMOND",
+        "CLOVER",
+        "JACKPOT",
+        "CLOVER",
+        "DIAMOND",
+        "STAR",
+        "GOLD",
+        "STAR"
+      ],
+      "payout": 50
+    },
+    "createdAt": "2026-02-22T05:46:16.333Z"
+  },
+  {
+    "id": "cl-1771739261120-4avitab",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:47:41.119Z"
+  },
+  {
+    "id": "cl-1771739261121-axcfde0",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "JACKPOT",
+        "STAR",
+        "GOLD",
+        "CLOVER",
+        "JACKPOT",
+        "GOLD",
+        "JACKPOT",
+        "DIAMOND",
+        "CLOVER",
+        "CLOVER",
+        "LUCKY"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T05:47:41.121Z"
+  },
+  {
+    "id": "cl-1771739559030-iu1cqh3",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:52:39.029Z"
+  },
+  {
+    "id": "cl-1771739559031-32may0z",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "DIAMOND",
+        "GOLD",
+        "DIAMOND",
+        "JACKPOT",
+        "GOLD",
+        "STAR",
+        "JACKPOT",
+        "DIAMOND",
+        "STAR",
+        "GOLD",
+        "GOLD"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T05:52:39.031Z"
+  },
+  {
+    "id": "cl-1771739631882-sfvn52y",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:53:51.881Z"
+  },
+  {
+    "id": "cl-1771739631883-8s8hcqq",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "DIAMOND",
+        "DIAMOND",
+        "STAR",
+        "STAR",
+        "LUCKY",
+        "CLOVER",
+        "JACKPOT",
+        "CLOVER",
+        "JACKPOT",
+        "STAR",
+        "DIAMOND"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T05:53:51.882Z"
+  },
+  {
+    "id": "cl-1771739715958-uftukmn",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:55:15.957Z"
+  },
+  {
+    "id": "cl-1771739715960-z32652o",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "GOLD",
+        "DIAMOND",
+        "DIAMOND",
+        "LUCKY",
+        "GOLD",
+        "CLOVER",
+        "GOLD",
+        "STAR",
+        "GOLD",
+        "DIAMOND",
+        "CLOVER"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T05:55:15.959Z"
+  },
+  {
+    "id": "cl-1771739773838-uiqrl55",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:56:13.837Z"
+  },
+  {
+    "id": "cl-1771739773839-rhy6eqe",
+    "userId": "2",
+    "amount": 30,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "CLOVER",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "STAR",
+        "DIAMOND",
+        "LUCKY",
+        "JACKPOT",
+        "STAR",
+        "CLOVER",
+        "LUCKY"
+      ],
+      "payout": 30
+    },
+    "createdAt": "2026-02-22T05:56:13.839Z"
+  },
+  {
+    "id": "cl-1771739786584-g2suxim",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:56:26.583Z"
+  },
+  {
+    "id": "cl-1771739786585-qkuyyeo",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "STAR",
+        "CLOVER",
+        "STAR",
+        "CLOVER",
+        "DIAMOND",
+        "GOLD",
+        "DIAMOND",
+        "JACKPOT",
+        "LUCKY",
+        "DIAMOND",
+        "STAR"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T05:56:26.585Z"
+  },
+  {
+    "id": "cl-1771739900848-pcfg2ap",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T05:58:20.847Z"
+  },
+  {
+    "id": "cl-1771739900850-0uqbwjt",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "CLOVER",
+        "JACKPOT",
+        "CLOVER",
+        "LUCKY",
+        "GOLD",
+        "JACKPOT",
+        "JACKPOT",
+        "GOLD",
+        "LUCKY",
+        "STAR",
+        "DIAMOND"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T05:58:20.850Z"
+  },
+  {
+    "id": "cl-1771740015877-l3ozmzi",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:00:15.876Z"
+  },
+  {
+    "id": "cl-1771740015879-rsve698",
+    "userId": "2",
+    "amount": 30,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "GOLD",
+        "GOLD",
+        "CLOVER",
+        "LUCKY",
+        "JACKPOT",
+        "CLOVER",
+        "LUCKY",
+        "CLOVER",
+        "JACKPOT",
+        "CLOVER",
+        "CLOVER"
+      ],
+      "payout": 30
+    },
+    "createdAt": "2026-02-22T06:00:15.878Z"
+  },
+  {
+    "id": "cl-1771740122983-dy6qh98",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:02:02.982Z"
+  },
+  {
+    "id": "cl-1771740155076-ywpg60c",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:02:35.075Z"
+  },
+  {
+    "id": "cl-1771740429174-yrf6awa",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:07:09.174Z"
+  },
+  {
+    "id": "cl-1771740439065-a0zqlmm",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:07:19.064Z"
+  },
+  {
+    "id": "cl-1771740556035-4yh6pog",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:09:16.034Z"
+  },
+  {
+    "id": "cl-1771740580905-4umzith",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:09:40.904Z"
+  },
+  {
+    "id": "cl-1771740620654-u0j65gj",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:10:20.653Z"
+  },
+  {
+    "id": "cl-1771740626735-3t8ykmq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:10:26.734Z"
+  },
+  {
+    "id": "cl-1771740634752-ytsq2g9",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:10:34.751Z"
+  },
+  {
+    "id": "cl-1771740685624-x0dirxv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:11:25.623Z"
+  },
+  {
+    "id": "cl-1771740723716-ugppzxr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:03.715Z"
+  },
+  {
+    "id": "cl-1771740730437-xl4h5hp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:10.436Z"
+  },
+  {
+    "id": "cl-1771740736827-2ry5wsh",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:16.827Z"
+  },
+  {
+    "id": "cl-1771740741297-fllk6ch",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:21.296Z"
+  },
+  {
+    "id": "cl-1771740746374-v44308f",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:26.373Z"
+  },
+  {
+    "id": "cl-1771740753670-p764ls6",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:33.669Z"
+  },
+  {
+    "id": "cl-1771740760689-1tth4tm",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:40.688Z"
+  },
+  {
+    "id": "cl-1771740767440-k0h2wkt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:47.439Z"
+  },
+  {
+    "id": "cl-1771740773810-v4kf5qf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:53.809Z"
+  },
+  {
+    "id": "cl-1771740779229-x980o4m",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:12:59.228Z"
+  },
+  {
+    "id": "cl-1771740784505-9dbgqt3",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:13:04.504Z"
+  },
+  {
+    "id": "cl-1771740815722-u63jd9o",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:13:35.721Z"
+  },
+  {
+    "id": "cl-1771740821120-mre9m2w",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:13:41.119Z"
+  },
+  {
+    "id": "cl-1771740883895-d8vss69",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:14:43.894Z"
+  },
+  {
+    "id": "cl-1771740895061-i9f2uxo",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:14:55.061Z"
+  },
+  {
+    "id": "cl-1771740903656-7rhhw29",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:15:03.655Z"
+  },
+  {
+    "id": "cl-1771740945589-kmhpok2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:15:45.588Z"
+  },
+  {
+    "id": "cl-1771740952511-huswdi2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:15:52.510Z"
+  },
+  {
+    "id": "cl-1771740958142-ar20mfz",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:15:58.141Z"
+  },
+  {
+    "id": "cl-1771740966386-fi9fwk2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:06.385Z"
+  },
+  {
+    "id": "cl-1771740972892-q4e0gtk",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:12.891Z"
+  },
+  {
+    "id": "cl-1771740981455-hkmhd2x",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:21.454Z"
+  },
+  {
+    "id": "cl-1771740990065-4c6mrt8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:30.064Z"
+  },
+  {
+    "id": "cl-1771740998385-9elubrv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:38.384Z"
+  },
+  {
+    "id": "cl-1771741005058-vqcsvaw",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:16:45.057Z"
+  },
+  {
+    "id": "cl-1771741142621-j6tpu4r",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:02.620Z"
+  },
+  {
+    "id": "cl-1771741150431-yzydknj",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:10.430Z"
+  },
+  {
+    "id": "cl-1771741157167-ky21p0t",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:17.166Z"
+  },
+  {
+    "id": "cl-1771741162843-ipk6doq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:22.843Z"
+  },
+  {
+    "id": "cl-1771741169177-huot8ub",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:29.176Z"
+  },
+  {
+    "id": "cl-1771741175934-vtxijwr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:35.934Z"
+  },
+  {
+    "id": "cl-1771741182432-h7p9sxf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:42.432Z"
+  },
+  {
+    "id": "cl-1771741182434-c2b9pih",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "JACKPOT",
+        "LUCKY",
+        "GOLD",
+        "DIAMOND",
+        "STAR",
+        "DIAMOND",
+        "DIAMOND",
+        "DIAMOND",
+        "LUCKY",
+        "DIAMOND",
+        "GOLD"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T06:19:42.433Z"
+  },
+  {
+    "id": "cl-1771741199308-cwytxif",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:19:59.308Z"
+  },
+  {
+    "id": "cl-1771741206616-hj6dw5w",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:06.615Z"
+  },
+  {
+    "id": "cl-1771741213276-a2jvaso",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:13.276Z"
+  },
+  {
+    "id": "cl-1771741218978-6jow1x4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:18.977Z"
+  },
+  {
+    "id": "cl-1771741224234-kl0wia0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:24.233Z"
+  },
+  {
+    "id": "cl-1771741229678-t4fq7do",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:29.677Z"
+  },
+  {
+    "id": "cl-1771741235263-t97atjv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:35.262Z"
+  },
+  {
+    "id": "cl-1771741240637-jo2z6u3",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:40.636Z"
+  },
+  {
+    "id": "cl-1771741246180-cwxc04k",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:46.179Z"
+  },
+  {
+    "id": "cl-1771741255052-b33eor4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:20:55.051Z"
+  },
+  {
+    "id": "cl-1771741262137-ffx2i6v",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:21:02.136Z"
+  },
+  {
+    "id": "cl-1771741268385-h5jya17",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:21:08.385Z"
+  },
+  {
+    "id": "cl-1771741302993-44d83na",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:21:42.992Z"
+  },
+  {
+    "id": "cl-1771741302995-i7xnuvt",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "JACKPOT",
+        "DIAMOND",
+        "GOLD",
+        "GOLD",
+        "JACKPOT",
+        "JACKPOT",
+        "LUCKY",
+        "CLOVER",
+        "JACKPOT",
+        "DIAMOND",
+        "DIAMOND"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:21:42.994Z"
+  },
+  {
+    "id": "cl-1771741308396-3l1duz4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:21:48.395Z"
+  },
+  {
+    "id": "cl-1771741368977-brquc84",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:22:48.976Z"
+  },
+  {
+    "id": "cl-1771741368981-zvobvps",
+    "userId": "2",
+    "amount": 100,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "STAR",
+        "GOLD",
+        "STAR",
+        "STAR",
+        "STAR",
+        "GOLD",
+        "LUCKY",
+        "STAR",
+        "STAR",
+        "STAR",
+        "LUCKY"
+      ],
+      "payout": 100
+    },
+    "createdAt": "2026-02-22T06:22:48.979Z"
+  },
+  {
+    "id": "cl-1771741383263-bys1qdc",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:23:03.263Z"
+  },
+  {
+    "id": "cl-1771741383265-7zeanfd",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "DIAMOND",
+        "DIAMOND",
+        "DIAMOND",
+        "CLOVER",
+        "JACKPOT",
+        "STAR",
+        "STAR",
+        "DIAMOND",
+        "GOLD",
+        "LUCKY",
+        "DIAMOND"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T06:23:03.264Z"
+  },
+  {
+    "id": "cl-1771741875968-5e8sbrq",
+    "userId": "2",
+    "amount": -4202,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 4302
+    },
+    "createdAt": "2026-02-22T06:31:15.967Z"
+  },
+  {
+    "id": "cl-1771741881324-5kgejtg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:21.323Z"
+  },
+  {
+    "id": "cl-1771741881326-o8l86l9",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "DIAMOND",
+        "DIAMOND",
+        "GOLD",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "GOLD",
+        "GOLD",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:31:21.325Z"
+  },
+  {
+    "id": "cl-1771741886980-wyg95k2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:26.979Z"
+  },
+  {
+    "id": "cl-1771741886981-j3wi67j",
+    "userId": "2",
+    "amount": 200,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "STAR",
+        "GOLD",
+        "LUCKY",
+        "JACKPOT",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "DIAMOND"
+      ],
+      "payout": 200
+    },
+    "createdAt": "2026-02-22T06:31:26.980Z"
+  },
+  {
+    "id": "cl-1771741892885-yawlahy",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:32.884Z"
+  },
+  {
+    "id": "cl-1771741898176-r6q6h26",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:38.176Z"
+  },
+  {
+    "id": "cl-1771741898178-8a33ckd",
+    "userId": "2",
+    "amount": 30,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "LUCKY",
+        "CLOVER",
+        "JACKPOT",
+        "LUCKY",
+        "CLOVER",
+        "JACKPOT",
+        "GOLD",
+        "DIAMOND",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY"
+      ],
+      "payout": 30
+    },
+    "createdAt": "2026-02-22T06:31:38.177Z"
+  },
+  {
+    "id": "cl-1771741904369-mn4sj4p",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:44.369Z"
+  },
+  {
+    "id": "cl-1771741910054-9wky5o3",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:50.053Z"
+  },
+  {
+    "id": "cl-1771741910055-57xij1p",
+    "userId": "2",
+    "amount": 100,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "GOLD",
+        "STAR",
+        "JACKPOT",
+        "GOLD",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "LUCKY",
+        "GOLD"
+      ],
+      "payout": 100
+    },
+    "createdAt": "2026-02-22T06:31:50.055Z"
+  },
+  {
+    "id": "cl-1771741915427-r423oiv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:31:55.427Z"
+  },
+  {
+    "id": "cl-1771742038505-wam349w",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:33:58.504Z"
+  },
+  {
+    "id": "cl-1771742045366-2ib15i5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:05.365Z"
+  },
+  {
+    "id": "cl-1771742050620-9k4ts72",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:10.619Z"
+  },
+  {
+    "id": "cl-1771742058061-88mnwx9",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:18.061Z"
+  },
+  {
+    "id": "cl-1771742058063-21f7dm7",
+    "userId": "2",
+    "amount": 20,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "GOLD",
+        "CLOVER",
+        "CLOVER",
+        "JACKPOT",
+        "JACKPOT",
+        "STAR",
+        "LUCKY",
+        "CLOVER",
+        "LUCKY",
+        "CLOVER",
+        "DIAMOND"
+      ],
+      "payout": 20
+    },
+    "createdAt": "2026-02-22T06:34:18.062Z"
+  },
+  {
+    "id": "cl-1771742065355-q5kew6h",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:25.354Z"
+  },
+  {
+    "id": "cl-1771742065356-79lxuq1",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "DIAMOND",
+        "DIAMOND",
+        "CLOVER",
+        "LUCKY",
+        "JACKPOT",
+        "LUCKY",
+        "STAR",
+        "JACKPOT",
+        "STAR",
+        "LUCKY",
+        "JACKPOT"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:34:25.356Z"
+  },
+  {
+    "id": "cl-1771742075945-3w3wjp2",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:35.944Z"
+  },
+  {
+    "id": "cl-1771742083913-og92nh8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:43.912Z"
+  },
+  {
+    "id": "cl-1771742083914-cgfaln8",
+    "userId": "2",
+    "amount": 20,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "DIAMOND",
+        "JACKPOT",
+        "LUCKY",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "LUCKY",
+        "CLOVER",
+        "DIAMOND",
+        "LUCKY",
+        "JACKPOT"
+      ],
+      "payout": 20
+    },
+    "createdAt": "2026-02-22T06:34:43.913Z"
+  },
+  {
+    "id": "cl-1771742092570-lzziexs",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:52.569Z"
+  },
+  {
+    "id": "cl-1771742099644-qkowste",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:34:59.643Z"
+  },
+  {
+    "id": "cl-1771742107840-d4osw6e",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:35:07.839Z"
+  },
+  {
+    "id": "cl-1771742114650-iphrad0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:35:14.650Z"
+  },
+  {
+    "id": "cl-1771742120548-f1kjfgz",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:35:20.547Z"
+  },
+  {
+    "id": "cl-1771742120549-ae6hz9t",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "CLOVER",
+        "STAR",
+        "CLOVER",
+        "STAR",
+        "LUCKY",
+        "JACKPOT",
+        "CLOVER",
+        "JACKPOT",
+        "JACKPOT",
+        "STAR",
+        "CLOVER"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:35:20.549Z"
+  },
+  {
+    "id": "cl-1771742338435-knnlsqh",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:38:58.434Z"
+  },
+  {
+    "id": "cl-1771742338437-n0vbmd0",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "JACKPOT",
+        "GOLD",
+        "GOLD",
+        "STAR",
+        "GOLD",
+        "DIAMOND",
+        "CLOVER",
+        "JACKPOT",
+        "DIAMOND",
+        "GOLD",
+        "JACKPOT"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:38:58.436Z"
+  },
+  {
+    "id": "cl-1771742351160-5ygyj59",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:39:11.160Z"
+  },
+  {
+    "id": "cl-1771742351162-9kbkziz",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "CLOVER",
+        "CLOVER",
+        "JACKPOT",
+        "JACKPOT",
+        "DIAMOND",
+        "JACKPOT",
+        "JACKPOT",
+        "GOLD",
+        "GOLD",
+        "JACKPOT",
+        "JACKPOT",
+        "STAR"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:39:11.161Z"
+  },
+  {
+    "id": "cl-1771742357092-t1dmgek",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:39:17.092Z"
+  },
+  {
+    "id": "cl-1771742357094-4y7bg63",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "JACKPOT",
+        "STAR",
+        "STAR",
+        "JACKPOT",
+        "LUCKY",
+        "JACKPOT",
+        "LUCKY",
+        "CLOVER",
+        "LUCKY",
+        "CLOVER",
+        "STAR"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:39:17.093Z"
+  },
+  {
+    "id": "cl-1771742431257-2jaw51k",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:40:31.256Z"
+  },
+  {
+    "id": "cl-1771742431260-rzqmp1y",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "CLOVER",
+        "CLOVER",
+        "CLOVER",
+        "CLOVER",
+        "JACKPOT",
+        "GOLD",
+        "DIAMOND"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:40:31.259Z"
+  },
+  {
+    "id": "cl-1771742440795-yo94r4e",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:40:40.794Z"
+  },
+  {
+    "id": "cl-1771742440796-zwrodwh",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "GOLD",
+        "DIAMOND",
+        "JACKPOT",
+        "GOLD",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "LUCKY",
+        "DIAMOND",
+        "LUCKY",
+        "DIAMOND"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:40:40.796Z"
+  },
+  {
+    "id": "cl-1771742446648-r5qabnc",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:40:46.648Z"
+  },
+  {
+    "id": "cl-1771742446651-lvllpoe",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "STAR",
+        "GOLD",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "JACKPOT",
+        "DIAMOND",
+        "LUCKY",
+        "JACKPOT",
+        "JACKPOT",
+        "JACKPOT",
+        "GOLD"
+      ],
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:40:46.650Z"
+  },
+  {
+    "id": "cl-1771742499517-86o8kgl",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:41:39.516Z"
+  },
+  {
+    "id": "cl-1771742518737-ssg4qfc",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:41:58.736Z"
+  },
+  {
+    "id": "cl-1771742525152-oiii6jz",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:05.151Z"
+  },
+  {
+    "id": "cl-1771742531515-qcrj3o3",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:11.515Z"
+  },
+  {
+    "id": "cl-1771742538199-hj0ovot",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:18.198Z"
+  },
+  {
+    "id": "cl-1771742545081-nxtqsv0",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:25.080Z"
+  },
+  {
+    "id": "cl-1771742554606-xatrpr5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:34.605Z"
+  },
+  {
+    "id": "cl-1771742559950-szcuyx7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:39.949Z"
+  },
+  {
+    "id": "cl-1771742566004-qghmbt8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:46.003Z"
+  },
+  {
+    "id": "cl-1771742572035-tzk3fp1",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:52.034Z"
+  },
+  {
+    "id": "cl-1771742578191-ww3g3g1",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:42:58.190Z"
+  },
+  {
+    "id": "cl-1771742585878-4p45nbc",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:43:05.878Z"
+  },
+  {
+    "id": "cl-1771742703540-qvfxupy",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:03.539Z"
+  },
+  {
+    "id": "cl-1771742709429-m6vwyom",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:09.427Z"
+  },
+  {
+    "id": "cl-1771742714101-apj1vbv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:14.101Z"
+  },
+  {
+    "id": "cl-1771742714103-9i2s0bw",
+    "userId": "2",
+    "amount": 50,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "STAR",
+        "CLOVER",
+        "STAR",
+        "GOLD",
+        "LUCKY",
+        "LUCKY",
+        "LUCKY",
+        "LUCKY",
+        "CLOVER",
+        "STAR",
+        "GOLD"
+      ],
+      "payout": 50
+    },
+    "createdAt": "2026-02-22T06:45:14.102Z"
+  },
+  {
+    "id": "cl-1771742721656-56wvmic",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:21.655Z"
+  },
+  {
+    "id": "cl-1771742739500-yfq4m3a",
+    "userId": "2",
+    "amount": -4510,
+    "reason": "admin_set",
+    "metadata": {
+      "prevBalance": 4610
+    },
+    "createdAt": "2026-02-22T06:45:39.500Z"
+  },
+  {
+    "id": "cl-1771742745567-x2go3ew",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:45.567Z"
+  },
+  {
+    "id": "cl-1771742751454-o7i0x3u",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:51.453Z"
+  },
+  {
+    "id": "cl-1771742757049-yfhksoz",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:45:57.048Z"
+  },
+  {
+    "id": "cl-1771742757050-jlju619",
+    "userId": "2",
+    "amount": 10,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "LUCKY",
+        "DIAMOND",
+        "STAR",
+        "GOLD",
+        "DIAMOND",
+        "STAR",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "JACKPOT",
+        "GOLD",
+        "LUCKY"
+      ],
+      "payout": 10
+    },
+    "createdAt": "2026-02-22T06:45:57.050Z"
+  },
+  {
+    "id": "cl-1771742761932-fqel31m",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:46:01.932Z"
+  },
+  {
+    "id": "cl-1771742767330-5yw4km4",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:46:07.330Z"
+  },
+  {
+    "id": "cl-1771742767332-gsn9kuz",
+    "userId": "2",
+    "amount": 20,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "panels": [
+        "DIAMOND",
+        "CLOVER",
+        "LUCKY",
+        "GOLD",
+        "STAR",
+        "CLOVER",
+        "CLOVER",
+        "LUCKY",
+        "LUCKY",
+        "CLOVER",
+        "LUCKY",
+        "DIAMOND"
+      ],
+      "payout": 20
+    },
+    "createdAt": "2026-02-22T06:46:07.331Z"
+  },
+  {
+    "id": "cl-1771742907348-qvr54i8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:48:27.347Z"
+  },
+  {
+    "id": "cl-1771742914439-6vi4fhv",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:48:34.439Z"
+  },
+  {
+    "id": "cl-1771742921542-s4659yo",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:48:41.541Z"
+  },
+  {
+    "id": "cl-1771742927455-tho3eaf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:48:47.455Z"
+  },
+  {
+    "id": "cl-1771742933361-8rcy8wr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:48:53.361Z"
+  },
+  {
+    "id": "cl-1771743018835-rirub7h",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:50:18.835Z"
+  },
+  {
+    "id": "cl-1771743024516-2umr0ws",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:50:24.516Z"
+  },
+  {
+    "id": "cl-1771743088660-c5qusgq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:51:28.659Z"
+  },
+  {
+    "id": "cl-1771743091682-ahal966",
+    "userId": "2",
+    "amount": 500,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "claimKey": "592e9d31-6c06-4d92-bd75-1c976d1891fb",
+      "payout": 500
+    },
+    "createdAt": "2026-02-22T06:51:31.681Z"
+  },
+  {
+    "id": "cl-1771743096314-immhu32",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:51:36.314Z"
+  },
+  {
+    "id": "cl-1771743099544-zxfzf9i",
+    "userId": "2",
+    "amount": 20,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "claimKey": "2a71f47f-172f-48c2-97cf-e86e69b060c2",
+      "payout": 20
+    },
+    "createdAt": "2026-02-22T06:51:39.543Z"
+  },
+  {
+    "id": "cl-1771743102794-e1zi7zc",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:51:42.794Z"
+  },
+  {
+    "id": "cl-1771743105884-cddgor0",
+    "userId": "2",
+    "amount": 100,
+    "reason": "scratch_off_win",
+    "metadata": {
+      "claimKey": "7492aae5-943e-4684-b477-2d1ed9ebe190",
+      "payout": 100
+    },
+    "createdAt": "2026-02-22T06:51:45.884Z"
+  },
+  {
+    "id": "cl-1771743109015-9bnsled",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:51:49.014Z"
+  },
+  {
+    "id": "cl-1771743117521-02rb089",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:51:57.520Z"
+  },
+  {
+    "id": "cl-1771743139014-8mr0omq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:52:19.013Z"
+  },
+  {
+    "id": "cl-1771743147897-rw4iyfd",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:52:27.896Z"
+  },
+  {
+    "id": "cl-1771743251138-sgb2mx5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:54:11.137Z"
+  },
+  {
+    "id": "cl-1771743257707-jcgofc9",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:54:17.706Z"
+  },
+  {
+    "id": "cl-1771743266314-k2lbqwx",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:54:26.313Z"
+  },
+  {
+    "id": "cl-1771743365615-xe7o4z8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:56:05.614Z"
+  },
+  {
+    "id": "cl-1771743366693-l4cauow",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:56:06.692Z"
+  },
+  {
+    "id": "cl-1771743367766-hzejabf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "scratch_off",
+    "metadata": {
+      "count": 1
+    },
+    "createdAt": "2026-02-22T06:56:07.765Z"
+  },
+  {
+    "id": "cl-1771744028663-qz8nzyy",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:08.662Z"
+  },
+  {
+    "id": "cl-1771744029588-l2p45hf",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:09.588Z"
+  },
+  {
+    "id": "cl-1771744029983-47a3yqe",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:09.982Z"
+  },
+  {
+    "id": "cl-1771744030174-8098p0z",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:10.173Z"
+  },
+  {
+    "id": "cl-1771744030333-l6zbsqr",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:10.333Z"
+  },
+  {
+    "id": "cl-1771744030494-xnthylq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:10.493Z"
+  },
+  {
+    "id": "cl-1771744031360-hmokf0b",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:11.359Z"
+  },
+  {
+    "id": "cl-1771744032198-lqci3n5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:12.198Z"
+  },
+  {
+    "id": "cl-1771744032781-nvvhopa",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:12.781Z"
+  },
+  {
+    "id": "cl-1771744033231-whip8ok",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:13.230Z"
+  },
+  {
+    "id": "cl-1771744033724-xxfrns7",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:13.723Z"
+  },
+  {
+    "id": "cl-1771744034101-4u7k87g",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:07:14.100Z"
+  },
+  {
+    "id": "cl-1771744417735-qedtpjq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:37.734Z"
+  },
+  {
+    "id": "cl-1771744417893-3jcb870",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:37.892Z"
+  },
+  {
+    "id": "cl-1771744418052-9uuzsx8",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.051Z"
+  },
+  {
+    "id": "cl-1771744418226-qx523gp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.225Z"
+  },
+  {
+    "id": "cl-1771744418406-9hg7w2u",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.405Z"
+  },
+  {
+    "id": "cl-1771744418575-228bq7y",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.574Z"
+  },
+  {
+    "id": "cl-1771744418763-ebwc4dk",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.762Z"
+  },
+  {
+    "id": "cl-1771744418968-4rpdjwn",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:38.967Z"
+  },
+  {
+    "id": "cl-1771744419146-007a6qq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:39.145Z"
+  },
+  {
+    "id": "cl-1771744419375-jnizg3v",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:39.374Z"
+  },
+  {
+    "id": "cl-1771744419588-p1jhbda",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:39.588Z"
+  },
+  {
+    "id": "cl-1771744419779-f9dblvp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:39.778Z"
+  },
+  {
+    "id": "cl-1771744419973-93dwi77",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:39.973Z"
+  },
+  {
+    "id": "cl-1771744420173-8d42nub",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:40.172Z"
+  },
+  {
+    "id": "cl-1771744420360-uykt7ur",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:40.359Z"
+  },
+  {
+    "id": "cl-1771744420553-c5qj74w",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:40.552Z"
+  },
+  {
+    "id": "cl-1771744420750-kbwcqkg",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:40.749Z"
+  },
+  {
+    "id": "cl-1771744420935-sz9usxo",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:40.934Z"
+  },
+  {
+    "id": "cl-1771744421126-jvvmtl5",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:41.125Z"
+  },
+  {
+    "id": "cl-1771744421322-6h6nu31",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:41.321Z"
+  },
+  {
+    "id": "cl-1771744421519-obh2k5p",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:41.518Z"
+  },
+  {
+    "id": "cl-1771744421713-2g82meq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:41.712Z"
+  },
+  {
+    "id": "cl-1771744421902-fnzhsnt",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:41.901Z"
+  },
+  {
+    "id": "cl-1771744422098-4ivy9nu",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:42.097Z"
+  },
+  {
+    "id": "cl-1771744422510-tw07lgk",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:42.509Z"
+  },
+  {
+    "id": "cl-1771744422724-8m78adb",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:42.723Z"
+  },
+  {
+    "id": "cl-1771744422952-539ylf1",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:42.952Z"
+  },
+  {
+    "id": "cl-1771744423167-cdu1p0f",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:43.167Z"
+  },
+  {
+    "id": "cl-1771744423381-78nzdup",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:43.380Z"
+  },
+  {
+    "id": "cl-1771744423609-8n7tndq",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:43.608Z"
+  },
+  {
+    "id": "cl-1771744423836-b7yx27m",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:43.836Z"
+  },
+  {
+    "id": "cl-1771744424033-dzy3pc9",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:44.032Z"
+  },
+  {
+    "id": "cl-1771744424243-w65eemp",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:44.243Z"
+  },
+  {
+    "id": "cl-1771744424407-nhd4ger",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:44.406Z"
+  },
+  {
+    "id": "cl-1771744424642-dde2obs",
+    "userId": "2",
+    "amount": -10,
+    "reason": "lottery_ticket",
+    "metadata": {
+      "count": 1,
+      "drawId": "2026-02-23"
+    },
+    "createdAt": "2026-02-22T07:13:44.641Z"
   }
 ]

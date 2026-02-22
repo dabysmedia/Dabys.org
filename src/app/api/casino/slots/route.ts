@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { deductCredits, addCredits, getCredits } from "@/lib/data";
+import { deductCredits, addCredits, getCredits, getCasinoGameSettings } from "@/lib/data";
 import {
   pickSlotSymbols,
   getSlotsPayout,
   type SlotSymbol,
 } from "@/lib/casino";
-
-const MIN_BET = 5;
-const MAX_BET = 100;
-const VALID_BETS = [5, 10, 25, 50, 100];
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -16,16 +12,20 @@ export async function POST(request: Request) {
   const userId = body.userId as string | undefined;
   const bet = typeof body.bet === "number" ? Math.floor(body.bet) : undefined;
 
-  if (!userId || bet === undefined || bet < MIN_BET || bet > MAX_BET) {
+  const settings = getCasinoGameSettings();
+  const { slots } = settings;
+  const { minBet, maxBet, validBets } = slots;
+
+  if (!userId || bet === undefined || bet < minBet || bet > maxBet) {
     return NextResponse.json(
-      { error: `Bet must be between ${MIN_BET} and ${MAX_BET} credits` },
+      { error: `Bet must be between ${minBet} and ${maxBet} credits` },
       { status: 400 }
     );
   }
 
-  if (!VALID_BETS.includes(bet)) {
+  if (!validBets.includes(bet)) {
     return NextResponse.json(
-      { error: `Bet must be one of: ${VALID_BETS.join(", ")}` },
+      { error: `Bet must be one of: ${validBets.join(", ")}` },
       { status: 400 }
     );
   }
@@ -46,8 +46,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const { paytable, paytable2oak } = slots;
   const symbols = pickSlotSymbols();
-  const payout = getSlotsPayout(symbols, bet);
+  const payout = getSlotsPayout(symbols, bet, paytable, paytable2oak);
 
   if (payout > 0) {
     addCredits(userId, payout, "casino_slots_win", {

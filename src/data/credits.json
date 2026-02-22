@@ -21,7 +21,12 @@
   },
   {
     "userId": "1",
-    "balance": 60,
-    "updatedAt": "2026-02-20T05:59:41.509Z"
+    "balance": 0,
+    "updatedAt": "2026-02-22T05:29:31.818Z"
+  },
+  {
+    "userId": "2",
+    "balance": 30,
+    "updatedAt": "2026-02-22T07:13:44.641Z"
   }
 ]

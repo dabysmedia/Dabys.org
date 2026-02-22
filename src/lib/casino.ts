@@ -15,6 +15,79 @@ export const SLOT_PAYTABLE: Record<SlotSymbol, number> = {
 // 2-of-a-kind pays (same for all symbols)
 export const SLOT_PAYTABLE_2OAK = 0.25;
 
+// Scratch-off: 12 panels, different symbols, match 3+ to win.
+export const SCRATCH_OFF_SYMBOLS = ["JACKPOT", "DIAMOND", "GOLD", "STAR", "CLOVER", "LUCKY"] as const;
+export type ScratchOffSymbol = (typeof SCRATCH_OFF_SYMBOLS)[number];
+
+export const SCRATCH_OFF_PAYTABLE: Record<string, number> = {
+  JACKPOT: 50,
+  DIAMOND: 20,
+  GOLD: 10,
+  STAR: 5,
+  CLOVER: 3,
+  LUCKY: 1,
+};
+
+/** Pick 12 symbols for a scratch-off ticket. winChanceDenom per symbol = "1 in N". P(win) = sum(1/denom), P(lose) = 1 - that. */
+export function pickScratchOffPanels(winChanceDenom: Record<string, number>): string[] {
+  const denoms: { sym: string; denom: number }[] = [];
+  for (const sym of SCRATCH_OFF_SYMBOLS) {
+    const d = Math.max(1, Math.floor(winChanceDenom[sym] ?? 20));
+    denoms.push({ sym, denom: d });
+  }
+  const totalWinChance = denoms.reduce((s, w) => s + 1 / w.denom, 0);
+  const r = Math.random();
+
+  if (r >= totalWinChance) {
+    const panels: string[] = [];
+    for (const sym of SCRATCH_OFF_SYMBOLS) {
+      panels.push(sym, sym);
+    }
+    return shuffle(panels);
+  }
+
+  const winR = r / totalWinChance;
+  let acc = 0;
+  let winSym = denoms[denoms.length - 1]!.sym;
+  for (let i = 0; i < denoms.length; i++) {
+    const { sym, denom } = denoms[i]!;
+    const w = (1 / denom) / totalWinChance;
+    acc += w;
+    if (winR < acc || i === denoms.length - 1) {
+      winSym = sym;
+      break;
+    }
+  }
+
+  const panels: string[] = [winSym, winSym, winSym];
+  for (let i = 0; i < 9; i++) {
+    panels.push(SCRATCH_OFF_SYMBOLS[Math.floor(Math.random() * SCRATCH_OFF_SYMBOLS.length)] as string);
+  }
+  return shuffle(panels);
+}
+
+/** Payout for scratch-off: match 3+ of same symbol = win that symbol's multiplier × cost. Take highest. */
+export function getScratchOffPayout(
+  panels: string[],
+  cost: number,
+  paytable?: Record<string, number>
+): number {
+  const pt: Record<string, number> = paytable ?? SCRATCH_OFF_PAYTABLE;
+  const counts: Record<string, number> = {};
+  for (const s of panels) {
+    counts[s] = (counts[s] ?? 0) + 1;
+  }
+  let bestPayout = 0;
+  for (const [sym, count] of Object.entries(counts)) {
+    if (count >= 3) {
+      const mult = pt[sym] ?? 0;
+      const payout = Math.floor(cost * mult);
+      if (payout > bestPayout) bestPayout = payout;
+    }
+  }
+  return bestPayout;
+}
+
 export function pickSlotSymbols(): [SlotSymbol, SlotSymbol, SlotSymbol] {
   const symbols = [...SLOT_SYMBOLS];
   return [
@@ -26,16 +99,19 @@ export function pickSlotSymbols(): [SlotSymbol, SlotSymbol, SlotSymbol] {
 
 export function getSlotsPayout(
   symbols: [SlotSymbol, SlotSymbol, SlotSymbol],
-  bet: number
+  bet: number,
+  paytable?: Record<string, number>,
+  paytable2oak?: number
 ): number {
+  const pt: Record<string, number> = paytable ?? SLOT_PAYTABLE;
+  const pt2 = paytable2oak ?? SLOT_PAYTABLE_2OAK;
   const [a, b, c] = symbols;
   if (a === b && b === c) {
-    const mult = SLOT_PAYTABLE[a];
+    const mult = pt[String(a)] ?? 4;
     return Math.floor(bet * mult);
   }
-  // 2-of-a-kind
   if (a === b || b === c || a === c) {
-    return Math.floor(bet * SLOT_PAYTABLE_2OAK);
+    return Math.floor(bet * pt2);
   }
   return 0;
 }
@@ -59,15 +135,17 @@ export function isRed(n: number): boolean {
 
 export function getRoulettePayout(
   selection: "red" | "black" | number,
-  result: number
+  result: number,
+  colorPayout = 2,
+  straightPayout = 35
 ): number {
   if (typeof selection === "number") {
-    return selection === result ? 35 : 0;
+    return selection === result ? straightPayout : 0;
   }
   if (result === 0) return 0;
   const red = isRed(result);
-  if (selection === "red" && red) return 2;
-  if (selection === "black" && !red) return 2;
+  if (selection === "red" && red) return colorPayout;
+  if (selection === "black" && !red) return colorPayout;
   return 0;
 }
 

@@ -1,0 +1,34 @@
+{"sessionId":"035653","location":"scratch-off/route.ts:postDeduct","message":"After deduct","data":{"deducted":true,"balanceAfter":0,"expectedBalance":0},"timestamp":1771743088661,"hypothesisId":"H2"}
+{"sessionId":"035653","location":"scratch-off/route.ts:preDeduct","message":"Before deduct","data":{"userId":"2","balance":10,"totalCost":10},"timestamp":1771743088658,"hypothesisId":"H1"}
+{"sessionId":"035653","location":"casino/page.tsx:postScratchPurchase","message":"After scratch purchase","data":{"newBalance":0,"totalCost":10},"timestamp":1771743088665,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":0},"timestamp":1771743088673,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":0},"timestamp":1771743088675,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":500},"timestamp":1771743091689,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":500,"delta":500},"timestamp":1771743091691,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":500},"timestamp":1771743091699,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"scratch-off/route.ts:postDeduct","message":"After deduct","data":{"deducted":true,"balanceAfter":490,"expectedBalance":490},"timestamp":1771743096315,"hypothesisId":"H2"}
+{"sessionId":"035653","location":"scratch-off/route.ts:preDeduct","message":"Before deduct","data":{"userId":"2","balance":500,"totalCost":10},"timestamp":1771743096313,"hypothesisId":"H1"}
+{"sessionId":"035653","location":"casino/page.tsx:postScratchPurchase","message":"After scratch purchase","data":{"newBalance":490,"totalCost":10},"timestamp":1771743096319,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":490},"timestamp":1771743096326,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":490},"timestamp":1771743096332,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":510},"timestamp":1771743099560,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":510,"delta":20},"timestamp":1771743099562,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":510},"timestamp":1771743099569,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"scratch-off/route.ts:postDeduct","message":"After deduct","data":{"deducted":true,"balanceAfter":500,"expectedBalance":500},"timestamp":1771743102795,"hypothesisId":"H2"}
+{"sessionId":"035653","location":"scratch-off/route.ts:preDeduct","message":"Before deduct","data":{"userId":"2","balance":510,"totalCost":10},"timestamp":1771743102793,"hypothesisId":"H1"}
+{"sessionId":"035653","location":"casino/page.tsx:postScratchPurchase","message":"After scratch purchase","data":{"newBalance":500,"totalCost":10},"timestamp":1771743102798,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":500},"timestamp":1771743102806,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":500},"timestamp":1771743102810,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":600},"timestamp":1771743105893,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":600,"delta":100},"timestamp":1771743105901,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":600},"timestamp":1771743105909,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"scratch-off/route.ts:postDeduct","message":"After deduct","data":{"deducted":true,"balanceAfter":590,"expectedBalance":590},"timestamp":1771743109015,"hypothesisId":"H2"}
+{"sessionId":"035653","location":"scratch-off/route.ts:preDeduct","message":"Before deduct","data":{"userId":"2","balance":600,"totalCost":10},"timestamp":1771743109013,"hypothesisId":"H1"}
+{"sessionId":"035653","location":"casino/page.tsx:postScratchPurchase","message":"After scratch purchase","data":{"newBalance":590,"totalCost":10},"timestamp":1771743109019,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":590},"timestamp":1771743109025,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":590},"timestamp":1771743109033,"hypothesisId":"H4"}
+{"sessionId":"035653","location":"scratch-off/route.ts:preDeduct","message":"Before deduct","data":{"userId":"2","balance":590,"totalCost":10},"timestamp":1771743117519,"hypothesisId":"H1"}
+{"sessionId":"035653","location":"scratch-off/route.ts:postDeduct","message":"After deduct","data":{"deducted":true,"balanceAfter":580,"expectedBalance":580},"timestamp":1771743117522,"hypothesisId":"H2"}
+{"sessionId":"035653","location":"casino/page.tsx:postScratchPurchase","message":"After scratch purchase","data":{"newBalance":580,"totalCost":10},"timestamp":1771743117525,"hypothesisId":"H3","runId":"post-fix"}
+{"sessionId":"035653","location":"credits/route.ts:GET","message":"Credits API returning","data":{"userId":"2","balance":580},"timestamp":1771743117532,"hypothesisId":"H5"}
+{"sessionId":"035653","location":"casino/page.tsx:refreshCredits","message":"Credits API response","data":{"balance":580},"timestamp":1771743117542,"hypothesisId":"H4"}

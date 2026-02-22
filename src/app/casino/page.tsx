@@ -1,23 +1,37 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK, handValue, type Card } from "@/lib/casino";
+import { RED_NUMBERS, SLOT_SYMBOLS, SLOT_PAYTABLE, SLOT_PAYTABLE_2OAK, SCRATCH_OFF_SYMBOLS, SCRATCH_OFF_PAYTABLE, handValue, type Card } from "@/lib/casino";
 
-type GameTab = "slots" | "blackjack" | "roulette" | "dabys-bets";
+type GameTab = "slots" | "blackjack" | "roulette" | "lottery" | "dabys-bets";
 
 const TABS: { key: GameTab; label: string }[] = [
   { key: "slots", label: "Slots" },
   { key: "blackjack", label: "Blackjack" },
+  { key: "lottery", label: "Lottery" },
   { key: "roulette", label: "Roulette" },
   { key: "dabys-bets", label: "Dabys Bets" },
 ];
+
+interface CasinoGameSettings {
+  slots: { minBet: number; maxBet: number; validBets: number[] };
+  blackjack: { minBet: number; maxBet: number };
+  roulette: { minBet: number; maxBet: number; betStep: number };
+}
+
+const DEFAULT_CASINO_SETTINGS: CasinoGameSettings = {
+  slots: { minBet: 5, maxBet: 100, validBets: [5, 10, 25, 50, 100] },
+  blackjack: { minBet: 2, maxBet: 500 },
+  roulette: { minBet: 5, maxBet: 500, betStep: 5 },
+};
 
 function CasinoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<{ id: string; name: string } | null>(null);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [gameSettings, setGameSettings] = useState<CasinoGameSettings>(DEFAULT_CASINO_SETTINGS);
   const [blackjackLastResult, setBlackjackLastResult] = useState<{ result: string; payout: number; netChange: number } | null>(null);
   const [blackjackResultFading, setBlackjackResultFading] = useState(false);
 
@@ -70,7 +84,19 @@ function CasinoContent() {
     }
   }, [router]);
 
-  const refreshCredits = (delta?: number) => {
+  useEffect(() => {
+    fetch("/api/casino/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.slots && d?.blackjack && d?.roulette) setGameSettings(d);
+      })
+      .catch(() => {});
+  }, []);
+
+  const refreshCredits = (delta?: number, newBalance?: number) => {
+    if (typeof newBalance === "number") {
+      setCreditBalance(newBalance);
+    }
     const cached = localStorage.getItem("dabys_user");
     if (!cached) return;
     try {
@@ -115,7 +141,7 @@ function CasinoContent() {
             Casino
           </h1>
           <p className="text-white/50 text-base sm:text-lg mt-2 tracking-wide">
-            Slots · Blackjack · Roulette · Dabys Bets
+            Slots · Blackjack · Lottery · Roulette · Dabys Bets
           </p>
         </div>
 
@@ -139,7 +165,7 @@ function CasinoContent() {
         {/* Game content — main glass panel, bigger */}
         <div className="rounded-3xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-8 sm:p-12 shadow-[0_16px_48px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.05)] transition-shadow duration-300 hover:shadow-[0_20px_56px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.06)]">
           {activeTab === "slots" && (
-            <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+            <SlotsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} validBets={gameSettings.slots.validBets} />
           )}
           {activeTab === "blackjack" && (
             <BlackjackGame
@@ -147,10 +173,22 @@ function CasinoContent() {
               balance={creditBalance}
               onCreditsChange={refreshCredits}
               onResult={setBlackjackLastResult}
+              minBet={gameSettings.blackjack.minBet}
+              maxBet={gameSettings.blackjack.maxBet}
             />
           )}
           {activeTab === "roulette" && (
-            <RouletteGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
+            <RouletteGame
+              userId={user.id}
+              balance={creditBalance}
+              onCreditsChange={refreshCredits}
+              minBet={gameSettings.roulette.minBet}
+              maxBet={gameSettings.roulette.maxBet}
+              betStep={gameSettings.roulette.betStep}
+            />
+          )}
+          {activeTab === "lottery" && (
+            <LotteryGame userId={user.id} userName={user.name} balance={creditBalance} onCreditsChange={refreshCredits} />
           )}
           {activeTab === "dabys-bets" && (
             <DabysBetsGame userId={user.id} balance={creditBalance} onCreditsChange={refreshCredits} />
@@ -182,8 +220,6 @@ function CasinoContent() {
   );
 }
 
-const SLOT_BETS = [5, 10, 25, 50, 100];
-
 const SLOT_ICONS: Record<string, string> = {
   "7": "7️⃣",
   BAR: "BAR",
@@ -197,6 +233,223 @@ function slotIcon(symbol: string): string {
   return SLOT_ICONS[symbol] ?? symbol;
 }
 
+const SCRATCH_ICONS: Record<string, string> = {
+  JACKPOT: "🎰",
+  DIAMOND: "💎",
+  GOLD: "🥇",
+  STAR: "⭐",
+  CLOVER: "🍀",
+  LUCKY: "✨",
+};
+
+function scratchIcon(symbol: string): string {
+  if (!symbol) return "❓";
+  return SCRATCH_ICONS[symbol] ?? "❓";
+}
+
+const SCRATCH_RADIUS = 16;
+const SCRATCH_REVEAL_THRESHOLD = 0.7;
+const SCRATCH_INTERP_STEP = 6; // draw circles every N px for smooth trails
+const SCRATCH_REVEAL_CHECK_MS = 33; // ~30fps for snappy reveal
+
+function ScratchPanel({
+  symbol,
+  isRevealed,
+  onReveal,
+  panelKey,
+  className,
+}: {
+  symbol: string;
+  isRevealed: boolean;
+  onReveal: () => void;
+  panelKey: string;
+  className: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+  const lastCheckRef = useRef(0);
+
+  const drawScratchLayer = useCallback(
+    (width: number, height: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas || isRevealed) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.fillStyle = "#6b7280";
+      ctx.fillRect(0, 0, width, height);
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, "#9ca3af");
+      grad.addColorStop(0.5, "#6b7280");
+      grad.addColorStop(1, "#4b5563");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      for (let i = 0; i < 30; i++) {
+        ctx.fillRect(Math.random() * width, Math.random() * height, 3, 3);
+      }
+    },
+    [isRevealed]
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || isRevealed) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    const init = () => {
+      const rect = parent.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = Math.floor(rect.width * dpr);
+        canvas.height = Math.floor(rect.height * dpr);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(dpr, dpr);
+          drawScratchLayer(rect.width, rect.height);
+        }
+      }
+    };
+    requestAnimationFrame(init);
+  }, [drawScratchLayer, isRevealed]);
+
+  const getScratchedRatio = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || canvas.width === 0 || canvas.height === 0) return 0;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return 0;
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = img.data;
+    let scratched = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      if (data[i] < 128) scratched++;
+    }
+    return scratched / (canvas.width * canvas.height);
+  }, []);
+
+  const scratchAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container || isRevealed) return;
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      if (x < -SCRATCH_RADIUS || x > rect.width + SCRATCH_RADIUS || y < -SCRATCH_RADIUS || y > rect.height + SCRATCH_RADIUS) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "rgba(0,0,0,1)";
+
+      const last = lastPosRef.current;
+      if (last != null) {
+        const dx = x - last.x;
+        const dy = y - last.y;
+        const dist = Math.hypot(dx, dy);
+        const steps = Math.max(1, Math.ceil(dist / SCRATCH_INTERP_STEP));
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps;
+          const px = last.x + dx * t;
+          const py = last.y + dy * t;
+          ctx.beginPath();
+          ctx.arc(px, py, SCRATCH_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, SCRATCH_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      lastPosRef.current = { x, y };
+
+      ctx.globalCompositeOperation = "source-over";
+
+      const now = Date.now();
+      if (now - lastCheckRef.current > SCRATCH_REVEAL_CHECK_MS) {
+        lastCheckRef.current = now;
+        if (getScratchedRatio() >= SCRATCH_REVEAL_THRESHOLD) {
+          onReveal();
+        }
+      }
+    },
+    [isRevealed, onReveal, getScratchedRatio]
+  );
+
+  const clearLastPos = useCallback(() => {
+    lastPosRef.current = null;
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isRevealed) return;
+      scratchAt(e.clientX, e.clientY);
+    },
+    [isRevealed, scratchAt]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    clearLastPos();
+  }, [clearLastPos]);
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (isRevealed) return;
+      lastPosRef.current = null;
+      const t = e.touches[0];
+      if (t) scratchAt(t.clientX, t.clientY);
+    },
+    [isRevealed, scratchAt]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (isRevealed) return;
+      const t = e.touches[0];
+      if (t) scratchAt(t.clientX, t.clientY);
+    },
+    [isRevealed, scratchAt]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    clearLastPos();
+  }, [clearLastPos]);
+
+  if (isRevealed) {
+    return (
+      <div
+        ref={containerRef}
+        className={`${className} flex items-center justify-center text-xl sm:text-2xl font-bold`}
+      >
+        {scratchIcon(symbol)}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`${className} relative overflow-hidden select-none cursor-crosshair`}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
+      <div className="absolute inset-0 flex items-center justify-center text-xl sm:text-2xl font-bold text-white/95 z-[1] pointer-events-none">
+        {scratchIcon(symbol)}
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full z-[2] touch-none"
+        style={{ width: "100%", height: "100%" }}
+      />
+    </div>
+  );
+}
+
+
 const SPIN_TICK_MS = 80;
 const REEL_STOP_DELAY_MS = 400;
 
@@ -208,12 +461,18 @@ function SlotsGame({
   userId,
   balance,
   onCreditsChange,
+  validBets,
 }: {
   userId: string;
   balance: number;
-  onCreditsChange: (delta?: number) => void;
+  onCreditsChange: (delta?: number, newBalance?: number) => void;
+  validBets: number[];
 }) {
-  const [bet, setBet] = useState(10);
+  const bets = validBets.length > 0 ? validBets : [5, 10, 25, 50, 100];
+  const [bet, setBet] = useState(bets[0] ?? 10);
+  useEffect(() => {
+    setBet((b) => (bets.includes(b) ? b : bets[0] ?? 10));
+  }, [validBets]);
   const [spinning, setSpinning] = useState(false);
   const [symbols, setSymbols] = useState<string[] | null>(null);
   const [finalSymbols, setFinalSymbols] = useState<string[] | null>(null);
@@ -342,7 +601,7 @@ function SlotsGame({
 
       {/* Bet selector — bigger chips with hover */}
       <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8">
-        {SLOT_BETS.map((b) => (
+        {bets.map((b) => (
           <button
             key={b}
             onClick={() => setBet(b)}
@@ -417,13 +676,17 @@ function BlackjackGame({
   balance,
   onCreditsChange,
   onResult,
+  minBet,
+  maxBet,
 }: {
   userId: string;
   balance: number;
-  onCreditsChange: (delta?: number) => void;
+  onCreditsChange: (delta?: number, newBalance?: number) => void;
   onResult: (r: { result: string; payout: number; netChange: number } | null) => void;
+  minBet: number;
+  maxBet: number;
 }) {
-  const [betInput, setBetInput] = useState("10");
+  const [betInput, setBetInput] = useState(String(minBet));
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<{ status: string; bet: number; offerInsurance?: boolean; currentHandIndex?: number; playerHands?: { suit: string; rank: string }[][] } | null>(null);
   const [playerHand, setPlayerHand] = useState<{ suit: string; rank: string }[]>([]);
@@ -467,9 +730,9 @@ function BlackjackGame({
     if (loading) return;
     if (action === "deal") {
       const parsed = parseInt(betInput, 10);
-      const betVal = isNaN(parsed) ? 0 : Math.max(2, Math.min(500, parsed));
-      if (betVal < 2 || betVal > 500) {
-        alert("Please enter a bet between 2 and 500.");
+      const betVal = isNaN(parsed) ? 0 : Math.max(minBet, Math.min(maxBet, parsed));
+      if (betVal < minBet || betVal > maxBet) {
+        alert(`Please enter a bet between ${minBet} and ${maxBet}.`);
         return;
       }
       if (betVal % 2 !== 0) {
@@ -484,7 +747,7 @@ function BlackjackGame({
     setLoading(true);
     if (action === "deal") onResult(null);
     try {
-      const betVal = action === "deal" ? Math.max(2, Math.min(500, parseInt(betInput, 10) || 0)) : 0;
+      const betVal = action === "deal" ? Math.max(minBet, Math.min(maxBet, parseInt(betInput, 10) || 0)) : 0;
       const body: Record<string, unknown> = { userId, action };
       if (action === "deal") body.bet = betVal;
       if (action === "insurance") body.takeInsurance = takeInsurance;
@@ -593,19 +856,19 @@ function BlackjackGame({
               pattern="[0-9]*"
               value={betInput}
               onChange={(e) => setBetInput(e.target.value.replace(/\D/g, ""))}
-              placeholder="2–500, even"
+              placeholder={`${minBet}–${maxBet}, even`}
               className="casino-bet-input w-20 bg-transparent px-2 py-2.5 text-white/90 text-center text-sm focus:outline-none placeholder:text-white/30"
-              title="Bet (even number, 2–500)"
+              title={`Bet (even number, ${minBet}–${maxBet})`}
             />
             <div className="flex flex-col border-l border-white/[0.1]">
               <button
                 type="button"
                 onClick={() => {
                   const v = parseInt(betInput, 10) || 0;
-                  const next = Math.min(500, Math.max(2, v) + 2);
+                  const next = Math.min(maxBet, Math.max(minBet, v) + 2);
                   setBetInput(String(next));
                 }}
-                disabled={(parseInt(betInput, 10) || 0) >= 500}
+                disabled={(parseInt(betInput, 10) || 0) >= maxBet}
                 className="flex items-center justify-center w-6 h-5 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 aria-label="Increase bet"
               >
@@ -615,10 +878,10 @@ function BlackjackGame({
                 type="button"
                 onClick={() => {
                   const v = parseInt(betInput, 10) || 0;
-                  const next = Math.max(2, Math.min(500, v) - 2);
+                  const next = Math.max(minBet, Math.min(maxBet, v) - 2);
                   setBetInput(String(next));
                 }}
-                disabled={(parseInt(betInput, 10) || 0) <= 2}
+                disabled={(parseInt(betInput, 10) || 0) <= minBet}
                 className="flex items-center justify-center w-6 h-5 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer border-t border-white/[0.08]"
                 aria-label="Decrease bet"
               >
@@ -694,15 +957,30 @@ function RouletteGame({
   userId,
   balance,
   onCreditsChange,
+  minBet,
+  maxBet,
+  betStep,
 }: {
   userId: string;
   balance: number;
-  onCreditsChange: (delta?: number) => void;
+  onCreditsChange: (delta?: number, newBalance?: number) => void;
+  minBet: number;
+  maxBet: number;
+  betStep: number;
 }) {
-  const [betInput, setBetInput] = useState("10");
+  const [betInput, setBetInput] = useState(String(minBet));
   const [selection, setSelection] = useState<"red" | "black" | number | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const QUICK_BETS = [5, 10, 25, 50, 100, 250, 500];
+  const QUICK_BETS = (() => {
+    const common = [5, 10, 25, 50, 100, 250, 500];
+    const valid = common.filter((v) => v >= minBet && v <= maxBet && v % betStep === 0);
+    if (valid.length > 0) return valid;
+    const fallback: number[] = [];
+    for (let v = minBet; v <= maxBet && fallback.length < 7; v += betStep) {
+      fallback.push(v);
+    }
+    return fallback.length > 0 ? fallback : [minBet];
+  })();
   const [lastResult, setLastResult] = useState<{
     result: number;
     resultColor: string;
@@ -714,14 +992,14 @@ function RouletteGame({
   const SPIN_DURATION_MS = 2000;
 
   async function handleSpin() {
-    const betVal = Math.max(5, Math.min(500, parseInt(betInput, 10) || 0));
+    const betVal = Math.max(minBet, Math.min(maxBet, parseInt(betInput, 10) || 0));
     if (spinning || selection === null) return;
-    if (betVal < 5 || betVal > 500) {
-      alert("Please enter a bet between 5 and 500.");
+    if (betVal < minBet || betVal > maxBet) {
+      alert(`Please enter a bet between ${minBet} and ${maxBet}.`);
       return;
     }
-    if (betVal % 5 !== 0) {
-      alert("Please enter a multiple of 5 for your bet.");
+    if (betVal % betStep !== 0) {
+      alert(`Please enter a multiple of ${betStep} for your bet.`);
       return;
     }
     if (balance < betVal) {
@@ -778,19 +1056,19 @@ function RouletteGame({
                 pattern="[0-9]*"
                 value={betInput}
                 onChange={(e) => setBetInput(e.target.value.replace(/\D/g, ""))}
-                placeholder="5–500, ×5"
+                placeholder={`${minBet}–${maxBet}, ×${betStep}`}
                 className="casino-bet-input w-20 bg-transparent px-3 py-2 text-white/90 text-center text-sm focus:outline-none placeholder:text-white/30"
-                title="Bet (multiple of 5, 5–500)"
+                title={`Bet (multiple of ${betStep}, ${minBet}–${maxBet})`}
               />
               <div className="flex flex-col border-l border-white/[0.1]">
                 <button
                   type="button"
-                  onClick={() => {
-                    const v = parseInt(betInput, 10) || 0;
-                    const next = Math.min(500, Math.max(5, v) + 5);
-                    setBetInput(String(next));
-                  }}
-                  disabled={(parseInt(betInput, 10) || 0) >= 500}
+                onClick={() => {
+                  const v = parseInt(betInput, 10) || 0;
+                  const next = Math.min(maxBet, Math.max(minBet, v) + betStep);
+                  setBetInput(String(next));
+                }}
+                  disabled={(parseInt(betInput, 10) || 0) >= maxBet}
                   className="flex items-center justify-center w-6 h-4 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   aria-label="Increase bet"
                 >
@@ -798,12 +1076,12 @@ function RouletteGame({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const v = parseInt(betInput, 10) || 0;
-                    const next = Math.max(5, Math.min(500, v) - 5);
-                    setBetInput(String(next));
-                  }}
-                  disabled={(parseInt(betInput, 10) || 0) <= 5}
+                onClick={() => {
+                  const v = parseInt(betInput, 10) || 0;
+                  const next = Math.max(minBet, Math.min(maxBet, v) - betStep);
+                  setBetInput(String(next));
+                }}
+                  disabled={(parseInt(betInput, 10) || 0) <= minBet}
                   className="flex items-center justify-center w-6 h-4 text-amber-400/90 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer border-t border-white/[0.08]"
                   aria-label="Decrease bet"
                 >
@@ -943,6 +1221,417 @@ function RouletteGame({
   );
 }
 
+function LotteryGame({
+  userId,
+  userName,
+  balance,
+  onCreditsChange,
+}: {
+  userId: string;
+  userName: string;
+  balance: number;
+  onCreditsChange: (delta?: number, newBalance?: number) => void;
+}) {
+  const [state, setState] = useState<{
+    currentDrawId: string;
+    nextDrawAt: string;
+    ticketPrice: number;
+    totalTickets: number;
+    myTickets: number;
+    prizePool: number;
+    soldOut?: boolean;
+    scratchOffCost?: number;
+    latestDraw: {
+      drawId: string;
+      winnerUserId: string | null;
+      winnerUserName: string | null;
+      prizePool: number;
+      ticketCount: number;
+      drawnAt: string;
+    } | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [ticketCount, setTicketCount] = useState(1);
+  const [scratchPurchasing, setScratchPurchasing] = useState(false);
+  const [scratchResult, setScratchResult] = useState<{
+    tickets: { panels: string[]; payout: number; win: boolean; claimKey?: string }[];
+    totalCost: number;
+  } | null>(null);
+  const [scratchRevealed, setScratchRevealed] = useState<number[]>([]);
+  const [claimedPayouts, setClaimedPayouts] = useState<Record<number, number>>({});
+  const claimingRef = useRef<Set<number>>(new Set());
+  const scratchResultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scratchResult) {
+      requestAnimationFrame(() => {
+        scratchResultRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+  }, [scratchResult]);
+
+  // Claim credits when win is revealed (not on purchase)
+  useEffect(() => {
+    if (!scratchResult || !userId) return;
+    const panelsPerTicket = 12;
+    scratchResult.tickets.forEach((ticket, ti) => {
+      if (!ticket.claimKey || claimingRef.current.has(ti)) return;
+      const startIdx = ti * panelsPerTicket;
+      const revealedIndices = scratchRevealed.filter((r) => r >= startIdx && r < startIdx + panelsPerTicket);
+      const revealedSymbols = revealedIndices.map((r) => ticket.panels[r - startIdx]);
+      const symbolCounts: Record<string, number> = {};
+      for (const s of revealedSymbols) {
+        symbolCounts[s] = (symbolCounts[s] ?? 0) + 1;
+      }
+      const matchRevealed = Object.values(symbolCounts).some((c) => c >= 3) && ticket.win;
+      if (!matchRevealed) return;
+      claimingRef.current.add(ti);
+      (async () => {
+        try {
+          const res = await fetch("/api/casino/scratch-off/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, claimKey: ticket.claimKey }),
+          });
+          const data = await res.json();
+          if (res.ok && data.payout != null) {
+            setClaimedPayouts((prev) => ({ ...prev, [ti]: data.payout }));
+            onCreditsChange(data.payout);
+          } else {
+            claimingRef.current.delete(ti);
+          }
+        } catch {
+          claimingRef.current.delete(ti);
+        }
+      })();
+    });
+  }, [scratchResult, scratchRevealed, userId, onCreditsChange]);
+
+  const loadState = useCallback(() => {
+    fetch(`/api/casino/lottery?userId=${encodeURIComponent(userId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setState)
+      .catch(() => setState(null))
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  useEffect(() => {
+    loadState();
+  }, [loadState]);
+
+  async function handlePurchase() {
+    if (purchasing || !state || balance < ticketCount * state.ticketPrice) return;
+    setPurchasing(true);
+    try {
+      const res = await fetch("/api/casino/lottery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, userName, count: ticketCount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Purchase failed");
+        setPurchasing(false);
+        return;
+      }
+      onCreditsChange();
+      loadState();
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  async function handleScratchPurchase() {
+    const cost = state?.scratchOffCost ?? 10;
+    if (scratchPurchasing || !state || balance < cost) return;
+    setScratchPurchasing(true);
+    setScratchResult(null);
+    setScratchRevealed([]);
+    setClaimedPayouts({});
+    claimingRef.current.clear();
+    try {
+      const res = await fetch("/api/casino/scratch-off", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, count: 1 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Purchase failed");
+        setScratchPurchasing(false);
+        return;
+      }
+      setScratchResult({
+        tickets: data.tickets,
+        totalCost: data.totalCost,
+      });
+      onCreditsChange(undefined, data.newBalance); // immediate update + background refresh
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -data.totalCost } })); // notify Header
+    } catch {
+      alert("Something went wrong");
+    } finally {
+      setScratchPurchasing(false);
+    }
+  }
+
+  function dismissScratchResult() {
+    setScratchResult(null);
+    setScratchRevealed([]);
+    setClaimedPayouts({});
+    claimingRef.current.clear();
+  }
+
+  if (loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white/50 rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  if (!state) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-sm text-white/40">Could not load lottery. Try again later.</p>
+      </div>
+    );
+  }
+
+  const nextDrawDate = new Date(state.nextDrawAt);
+  const soldOut = state?.soldOut ?? false;
+  const canPurchase = state && !soldOut && balance >= ticketCount * state.ticketPrice;
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+        <h2 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">Weekly Lottery</h2>
+        <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+      </div>
+
+      <p className="text-white/60 text-sm mb-6 text-center">
+        Draw every Monday at noon Atlantic.
+      </p>
+
+      <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 mb-8 shadow-[0_4px_24px_rgba(0,0,0,0.15)]">
+        <div className="grid sm:grid-cols-3 gap-6 mb-8">
+          <div className="text-center p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]" title="Winner receives 75% of pool. 25% house cut.">
+            <p className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Prize Pool</p>
+            <p className="text-2xl font-bold text-amber-400 tabular-nums">{state.prizePool}</p>
+            <p className="text-xs text-white/40 mt-1">credits</p>
+          </div>
+          <div className="text-center p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <p className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Your Tickets</p>
+            <p className="text-2xl font-bold text-white/90 tabular-nums">{state.myTickets}</p>
+            <p className="text-xs text-white/40 mt-1">of {state.totalTickets} total</p>
+          </div>
+          <div className="text-center p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+            <p className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Next Draw</p>
+            <p className="text-lg font-semibold text-white/90">
+              {nextDrawDate.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </p>
+            <p className="text-xs text-white/40 mt-1">12:00 PM Atlantic</p>
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-6 -mt-6 mb-4">
+          <p className="text-white/25 text-[9px] text-center">Max pool 600cr</p>
+          <div className="sm:col-span-2" />
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {!soldOut && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-white/50">Tickets</label>
+              <div className="flex rounded-lg border border-white/[0.1] bg-white/[0.06] overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setTicketCount((c) => Math.max(1, c - 1))}
+                  disabled={ticketCount <= 1}
+                  className="px-3 py-2 text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  −
+                </button>
+                <span className="px-4 py-2 text-white/90 font-medium min-w-[2rem] text-center">{ticketCount}</span>
+                <button
+                  type="button"
+                  onClick={() => setTicketCount((c) => Math.min(10, c + 1))}
+                  disabled={ticketCount >= 10}
+                  className="px-3 py-2 text-amber-400 hover:bg-amber-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={handlePurchase}
+            disabled={purchasing || !canPurchase}
+            className="casino-premium-btn px-8 py-3.5 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {purchasing ? "…" : soldOut ? "Sold out" : `Buy ${ticketCount} ticket${ticketCount > 1 ? "s" : ""} (${ticketCount * (state?.ticketPrice ?? 25)} cr)`}
+          </button>
+        </div>
+        <p className="text-white/25 text-[9px] mt-3 text-center">
+          25% house cut — winner receives 75% of the prize pool.
+        </p>
+      </div>
+
+      {state.latestDraw && (
+        <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8">
+          <p className="text-[10px] uppercase tracking-widest text-white/40 mb-3">Last Winner</p>
+          {state.latestDraw.winnerUserName ? (
+            <p className="text-lg font-semibold text-amber-400">
+              {state.latestDraw.winnerUserName} won {state.latestDraw.prizePool} credits
+            </p>
+          ) : (
+            <p className="text-white/50 text-sm">No tickets sold for that draw</p>
+          )}
+          <p className="text-xs text-white/40 mt-1">
+            {state.latestDraw.ticketCount} ticket{state.latestDraw.ticketCount !== 1 ? "s" : ""} ·{" "}
+            {new Date(state.latestDraw.drawnAt).toLocaleDateString()}
+          </p>
+        </div>
+      )}
+
+      {/* Scratch-off tickets */}
+      <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 mt-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
+          <h3 className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em]">Scratch-off Tickets</h3>
+          <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+        </div>
+        <p className="text-white/60 text-sm mb-6 text-center">
+          12 panels · Match 3 or more of the same symbol to win
+        </p>
+
+        {!scratchResult ? (
+          <div className="flex flex-col items-center">
+            <p className="text-white/50 text-sm mb-2">
+              {(state?.scratchOffCost ?? 10)} credits per ticket
+            </p>
+            <button
+              onClick={handleScratchPurchase}
+              disabled={scratchPurchasing || balance < (state?.scratchOffCost ?? 10)}
+              className="casino-premium-btn px-8 py-3.5 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {scratchPurchasing ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                  Scratching…
+                </span>
+              ) : (
+                `Buy Scratch-off (${state?.scratchOffCost ?? 10} cr)`
+              )}
+            </button>
+          </div>
+        ) : (
+          <div ref={scratchResultRef} className="space-y-6">
+            {scratchResult.tickets.map((ticket, ti) => {
+              const panelsForTicket = 12;
+              const startIdx = ti * panelsForTicket;
+              const revealedIndices = scratchRevealed.filter((r) => r >= startIdx && r < startIdx + panelsForTicket);
+              const allRevealed = revealedIndices.length === panelsForTicket;
+              const revealedSymbols = revealedIndices.map((r) => ticket.panels[r - startIdx]);
+              const symbolCounts: Record<string, number> = {};
+              for (const s of revealedSymbols) {
+                symbolCounts[s] = (symbolCounts[s] ?? 0) + 1;
+              }
+              const matchRevealed = Object.values(symbolCounts).some((c) => c >= 3) && ticket.win;
+              const showResult = matchRevealed || allRevealed;
+              return (
+                <div key={ti} className="flex flex-col items-center w-full">
+                  <div className="w-full flex items-start">
+                    <div className="flex-1 min-w-0" />
+                    <div className="rounded-2xl border border-white/[0.1] bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 shrink-0">
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest text-center mb-4">Match 3 to win</p>
+                      <div className="grid grid-cols-4 gap-3 sm:gap-4">
+                        {ticket.panels.map((_, i) => {
+                          const revealed = scratchRevealed.includes(startIdx + i);
+                          return (
+                            <ScratchPanel
+                              key={i}
+                              panelKey={`${ti}-${i}`}
+                              symbol={ticket.panels[i]}
+                              isRevealed={revealed}
+                              onReveal={() => setScratchRevealed((prev) => (prev.includes(startIdx + i) ? prev : [...prev, startIdx + i]))}
+                              className={`aspect-square min-w-[64px] min-h-[64px] sm:min-w-[80px] sm:min-h-[80px] rounded-xl border-2 ${
+                                revealed
+                                  ? "border-amber-400/50 bg-amber-500/10 text-white/95"
+                                  : "border-amber-500/40 bg-gradient-to-b from-amber-600/30 to-amber-800/20 text-amber-200/80"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex-1 flex justify-end shrink-0 pl-4">
+                      <div className="flex flex-col py-3 px-4 rounded-xl border border-white/[0.1] bg-white/[0.04] text-xs text-white/50 min-w-[90px] backdrop-blur-sm">
+                        {SCRATCH_OFF_SYMBOLS.map((sym) => (
+                          <div key={sym} className="flex items-center justify-between gap-3 py-0.5">
+                            <span>{scratchIcon(sym)}</span>
+                            <span className="text-amber-400/80 font-medium">{SCRATCH_OFF_PAYTABLE[sym]}×</span>
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-white/40 mt-1 pt-1 border-t border-white/[0.06]">Match 3+</p>
+                      </div>
+                    </div>
+                  </div>
+                  {showResult ? (
+                    <p className={`text-sm font-medium mt-3 ${ticket.win ? "text-emerald-400" : "text-white/50"}`}>
+                      {ticket.win ? `Won ${ticket.payout} credits!` : "No match — try again!"}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white/40 mt-3">Hover to scratch — reveal when 70% scratched</p>
+                  )}
+                </div>
+              );
+            })}
+            {scratchResult.tickets.every((ticket, ti) => {
+              const startIdx = ti * 12;
+              const revealedIndices = scratchRevealed.filter((r) => r >= startIdx && r < startIdx + 12);
+              const allRevealed = revealedIndices.length === 12;
+              const revealedSymbols = revealedIndices.map((r) => ticket.panels[r - startIdx]);
+              const symbolCounts: Record<string, number> = {};
+              for (const s of revealedSymbols) {
+                symbolCounts[s] = (symbolCounts[s] ?? 0) + 1;
+              }
+              const matchRevealed = Object.values(symbolCounts).some((c) => c >= 3) && ticket.win;
+              return matchRevealed || allRevealed;
+            }) ? (
+              (() => {
+                const totalClaimed = Object.values(claimedPayouts).reduce((a, b) => a + b, 0);
+                const netChange = totalClaimed - scratchResult.totalCost;
+                return (
+                  <div className={`text-center py-4 px-6 rounded-xl border-2 backdrop-blur-xl ${
+                    netChange >= 0 ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300" : "bg-white/[0.05] border-white/[0.1] text-white/60"
+                  }`}>
+                    <p className="text-sm">
+                      {netChange >= 0
+                        ? `Net +${netChange} credits`
+                        : `Net ${netChange} credits`}
+                    </p>
+                  </div>
+                );
+              })()
+            ) : null}
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={dismissScratchResult}
+                className="casino-premium-btn px-6 py-2.5 rounded-lg border border-white/[0.15] bg-white/[0.06] text-white/70 text-sm font-medium hover:bg-white/[0.1] cursor-pointer"
+              >
+                Buy Another
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface DabysBetsEvent {
   id: string;
   title: string;
@@ -962,7 +1651,7 @@ function DabysBetsGame({
 }: {
   userId: string;
   balance: number;
-  onCreditsChange: (delta?: number) => void;
+  onCreditsChange: (delta?: number, newBalance?: number) => void;
 }) {
   const [events, setEvents] = useState<DabysBetsEvent[]>([]);
   const [loading, setLoading] = useState(true);

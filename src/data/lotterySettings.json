@@ -1,0 +1,24 @@
+{
+  "ticketCost": 10,
+  "startingPool": 100,
+  "houseTakePercent": 25,
+  "scratchOff": {
+    "cost": 10,
+    "paytable": {
+      "JACKPOT": 50,
+      "DIAMOND": 20,
+      "GOLD": 10,
+      "STAR": 5,
+      "CLOVER": 2,
+      "LUCKY": 1
+    },
+    "winChanceDenom": {
+      "JACKPOT": 500,
+      "DIAMOND": 200,
+      "GOLD": 100,
+      "STAR": 50,
+      "CLOVER": 10,
+      "LUCKY": 5
+    }
+  }
+}

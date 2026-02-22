@@ -311,15 +311,11 @@ export async function GET() {
     .sort((a, b) => b.unlocked - a.unlocked)
     .slice(0, 10);
 
-  // Lifetime net per user: sum of ALL ledger entries (quests, vault, quicksells, casino, packs, marketplace, trivia, etc.)
-  const netCreditsByUser = new Map<string, number>();
-  for (const entry of ledger) {
-    netCreditsByUser.set(entry.userId, (netCreditsByUser.get(entry.userId) || 0) + entry.amount);
-  }
-  const totalCreditsEarned = Array.from(netCreditsByUser.entries())
-    .map(([userId, net]) => {
+  // Vendor Rep: most quicksells (cards vendored) per user
+  const vendorReps = Array.from(quicksellByUser.entries())
+    .map(([userId, stats]) => {
       const user = users.find((u) => u.id === userId);
-      return { userName: user?.name ?? userId, value: net };
+      return { userName: user?.name ?? userId, value: stats.count };
     })
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
@@ -351,7 +347,7 @@ export async function GET() {
     legendaryCollectors,
     cardCollectors,
     codexCompletion,
-    totalCreditsEarned,
+    vendorReps,
     packAddicts,
     biggestQuesters,
     highRollers,

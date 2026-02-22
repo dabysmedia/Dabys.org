@@ -6,6 +6,7 @@ import {
   getBlackjackSession,
   saveBlackjackSession,
   removeBlackjackSession,
+  getCasinoGameSettings,
   type BlackjackSession,
   type BlackjackCard,
 } from "@/lib/data";
@@ -14,9 +15,6 @@ import {
   handValue,
   type Card,
 } from "@/lib/casino";
-
-const MIN_BET = 2;
-const MAX_BET = 500;
 
 function toDataCard(c: Card): BlackjackCard {
   return { suit: c.suit, rank: c.rank };
@@ -47,9 +45,11 @@ export async function POST(request: Request) {
   }
 
   if (action === "deal") {
-    if (betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET || betRaw % 2 !== 0) {
+    const { blackjack } = getCasinoGameSettings();
+    const { minBet, maxBet } = blackjack;
+    if (betRaw === undefined || betRaw < minBet || betRaw > maxBet || betRaw % 2 !== 0) {
       return NextResponse.json(
-        { error: `Bet must be an even number between ${MIN_BET} and ${MAX_BET}` },
+        { error: `Bet must be an even number between ${minBet} and ${maxBet}` },
         { status: 400 }
       );
     }
@@ -136,7 +136,8 @@ export async function POST(request: Request) {
       }
       session.status = "resolved";
       session.result = "win";
-      session.payout = Math.floor(betRaw * 2.5); // Blackjack pays 3:2 -> 2.5x
+      const { blackjackPayout } = getCasinoGameSettings().blackjack;
+      session.payout = Math.floor(betRaw * (1 + blackjackPayout));
       addCredits(userId, session.payout, "casino_blackjack_win", {
         bet: betRaw,
         result: "win",
@@ -223,7 +224,8 @@ export async function POST(request: Request) {
     if (playerHasBlackjack) {
       session.status = "resolved";
       session.result = "win";
-      session.payout = Math.floor(session.bet * 2.5);
+      const { blackjackPayout } = getCasinoGameSettings().blackjack;
+      session.payout = Math.floor(session.bet * (1 + blackjackPayout));
       addCredits(userId, session.payout, "casino_blackjack_win", { bet: session.bet, result: "win" });
       removeBlackjackSession(userId);
       return NextResponse.json({

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
@@ -2006,6 +2007,399 @@ export function deleteDabysBetsEvent(id: string): boolean {
   if (events.length === getDabysBetsEventsRaw().length) return false;
   saveDabysBetsEventsRaw(events);
   return true;
+}
+
+// ──── Casino Game Settings (Slots, Blackjack, Roulette) ───
+const SLOT_SYMBOL_KEYS = ["7", "BAR", "star", "bell", "cherry"] as const;
+
+export interface CasinoGameSettings {
+  slots: {
+    minBet: number;
+    maxBet: number;
+    validBets: number[];
+    /** 3-of-a-kind multiplier per symbol. Lower = higher house edge. */
+    paytable: Record<string, number>;
+    /** 2-of-a-kind multiplier (same for all). */
+    paytable2oak: number;
+  };
+  blackjack: {
+    minBet: number;
+    maxBet: number;
+    /** Blackjack payout multiplier. 1.5 = 3:2, 1.2 = 6:5. */
+    blackjackPayout: number;
+  };
+  roulette: {
+    minBet: number;
+    maxBet: number;
+    betStep: number;
+    /** Red/Black payout multiplier. 2 = even money. */
+    colorPayout: number;
+    /** Straight up (single number) payout multiplier. 35 = 35:1. */
+    straightPayout: number;
+  };
+}
+
+const DEFAULT_SLOTS_PAYTABLE: Record<string, number> = {
+  "7": 43,
+  BAR: 21,
+  star: 13,
+  bell: 9,
+  cherry: 4,
+};
+
+const DEFAULT_CASINO_GAME_SETTINGS: CasinoGameSettings = {
+  slots: {
+    minBet: 5,
+    maxBet: 100,
+    validBets: [5, 10, 25, 50, 100],
+    paytable: { ...DEFAULT_SLOTS_PAYTABLE },
+    paytable2oak: 0.25,
+  },
+  blackjack: {
+    minBet: 2,
+    maxBet: 500,
+    blackjackPayout: 1.5,
+  },
+  roulette: {
+    minBet: 5,
+    maxBet: 500,
+    betStep: 5,
+    colorPayout: 2,
+    straightPayout: 35,
+  },
+};
+
+function parsePaytable(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SLOTS_PAYTABLE };
+  const out: Record<string, number> = {};
+  for (const k of SLOT_SYMBOL_KEYS) {
+    const v = (raw as Record<string, unknown>)[k];
+    if (typeof v === "number" && v >= 0) out[k] = Math.floor(v);
+    else out[k] = DEFAULT_SLOTS_PAYTABLE[k] ?? 4;
+  }
+  return out;
+}
+
+function getCasinoGameSettingsRaw(): CasinoGameSettings {
+  try {
+    const raw = readJson<Partial<CasinoGameSettings>>("casinoGameSettings.json");
+    const slots = raw.slots;
+    const blackjack = raw.blackjack;
+    const roulette = raw.roulette;
+    return {
+      slots: {
+        minBet: typeof slots?.minBet === "number" && slots.minBet >= 1 ? slots.minBet : DEFAULT_CASINO_GAME_SETTINGS.slots.minBet,
+        maxBet: typeof slots?.maxBet === "number" && slots.maxBet >= 1 ? slots.maxBet : DEFAULT_CASINO_GAME_SETTINGS.slots.maxBet,
+        validBets: Array.isArray(slots?.validBets) && slots.validBets.length > 0
+          ? slots.validBets.filter((v): v is number => typeof v === "number" && v >= 1).sort((a, b) => a - b)
+          : DEFAULT_CASINO_GAME_SETTINGS.slots.validBets,
+        paytable: parsePaytable(slots?.paytable),
+        paytable2oak: typeof slots?.paytable2oak === "number" && slots.paytable2oak >= 0 ? slots.paytable2oak : DEFAULT_CASINO_GAME_SETTINGS.slots.paytable2oak,
+      },
+      blackjack: {
+        minBet: typeof blackjack?.minBet === "number" && blackjack.minBet >= 2 && blackjack.minBet % 2 === 0 ? blackjack.minBet : DEFAULT_CASINO_GAME_SETTINGS.blackjack.minBet,
+        maxBet: typeof blackjack?.maxBet === "number" && blackjack.maxBet >= 2 && blackjack.maxBet % 2 === 0 ? blackjack.maxBet : DEFAULT_CASINO_GAME_SETTINGS.blackjack.maxBet,
+        blackjackPayout: typeof blackjack?.blackjackPayout === "number" && blackjack.blackjackPayout >= 1 && blackjack.blackjackPayout <= 3 ? blackjack.blackjackPayout : DEFAULT_CASINO_GAME_SETTINGS.blackjack.blackjackPayout,
+      },
+      roulette: {
+        minBet: typeof roulette?.minBet === "number" && roulette.minBet >= 1 ? roulette.minBet : DEFAULT_CASINO_GAME_SETTINGS.roulette.minBet,
+        maxBet: typeof roulette?.maxBet === "number" && roulette.maxBet >= 1 ? roulette.maxBet : DEFAULT_CASINO_GAME_SETTINGS.roulette.maxBet,
+        betStep: typeof roulette?.betStep === "number" && roulette.betStep >= 1 ? roulette.betStep : DEFAULT_CASINO_GAME_SETTINGS.roulette.betStep,
+        colorPayout: typeof roulette?.colorPayout === "number" && roulette.colorPayout >= 1 && roulette.colorPayout <= 10 ? roulette.colorPayout : DEFAULT_CASINO_GAME_SETTINGS.roulette.colorPayout,
+        straightPayout: typeof roulette?.straightPayout === "number" && roulette.straightPayout >= 10 && roulette.straightPayout <= 50 ? roulette.straightPayout : DEFAULT_CASINO_GAME_SETTINGS.roulette.straightPayout,
+      },
+    };
+  } catch {
+    return DEFAULT_CASINO_GAME_SETTINGS;
+  }
+}
+
+function saveCasinoGameSettingsRaw(settings: CasinoGameSettings) {
+  writeJson("casinoGameSettings.json", settings);
+}
+
+export function getCasinoGameSettings(): CasinoGameSettings {
+  return getCasinoGameSettingsRaw();
+}
+
+export function saveCasinoGameSettings(settings: CasinoGameSettings): void {
+  saveCasinoGameSettingsRaw(settings);
+}
+
+// ──── Weekly Lottery ──────────────────────────────────────
+const DEFAULT_SCRATCH_OFF_PAYTABLE: Record<string, number> = {
+  JACKPOT: 50,
+  DIAMOND: 20,
+  GOLD: 10,
+  STAR: 5,
+  CLOVER: 3,
+  LUCKY: 1,
+};
+
+const DEFAULT_SCRATCH_OFF_ODDS: Record<string, number> = {
+  JACKPOT: 200,
+  DIAMOND: 100,
+  GOLD: 50,
+  STAR: 25,
+  CLOVER: 15,
+  LUCKY: 10,
+};
+
+export interface ScratchOffSettings {
+  cost: number;
+  /** Match 3+ of same symbol = win. Multiplier per symbol. */
+  paytable: Record<string, number>;
+  /** Per-symbol win chance: 1 in N. Higher = rarer. P(win) = sum(1/denom). Losing tickets show symbols but no 3+ match. */
+  winChanceDenom: Record<string, number>;
+}
+
+export interface LotterySettings {
+  ticketCost: number;
+  startingPool: number;
+  /** 0–100: house keeps this % of prize pool; winner gets the rest. 0 = winner gets full pool. */
+  houseTakePercent: number;
+  scratchOff: ScratchOffSettings;
+}
+
+const DEFAULT_SCRATCH_OFF: ScratchOffSettings = {
+  cost: 10,
+  paytable: { ...DEFAULT_SCRATCH_OFF_PAYTABLE },
+  winChanceDenom: { ...DEFAULT_SCRATCH_OFF_ODDS },
+};
+
+const DEFAULT_LOTTERY_SETTINGS: LotterySettings = {
+  ticketCost: 25,
+  startingPool: 0,
+  houseTakePercent: 0,
+  scratchOff: DEFAULT_SCRATCH_OFF,
+};
+
+function parseScratchOffPaytable(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SCRATCH_OFF_PAYTABLE };
+  const out: Record<string, number> = {};
+  for (const k of ["JACKPOT", "DIAMOND", "GOLD", "STAR", "CLOVER", "LUCKY"]) {
+    const v = (raw as Record<string, unknown>)[k];
+    if (typeof v === "number" && v >= 0) out[k] = Math.floor(v);
+    else out[k] = DEFAULT_SCRATCH_OFF_PAYTABLE[k] ?? 1;
+  }
+  return out;
+}
+
+function parseScratchOffOdds(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SCRATCH_OFF_ODDS };
+  const out: Record<string, number> = {};
+  for (const k of ["JACKPOT", "DIAMOND", "GOLD", "STAR", "CLOVER", "LUCKY"]) {
+    const v = (raw as Record<string, unknown>)[k];
+    if (typeof v === "number" && v >= 1) out[k] = Math.floor(v);
+    else out[k] = DEFAULT_SCRATCH_OFF_ODDS[k] ?? 20;
+  }
+  return out;
+}
+
+function getLotterySettingsRaw(): LotterySettings {
+  try {
+    const raw = readJson<Partial<LotterySettings>>("lotterySettings.json");
+    const scratchRaw = raw.scratchOff;
+    return {
+      ticketCost: typeof raw.ticketCost === "number" && raw.ticketCost >= 1 ? raw.ticketCost : DEFAULT_LOTTERY_SETTINGS.ticketCost,
+      startingPool: typeof raw.startingPool === "number" && raw.startingPool >= 0 ? raw.startingPool : DEFAULT_LOTTERY_SETTINGS.startingPool,
+      houseTakePercent: typeof raw.houseTakePercent === "number" && raw.houseTakePercent >= 0 && raw.houseTakePercent <= 100 ? raw.houseTakePercent : DEFAULT_LOTTERY_SETTINGS.houseTakePercent,
+      scratchOff: {
+        cost: typeof scratchRaw?.cost === "number" && scratchRaw.cost >= 1 ? scratchRaw.cost : DEFAULT_SCRATCH_OFF.cost,
+        paytable: parseScratchOffPaytable(scratchRaw?.paytable),
+        winChanceDenom: (() => {
+          const wcd = scratchRaw?.winChanceDenom;
+          if (wcd && typeof wcd === "object" && !Array.isArray(wcd)) return parseScratchOffOdds(wcd);
+          const legacy = (scratchRaw as unknown as Record<string, unknown>);
+          if (typeof legacy?.winChanceDenom === "number" && legacy.winChanceDenom >= 1) {
+            const d = Math.floor(legacy.winChanceDenom as number);
+            return { JACKPOT: d * 10, DIAMOND: d * 5, GOLD: d * 2, STAR: d, CLOVER: Math.max(1, Math.floor(d / 2)), LUCKY: Math.max(1, Math.floor(d / 4)) };
+          }
+          const bw = legacy?.blankWeight;
+          if (typeof bw === "number" && bw >= 0) {
+            const d = Math.max(1, Math.floor(bw) + 1);
+            return { JACKPOT: d * 10, DIAMOND: d * 5, GOLD: d * 2, STAR: d, CLOVER: Math.max(1, Math.floor(d / 2)), LUCKY: Math.max(1, Math.floor(d / 4)) };
+          }
+          return DEFAULT_SCRATCH_OFF.winChanceDenom;
+        })(),
+      },
+    };
+  } catch {
+    return DEFAULT_LOTTERY_SETTINGS;
+  }
+}
+
+function saveLotterySettingsRaw(settings: LotterySettings) {
+  writeJson("lotterySettings.json", settings);
+}
+
+// ──── Scratch-off claims (credits added when win is revealed) ────
+function getScratchOffClaimsRaw(): Record<string, { userId: string; payout: number }> {
+  try {
+    return readJson<Record<string, { userId: string; payout: number }>>("scratchOffClaims.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveScratchOffClaimsRaw(claims: Record<string, { userId: string; payout: number }>) {
+  writeJson("scratchOffClaims.json", claims);
+}
+
+export function createScratchOffClaim(userId: string, payout: number): string {
+  const claims = getScratchOffClaimsRaw();
+  const key = crypto.randomUUID();
+  claims[key] = { userId, payout };
+  saveScratchOffClaimsRaw(claims);
+  return key;
+}
+
+export function claimScratchOffWin(claimKey: string): number | null {
+  const claims = getScratchOffClaimsRaw();
+  const entry = claims[claimKey];
+  if (!entry) return null;
+  addCredits(entry.userId, entry.payout, "scratch_off_win", { claimKey, payout: entry.payout });
+  delete claims[claimKey];
+  saveScratchOffClaimsRaw(claims);
+  return entry.payout;
+}
+
+export function getLotterySettings(): LotterySettings {
+  return getLotterySettingsRaw();
+}
+
+export function saveLotterySettings(settings: LotterySettings): void {
+  saveLotterySettingsRaw(settings);
+}
+
+export interface LotteryTicket {
+  id: string;
+  drawId: string;
+  userId: string;
+  userName: string;
+  purchasedAt: string;
+}
+
+export interface LotteryDraw {
+  drawId: string;
+  winnerUserId: string | null;
+  winnerUserName: string | null;
+  prizePool: number;
+  ticketCount: number;
+  drawnAt: string;
+}
+
+function getLotteryTicketsRaw(): LotteryTicket[] {
+  try {
+    return readJson<LotteryTicket[]>("lotteryTickets.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveLotteryTicketsRaw(tickets: LotteryTicket[]) {
+  writeJson("lotteryTickets.json", tickets);
+}
+
+function getLotteryDrawsRaw(): LotteryDraw[] {
+  try {
+    return readJson<LotteryDraw[]>("lotteryDraws.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveLotteryDrawsRaw(draws: LotteryDraw[]) {
+  writeJson("lotteryDraws.json", draws);
+}
+
+/** Next Monday at 16:00 UTC (noon Atlantic Standard Time). */
+function getNextMondayNoonUtc(): Date {
+  const now = new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const dayOfWeek = now.getUTCDay();
+  const hour = now.getUTCHours();
+  const minute = now.getUTCMinutes();
+  let daysToAdd = (8 - dayOfWeek) % 7;
+  if (dayOfWeek === 1 && (hour > 16 || (hour === 16 && minute >= 0))) {
+    daysToAdd = 7;
+  }
+  const nextMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysToAdd, 16, 0, 0, 0));
+  return nextMonday;
+}
+
+/** Draw ID = YYYY-MM-DD of the Monday we're drawing for. */
+export function getCurrentDrawId(): string {
+  return getNextMondayNoonUtc().toISOString().slice(0, 10);
+}
+
+export function getNextDrawAt(): Date {
+  return getNextMondayNoonUtc();
+}
+
+export function getLotteryTicketsForDraw(drawId: string): LotteryTicket[] {
+  return getLotteryTicketsRaw().filter((t) => t.drawId === drawId);
+}
+
+export function addLotteryTicket(
+  drawId: string,
+  userId: string,
+  userName: string
+): LotteryTicket {
+  const tickets = getLotteryTicketsRaw();
+  const now = new Date().toISOString();
+  const ticket: LotteryTicket = {
+    id: `lot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    drawId,
+    userId,
+    userName,
+    purchasedAt: now,
+  };
+  tickets.push(ticket);
+  saveLotteryTicketsRaw(tickets);
+  return ticket;
+}
+
+export function runLotteryDraw(drawId: string): LotteryDraw | null {
+  const tickets = getLotteryTicketsRaw().filter((t) => t.drawId === drawId);
+  const draws = getLotteryDrawsRaw();
+  if (draws.some((d) => d.drawId === drawId)) {
+    return draws.find((d) => d.drawId === drawId) ?? null;
+  }
+  const { ticketCost, startingPool, houseTakePercent } = getLotterySettings();
+  const ticketRevenue = tickets.length * ticketCost;
+  const grossPool = ticketRevenue + startingPool;
+  const houseTake = Math.floor((grossPool * houseTakePercent) / 100);
+  const winnerPayout = grossPool - houseTake;
+  const now = new Date().toISOString();
+  let winnerUserId: string | null = null;
+  let winnerUserName: string | null = null;
+  if (tickets.length > 0 && winnerPayout > 0) {
+    const winnerTicket = tickets[Math.floor(Math.random() * tickets.length)];
+    winnerUserId = winnerTicket.userId;
+    winnerUserName = winnerTicket.userName;
+    addCredits(winnerUserId, winnerPayout, "lottery_win", { drawId, prizePool: winnerPayout });
+  }
+  const draw: LotteryDraw = {
+    drawId,
+    winnerUserId,
+    winnerUserName,
+    prizePool: winnerPayout,
+    ticketCount: tickets.length,
+    drawnAt: now,
+  };
+  draws.push(draw);
+  saveLotteryDrawsRaw(draws);
+  return draw;
+}
+
+export function getLotteryDraw(drawId: string): LotteryDraw | undefined {
+  return getLotteryDrawsRaw().find((d) => d.drawId === drawId);
+}
+
+export function getLatestLotteryDraw(): LotteryDraw | undefined {
+  const draws = getLotteryDrawsRaw();
+  return draws.length > 0 ? draws[draws.length - 1] : undefined;
 }
 
 // ──── User feedback (for Feedback button → admin panel) ───

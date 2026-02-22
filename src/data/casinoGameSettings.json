@@ -1,0 +1,33 @@
+{
+  "slots": {
+    "minBet": 5,
+    "maxBet": 100,
+    "validBets": [
+      5,
+      10,
+      25,
+      50,
+      100
+    ],
+    "paytable": {
+      "7": 43,
+      "BAR": 21,
+      "star": 13,
+      "bell": 9,
+      "cherry": 4
+    },
+    "paytable2oak": 0
+  },
+  "blackjack": {
+    "minBet": 2,
+    "maxBet": 500,
+    "blackjackPayout": 1.5
+  },
+  "roulette": {
+    "minBet": 5,
+    "maxBet": 500,
+    "betStep": 5,
+    "colorPayout": 2,
+    "straightPayout": 35
+  }
+}

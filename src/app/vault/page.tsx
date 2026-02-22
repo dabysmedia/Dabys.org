@@ -324,11 +324,11 @@ export default function VaultPage() {
               </section>
             )}
             {other.length > 0 && (
-              <section className="max-w-4xl mx-auto">
+              <section className="w-full max-w-[min(100%,1400px)] mx-auto">
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
                   More from Dabys Media
                 </h2>
-                <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
+                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {other.map((v) => (
                     <VaultVideoCard
                       key={v.id}

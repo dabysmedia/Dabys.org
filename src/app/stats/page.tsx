@@ -26,7 +26,7 @@ interface StatsData {
   legendaryCollectors: { userName: string; value: number }[];
   cardCollectors: { userName: string; value: number }[];
   codexCompletion: { userName: string; unlocked: number; holoUnlocked: number; total: number; pct: number }[];
-  totalCreditsEarned: { userName: string; value: number }[];
+  vendorReps: { userName: string; value: number }[];
   packAddicts: { userName: string; value: number }[];
   biggestQuesters: { userName: string; value: number }[];
   highRollers: { userName: string; value: number; hands: number; netPnl: number }[];
@@ -120,6 +120,11 @@ const StatsIcons = {
   chartBar: (className?: string) => (
     <svg className={className ?? iconClass} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+    </svg>
+  ),
+  shoppingCart: (className?: string) => (
+    <svg className={className ?? iconClass} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
     </svg>
   ),
 };
@@ -640,16 +645,16 @@ export default function StatsPage() {
                     />
 
                     <LeaderboardCard
-                      title="Lifetime Net"
-                      icon={StatsIcons.sparkles()}
-                      entries={data.totalCreditsEarned.map((e) => ({
+                      title="Vendor Rep"
+                      icon={StatsIcons.shoppingCart()}
+                      entries={data.vendorReps.map((e) => ({
                         name: e.userName,
                         value: e.value,
-                        displayValue: `${e.value >= 0 ? "+" : ""}${e.value.toLocaleString()} cr`,
+                        displayValue: `${e.value.toLocaleString()} cards`,
                       }))}
                       accentFrom="from-sky-400/60"
                       accentTo="to-sky-500/60"
-                      emptyText="No credit activity yet"
+                      emptyText="No cards quicksold yet"
                       glowColor="bg-sky-400"
                     />
 

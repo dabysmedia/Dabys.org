@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { deductCredits, addCredits, getCredits } from "@/lib/data";
+import { deductCredits, addCredits, getCredits, getCasinoGameSettings } from "@/lib/data";
 import {
   spinRoulette,
   getRoulettePayout,
   isRed,
 } from "@/lib/casino";
-
-const MIN_BET = 5;
-const MAX_BET = 500;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -16,9 +13,13 @@ export async function POST(request: Request) {
   const betRaw = typeof body.bet === "number" ? Math.floor(body.bet) : undefined;
   const selection = body.selection; // "red" | "black" | number 0-36
 
-  if (!userId || betRaw === undefined || betRaw < MIN_BET || betRaw > MAX_BET || betRaw % 5 !== 0) {
+  const settings = getCasinoGameSettings();
+  const { roulette } = settings;
+  const { minBet, maxBet, betStep } = roulette;
+
+  if (!userId || betRaw === undefined || betRaw < minBet || betRaw > maxBet || betRaw % betStep !== 0) {
     return NextResponse.json(
-      { error: `Bet must be a multiple of 5 between ${MIN_BET} and ${MAX_BET} credits` },
+      { error: `Bet must be a multiple of ${betStep} between ${minBet} and ${maxBet} credits` },
       { status: 400 }
     );
   }
@@ -54,8 +55,9 @@ export async function POST(request: Request) {
     );
   }
 
+  const { colorPayout, straightPayout } = roulette;
   const result = spinRoulette();
-  const multiplier = getRoulettePayout(selectionParsed, result);
+  const multiplier = getRoulettePayout(selectionParsed, result, colorPayout, straightPayout);
   const payout = multiplier > 0 ? betRaw * multiplier : 0;
 
   if (payout > 0) {
