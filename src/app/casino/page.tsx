@@ -1241,6 +1241,8 @@ function LotteryGame({
     prizePool: number;
     soldOut?: boolean;
     scratchOffCost?: number;
+    scratchOffTicketsToday?: number;
+    scratchOffSoldOut?: boolean;
     latestDraw: {
       drawId: string;
       winnerUserId: string | null;
@@ -1370,6 +1372,7 @@ function LotteryGame({
       });
       onCreditsChange(undefined, data.newBalance); // immediate update + background refresh
       window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: -data.totalCost } })); // notify Header
+      loadState(); // refresh scratch-off count / sold-out state
     } catch {
       alert("Something went wrong");
     } finally {
@@ -1402,6 +1405,8 @@ function LotteryGame({
 
   const nextDrawDate = new Date(state.nextDrawAt);
   const soldOut = state?.soldOut ?? false;
+  const scratchOffSoldOut = state?.scratchOffSoldOut ?? false;
+  const scratchOffTicketsToday = state?.scratchOffTicketsToday ?? 0;
   const canPurchase = state && !soldOut && balance >= ticketCount * state.ticketPrice;
 
   return (
@@ -1510,11 +1515,11 @@ function LotteryGame({
         {!scratchResult ? (
           <div className="flex flex-col items-center">
             <p className="text-white/50 text-sm mb-2">
-              {(state?.scratchOffCost ?? 10)} credits per ticket
+              {(state?.scratchOffCost ?? 10)} credits per ticket · 20/day per person
             </p>
             <button
               onClick={handleScratchPurchase}
-              disabled={scratchPurchasing || balance < (state?.scratchOffCost ?? 10)}
+              disabled={scratchPurchasing || scratchOffSoldOut || balance < (state?.scratchOffCost ?? 10)}
               className="casino-premium-btn px-8 py-3.5 rounded-xl border-2 border-amber-500/40 bg-amber-500/15 text-amber-400 font-semibold hover:border-amber-500/60 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {scratchPurchasing ? (
@@ -1522,8 +1527,10 @@ function LotteryGame({
                   <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
                   Scratching…
                 </span>
+              ) : scratchOffSoldOut ? (
+                `Sold out (${scratchOffTicketsToday}/20 today)`
               ) : (
-                `Buy Scratch-off (${state?.scratchOffCost ?? 10} cr)`
+                `Buy Scratch-off (${state?.scratchOffCost ?? 10} cr) · ${scratchOffTicketsToday}/20 today`
               )}
             </button>
           </div>

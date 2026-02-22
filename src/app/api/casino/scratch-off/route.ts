@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { deductCredits, getCredits, getLotterySettings, createScratchOffClaim } from "@/lib/data";
+import { deductCredits, getCredits, getLotterySettings, createScratchOffClaim, getScratchOffTicketsToday, getScratchOffDailyLimit } from "@/lib/data";
 import { pickScratchOffPanels, getScratchOffPayout } from "@/lib/casino";
 
 /** POST: purchase scratch-off ticket(s). 12 panels, match 3+ of same symbol to win. */
@@ -27,6 +27,22 @@ export async function POST(request: Request) {
   const { cost, paytable, winChanceDenom } = scratchOff;
   const totalCost = count * cost;
   const balance = getCredits(userId);
+  const ticketsToday = getScratchOffTicketsToday(userId);
+  const limit = getScratchOffDailyLimit();
+
+  if (ticketsToday >= limit) {
+    return NextResponse.json(
+      { error: "Daily scratch-off limit reached (20/day per person)" },
+      { status: 400 }
+    );
+  }
+
+  if (ticketsToday + count > limit) {
+    return NextResponse.json(
+      { error: `Can only buy ${limit - ticketsToday} more today (20/day per person)` },
+      { status: 400 }
+    );
+  }
 
   if (balance < totalCost) {
     return NextResponse.json(

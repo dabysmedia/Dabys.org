@@ -10,6 +10,8 @@ import {
   getLotterySettings,
   deductCredits,
   getCredits,
+  getScratchOffTicketsToday,
+  getScratchOffDailyLimit,
 } from "@/lib/data";
 
 const LOTTERY_POOL_CAP = 600;
@@ -35,6 +37,9 @@ export async function GET(request: Request) {
   const latestDraw = getLatestLotteryDraw();
   const prizePool = tickets.length * ticketCost + startingPool;
   const soldOut = prizePool >= LOTTERY_POOL_CAP;
+  const scratchOffTicketsToday = userId ? getScratchOffTicketsToday(userId) : 0;
+  const scratchOffLimit = getScratchOffDailyLimit();
+  const scratchOffSoldOut = scratchOffTicketsToday >= scratchOffLimit;
 
   return NextResponse.json({
     currentDrawId,
@@ -45,6 +50,8 @@ export async function GET(request: Request) {
     prizePool,
     soldOut,
     scratchOffCost: scratchOff.cost,
+    scratchOffTicketsToday,
+    scratchOffSoldOut,
     latestDraw: latestDraw
       ? {
           drawId: latestDraw.drawId,

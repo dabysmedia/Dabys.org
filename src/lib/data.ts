@@ -2359,6 +2359,27 @@ export function getLotteryTicketsForDraw(drawId: string): LotteryTicket[] {
   return getLotteryTicketsRaw().filter((t) => t.drawId === drawId);
 }
 
+const SCRATCH_OFF_DAILY_LIMIT = 20;
+
+/** Returns how many scratch-off tickets the user has purchased today (UTC). */
+export function getScratchOffTicketsToday(userId: string): number {
+  const ledger = getCreditLedgerRaw();
+  const today = new Date().toISOString().slice(0, 10);
+  return ledger
+    .filter(
+      (e) =>
+        e.userId === userId &&
+        e.reason === "scratch_off" &&
+        e.amount < 0 &&
+        e.createdAt.startsWith(today)
+    )
+    .reduce((sum, e) => sum + (typeof e.metadata?.count === "number" ? e.metadata.count : 1), 0);
+}
+
+export function getScratchOffDailyLimit(): number {
+  return SCRATCH_OFF_DAILY_LIMIT;
+}
+
 /** Remove all tickets for a draw. Used by admin to reset the current lottery. */
 export function clearLotteryTicketsForDraw(drawId: string): number {
   const tickets = getLotteryTicketsRaw().filter((t) => t.drawId !== drawId);
