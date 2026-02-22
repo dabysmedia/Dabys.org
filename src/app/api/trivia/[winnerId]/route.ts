@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { generateTriviaQuestions } from "@/lib/trivia";
-import { getTriviaAttemptsForWinner } from "@/lib/data";
+import { getTriviaAttemptsForWinner, isWinnerArchived } from "@/lib/data";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ winnerId: string }> }
 ) {
   const { winnerId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Trivia is locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 

@@ -209,6 +209,16 @@ export function saveWinners(winners: Winner[]) {
   writeJson("winners.json", winners);
 }
 
+/** True if the winner's week has ended (archived in winners circle). Reviews/comments/trivia are locked until then. */
+export function isWinnerArchived(winnerId: string): boolean {
+  const winners = getWinners();
+  const winner = winners.find((w) => w.id === winnerId);
+  if (!winner?.weekId) return true; // No week = treat as archived (allow interactions for legacy)
+  const weeks = getWeeks();
+  const week = weeks.find((w) => w.id === winner.weekId);
+  return !!week?.endedAt;
+}
+
 // ──── Votes (one per user per week) ─────────────────────
 export interface Vote {
   id: string;
@@ -832,6 +842,160 @@ export function setCredits(userId: string, balance: number): void {
     createdAt: now,
   });
   saveCreditLedgerRaw(ledger);
+}
+
+/**
+ * Roll back a user to the state they were in at the start of `rollbackDate` (YYYY-MM-DD, UTC).
+ * Everything that happened on or after that date is undone:
+ *  - Credits: remove ledger entries on/after that date, recompute balance.
+ *  - Cards: remove cards acquired on/after that date, plus remove marketplace listings for those cards.
+ *  - Codex: use activity log to undo unlocks added on/after that date (handles uploads that consumed cards).
+ *  - Lottery tickets: remove tickets purchased on/after that date.
+ *  - Trades: cancel pending trades created on/after that date that involve this user.
+ *  - Marketplace listings: remove listings created on/after that date by this user.
+ *
+ * NOTE: Stardust and Prisms have no ledger, so their balances cannot be computed for a past date.
+ */
+export function rollbackUser(userId: string, rollbackDate: string): {
+  newBalance: number;
+  cardsRemoved: number;
+  lotteryTicketsRemoved: number;
+  ledgerEntriesRemoved: number;
+  codexUnlocksRemoved: number;
+  tradesCancelled: number;
+  listingsRemoved: number;
+  setCompletionQuestsRemoved: number;
+} {
+  const cutoff = rollbackDate; // YYYY-MM-DD — entries whose date >= this are removed
+
+  // 1. Credits: remove ledger entries on/after cutoff, recompute balance
+  const ledger = getCreditLedgerRaw();
+  const entriesToRemove = ledger.filter(
+    (e) => e.userId === userId && e.createdAt.slice(0, 10) >= cutoff
+  );
+  const netChangeAfter = entriesToRemove.reduce((sum, e) => sum + e.amount, 0);
+  const credits = getCreditsRaw();
+  const credIdx = credits.findIndex((c) => c.userId === userId);
+  const currentBalance = credIdx >= 0 ? credits[credIdx].balance : 0;
+  const restoredBalance = Math.max(0, currentBalance - netChangeAfter);
+
+  const ledgerFiltered = ledger.filter(
+    (e) => !(e.userId === userId && e.createdAt.slice(0, 10) >= cutoff)
+  );
+  saveCreditLedgerRaw(ledgerFiltered);
+
+  const now = new Date().toISOString();
+  const creditEntry: UserCredit = { userId, balance: restoredBalance, updatedAt: now };
+  if (credIdx >= 0) credits[credIdx] = creditEntry;
+  else credits.push(creditEntry);
+  saveCreditsRaw(credits);
+
+  // 2. Cards: remove cards acquired on/after cutoff
+  const cardsRaw = getCardsRaw();
+  const cardsToRemove = cardsRaw.filter(
+    (c) => c.userId === userId && c.acquiredAt.slice(0, 10) >= cutoff
+  );
+  const removedCardIds = new Set<string>(cardsToRemove.map((c) => c.id));
+  let cardsRemoved = 0;
+  for (const card of cardsToRemove) {
+    if (removeCard(card.id)) cardsRemoved++;
+  }
+
+  // 3. Codex: use the activity log to undo ALL unlocks added on/after cutoff
+  const codexLog = getCodexLogRaw();
+  const codexAddsToUndo = codexLog.filter(
+    (e) => e.userId === userId && e.action === "add" && e.createdAt.slice(0, 10) >= cutoff
+  );
+  let codexUnlocksRemoved = 0;
+  for (const entry of codexAddsToUndo) {
+    switch (entry.variant) {
+      case "regular":
+        removeCodexUnlock(userId, entry.characterId);
+        break;
+      case "holo":
+        removeCodexUnlockHolo(userId, entry.characterId);
+        break;
+      case "prismatic":
+        removeCodexUnlockPrismatic(userId, entry.characterId);
+        break;
+      case "darkMatter":
+        removeCodexUnlockDarkMatter(userId, entry.characterId);
+        break;
+      case "altart":
+      case "altart_holo":
+        removeCodexUnlockAltArt(userId, entry.characterId);
+        break;
+      case "boys":
+        removeCodexUnlockBoys(userId, entry.characterId);
+        break;
+    }
+    codexUnlocksRemoved++;
+  }
+  // Also clean up the log entries that are on/after cutoff for this user
+  const codexLogFiltered = codexLog.filter(
+    (e) => !(e.userId === userId && e.createdAt.slice(0, 10) >= cutoff)
+  );
+  saveCodexLogRaw(codexLogFiltered);
+
+  // 4. Lottery tickets: remove tickets purchased on/after cutoff
+  const tickets = getLotteryTicketsRaw();
+  const ticketsFiltered = tickets.filter(
+    (t) => !(t.userId === userId && t.purchasedAt.slice(0, 10) >= cutoff)
+  );
+  const lotteryTicketsRemoved = tickets.length - ticketsFiltered.length;
+  if (lotteryTicketsRemoved > 0) saveLotteryTicketsRaw(ticketsFiltered);
+
+  // 5. Trades: cancel pending trades created on/after cutoff involving this user
+  const trades = getTradesRaw();
+  let tradesCancelled = 0;
+  for (let i = 0; i < trades.length; i++) {
+    const t = trades[i];
+    if (t.status !== "pending") continue;
+    const involvesUser = t.initiatorUserId === userId || t.counterpartyUserId === userId;
+    const afterCutoff = t.createdAt.slice(0, 10) >= cutoff;
+    const involvesRemovedCard =
+      t.offeredCardIds?.some((id) => removedCardIds.has(id)) ||
+      t.requestedCardIds?.some((id) => removedCardIds.has(id));
+    if ((involvesUser && afterCutoff) || involvesRemovedCard) {
+      trades[i] = { ...t, status: "denied" as const };
+      tradesCancelled++;
+    }
+  }
+  if (tradesCancelled > 0) saveTradesRaw(trades);
+
+  // 6. Marketplace listings: remove listings created on/after cutoff by this user
+  const listings = getListingsRaw();
+  let listingsRemoved = 0;
+  for (const l of listings) {
+    if (l.sellerUserId === userId && l.createdAt.slice(0, 10) >= cutoff) {
+      removeListing(l.id);
+      listingsRemoved++;
+    }
+  }
+
+  // 7. Set completion quests: remove unclaimed quests completed on/after cutoff
+  const scStore = getSetCompletionQuestsRaw();
+  const scQuests = scStore[userId] ?? [];
+  const scFiltered = scQuests.filter(
+    (q) => !(q.completedAt.slice(0, 10) >= cutoff && !q.claimed)
+  );
+  const setCompletionQuestsRemoved = scQuests.length - scFiltered.length;
+  if (setCompletionQuestsRemoved > 0) {
+    if (scFiltered.length === 0) delete scStore[userId];
+    else scStore[userId] = scFiltered;
+    saveSetCompletionQuestsRaw(scStore);
+  }
+
+  return {
+    newBalance: restoredBalance,
+    cardsRemoved,
+    lotteryTicketsRemoved,
+    ledgerEntriesRemoved: entriesToRemove.length,
+    codexUnlocksRemoved,
+    tradesCancelled,
+    listingsRemoved,
+    setCompletionQuestsRemoved,
+  };
 }
 
 // ──── Stardust (Alchemy) ────────────────────────────────
@@ -1463,6 +1627,99 @@ export function updateCardsByCharacterId(
   return changed;
 }
 
+// ──── Codex Activity Log (tracks add/remove with timestamps for rollback) ────
+interface CodexLogEntry {
+  userId: string;
+  characterId: string;
+  variant: "regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "altart_holo" | "boys";
+  action: "add" | "remove";
+  createdAt: string;
+}
+
+function getCodexLogRaw(): CodexLogEntry[] {
+  try {
+    return readJson<CodexLogEntry[]>("codexActivityLog.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCodexLogRaw(entries: CodexLogEntry[]) {
+  writeJson("codexActivityLog.json", entries);
+}
+
+function logCodexActivity(userId: string, characterId: string, variant: CodexLogEntry["variant"], action: "add" | "remove") {
+  const log = getCodexLogRaw();
+  log.push({ userId, characterId, variant, action, createdAt: new Date().toISOString() });
+  saveCodexLogRaw(log);
+}
+
+/**
+ * Backfill the codex activity log for a user (or all users if userId is omitted).
+ * Reads the current codex state and creates "add" log entries with the given backfillDate.
+ * Existing log entries for the user(s) are preserved; only missing entries are added.
+ * Use this to establish a baseline so the rollback tool works for pre-log codex entries.
+ */
+export function backfillCodexLog(backfillDate: string, userId?: string): number {
+  const timestamp = `${backfillDate}T00:00:00.000Z`;
+  const log = getCodexLogRaw();
+  const existing = new Set(
+    log.map((e) => `${e.userId}|${e.characterId}|${e.variant}`)
+  );
+
+  let added = 0;
+
+  const userIds = userId
+    ? [userId]
+    : (() => {
+        const ids = new Set<string>();
+        for (const data of [
+          getCodexUnlocksRaw(),
+          getHoloCodexUnlocksRaw(),
+          getPrismaticCodexUnlocksRaw(),
+          getDarkMatterCodexUnlocksRaw(),
+          getAltArtCodexUnlocksRaw(),
+          getAltArtHoloCodexUnlocksRaw(),
+          getBoysCodexUnlocksRaw(),
+        ]) {
+          for (const uid of Object.keys(data)) ids.add(uid);
+        }
+        return Array.from(ids);
+      })();
+
+  for (const uid of userIds) {
+    const variants: { data: Record<string, string[]>; variant: CodexLogEntry["variant"] }[] = [
+      { data: getCodexUnlocksRaw(), variant: "regular" },
+      { data: getHoloCodexUnlocksRaw(), variant: "holo" },
+      { data: getPrismaticCodexUnlocksRaw(), variant: "prismatic" },
+      { data: getDarkMatterCodexUnlocksRaw(), variant: "darkMatter" },
+      { data: getAltArtCodexUnlocksRaw(), variant: "altart" },
+      { data: getAltArtHoloCodexUnlocksRaw(), variant: "altart_holo" },
+      { data: getBoysCodexUnlocksRaw(), variant: "boys" },
+    ];
+
+    for (const { data, variant } of variants) {
+      const characterIds = Array.isArray(data[uid]) ? data[uid] : [];
+      for (const characterId of characterIds) {
+        const key = `${uid}|${characterId}|${variant}`;
+        if (existing.has(key)) continue;
+        log.push({
+          userId: uid,
+          characterId,
+          variant,
+          action: "add",
+          createdAt: timestamp,
+        });
+        existing.add(key);
+        added++;
+      }
+    }
+  }
+
+  if (added > 0) saveCodexLogRaw(log);
+  return added;
+}
+
 // ──── Codex (unlock by uploading a card; removes card from collection, legendaries re-enter pool) ────
 // Persisted in DATA_DIR (src/data by default, or /data when DATA_DIR env is set).
 const CODEX_UNLOCKS_FILE = "codexUnlocks.json";
@@ -1490,6 +1747,7 @@ export function addCodexUnlock(userId: string, characterId: string): void {
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   saveCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "regular", "add");
 }
 
 export function removeCodexUnlock(userId: string, characterId: string): void {
@@ -1530,6 +1788,7 @@ export function addCodexUnlockHolo(userId: string, characterId: string): void {
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   saveHoloCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "holo", "add");
 }
 
 export function removeCodexUnlockHolo(userId: string, characterId: string): void {
@@ -1570,6 +1829,7 @@ export function addCodexUnlockPrismatic(userId: string, characterId: string): vo
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   savePrismaticCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "prismatic", "add");
 }
 
 export function removeCodexUnlockPrismatic(userId: string, characterId: string): void {
@@ -1609,6 +1869,7 @@ export function addCodexUnlockDarkMatter(userId: string, characterId: string): v
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   saveDarkMatterCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "darkMatter", "add");
 }
 
 export function removeCodexUnlockDarkMatter(userId: string, characterId: string): void {
@@ -1671,17 +1932,20 @@ export function addCodexUnlockAltArt(userId: string, characterId: string, isHolo
       if (!holoList.includes(characterId)) {
         holoData[userId] = [...holoList, characterId];
         saveAltArtHoloCodexUnlocksRaw(holoData);
+        logCodexActivity(userId, characterId, "altart_holo", "add");
       }
     }
     return;
   }
   data[userId] = [...list, characterId];
   saveAltArtCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "altart", "add");
   if (isHolo) {
     const holoData = getAltArtHoloCodexUnlocksRaw();
     const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
     holoData[userId] = [...holoList, characterId];
     saveAltArtHoloCodexUnlocksRaw(holoData);
+    logCodexActivity(userId, characterId, "altart_holo", "add");
   }
 }
 
@@ -1727,6 +1991,7 @@ export function addCodexUnlockBoys(userId: string, characterId: string): void {
   if (list.includes(characterId)) return;
   data[userId] = [...list, characterId];
   saveBoysCodexUnlocksRaw(data);
+  logCodexActivity(userId, characterId, "boys", "add");
 }
 
 export function removeCodexUnlockBoys(userId: string, characterId: string): void {

@@ -4737,6 +4737,10 @@ function CardsContent() {
                           <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/90 text-black">
                             ✓ Done
                           </span>
+                        ) : (w as { reviewsLocked?: boolean }).reviewsLocked ? (
+                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white/80">
+                            Locked
+                          </span>
                         ) : (
                           <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/90 text-white">
                             Play

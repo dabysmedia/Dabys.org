@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
-import { getComments, saveComments, getCommentLikes, saveCommentLikes, getCommentDislikes, saveCommentDislikes, addCredits, getCreditSettings, addNotification } from "@/lib/data";
+import { getComments, saveComments, getCommentLikes, saveCommentLikes, getCommentDislikes, saveCommentDislikes, addCredits, getCreditSettings, addNotification, isWinnerArchived } from "@/lib/data";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: winnerId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Comments are locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const body = await request.json();
 
   if (!body.userId || !body.userName) {
@@ -74,6 +82,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: winnerId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Comments are locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const commentId = searchParams.get("commentId");
   const userId = searchParams.get("userId");

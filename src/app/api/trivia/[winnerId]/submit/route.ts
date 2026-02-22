@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { submitTriviaAnswers } from "@/lib/trivia";
+import { isWinnerArchived } from "@/lib/data";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ winnerId: string }> }
 ) {
   const { winnerId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Trivia is locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   if (!body.userId || typeof body.userId !== "string") {

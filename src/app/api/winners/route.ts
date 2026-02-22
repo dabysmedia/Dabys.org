@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits, getCreditSettings, getVotes } from "@/lib/data";
+import { getWinners, saveWinners, getSubmissions, saveSubmissions, getCurrentWeek, getWeeks, getUsers, getProfile, addCredits, getCreditSettings, getVotes, isWinnerArchived } from "@/lib/data";
 import { addPendingPoolEntriesForWinner, getCompletedWinnerIds, getCompletedHoloWinnerIds } from "@/lib/cards";
 
 export async function GET() {
@@ -42,6 +42,7 @@ export async function GET() {
       submitterAvatarUrl,
       submitterDisplayedBadge,
       voteCount,
+      reviewsLocked: !isWinnerArchived(w.id),
     };
   });
   return NextResponse.json(enriched);

@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
-import { getRatings, saveRatings, addCredits, getCreditSettings } from "@/lib/data";
+import { getRatings, saveRatings, addCredits, getCreditSettings, isWinnerArchived } from "@/lib/data";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: winnerId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Reviews are locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const body = await request.json();
 
   if (!body.userId || !body.userName) {

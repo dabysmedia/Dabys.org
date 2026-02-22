@@ -69,6 +69,7 @@ interface WinnerDetail {
   submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
   weekTheme?: string;
   runnerUps?: RunnerUp[];
+  reviewsLocked?: boolean;
   ratings: Rating[];
   comments: Comment[];
   stats: {
@@ -582,7 +583,14 @@ export default function WinnerDetailPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               {winner.tmdbId && (
-                triviaCompleted ? (
+                winner.reviewsLocked ? (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 text-sm cursor-not-allowed" title="Trivia unlocks after the new week starts and this winner is archived in the winners circle">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                    Trivia locked
+                  </span>
+                ) : triviaCompleted ? (
                   <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -706,11 +714,21 @@ export default function WinnerDetailPage() {
 
         {/* ─── Rate This Movie ─── */}
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-8">
+          {winner.reviewsLocked && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
+              <svg className="w-5 h-5 text-amber-400/80 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+              <p className="text-sm text-amber-200/90">
+                Reviews, comments, and trivia are locked until the new week starts and this winner is archived in the winners circle.
+              </p>
+            </div>
+          )}
           <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-5">
             {ratingSubmitted ? "Your Rating" : "Rate This Movie"}
           </h3>
 
-          <div className="flex flex-col sm:flex-row items-center gap-8">
+          <div className={`flex flex-col sm:flex-row items-center gap-8 ${winner.reviewsLocked ? "pointer-events-none opacity-60" : ""}`}>
             {/* Thumbs */}
             <div className="flex items-center gap-4">
               <button
@@ -782,7 +800,7 @@ export default function WinnerDetailPage() {
             {/* Submit */}
             <button
               onClick={submitRating}
-              disabled={myThumb === null || myStars === 0 || ratingSubmitted}
+              disabled={winner.reviewsLocked || myThumb === null || myStars === 0 || ratingSubmitted}
               className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer disabled:cursor-not-allowed ${
                 ratingSubmitted
                   ? "bg-green-500/15 border border-green-500/30 text-green-400"
@@ -937,6 +955,7 @@ export default function WinnerDetailPage() {
           </div>
 
           {/* Compose */}
+          {!winner.reviewsLocked && (
           <div className="px-6 py-5 border-b border-white/[0.06]">
             {replyingTo && (
               <div className="flex items-center gap-2 mb-3 text-sm text-white/50">
@@ -1037,12 +1056,15 @@ export default function WinnerDetailPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Comment feed */}
           {winner.comments.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <p className="text-white/25 text-sm">
-                No comments yet. Be the first to share your thoughts!
+                {winner.reviewsLocked
+                  ? "No comments yet. Comments unlock after the new week starts and this winner is archived in the winners circle."
+                  : "No comments yet. Be the first to share your thoughts!"}
               </p>
             </div>
           ) : (
@@ -1080,7 +1102,7 @@ export default function WinnerDetailPage() {
                           {timeAgo(comment.createdAt)}
                         </span>
                         {/* Delete own comment */}
-                        {comment.userId === user.id && (
+                        {comment.userId === user.id && !winner.reviewsLocked && (
                           <button
                             onClick={() => deleteComment(comment.id)}
                             className="ml-auto text-white/15 hover:text-red-400 transition-colors cursor-pointer"
@@ -1125,9 +1147,9 @@ export default function WinnerDetailPage() {
                       <div className="flex items-center gap-4 mt-2">
                         <button
                           onClick={() => toggleLike(comment.id)}
-                          disabled={likingId === comment.id || dislikingId === comment.id}
-                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${comment.likedByMe ? "text-red-400" : "text-white/40 hover:text-red-400/80"}`}
-                          title={comment.likedByMe ? "Unlike" : "Like"}
+                          disabled={winner.reviewsLocked || likingId === comment.id || dislikingId === comment.id}
+                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${comment.likedByMe ? "text-red-400" : "text-white/40 hover:text-red-400/80"}`}
+                          title={winner.reviewsLocked ? "Locked" : (comment.likedByMe ? "Unlike" : "Like")}
                         >
                           {comment.likedByMe ? (
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" /></svg>
@@ -1138,16 +1160,17 @@ export default function WinnerDetailPage() {
                         </button>
                         <button
                           onClick={() => toggleDislike(comment.id)}
-                          disabled={likingId === comment.id || dislikingId === comment.id}
-                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 ${comment.dislikedByMe ? "text-slate-400" : "text-white/40 hover:text-slate-400/80"}`}
-                          title={comment.dislikedByMe ? "Remove dislike" : "Dislike"}
+                          disabled={winner.reviewsLocked || likingId === comment.id || dislikingId === comment.id}
+                          className={`flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${comment.dislikedByMe ? "text-slate-400" : "text-white/40 hover:text-slate-400/80"}`}
+                          title={winner.reviewsLocked ? "Locked" : (comment.dislikedByMe ? "Remove dislike" : "Dislike")}
                         >
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.73 5.5h1.035A7.465 7.465 0 0118 9.625a7.465 7.465 0 01-1.235 4.125h-.148c-.806 0-1.534.446-2.031 1.08a9.04 9.04 0 01-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.499 4.499 0 00-.322 1.672v.633A.75.75 0 019 22a2.25 2.25 0 01-2.25-2.25c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282H3.622c-1.026 0-1.945-.694-2.054-1.715A12.137 12.137 0 011.5 12.25c0-2.848.992-5.464 2.649-7.521C4.537 4.247 5.136 4 5.754 4H9.77a4.5 4.5 0 011.423.23l3.114 1.04a4.5 4.5 0 001.423.23zM21.669 14.023c.536-1.362.831-2.845.831-4.398 0-1.22-.182-2.398-.52-3.507-.26-.85-1.084-1.368-1.973-1.368H19.1c-.445 0-.72.498-.523.898.591 1.2.924 2.55.924 3.977a8.958 8.958 0 01-1.302 4.666c-.245.403.028.959.5.959h1.053c.832 0 1.612-.453 1.918-1.227z" /></svg>
                           <span>{comment.dislikeCount ?? 0}</span>
                         </button>
                         <button
                           onClick={() => setReplyingTo({ commentId: comment.id, userName: comment.userName })}
-                          className="text-xs font-medium text-white/40 hover:text-purple-400 transition-colors cursor-pointer"
+                          disabled={winner.reviewsLocked}
+                          className="text-xs font-medium text-white/40 hover:text-purple-400 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-white/40"
                         >
                           Reply
                         </button>

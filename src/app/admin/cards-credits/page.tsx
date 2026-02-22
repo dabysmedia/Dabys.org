@@ -274,12 +274,17 @@ export default function AdminCardsCreditsPage() {
     quests: false,
     trivia: false,
     collection: false,
-    codex: false,
+    codex: true,
   });
   const [wipeConfirmUser, setWipeConfirmUser] = useState("");
   const [wipeConfirmServer, setWipeConfirmServer] = useState("");
   const [wipeConfirmUserInvCurr, setWipeConfirmUserInvCurr] = useState("");
   const [wipeConfirmServerInvCurr, setWipeConfirmServerInvCurr] = useState("");
+  const [rollbackConfirm, setRollbackConfirm] = useState("");
+  const [rollbackDate, setRollbackDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [backfillDate, setBackfillDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [backfillLoading, setBackfillLoading] = useState(false);
   const [wipingUser, setWipingUser] = useState(false);
   const [wipingServer, setWipingServer] = useState(false);
   const [wipingUserInvCurr, setWipingUserInvCurr] = useState(false);
@@ -2100,14 +2105,30 @@ export default function AdminCardsCreditsPage() {
                           {poolForVariant.filter((c) => !ids.includes(c.characterId)).map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}
                         </select>
                       </div>
-                      <ul className="space-y-1 max-h-40 overflow-y-auto">
-                        {ids.length === 0 ? ( <li className="text-white/30 text-sm">None</li> ) : ( ids.map((characterId) => { const entry = pool.find((p) => p.characterId === characterId); const name = entry ? poolOptionLabel(entry) : characterId; const busyKey = `${variant}-remove-${characterId}`; return (
-                              <li key={characterId} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded bg-white/[0.04]">
-                                <span className="text-white/80 text-sm truncate">{name}</span>
-                                <button type="button" disabled={codexBusy[busyKey]} onClick={async () => { setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId) } : null); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="shrink-0 px-2 py-1 rounded text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 cursor-pointer">{codexBusy[busyKey] ? "…" : "Remove"}</button>
-                              </li>
-                        ); }) )}
-                      </ul>
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {ids.length === 0 ? ( <p className="text-white/30 text-sm py-2">None</p> ) : ( (() => { const bySet = new Map<string, string[]>(); for (const characterId of ids) { const entry = pool.find((p) => p.characterId === characterId); const setKey = (entry?.customSetId ?? entry?.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(setKey)) bySet.set(setKey, []); bySet.get(setKey)!.push(characterId); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const setIds = bySet.get(setName)!; return (
+                            <div key={setName}>
+                              <h5 className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mb-1.5">{setName} ({setIds.length})</h5>
+                              <ul className="space-y-1.5">
+                                {setIds.map((characterId) => { const entry = pool.find((p) => p.characterId === characterId); const name = entry ? poolOptionLabel(entry) : characterId; const busyKey = `${variant}-remove-${characterId}`; const imgUrl = entry?.profilePath?.trim(); return (
+                                  <li key={characterId} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06]">
+                                    {imgUrl ? (
+                                      <div className="shrink-0 w-10 h-10 rounded-md overflow-hidden bg-white/5">
+                                        <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                      </div>
+                                    ) : (
+                                      <div className="shrink-0 w-10 h-10 rounded-md bg-white/5 flex items-center justify-center">
+                                        <span className="text-white/30 text-xs">?</span>
+                                      </div>
+                                    )}
+                                    <span className="text-white/80 text-sm truncate flex-1 min-w-0">{name}</span>
+                                    <button type="button" disabled={codexBusy[busyKey]} onClick={async () => { setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId) } : null); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="shrink-0 px-2 py-1 rounded text-xs font-medium text-red-400 hover:bg-red-500/20 disabled:opacity-40 cursor-pointer">{codexBusy[busyKey] ? "…" : "Remove"}</button>
+                                  </li>
+                                ); })}
+                              </ul>
+                            </div>
+                        ); }); })() )}
+                      </div>
                     </div>
                   );
                 })}
@@ -2724,6 +2745,81 @@ export default function AdminCardsCreditsPage() {
           </div>
         </div>
         <div className="space-y-6">
+          <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] p-4">
+            <h3 className="text-sm font-medium text-orange-400/90 mb-2">Rollback user to a selected date</h3>
+            <p className="text-[11px] text-white/40 mb-3">Revert selected user to the state they were in at the <strong className="text-white/60">start</strong> of the selected date (midnight UTC). Everything that happened on or after that date is undone: credits, inventory (cards), codex, lottery tickets, trades, and marketplace listings. Type <strong className="text-orange-400/80">ROLLBACK</strong> to confirm.</p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!selectedUserId || rollbackLoading || rollbackConfirm.trim().toUpperCase() !== "ROLLBACK" || !rollbackDate) return;
+                setRollbackLoading(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/admin/rollback", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: selectedUserId, date: rollbackDate }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok) {
+                    setCreditBalance(data.newBalance);
+                    setCreditInput(String(data.newBalance));
+                    setRollbackConfirm("");
+                    loadData();
+                    alert(data.message || "Rollback complete.");
+                  } else {
+                    setError(data.error || "Failed to rollback");
+                  }
+                } finally {
+                  setRollbackLoading(false);
+                }
+              }}
+              className="flex flex-wrap gap-3 items-end"
+            >
+              <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-orange-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"><option value="">-- Select user --</option>{users.map((u) => ( <option key={u.id} value={u.id}>{u.name} ({u.id})</option> ))}</select>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Rollback to start of</label>
+                <input type="date" value={rollbackDate} onChange={(e) => setRollbackDate(e.target.value)} className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-orange-500/40 w-44 [color-scheme:dark]" />
+              </div>
+              <input type="text" value={rollbackConfirm} onChange={(e) => setRollbackConfirm(e.target.value)} placeholder="Type ROLLBACK to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-orange-500/40 w-48" />
+              <button type="submit" disabled={!selectedUserId || rollbackLoading || rollbackConfirm.trim().toUpperCase() !== "ROLLBACK" || !rollbackDate} className="px-4 py-2.5 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{rollbackLoading ? "Rolling back…" : "Rollback"}</button>
+            </form>
+          </div>
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.03] p-4">
+            <h3 className="text-sm font-medium text-amber-400/90 mb-2">Backfill codex activity log</h3>
+            <p className="text-[11px] text-white/40 mb-3">Stamps all current codex entries into the activity log with the chosen date. This creates a baseline so the rollback tool can undo codex changes that happened after this date. Only adds entries that aren&apos;t already in the log. Run this <strong className="text-white/60">once</strong> after cleaning up any exploited entries, choosing a date <strong className="text-white/60">before</strong> the exploit.</p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (backfillLoading || !backfillDate) return;
+                setBackfillLoading(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/admin/rollback/backfill-codex", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ date: backfillDate, userId: selectedUserId || undefined }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok) {
+                    alert(data.message || "Backfill complete.");
+                  } else {
+                    setError(data.error || "Failed to backfill");
+                  }
+                } finally {
+                  setBackfillLoading(false);
+                }
+              }}
+              className="flex flex-wrap gap-3 items-end"
+            >
+              <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="px-4 py-2.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white outline-none focus:border-amber-500/50 cursor-pointer [color-scheme:dark] min-w-[200px]"><option value="">All users</option>{users.map((u) => ( <option key={u.id} value={u.id}>{u.name} ({u.id})</option> ))}</select>
+              <div>
+                <label className="block text-xs text-white/40 mb-1">Stamp entries with date</label>
+                <input type="date" value={backfillDate} onChange={(e) => setBackfillDate(e.target.value)} className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40 w-44 [color-scheme:dark]" />
+              </div>
+              <button type="submit" disabled={backfillLoading || !backfillDate} className="px-4 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{backfillLoading ? "Backfilling…" : "Backfill codex log"}</button>
+            </form>
+          </div>
           <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
             <h3 className="text-sm font-medium text-white/70 mb-2">Wipe one user&apos;s inventory</h3>
             <form onSubmit={handleWipeUser} className="flex flex-wrap gap-3 items-end">

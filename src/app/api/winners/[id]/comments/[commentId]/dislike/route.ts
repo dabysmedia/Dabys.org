@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
-import { getComments, getCommentDislikes, saveCommentDislikes, getCommentLikes, saveCommentLikes } from "@/lib/data";
+import { getComments, getCommentDislikes, saveCommentDislikes, getCommentLikes, saveCommentLikes, isWinnerArchived } from "@/lib/data";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   const { id: winnerId, commentId } = await params;
+
+  if (!isWinnerArchived(winnerId)) {
+    return NextResponse.json(
+      { error: "Comments are locked until the winner is archived in the winners circle (after the new week starts)" },
+      { status: 423 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   if (!body.userId || typeof body.userId !== "string") {
