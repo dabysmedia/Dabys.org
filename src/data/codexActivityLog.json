@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "userId": "3",
+    "characterId": "actor-57412-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.952Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "actor-57409-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.967Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "actor-57415-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.970Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "custom-1770869738689-jilnomh",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.973Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "actor-57410-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.976Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "actor-57414-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.979Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "actor-70851-9353",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.990Z"
+  },
+  {
+    "userId": "3",
+    "characterId": "custom-1770993986099-ha56a75",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-22T21:28:10.993Z"
+  }
+]

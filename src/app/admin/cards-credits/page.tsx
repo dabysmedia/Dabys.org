@@ -282,6 +282,7 @@ export default function AdminCardsCreditsPage() {
   const [manageCodexModalTab, setManageCodexModalTab] = useState<"regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "boys">("regular");
   const [codexAddAltArtAsHolo, setCodexAddAltArtAsHolo] = useState(false);
   const [codexAddSetBusy, setCodexAddSetBusy] = useState(false);
+  const [codexAddSetDropdownOpen, setCodexAddSetDropdownOpen] = useState(false);
   const [openUserSection, setOpenUserSection] = useState<Record<string, boolean>>({
     credits: false,
     stardust: false,
@@ -460,6 +461,14 @@ export default function AdminCardsCreditsPage() {
     document.addEventListener("paste", handlePaste);
     return () => document.removeEventListener("paste", handlePaste);
   }, [showImagePickerForAdd, showImagePickerForEdit, showImagePickerForPack, editingPoolEntry]);
+
+  useEffect(() => {
+    if (!showManageCodexModal) setCodexAddSetDropdownOpen(false);
+  }, [showManageCodexModal]);
+
+  useEffect(() => {
+    setCodexAddSetDropdownOpen(false);
+  }, [manageCodexModalTab]);
 
   useEffect(() => {
     if (!editingPoolEntry) {
@@ -3195,68 +3204,107 @@ export default function AdminCardsCreditsPage() {
                   availableBySet.get(setKey)!.push(c);
                 }
                 const setsWithAvailable = Array.from(availableBySet.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                const addSingle = async (c: CharacterPortrayal) => {
+                  const isHolo = variant === "altart" && codexAddAltArtAsHolo;
+                  const busyKey = `${variant}-add-${c.characterId}`;
+                  setCodexBusy((b) => ({ ...b, [busyKey]: true }));
+                  try {
+                    const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId: c.characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }) });
+                    if (res.ok) {
+                      setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), c.characterId], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), c.characterId] }) } : null);
+                      loadData();
+                    }
+                  } finally {
+                    setCodexBusy((b) => ({ ...b, [busyKey]: false }));
+                  }
+                };
+                const addSet = async (setName: string) => {
+                  if (!availableBySet.has(setName)) return;
+                  const toAdd = availableBySet.get(setName)!;
+                  setCodexAddSetDropdownOpen(false);
+                  setCodexAddSetBusy(true);
+                  const isHolo = variant === "altart" && codexAddAltArtAsHolo;
+                  try {
+                    const results = await Promise.all(toAdd.map((c) =>
+                      fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId: c.characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }) })
+                    ));
+                    if (results.every((r) => r.ok)) {
+                      const addedIds = toAdd.map((c) => c.characterId);
+                      setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), ...addedIds], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), ...addedIds] }) } : null);
+                      loadData();
+                    }
+                  } finally {
+                    setCodexAddSetBusy(false);
+                  }
+                };
                 return (
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2 items-end">
-                      <select id={`codex-modal-add-${variant}`} className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" onChange={async (e) => { const characterId = e.target.value; if (!characterId) return; e.target.value = ""; const isHolo = variant === "altart" && codexAddAltArtAsHolo; const busyKey = `${variant}-add-${characterId}`; setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), characterId], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), characterId] }) } : null); loadData(); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }}>
-                        <option value="">Add {label}…</option>
-                        {available.map((c) => ( <option key={c.characterId} value={c.characterId}>{poolOptionLabel(c)}</option> ))}
-                      </select>
-                      {setsWithAvailable.length > 0 && (
-                        <>
-                          <select id={`codex-modal-add-set-${variant}`} className="min-w-[160px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-purple-500/50 [color-scheme:dark]" defaultValue="">
-                            <option value="">Add set…</option>
-                            {setsWithAvailable.map(([setName, cards]) => (
-                              <option key={setName} value={setName}>{setName} ({cards.length})</option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            disabled={codexAddSetBusy}
-                            onClick={async () => {
-                              const sel = document.getElementById(`codex-modal-add-set-${variant}`) as HTMLSelectElement | null;
-                              const setName = sel?.value?.trim();
-                              if (!setName || !availableBySet.has(setName)) return;
-                              const toAdd = availableBySet.get(setName)!;
-                              setCodexAddSetBusy(true);
-                              const isHolo = variant === "altart" && codexAddAltArtAsHolo;
-                              try {
-                                const results = await Promise.all(toAdd.map((c) =>
-                                  fetch("/api/admin/user-codex", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ userId: selectedUserId, characterId: c.characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }),
-                                  })
-                                ));
-                                const ok = results.every((r) => r.ok);
-                                if (ok) {
-                                  const addedIds = toAdd.map((c) => c.characterId);
-                                  setUserCodex((prev) => prev ? {
-                                    ...prev,
-                                    [key]: [...(prev[key] ?? []), ...addedIds],
-                                    ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), ...addedIds] }),
-                                  } : null);
-                                  loadData();
-                                  if (sel) sel.value = "";
-                                }
-                              } finally {
-                                setCodexAddSetBusy(false);
-                              }
-                            }}
-                            className="px-4 py-2 rounded-lg bg-purple-600/80 text-white text-sm font-medium hover:bg-purple-500/80 disabled:opacity-40 cursor-pointer"
-                          >
-                            {codexAddSetBusy ? "Adding…" : "Add set"}
-                          </button>
-                        </>
-                      )}
-                      {variant === "altart" && (
-                        <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
-                          <input type="checkbox" checked={codexAddAltArtAsHolo} onChange={(e) => setCodexAddAltArtAsHolo(e.target.checked)} className="rounded border-white/30 bg-white/5" />
-                          <span>Add as holo</span>
-                        </label>
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-semibold text-white/80">Add single card</h3>
+                        {variant === "altart" && (
+                          <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
+                            <input type="checkbox" checked={codexAddAltArtAsHolo} onChange={(e) => setCodexAddAltArtAsHolo(e.target.checked)} className="rounded border-white/30 bg-white/5" />
+                            <span>Add as holo</span>
+                          </label>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setCodexAddSetDropdownOpen((o) => !o)}
+                          disabled={codexAddSetBusy || setsWithAvailable.length === 0}
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600/80 text-white text-sm font-medium hover:bg-emerald-500/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-emerald-500/30"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0v6m0-6V5m-14 6v6m0-6V5" /></svg>
+                          {codexAddSetBusy ? "Adding…" : "Add set"}
+                          {setsWithAvailable.length > 0 && <span className="text-emerald-200/80 text-xs">({setsWithAvailable.length} available)</span>}
+                        </button>
+                        {codexAddSetDropdownOpen && setsWithAvailable.length > 0 && (
+                          <>
+                            <div className="fixed inset-0 z-40" aria-hidden onClick={() => setCodexAddSetDropdownOpen(false)} />
+                            <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] py-1 rounded-lg border border-white/[0.12] bg-[#1a1a24] shadow-xl">
+                              {setsWithAvailable.map(([setName, cards]) => (
+                                <button key={setName} type="button" onClick={() => addSet(setName)} className="w-full px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.08] flex items-center justify-between gap-2">
+                                  <span className="truncate">{setName}</span>
+                                  <span className="text-white/50 text-xs shrink-0">{cards.length} cards</span>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-4">
+                      <p className="text-xs text-white/50 mb-3">Click a card to add it to the codex</p>
+                      {available.length === 0 ? (
+                        <p className="text-white/40 text-sm py-6 text-center">All {label} cards are already in the codex</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {setsWithAvailable.map(([setName, cards]) => (
+                            <div key={setName}>
+                              <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2">{setName}</h4>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                                {cards.map((c) => {
+                                  const busyKey = `${variant}-add-${c.characterId}`;
+                                  const codexCard = { id: c.characterId, rarity: c.rarity, isFoil: variant === "holo" || variant === "prismatic" || variant === "darkMatter" || (variant === "altart" && codexAddAltArtAsHolo), finish: variant === "altart" ? (codexAddAltArtAsHolo ? "holo" : "normal") : finish, actorName: c.actorName ?? "", characterName: c.characterName ?? "", movieTitle: c.movieTitle ?? "", profilePath: c.profilePath ?? "", cardType: c.cardType ?? "actor", isAltArt: variant === "altart" };
+                                  return (
+                                    <button key={c.characterId} type="button" disabled={!!codexBusy[busyKey]} onClick={() => addSingle(c)} className="relative w-full min-w-0 rounded-xl overflow-hidden border-2 border-transparent hover:border-purple-500/50 focus:border-purple-500/50 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group">
+                                      <CardDisplay card={codexCard} size="full" selectable />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">
+                                        <span className="px-2 py-1 rounded bg-purple-600/90 text-white text-xs font-medium">{codexBusy[busyKey] ? "…" : "+ Add"}</span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-white/80">In codex</h3>
                       {ids.length === 0 ? ( <p className="text-white/30 text-sm py-8 text-center">None</p> ) : ( (() => { const bySet = new Map<string, string[]>(); for (const characterId of ids) { const entry = pool.find((p) => p.characterId === characterId); const setKey = (entry?.customSetId ?? entry?.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(setKey)) bySet.set(setKey, []); bySet.get(setKey)!.push(characterId); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const setIds = bySet.get(setName)!; return (
                         <div key={setName} className="space-y-2">
                           <h5 className="text-xs font-semibold text-white/60 uppercase tracking-wider">{setName} ({setIds.length})</h5>
