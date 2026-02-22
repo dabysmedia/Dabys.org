@@ -37,6 +37,8 @@ interface Comment {
   parentUserName?: string;
   likeCount?: number;
   likedByMe?: boolean;
+  dislikeCount?: number;
+  dislikedByMe?: boolean;
   displayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
 }
 
