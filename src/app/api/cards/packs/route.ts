@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPacks, getPackPurchasesInWindow, getPackOldestPurchaseInWindow } from "@/lib/data";
+import { getPacks, getPackPurchasesInWindow, getPackOldestPurchaseInWindow, getUnopenedPacks } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -35,6 +35,8 @@ export async function GET(request: Request) {
         };
       })
     : rawPacks;
-  return NextResponse.json({ packs });
+
+  const unopenedPacks = userId ? getUnopenedPacks(userId) : [];
+  return NextResponse.json({ packs, unopenedPacks });
 }
 

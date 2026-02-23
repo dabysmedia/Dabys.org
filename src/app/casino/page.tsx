@@ -1241,6 +1241,7 @@ function LotteryGame({
     prizePool: number;
     soldOut?: boolean;
     scratchOffCost?: number;
+    scratchOffDailyLimit?: number;
     scratchOffTicketsToday?: number;
     scratchOffSoldOut?: boolean;
     latestDraw: {
@@ -1407,6 +1408,7 @@ function LotteryGame({
   const soldOut = state?.soldOut ?? false;
   const scratchOffSoldOut = state?.scratchOffSoldOut ?? false;
   const scratchOffTicketsToday = state?.scratchOffTicketsToday ?? 0;
+  const scratchOffDailyLimit = state?.scratchOffDailyLimit ?? 10;
   const canPurchase = state && !soldOut && balance >= ticketCount * state.ticketPrice;
 
   return (
@@ -1515,7 +1517,7 @@ function LotteryGame({
         {!scratchResult ? (
           <div className="flex flex-col items-center">
             <p className="text-white/50 text-sm mb-2">
-              {(state?.scratchOffCost ?? 10)} credits per ticket · 20/day per person
+              {(state?.scratchOffCost ?? 10)} credits per ticket · {scratchOffDailyLimit}/day per person
             </p>
             <button
               onClick={handleScratchPurchase}
@@ -1528,9 +1530,9 @@ function LotteryGame({
                   Scratching…
                 </span>
               ) : scratchOffSoldOut ? (
-                `Sold out (${scratchOffTicketsToday}/20 today)`
+                `Sold out (${scratchOffTicketsToday}/${scratchOffDailyLimit} today)`
               ) : (
-                `Buy Scratch-off (${state?.scratchOffCost ?? 10} cr) · ${scratchOffTicketsToday}/20 today`
+                `Buy Scratch-off (${state?.scratchOffCost ?? 10} cr) · ${scratchOffTicketsToday}/${scratchOffDailyLimit} today`
               )}
             </button>
           </div>

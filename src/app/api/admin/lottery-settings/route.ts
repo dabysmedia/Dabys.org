@@ -45,6 +45,11 @@ export async function PATCH(request: Request) {
       : current.houseTakePercent;
 
   const scratchRaw = body.scratchOff ?? {};
+  const scratchDailyLimit = typeof scratchRaw.dailyLimit === "number" && scratchRaw.dailyLimit >= 1
+    ? Math.floor(scratchRaw.dailyLimit)
+    : typeof scratchRaw.dailyLimit === "string"
+      ? Math.max(1, parseInt(scratchRaw.dailyLimit, 10) || current.scratchOff.dailyLimit ?? 20)
+      : current.scratchOff.dailyLimit ?? 20;
   const scratchCost = typeof scratchRaw.cost === "number" && scratchRaw.cost >= 1
     ? Math.floor(scratchRaw.cost)
     : typeof scratchRaw.cost === "string"
@@ -77,6 +82,7 @@ export async function PATCH(request: Request) {
     houseTakePercent: Math.max(0, Math.min(100, houseTakePercent)),
     scratchOff: {
       cost: Math.max(1, scratchCost),
+      dailyLimit: Math.max(1, scratchDailyLimit),
       paytable: scratchPaytable,
       winChanceDenom: scratchOdds,
     },

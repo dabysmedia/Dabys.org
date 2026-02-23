@@ -2449,6 +2449,8 @@ const DEFAULT_SCRATCH_OFF_ODDS: Record<string, number> = {
 
 export interface ScratchOffSettings {
   cost: number;
+  /** Max scratch-off tickets per user per day (UTC). Default 20. */
+  dailyLimit?: number;
   /** Match 3+ of same symbol = win. Multiplier per symbol. */
   paytable: Record<string, number>;
   /** Per-symbol win chance: 1 in N. Higher = rarer. P(win) = sum(1/denom). Losing tickets show symbols but no 3+ match. */
@@ -2465,6 +2467,7 @@ export interface LotterySettings {
 
 const DEFAULT_SCRATCH_OFF: ScratchOffSettings = {
   cost: 10,
+  dailyLimit: 20,
   paytable: { ...DEFAULT_SCRATCH_OFF_PAYTABLE },
   winChanceDenom: { ...DEFAULT_SCRATCH_OFF_ODDS },
 };
@@ -2508,6 +2511,7 @@ function getLotterySettingsRaw(): LotterySettings {
       houseTakePercent: typeof raw.houseTakePercent === "number" && raw.houseTakePercent >= 0 && raw.houseTakePercent <= 100 ? raw.houseTakePercent : DEFAULT_LOTTERY_SETTINGS.houseTakePercent,
       scratchOff: {
         cost: typeof scratchRaw?.cost === "number" && scratchRaw.cost >= 1 ? scratchRaw.cost : DEFAULT_SCRATCH_OFF.cost,
+        dailyLimit: typeof scratchRaw?.dailyLimit === "number" && scratchRaw.dailyLimit >= 1 ? scratchRaw.dailyLimit : DEFAULT_SCRATCH_OFF.dailyLimit ?? 20,
         paytable: parseScratchOffPaytable(scratchRaw?.paytable),
         winChanceDenom: (() => {
           const wcd = scratchRaw?.winChanceDenom;
@@ -2643,8 +2647,6 @@ export function getLotteryTicketsForDraw(drawId: string): LotteryTicket[] {
   return getLotteryTicketsRaw().filter((t) => t.drawId === drawId);
 }
 
-const SCRATCH_OFF_DAILY_LIMIT = 20;
-
 /** Returns how many scratch-off tickets the user has purchased today (UTC). */
 export function getScratchOffTicketsToday(userId: string): number {
   const ledger = getCreditLedgerRaw();
@@ -2661,7 +2663,9 @@ export function getScratchOffTicketsToday(userId: string): number {
 }
 
 export function getScratchOffDailyLimit(): number {
-  return SCRATCH_OFF_DAILY_LIMIT;
+  const scratch = getLotterySettings().scratchOff;
+  const limit = scratch.dailyLimit;
+  return typeof limit === "number" && limit >= 1 ? limit : 20;
 }
 
 /** Remove all tickets for a draw. Used by admin to reset the current lottery. */
@@ -3469,6 +3473,66 @@ export function deletePack(id: string): boolean {
   return true;
 }
 
+// ──── Unopened Packs (awarded packs kept in inventory until opened) ────
+export interface UnopenedPack {
+  id: string;
+  userId: string;
+  packId: string;
+  acquiredAt: string;
+  /** Source of the pack, e.g. "award" for future awarding mechanic. */
+  source?: string;
+}
+
+const UNOPENED_PACKS_FILE = "unopenedPacks.json";
+
+function getUnopenedPacksRaw(): UnopenedPack[] {
+  try {
+    return readJson<UnopenedPack[]>(UNOPENED_PACKS_FILE);
+  } catch {
+    return [];
+  }
+}
+
+function saveUnopenedPacksRaw(packs: UnopenedPack[]) {
+  writeJson(UNOPENED_PACKS_FILE, packs);
+}
+
+export function getUnopenedPacks(userId: string): UnopenedPack[] {
+  return getUnopenedPacksRaw().filter((p) => p.userId === userId);
+}
+
+export function getUnopenedPackById(id: string): UnopenedPack | undefined {
+  return getUnopenedPacksRaw().find((p) => p.id === id);
+}
+
+export function addUnopenedPack(
+  userId: string,
+  packId: string,
+  source?: string
+): UnopenedPack {
+  const packs = getUnopenedPacksRaw();
+  const id = `unopened-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+  const entry: UnopenedPack = {
+    id,
+    userId,
+    packId,
+    acquiredAt: new Date().toISOString(),
+    source,
+  };
+  packs.push(entry);
+  saveUnopenedPacksRaw(packs);
+  return entry;
+}
+
+export function removeUnopenedPack(id: string): UnopenedPack | null {
+  const packs = getUnopenedPacksRaw();
+  const idx = packs.findIndex((p) => p.id === id);
+  if (idx < 0) return null;
+  const [removed] = packs.splice(idx, 1);
+  saveUnopenedPacksRaw(packs);
+  return removed;
+}
+
 /** Reorder packs to match the given packIds (shop display order). */
 export function reorderPacks(packIds: string[]): boolean {
   const packs = getPacks();
@@ -3649,6 +3713,9 @@ export function wipeUserInventory(userId: string): {
   const buyOrdersRemoved = buyOrders.length - buyOrdersFiltered.length;
   if (buyOrdersRemoved > 0) saveBuyOrdersRaw(buyOrdersFiltered);
 
+  const unopenedPacks = getUnopenedPacksRaw();
+  saveUnopenedPacksRaw(unopenedPacks.filter((p) => p.userId !== userId));
+
   return {
     cardsRemoved: userCards.length,
     listingsRemoved,
@@ -3693,6 +3760,9 @@ export function wipeUserInventoryAndCurrencyOnly(userId: string): {
   const buyOrdersFiltered = buyOrders.filter((o) => o.requesterUserId !== userId);
   if (buyOrders.length !== buyOrdersFiltered.length) saveBuyOrdersRaw(buyOrdersFiltered);
 
+  const unopenedPacks = getUnopenedPacksRaw();
+  saveUnopenedPacksRaw(unopenedPacks.filter((p) => p.userId !== userId));
+
   return {
     cardsRemoved: userCards.length,
     listingsRemoved,
@@ -3716,6 +3786,7 @@ export function wipeServer(confirmWord: string): { success: boolean; error?: str
   writeJson("listings.json", []);
   writeJson("buyOrders.json", []);
   writeJson("trades.json", []);
+  writeJson(UNOPENED_PACKS_FILE, []);
 
   return { success: true };
 }
@@ -3734,6 +3805,7 @@ export function wipeServerInventoryAndCurrencyOnly(confirmWord: string): { succe
   writeJson("listings.json", []);
   writeJson("buyOrders.json", []);
   writeJson("trades.json", []);
+  writeJson(UNOPENED_PACKS_FILE, []);
 
   return { success: true };
 }

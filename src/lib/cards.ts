@@ -26,6 +26,9 @@ import {
   getCodexUnlockedPrismaticCharacterIds,
   getCodexUnlockedDarkMatterCharacterIds,
   getCardFinish,
+  getUnopenedPackById,
+  removeUnopenedPack,
+  addUnopenedPack,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack, CardFinish } from "@/lib/data";
 
@@ -381,6 +384,179 @@ function pickCardOfRarity(
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/**
+ * Roll and add cards from a pack (no credit deduction).
+ * Used by buyPack (after deducting) and openPack (for unopened awarded packs).
+ */
+function rollAndAddPackCards(
+  userId: string,
+  packId: string
+): { success: boolean; cards?: ReturnType<typeof addCard>[]; error?: string } {
+  migrateCommonToUncommon();
+  const allPacks = getPacks();
+  const selectedPack = packId
+    ? allPacks.find((p) => p.id === packId && p.isActive && !p.comingSoon)
+    : undefined;
+
+  const effectivePackId = selectedPack?.id ?? "default";
+  const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
+  const allowedRarities = selectedPack?.allowedRarities;
+  let allowedCardTypes = selectedPack?.allowedCardTypes;
+  if (selectedPack?.name?.toLowerCase().trim() === "character pack") {
+    allowedCardTypes = (allowedCardTypes ?? []).filter((t) => t !== "character");
+    if (allowedCardTypes.length === 0) allowedCardTypes = ["actor"];
+  }
+
+  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
+
+  const fullPool = getCharacterPool()
+    .filter((c) => c.profilePath?.trim())
+    .filter((c) => {
+      const rarityOk = !allowedRarities || allowedRarities.includes(norm(c.rarity) as any);
+      const type = (c.cardType ?? "actor") as NonNullable<typeof c.cardType>;
+      const typeOk = !allowedCardTypes || allowedCardTypes.length === 0 || allowedCardTypes.includes(type as any);
+      return rarityOk && typeOk;
+    });
+  const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
+  const ownedSlotsThisPack = new Set(ownedLegendarySlotIds);
+
+  function availablePool(): CharacterPortrayal[] {
+    return fullPool.filter(
+      (c) => c.rarity !== "legendary" || !ownedSlotsThisPack.has(c.altArtOfCharacterId ?? c.characterId)
+    );
+  }
+
+  let pool = availablePool();
+  if (pool.length === 0) {
+    const isBoysOnly =
+      allowedCardTypes?.length === 1 && allowedCardTypes[0] === "character";
+    return {
+      success: false,
+      error: isBoysOnly
+        ? "Boys pool too small. Add more Boys cards in Admin."
+        : "Character pool too small. Add more winning movies.",
+    };
+  }
+  const cardsToGive = Math.min(pool.length, cardsPerPack);
+
+  let weights: { legendary: number; epic: number; rare: number; uncommon: number } = DEFAULT_RARITY_WEIGHTS;
+  if (packId) {
+    const rawPacks = getPacksRaw();
+    const rawPack = rawPacks.find((p) => p.id === packId);
+    const rw = rawPack?.rarityWeights;
+    if (rw && typeof rw === "object") {
+      const safeNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+      const l = safeNum(rw.legendary);
+      const e = safeNum(rw.epic);
+      const r = safeNum(rw.rare);
+      const u = safeNum(rw.uncommon);
+      if (l + e + r + u > 0) weights = { legendary: l, epic: e, rare: r, uncommon: u };
+    }
+  }
+
+  const poolCounts = { legendary: 0, epic: 0, rare: 0, uncommon: 0 };
+  availablePool().forEach((c) => {
+    const t = normRarity(c.rarity);
+    if (t in poolCounts) poolCounts[t as keyof typeof poolCounts]++;
+  });
+  const adjustedWeights = {
+    legendary: poolCounts.legendary > 0 ? weights.legendary : 0,
+    epic: poolCounts.epic > 0 ? weights.epic : 0,
+    rare: poolCounts.rare > 0 ? weights.rare : 0,
+    uncommon: poolCounts.uncommon > 0 ? weights.uncommon : 0,
+  };
+  const adjSum = adjustedWeights.legendary + adjustedWeights.epic + adjustedWeights.rare + adjustedWeights.uncommon;
+  const rollWeights = adjSum > 0 ? adjustedWeights : weights;
+
+  const hitTier = rollPackTier(rollWeights);
+  const bulkRarity = (): Rarity => (Math.random() < 0.2 ? "rare" : "uncommon");
+  const bulkSlots: Rarity[] = Array.from({ length: Math.max(0, cardsToGive - 1) }, bulkRarity);
+  let raritySlots: Rarity[] = [hitTier, ...bulkSlots];
+  raritySlots = shuffleArray(raritySlots);
+
+  const cards: ReturnType<typeof addCard>[] = [];
+  const pickedCharacterIds = new Set<string>();
+
+  for (let i = 0; i < cardsToGive; i++) {
+    pool = availablePool().filter((c) => !pickedCharacterIds.has(c.characterId));
+    if (pool.length === 0) break;
+
+    const wantedRarity = raritySlots[i];
+    const char = pickCardOfRarity(pool, wantedRarity, ownedSlotsThisPack);
+    const packAllowsPrismatic = !!selectedPack?.allowPrismatic;
+    const packAllowsDarkMatter = !!selectedPack?.allowDarkMatter;
+    const packPrismaticChance = selectedPack?.prismaticChance;
+    const packDarkMatterChance = selectedPack?.darkMatterChance;
+    const packHoloChance = selectedPack?.holoChance;
+    const { isFoil, finish } = rollCardFinish({
+      allowPrismatic: packAllowsPrismatic,
+      allowDarkMatter: packAllowsDarkMatter,
+      prismaticChance: packAllowsPrismatic && typeof packPrismaticChance === "number" ? packPrismaticChance : undefined,
+      darkMatterChance: packAllowsDarkMatter && typeof packDarkMatterChance === "number" ? packDarkMatterChance : undefined,
+      holoChance: typeof packHoloChance === "number" ? packHoloChance : undefined,
+    });
+    const grantedRarity = wantedRarity;
+    const card = addCard({
+      userId,
+      characterId: char.characterId,
+      rarity: grantedRarity,
+      isFoil,
+      finish,
+      actorName: char.actorName,
+      characterName: char.characterName,
+      movieTitle: char.movieTitle,
+      movieTmdbId: char.movieTmdbId,
+      profilePath: char.profilePath,
+      cardType: char.cardType ?? "actor",
+    });
+    cards.push(card);
+    pickedCharacterIds.add(char.characterId);
+    if (grantedRarity === "legendary") {
+      ownedSlotsThisPack.add(char.altArtOfCharacterId ?? char.characterId);
+    }
+  }
+
+  return { success: true, cards };
+}
+
+/** Award a pack to a user (adds to unopened inventory). For use by future awarding mechanic. */
+export function awardPack(
+  userId: string,
+  packId: string,
+  source?: string
+): { success: boolean; unopenedPack?: { id: string; packId: string; acquiredAt: string }; error?: string } {
+  migrateCommonToUncommon();
+  const allPacks = getPacks();
+  const pack = allPacks.find((p) => p.id === packId && p.isActive && !p.comingSoon);
+  if (!pack) {
+    return { success: false, error: "Pack not found or inactive" };
+  }
+  const entry = addUnopenedPack(userId, packId, source);
+  return {
+    success: true,
+    unopenedPack: { id: entry.id, packId: entry.packId, acquiredAt: entry.acquiredAt },
+  };
+}
+
+/** Open an unopened pack from inventory. Returns the rolled cards. */
+export function openPack(
+  userId: string,
+  unopenedPackId: string
+): { success: boolean; cards?: ReturnType<typeof addCard>[]; error?: string } {
+  const unopened = getUnopenedPackById(unopenedPackId);
+  if (!unopened) {
+    return { success: false, error: "Pack not found" };
+  }
+  if (unopened.userId !== userId) {
+    return { success: false, error: "You don't own this pack" };
+  }
+  const removed = removeUnopenedPack(unopenedPackId);
+  if (!removed) {
+    return { success: false, error: "Failed to remove pack" };
+  }
+  return rollAndAddPackCards(userId, removed.packId);
+}
+
 export function buyPack(
   userId: string,
   packId?: string
@@ -428,134 +604,12 @@ export function buyPack(
     return { success: false, error: "Not enough credits" };
   }
 
-  const allowedRarities = selectedPack?.allowedRarities;
-  // Character Pack must never drop Boys (character); enforce in code regardless of stored config.
-  let allowedCardTypes = selectedPack?.allowedCardTypes;
-  if (selectedPack?.name?.toLowerCase().trim() === "character pack") {
-    allowedCardTypes = (allowedCardTypes ?? []).filter((t) => t !== "character");
-    if (allowedCardTypes.length === 0) allowedCardTypes = ["actor"];
-  }
-
-  const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
-
-  const fullPool = getCharacterPool()
-    .filter((c) => c.profilePath?.trim())
-    .filter((c) => {
-      const rarityOk = !allowedRarities || allowedRarities.includes(norm(c.rarity) as any);
-      const type = (c.cardType ?? "actor") as NonNullable<typeof c.cardType>;
-      const typeOk = !allowedCardTypes || allowedCardTypes.length === 0 || allowedCardTypes.includes(type as any);
-      return rarityOk && typeOk;
-    });
-  const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
-  const ownedSlotsThisPack = new Set(ownedLegendarySlotIds);
-
-  function availablePool(): CharacterPortrayal[] {
-    return fullPool.filter(
-      (c) => c.rarity !== "legendary" || !ownedSlotsThisPack.has(c.altArtOfCharacterId ?? c.characterId)
-    );
-  }
-
-  let pool = availablePool();
-  if (pool.length === 0) {
-    const isBoysOnly =
-      allowedCardTypes?.length === 1 && allowedCardTypes[0] === "character";
-    const error = isBoysOnly
-      ? "Boys pool too small. Add more Boys cards in Admin."
-      : "Character pool too small. Add more winning movies.";
-    return { success: false, error };
-  }
-  const cardsToGive = Math.min(pool.length, cardsPerPack);
-
   const deducted = deductCredits(userId, price, "pack_purchase", {
     packId: selectedPack?.id ?? "default",
   });
   if (!deducted) return { success: false, error: "Failed to deduct credits" };
 
-  // Resolve drop weights: custom from pack config, or global defaults.
-  // Each card independently rolls its rarity from the weight distribution.
-  let weights: { legendary: number; epic: number; rare: number; uncommon: number } = DEFAULT_RARITY_WEIGHTS;
-  if (packId) {
-    const rawPacks = getPacksRaw();
-    const rawPack = rawPacks.find((p) => p.id === packId);
-    const rw = rawPack?.rarityWeights;
-    if (rw && typeof rw === "object") {
-      const safeNum = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
-      const l = safeNum(rw.legendary);
-      const e = safeNum(rw.epic);
-      const r = safeNum(rw.rare);
-      const u = safeNum(rw.uncommon);
-      if (l + e + r + u > 0) weights = { legendary: l, epic: e, rare: r, uncommon: u };
-    }
-  }
-
-  // Zero out weights for rarities absent from the pool so rolls land on available tiers
-  const poolCounts = { legendary: 0, epic: 0, rare: 0, uncommon: 0 };
-  availablePool().forEach((c) => {
-    const t = normRarity(c.rarity);
-    if (t in poolCounts) poolCounts[t as keyof typeof poolCounts]++;
-  });
-  const adjustedWeights = {
-    legendary: poolCounts.legendary > 0 ? weights.legendary : 0,
-    epic: poolCounts.epic > 0 ? weights.epic : 0,
-    rare: poolCounts.rare > 0 ? weights.rare : 0,
-    uncommon: poolCounts.uncommon > 0 ? weights.uncommon : 0,
-  };
-  const adjSum = adjustedWeights.legendary + adjustedWeights.epic + adjustedWeights.rare + adjustedWeights.uncommon;
-  const rollWeights = adjSum > 0 ? adjustedWeights : weights;
-
-  // Per-pack model: one roll = hit tier (the set %s are chance per pack for that hit). Rest = bulk (20% rare, 80% uncommon).
-  const hitTier = rollPackTier(rollWeights);
-  const bulkRarity = (): Rarity => (Math.random() < 0.2 ? "rare" : "uncommon");
-  const hitSlot = hitTier;
-  const bulkSlots: Rarity[] = Array.from({ length: Math.max(0, cardsToGive - 1) }, bulkRarity);
-  let raritySlots: Rarity[] = [hitSlot, ...bulkSlots];
-  raritySlots = shuffleArray(raritySlots);
-
-  const cards: ReturnType<typeof addCard>[] = [];
-  const pickedCharacterIds = new Set<string>();
-
-  for (let i = 0; i < cardsToGive; i++) {
-    pool = availablePool().filter((c) => !pickedCharacterIds.has(c.characterId));
-    if (pool.length === 0) break;
-
-    const wantedRarity = raritySlots[i];
-    const char = pickCardOfRarity(pool, wantedRarity, ownedSlotsThisPack);
-    const packAllowsPrismatic = !!selectedPack?.allowPrismatic;
-    const packAllowsDarkMatter = !!selectedPack?.allowDarkMatter;
-    const packPrismaticChance = selectedPack?.prismaticChance;
-    const packDarkMatterChance = selectedPack?.darkMatterChance;
-    const packHoloChance = selectedPack?.holoChance;
-    const { isFoil, finish } = rollCardFinish({
-      allowPrismatic: packAllowsPrismatic,
-      allowDarkMatter: packAllowsDarkMatter,
-      prismaticChance: packAllowsPrismatic && typeof packPrismaticChance === "number" ? packPrismaticChance : undefined,
-      darkMatterChance: packAllowsDarkMatter && typeof packDarkMatterChance === "number" ? packDarkMatterChance : undefined,
-      holoChance: typeof packHoloChance === "number" ? packHoloChance : undefined,
-    });
-    // Use the rolled rarity so the granted rate exactly matches the set weight,
-    // even when the pool is too small and the character's natural rarity differs.
-    const grantedRarity = wantedRarity;
-    const card = addCard({
-      userId,
-      characterId: char.characterId,
-      rarity: grantedRarity,
-      isFoil,
-      finish,
-      actorName: char.actorName,
-      characterName: char.characterName,
-      movieTitle: char.movieTitle,
-      movieTmdbId: char.movieTmdbId,
-      profilePath: char.profilePath,
-      cardType: char.cardType ?? "actor",
-    });
-    cards.push(card);
-    pickedCharacterIds.add(char.characterId);
-    if (grantedRarity === "legendary") {
-      ownedSlotsThisPack.add(char.altArtOfCharacterId ?? char.characterId);
-    }
-  }
-
-  return { success: true, cards };
+  return rollAndAddPackCards(userId, effectivePackId);
 }
 
 /** Trade up: consume 4 cards of same rarity for 1 of next rarity. Epic→legendary: 33% legendary card, 67% 100 credits. */

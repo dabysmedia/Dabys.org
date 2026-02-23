@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMainQuestProgress, claimMainQuest } from "@/lib/mainQuests";
 import { addCredits, addStardust } from "@/lib/data";
+import { awardPack } from "@/lib/cards";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -28,9 +29,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to claim" }, { status: 500 });
   }
 
-  const { reward, rewardType } = item.definition;
+  const { reward, rewardType, rewardPackId } = item.definition;
   if (rewardType === "stardust") {
     addStardust(userId, reward);
+  } else if (rewardType === "pack" && rewardPackId) {
+    awardPack(userId, rewardPackId, "main_quest");
   } else {
     addCredits(userId, reward, "main_quest", { questId });
   }
@@ -39,5 +42,6 @@ export async function POST(request: Request) {
     success: true,
     reward,
     rewardType,
+    rewardPackId: rewardType === "pack" ? rewardPackId : undefined,
   });
 }

@@ -50,6 +50,7 @@ export async function GET(request: Request) {
     prizePool,
     soldOut,
     scratchOffCost: scratchOff.cost,
+    scratchOffDailyLimit: scratchOffLimit,
     scratchOffTicketsToday,
     scratchOffSoldOut,
     latestDraw: latestDraw

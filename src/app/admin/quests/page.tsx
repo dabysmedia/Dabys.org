@@ -23,9 +23,15 @@ interface QuestDefinition {
   label: string;
   description: string;
   reward: number;
-  rewardType: "credits" | "stardust";
+  rewardType: "credits" | "stardust" | "pack";
+  rewardPackId?: string;
   alwaysActive: boolean;
   rarityParam?: boolean;
+}
+
+interface PackOption {
+  id: string;
+  name: string;
 }
 
 interface QuestSettings {
@@ -65,8 +71,16 @@ export default function AdminQuestsPage() {
   const [wipeWinnerId, setWipeWinnerId] = useState("");
   const [wipingAllForUserId, setWipingAllForUserId] = useState<string | null>(null);
   const [mainQuestDefinitions, setMainQuestDefinitions] = useState<MainQuestDefinition[]>([]);
+  const [packs, setPacks] = useState<PackOption[]>([]);
   const [dailySectionCollapsed, setDailySectionCollapsed] = useState(false);
   const [mainSectionCollapsed, setMainSectionCollapsed] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/packs")
+      .then((r) => r.json())
+      .then((d) => setPacks(d.packs || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/admin/quests")
@@ -579,18 +593,20 @@ export default function AdminQuestsPage() {
                     className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 transition-colors"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">
-                    Reward Amount
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={def.reward}
-                    onChange={(e) => updateQuest(questType, "reward", parseInt(e.target.value) || 0)}
-                    className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 transition-colors"
-                  />
-                </div>
+                {def.rewardType !== "pack" && (
+                  <div>
+                    <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">
+                      Reward Amount
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={def.reward}
+                      onChange={(e) => updateQuest(questType, "reward", parseInt(e.target.value) || 0)}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 transition-colors"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">
                     Reward Type
@@ -602,8 +618,26 @@ export default function AdminQuestsPage() {
                   >
                     <option value="credits">Credits</option>
                     <option value="stardust">Stardust</option>
+                    <option value="pack">Pack</option>
                   </select>
                 </div>
+                {def.rewardType === "pack" && (
+                  <div>
+                    <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">
+                      Pack
+                    </label>
+                    <select
+                      value={def.rewardPackId ?? ""}
+                      onChange={(e) => updateQuest(questType, "rewardPackId", e.target.value || undefined)}
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 transition-colors cursor-pointer"
+                    >
+                      <option value="">Select pack…</option>
+                      {packs.filter((p) => p.id && p.name).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -706,16 +740,18 @@ export default function AdminQuestsPage() {
                           </select>
                         </div>
                       )}
-                      <div>
-                        <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Reward</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={def.reward}
-                          onChange={(e) => updateMainQuest(index, "reward", Math.max(0, parseInt(e.target.value) || 0))}
-                          className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
-                        />
-                      </div>
+                      {def.rewardType !== "pack" && (
+                        <div>
+                          <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Reward</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={def.reward}
+                            onChange={(e) => updateMainQuest(index, "reward", Math.max(0, parseInt(e.target.value) || 0))}
+                            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50"
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Reward Type</label>
                         <select
@@ -725,8 +761,24 @@ export default function AdminQuestsPage() {
                         >
                           <option value="credits">Credits</option>
                           <option value="stardust">Stardust</option>
+                          <option value="pack">Pack</option>
                         </select>
                       </div>
+                      {def.rewardType === "pack" && (
+                        <div>
+                          <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Pack</label>
+                          <select
+                            value={def.rewardPackId ?? ""}
+                            onChange={(e) => updateMainQuest(index, "rewardPackId", e.target.value || undefined)}
+                            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white/80 outline-none focus:border-purple-400/50 cursor-pointer [color-scheme:dark]"
+                          >
+                            <option value="">Select pack…</option>
+                            {packs.filter((p) => p.id && p.name).map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div>
                         <label className="block text-[10px] text-white/40 uppercase tracking-wider mb-1">Order</label>
                         <input

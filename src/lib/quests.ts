@@ -33,7 +33,7 @@ function writeJson<T>(filename: string, data: T) {
 
 // ──── Types ─────────────────────────────────────────────
 
-export type QuestRewardType = "credits" | "stardust";
+export type QuestRewardType = "credits" | "stardust" | "pack";
 export type Rarity = "uncommon" | "rare" | "epic" | "legendary";
 export type QuestType =
   | "login"
@@ -51,6 +51,8 @@ export interface QuestDefinition {
   description: string;
   reward: number;
   rewardType: QuestRewardType;
+  /** When rewardType is "pack", which pack to award. Required for pack rewards. */
+  rewardPackId?: string;
   alwaysActive: boolean;
   rarityParam?: boolean;
 }
@@ -71,6 +73,8 @@ export interface DailyQuestInstance {
   claimed: boolean;
   reward: number;
   rewardType: QuestRewardType;
+  /** When rewardType is "pack", which pack to award. */
+  rewardPackId?: string;
   label: string;
   description: string;
 }
@@ -252,6 +256,7 @@ function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
       claimed: false,
       reward: def.reward,
       rewardType: def.rewardType,
+      rewardPackId: def.rewardPackId,
       label,
       description,
     });
@@ -300,6 +305,7 @@ function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
       claimed: false,
       reward: def.reward,
       rewardType: def.rewardType,
+      rewardPackId: def.rewardPackId,
       label,
       description,
     });
@@ -363,6 +369,7 @@ function generateSingleReplacementQuest(
     claimed: false,
     reward: def.reward,
     rewardType: def.rewardType,
+    rewardPackId: def.rewardPackId,
     label,
     description,
   };
@@ -531,6 +538,7 @@ export function claimQuestReward(
     success: true,
     reward: quest.reward,
     rewardType: quest.rewardType,
+    rewardPackId: quest.rewardPackId,
     ...(allCompleteBonus !== undefined && { allCompleteBonus }),
   };
 }
@@ -539,7 +547,7 @@ export function claimQuestReward(
 
 export function claimAllQuestRewards(
   userId: string
-): { success: boolean; totalReward: number; rewardType: QuestRewardType; claimedCount: number; allCompleteBonus?: number } {
+): { success: boolean; totalReward: number; rewardType: QuestRewardType; claimedCount: number; allCompleteBonus?: number; packIds?: string[] } {
   const today = getTodayDateStr();
   const store = getDailyQuestsStore();
   const userQuests = store[today]?.[userId];
@@ -548,6 +556,7 @@ export function claimAllQuestRewards(
 
   let totalCredits = 0;
   let totalStardust = 0;
+  const packIds: string[] = [];
   let claimedCount = 0;
 
   for (const quest of userQuests.quests) {
@@ -555,6 +564,8 @@ export function claimAllQuestRewards(
       quest.claimed = true;
       if (quest.rewardType === "stardust") {
         totalStardust += quest.reward;
+      } else if (quest.rewardType === "pack" && quest.rewardPackId) {
+        packIds.push(quest.rewardPackId);
       } else {
         totalCredits += quest.reward;
       }
@@ -571,8 +582,9 @@ export function claimAllQuestRewards(
   return {
     success: claimedCount > 0,
     totalReward: totalCredits + totalStardust,
-    rewardType: totalCredits > 0 ? "credits" : "stardust",
+    rewardType: totalCredits > 0 ? "credits" : totalStardust > 0 ? "stardust" : packIds.length > 0 ? "pack" : "credits",
     claimedCount,
     ...(allCompleteBonus !== undefined && { allCompleteBonus }),
+    ...(packIds.length > 0 && { packIds }),
   };
 }

@@ -453,6 +453,14 @@ interface Pack {
   comingSoon?: boolean;
 }
 
+interface UnopenedPack {
+  id: string;
+  userId: string;
+  packId: string;
+  acquiredAt: string;
+  source?: string;
+}
+
 function formatRestockCountdown(nextRestockAt: string, now: number): string {
   const end = new Date(nextRestockAt).getTime();
   const left = Math.max(0, end - now);
@@ -547,6 +555,8 @@ function CardsContent() {
   const [legendaryRerollResultFading, setLegendaryRerollResultFading] = useState(false);
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
+  const [unopenedPacks, setUnopenedPacks] = useState<UnopenedPack[]>([]);
+  const [openingPackId, setOpeningPackId] = useState<string | null>(null);
   const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
   const [showTradeModal, setShowTradeModal] = useState(false);
   const [tradeStep, setTradeStep] = useState<1 | 2 | 3>(1);
@@ -881,6 +891,7 @@ function CardsContent() {
     if (packsRes.ok) {
       const d = await packsRes.json();
       setPacks(d.packs || []);
+      setUnopenedPacks(d.unopenedPacks || []);
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
     let acceptedList: TradeOfferEnriched[] = [];
@@ -1118,7 +1129,7 @@ function CardsContent() {
     const uid = getUserId();
     if (!uid) return;
     const res = await fetch(`/api/cards/packs?userId=${encodeURIComponent(uid)}`);
-    if (res.ok) { const d = await res.json(); setPacks(d.packs || []); }
+    if (res.ok) { const d = await res.json(); setPacks(d.packs || []); setUnopenedPacks(d.unopenedPacks || []); }
   }, [getUserId]);
 
   const refreshCodex = useCallback(async () => {
@@ -1270,6 +1281,12 @@ function CardsContent() {
     window.addEventListener("dabys-credits-refresh", handler);
     return () => window.removeEventListener("dabys-credits-refresh", handler);
   }, [refreshCredits]);
+
+  useEffect(() => {
+    const handler = () => { refreshPacks(); };
+    window.addEventListener("dabys-packs-refresh", handler);
+    return () => window.removeEventListener("dabys-packs-refresh", handler);
+  }, [refreshPacks]);
 
   // Keep incoming-trade refs in sync and notify header (red dot); sound only on accept
   useEffect(() => {
@@ -2900,6 +2917,11 @@ function CardsContent() {
                 {t.key === "trade" && receivedTrades.length > 0 && (
                   <span className="absolute top-2.5 right-3 sm:top-1.5 sm:right-1.5 w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(245,158,11,0.4)]" aria-label="Incoming trades" />
                 )}
+                {t.key === "store" && unopenedPacks.length > 0 && (
+                  <span className="absolute top-2.5 right-3 sm:top-1.5 sm:right-1.5 min-w-[18px] h-[18px] sm:min-w-[14px] sm:h-[14px] px-1 flex items-center justify-center rounded-full bg-amber-500/90 text-[10px] sm:text-[9px] font-bold text-amber-950 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(245,158,11,0.4)]" aria-label={`${unopenedPacks.length} unopened pack${unopenedPacks.length !== 1 ? "s" : ""}`}>
+                    {unopenedPacks.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -3087,6 +3109,79 @@ function CardsContent() {
                 </p>
               )}
               </div>
+
+              {/* Unopened packs — premium section below pack grid */}
+              {unopenedPacks.length > 0 && (
+                <div className="mt-10 pt-8 border-t border-white/[0.08]">
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400/80">Your rewards</span>
+                    <span className="h-px flex-1 max-w-12 bg-gradient-to-r from-amber-500/40 to-transparent" />
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    {unopenedPacks.map((up) => {
+                      const packDef = packs.find((p) => p.id === up.packId);
+                      const isOpening = openingPackId === up.id;
+                      return (
+                        <div
+                          key={up.id}
+                          className="group relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 via-white/[0.03] to-transparent shadow-[0_8px_32px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:shadow-[0_12px_40px_rgba(245,158,11,0.08)]"
+                        >
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(245,158,11,0.08),transparent)]" />
+                          <div className="relative flex items-center gap-4 p-4">
+                            <div className="h-20 w-14 shrink-0 overflow-hidden rounded-xl border border-white/[0.1] bg-white/[0.02] shadow-inner">
+                              {packDef?.imageUrl ? (
+                                <img src={packDef.imageUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-2xl opacity-50">📦</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-white/90 truncate">{packDef?.name ?? "Pack"}</p>
+                              <p className="text-[11px] text-white/50 mt-0.5">Ready to open</p>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                if (!user || isOpening) return;
+                                setOpeningPackId(up.id);
+                                try {
+                                  const res = await fetch("/api/cards/open-pack", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ userId: user.id, unopenedPackId: up.id }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok && data.cards) {
+                                    setNewCards(data.cards);
+                                    await Promise.all([refreshCards(), refreshPacks()]);
+                                    window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
+                                  } else {
+                                    alert(data.error || "Failed to open pack");
+                                  }
+                                } catch {
+                                  alert("Failed to open pack");
+                                } finally {
+                                  setOpeningPackId(null);
+                                }
+                              }}
+                              disabled={isOpening}
+                              className="shrink-0 rounded-xl border border-amber-500/50 bg-amber-500/20 px-4 py-2.5 text-sm font-semibold text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.15)] transition-all hover:border-amber-400/60 hover:bg-amber-500/30 hover:shadow-[0_0_24px_rgba(245,158,11,0.2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+                            >
+                              {isOpening ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="h-4 w-4 border-2 border-amber-300/40 border-t-amber-200 rounded-full animate-spin" />
+                                  Opening…
+                                </span>
+                              ) : (
+                                "Open"
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             )}
 

@@ -32,14 +32,14 @@ export async function POST(request: Request) {
 
   if (ticketsToday >= limit) {
     return NextResponse.json(
-      { error: "Daily scratch-off limit reached (20/day per person)" },
+      { error: `Daily scratch-off limit reached (${limit}/day per person)` },
       { status: 400 }
     );
   }
 
   if (ticketsToday + count > limit) {
     return NextResponse.json(
-      { error: `Can only buy ${limit - ticketsToday} more today (20/day per person)` },
+      { error: `Can only buy ${limit - ticketsToday} more today (${limit}/day per person)` },
       { status: 400 }
     );
   }

@@ -25,6 +25,7 @@ interface LotterySettings {
   houseTakePercent: number;
   scratchOff?: {
     cost: number;
+    dailyLimit?: number;
     paytable: Record<string, number>;
     winChanceDenom?: Record<string, number>;
   };
@@ -1045,6 +1046,7 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
   const [startingPool, setStartingPool] = useState("0");
   const [houseTakePercent, setHouseTakePercent] = useState("0");
   const [scratchCost, setScratchCost] = useState("10");
+  const [scratchDailyLimit, setScratchDailyLimit] = useState("20");
   const [scratchPayJACKPOT, setScratchPayJACKPOT] = useState("50");
   const [scratchPayDIAMOND, setScratchPayDIAMOND] = useState("20");
   const [scratchPayGOLD, setScratchPayGOLD] = useState("10");
@@ -1075,6 +1077,7 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
         setHouseTakePercent(String(data.houseTakePercent));
         const so = data.scratchOff ?? {};
         setScratchCost(String(so.cost ?? 10));
+        setScratchDailyLimit(String(so.dailyLimit ?? 20));
         setScratchPayJACKPOT(String(so.paytable?.JACKPOT ?? 50));
         setScratchPayDIAMOND(String(so.paytable?.DIAMOND ?? 20));
         setScratchPayGOLD(String(so.paytable?.GOLD ?? 10));
@@ -1115,6 +1118,11 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
       onError("Scratch-off cost must be at least 1");
       return;
     }
+    const sdl = parseInt(scratchDailyLimit, 10);
+    if (isNaN(sdl) || sdl < 1) {
+      onError("Scratch-off daily limit must be at least 1");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/admin/lottery-settings", {
@@ -1126,6 +1134,7 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
           houseTakePercent: ht,
           scratchOff: {
             cost: sc,
+            dailyLimit: sdl,
             paytable: {
               JACKPOT: parseInt(scratchPayJACKPOT, 10) || 50,
               DIAMOND: parseInt(scratchPayDIAMOND, 10) || 20,
@@ -1242,6 +1251,17 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
                 className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-4 py-2.5 text-white/90"
               />
             </div>
+            <div>
+              <label className="block text-sm text-white/50 mb-1">Per day limit (per person)</label>
+              <input
+                type="number"
+                min={1}
+                value={scratchDailyLimit}
+                onChange={(e) => setScratchDailyLimit(e.target.value)}
+                className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-4 py-2.5 text-white/90"
+              />
+              <p className="text-xs text-white/40 mt-1">Max scratch-off tickets each user can buy per day (UTC).</p>
+            </div>
             <p className="text-xs text-white/40 mb-3">Payout (×) and win odds (1 in N) per symbol. Higher N = rarer. Total win chance = sum of 1/N.</p>
             <div className="overflow-x-auto rounded-lg border border-white/[0.08]">
               <table className="w-full text-sm">
@@ -1327,7 +1347,7 @@ function LotterySection({ onError, onSuccess }: { onError: (s: string) => void; 
           </p>
           {settings.scratchOff && (
             <p className="text-white/70 mt-1">
-              Scratch-off: {settings.scratchOff.cost} cr · 12 panels · Match 3+ · Per-symbol odds
+              Scratch-off: {settings.scratchOff.cost} cr · {settings.scratchOff.dailyLimit ?? 20}/day · 12 panels · Match 3+ · Per-symbol odds
             </p>
           )}
           <div className="mt-6 pt-6 border-t border-white/[0.08]">

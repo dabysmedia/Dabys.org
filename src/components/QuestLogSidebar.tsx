@@ -279,6 +279,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        if (data.rewardType === "pack") {
+          window.dispatchEvent(new CustomEvent("dabys-packs-refresh"));
+        }
         window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
@@ -351,6 +354,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
         }
+        if (data.packIds?.length) {
+          window.dispatchEvent(new CustomEvent("dabys-packs-refresh"));
+        }
         window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
       }
     } catch {
@@ -390,6 +396,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         const delta = data.reward ?? 0;
         if (delta > 0) {
           window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+        if (data.rewardType === "pack") {
+          window.dispatchEvent(new CustomEvent("dabys-packs-refresh"));
         }
       }
     } catch {
@@ -717,7 +726,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                             {/* Reward / Claim button */}
                             <div className="flex-shrink-0 flex flex-col items-end gap-1">
                               <span className="text-[10px] text-amber-400/80 font-medium whitespace-nowrap">
-                                +{quest.reward} {quest.rewardType === "stardust" ? "SD" : "cr"}
+                                {quest.rewardType === "pack" ? "1 pack" : `+${quest.reward} ${quest.rewardType === "stardust" ? "SD" : "cr"}`}
                               </span>
                               {isClaimable && (
                                 <button
@@ -815,7 +824,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                                   </div>
                                   <div className="flex-shrink-0 flex flex-col items-end gap-1">
                                     <span className="text-[10px] font-medium text-cyan-300/80">
-                                      +{q.definition.reward} {q.definition.rewardType === "stardust" ? "★" : "cr"}
+                                      {q.definition.rewardType === "pack" ? "1 pack" : `+${q.definition.reward} ${q.definition.rewardType === "stardust" ? "★" : "cr"}`}
                                     </span>
                                     {isClaimable ? (
                                       <button

@@ -40,7 +40,7 @@ export type MainQuestType =
   | "trade_up_rarity"
   | "complete_dailies";
 
-export type MainQuestRewardType = "credits" | "stardust";
+export type MainQuestRewardType = "credits" | "stardust" | "pack";
 export type Rarity = "uncommon" | "rare" | "epic" | "legendary";
 
 export interface MainQuestDefinition {
@@ -49,6 +49,8 @@ export interface MainQuestDefinition {
   targetCount: number;
   reward: number;
   rewardType: MainQuestRewardType;
+  /** When rewardType is "pack", which pack to award. Required for pack rewards. */
+  rewardPackId?: string;
   label: string;
   description: string;
   /** For trade_up_rarity: which rarity counts */

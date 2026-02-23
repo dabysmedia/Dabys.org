@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { claimQuestReward, claimAllQuestRewards } from "@/lib/quests";
 import { addCredits, addStardust, claimSetCompletionQuest, claimHoloSetCompletionQuest } from "@/lib/data";
+import { awardPack } from "@/lib/cards";
 import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
 export async function POST(request: Request) {
@@ -47,11 +48,16 @@ export async function POST(request: Request) {
     }
     incrementUserLifetimeStat(userId, "dailiesCompleted", result.claimedCount);
 
-    // Award the rewards
-    if (result.rewardType === "stardust") {
-      addStardust(userId, result.totalReward);
-    } else {
-      addCredits(userId, result.totalReward, "daily_quest_reward", { claimedCount: result.claimedCount });
+    // Award the rewards (credits/stardust from totalReward, packs separately)
+    if (result.totalReward > 0) {
+      if (result.rewardType === "stardust") {
+        addStardust(userId, result.totalReward);
+      } else {
+        addCredits(userId, result.totalReward, "daily_quest_reward", { claimedCount: result.claimedCount });
+      }
+    }
+    for (const packId of result.packIds ?? []) {
+      awardPack(userId, packId, "daily_quest");
     }
 
     // Award all-quests-complete bonus if applicable
@@ -65,6 +71,7 @@ export async function POST(request: Request) {
       totalReward: result.totalReward,
       rewardType: result.rewardType,
       claimedCount: result.claimedCount,
+      packIds: result.packIds,
       allCompleteBonus: bonus > 0 ? bonus : undefined,
     });
   }
@@ -82,6 +89,8 @@ export async function POST(request: Request) {
   // Award the reward
   if (result.rewardType === "stardust") {
     addStardust(userId, result.reward!);
+  } else if (result.rewardType === "pack" && result.rewardPackId) {
+    awardPack(userId, result.rewardPackId, "daily_quest");
   } else {
     addCredits(userId, result.reward!, "daily_quest_reward", { questIndex });
   }
@@ -96,6 +105,7 @@ export async function POST(request: Request) {
     success: true,
     reward: result.reward,
     rewardType: result.rewardType,
+    rewardPackId: result.rewardPackId,
     allCompleteBonus: bonus > 0 ? bonus : undefined,
   });
 }
