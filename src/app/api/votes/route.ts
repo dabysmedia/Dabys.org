@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getVotes, saveVotes, getCurrentWeek, getSubmissions, addCredits, hasReceivedCreditsForWeek, getCreditSettings } from "@/lib/data";
+import { recordQuestProgress } from "@/lib/quests";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -75,6 +76,9 @@ export async function POST(request: Request) {
       addCredits(body.userId, amount, "vote", { weekId: currentWeek.id, submissionId: body.submissionId });
     }
   }
+
+  // Movie night quest: vote for a movie
+  recordQuestProgress(body.userId, "vote_movie");
 
   saveVotes(votes);
   return NextResponse.json(vote, { status: existing >= 0 ? 200 : 201 });

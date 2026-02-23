@@ -51,6 +51,8 @@ const QUEST_TYPE_LABELS: Record<string, string> = {
   pack_a_punch: "Pack-a-Punch",
   marketplace_request: "Marketplace Request",
   find_rarity_in_pack: "Find Rarity in Pack",
+  submit_movie: "Submit a Movie",
+  vote_movie: "Vote for a Movie",
 };
 
 export default function AdminQuestsPage() {

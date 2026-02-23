@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSubmissions, saveSubmissions, getCurrentWeek, getProfiles, addCredits, hasReceivedCreditsForWeek, getCreditSettings } from "@/lib/data";
+import { recordQuestProgress } from "@/lib/quests";
 import { getDisplayedBadgeForUser } from "@/lib/cards";
 
 export async function GET(request: Request) {
@@ -112,6 +113,9 @@ export async function POST(request: Request) {
     const { submission: amount } = getCreditSettings();
     addCredits(body.userId, amount, "submission", { submissionId: newId, weekId: currentWeek.id });
   }
+
+  // Movie night quest: submit a movie
+  recordQuestProgress(body.userId, "submit_movie");
 
   return NextResponse.json(newSub, { status: 201 });
 }

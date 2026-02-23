@@ -318,7 +318,7 @@ export default function HomePage() {
         }),
       });
       if (!res.ok) { const d = await res.json(); setSubError(d.error || "Failed"); }
-      else { setSelectedMovie(null); setSearchQuery(""); loadData(); }
+      else { setSelectedMovie(null); setSearchQuery(""); loadData(); window.dispatchEvent(new CustomEvent("dabys-quests-refresh")); }
     } finally { setSubmitting(false); }
   }
 
@@ -336,6 +336,7 @@ export default function HomePage() {
       body: JSON.stringify({ userId: user.id, userName: user.name, submissionId }),
     });
     loadData();
+    window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
   }
 
   async function clearMyVote() {

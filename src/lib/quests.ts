@@ -44,7 +44,9 @@ export type QuestType =
   | "disenchant_holo"
   | "pack_a_punch"
   | "marketplace_request"
-  | "find_rarity_in_pack";
+  | "find_rarity_in_pack"
+  | "submit_movie"
+  | "vote_movie";
 
 export interface QuestDefinition {
   label: string;
@@ -108,6 +110,8 @@ const DEFAULT_SETTINGS: QuestSettings = {
     pack_a_punch: { label: "Pack-a-Punch", description: "Pack-a-Punch a card", reward: 35, rewardType: "credits", alwaysActive: false, rarityParam: true },
     marketplace_request: { label: "Marketplace Request", description: "Place a buy order on the marketplace", reward: 20, rewardType: "credits", alwaysActive: false },
     find_rarity_in_pack: { label: "Find a Card in a Pack", description: "Find a card of a specific rarity in a pack", reward: 50, rewardType: "credits", alwaysActive: false, rarityParam: true },
+    submit_movie: { label: "Submit a Movie", description: "Submit a movie for this week's movie night", reward: 30, rewardType: "credits", alwaysActive: true },
+    vote_movie: { label: "Vote for a Movie", description: "Vote for a submission in this week's movie night", reward: 25, rewardType: "credits", alwaysActive: true },
   },
 };
 
