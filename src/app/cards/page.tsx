@@ -704,24 +704,41 @@ function CardsContent() {
     } catch { return new Set(); }
   });
   function toggleTrackCharacter(characterId: string) {
+    const uid = user?.id;
     setTrackedCharacterIds((prev) => {
       const next = new Set(prev);
       if (next.has(characterId)) {
         next.delete(characterId);
+        if (uid) {
+          fetch(`/api/cards/tracked?userId=${encodeURIComponent(uid)}&characterId=${encodeURIComponent(characterId)}`, { method: "DELETE" }).catch(() => {});
+        }
       } else if (next.size < MAX_TRACKED) {
         next.add(characterId);
+        if (uid) {
+          fetch("/api/cards/tracked", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: uid, characterId }),
+          }).catch(() => {});
+        }
       }
-      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
+      const arr = [...next];
+      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify(arr));
       return next;
     });
   }
 
   function untrackCharacterId(characterId: string) {
+    const uid = user?.id;
     setTrackedCharacterIds((prev) => {
       if (!prev.has(characterId)) return prev;
       const next = new Set(prev);
       next.delete(characterId);
-      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify([...next]));
+      if (uid) {
+        fetch(`/api/cards/tracked?userId=${encodeURIComponent(uid)}&characterId=${encodeURIComponent(characterId)}`, { method: "DELETE" }).catch(() => {});
+      }
+      const arr = [...next];
+      localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify(arr));
       return next;
     });
   }
@@ -844,9 +861,10 @@ function CardsContent() {
     if (!cached) return;
     const u = JSON.parse(cached) as User;
 
-    const [creditsRes, cardsRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, deniedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes, settingsRes, tradeBlockRes, prismsRes, alchemySettingsRes] = await Promise.all([
+    const [creditsRes, cardsRes, trackedRes, poolRes, listingsRes, ordersRes, winnersRes, attemptsRes, packsRes, tradesRes, acceptedTradesRes, deniedTradesRes, usersRes, stardustRes, shopItemsRes, codexRes, badgeProgressRes, quicksellPricesRes, settingsRes, tradeBlockRes, prismsRes, alchemySettingsRes] = await Promise.all([
       fetch(`/api/credits?userId=${encodeURIComponent(u.id)}`),
       fetch(`/api/cards?userId=${encodeURIComponent(u.id)}`),
+      fetch(`/api/cards/tracked?userId=${encodeURIComponent(u.id)}`),
       fetch("/api/cards/character-pool?codex=1"),
       fetch("/api/marketplace"),
       fetch("/api/marketplace/orders"),
@@ -873,6 +891,31 @@ function CardsContent() {
       if (typeof d?.balance === "number") setCreditBalance(d.balance);
     }
     if (cardsRes.ok) setCards(await cardsRes.json());
+    if (trackedRes.ok) {
+      const d = await trackedRes.json();
+      let ids = Array.isArray(d?.characterIds) ? d.characterIds : [];
+      if (ids.length === 0) {
+        try {
+          const raw = localStorage.getItem(TRACKED_CHARS_KEY);
+          const local = raw ? JSON.parse(raw) : [];
+          const localArr = Array.isArray(local) ? local.slice(0, MAX_TRACKED) : [];
+          if (localArr.length > 0) {
+            ids = localArr;
+            for (const cid of localArr) {
+              fetch("/api/cards/tracked", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: u.id, characterId: cid }),
+              }).catch(() => {});
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      setTrackedCharacterIds(new Set(ids.slice(0, MAX_TRACKED)));
+      try {
+        localStorage.setItem(TRACKED_CHARS_KEY, JSON.stringify(ids.slice(0, MAX_TRACKED)));
+      } catch { /* ignore */ }
+    }
     if (poolRes.ok) {
       const poolData = await poolRes.json();
       setPoolCount(poolData?.count ?? 0);

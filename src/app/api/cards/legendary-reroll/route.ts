@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { legendaryReroll } from "@/lib/cards";
-import { getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
+import { getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry, notifyAcquirerIfTracked } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 
 export async function POST(request: Request) {
@@ -27,6 +27,10 @@ export async function POST(request: Request) {
   incrementUserLifetimeStat(body.userId, "tradeUpsByRarity", 1, "legendary");
 
   if (result.card) {
+    if (result.card.characterId) {
+      const displayName = result.card.characterName || result.card.actorName || "this card";
+      notifyAcquirerIfTracked(body.userId, result.card.characterId, displayName);
+    }
     const users = getUsers();
     const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
     addEpicLegendaryTimelineEntry({

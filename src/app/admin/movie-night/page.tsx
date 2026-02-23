@@ -104,6 +104,7 @@ const TABS = [
   { key: "submissions", label: "Submissions", icon: "M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125M3.375 19.5c-.621 0-1.125-.504-1.125-1.125M13.5 3.375c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v5.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-5.25z" },
   { key: "votes", label: "Votes", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   { key: "winners", label: "Winners", icon: "M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172" },
+  { key: "attendance", label: "Who Showed Up", icon: "M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" },
   { key: "wheel", label: "Theme Wheel", icon: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" },
 ] as const;
 
@@ -222,6 +223,15 @@ export default function MovieNightPage() {
   const editWinnerDropdownRef = useRef<HTMLDivElement>(null);
   const editWinnerSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* ── Attendance state ── */
+  const [attendance, setAttendance] = useState<{ attended: string[]; packAwarded: string[] } | null>(null);
+  const [attendanceWeekId, setAttendanceWeekId] = useState("");
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceToggling, setAttendanceToggling] = useState<string | null>(null);
+  const [attendanceAwarding, setAttendanceAwarding] = useState(false);
+  const [attendancePackId, setAttendancePackId] = useState("");
+  const [packs, setPacks] = useState<{ id: string; name: string }[]>([]);
+
   /* ── Wheel state ── */
   const [wheel, setWheel] = useState<WheelData | null>(null);
   const [wheelEntries, setWheelEntries] = useState<string[]>([]);
@@ -276,6 +286,33 @@ export default function MovieNightPage() {
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
+
+  /* ── Load packs for attendance ── */
+  useEffect(() => {
+    if (activeTab === "attendance") {
+      fetch("/api/admin/packs")
+        .then((r) => r.json())
+        .then((d) => setPacks((d.packs ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))))
+        .catch(() => setPacks([]));
+    }
+  }, [activeTab]);
+
+  /* ── Load attendance when week selected ── */
+  useEffect(() => {
+    if (activeTab === "attendance" && attendanceWeekId) {
+      setAttendanceLoading(true);
+      fetch(`/api/admin/movie-night/attendance?weekId=${encodeURIComponent(attendanceWeekId)}`)
+        .then((r) => r.json())
+        .then((d) => setAttendance({ attended: d.attended ?? [], packAwarded: d.packAwarded ?? [] }))
+        .catch(() => setAttendance(null))
+        .finally(() => setAttendanceLoading(false));
+    } else if (activeTab === "attendance" && !attendanceWeekId && allWeeks.length > 0) {
+      const current = allWeeks.find((w) => !w.endedAt) ?? allWeeks[0];
+      setAttendanceWeekId(current.id);
+    } else if (activeTab !== "attendance") {
+      setAttendance(null);
+    }
+  }, [activeTab, attendanceWeekId, allWeeks]);
 
   /* ── Sync Weeks tab screening from current week winner ── */
   const currentWeekWinner = useMemo(
@@ -942,6 +979,50 @@ export default function MovieNightPage() {
     finally { setSettingResult(false); }
   }
 
+  /* ─── Attendance actions ─────────────────────────────────────────── */
+  async function toggleAttendance(userId: string) {
+    if (!attendanceWeekId) return;
+    setAttendanceToggling(userId);
+    try {
+      const res = await fetch("/api/admin/movie-night/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekId: attendanceWeekId, action: "toggle", userId }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setAttendance({ attended: d.attended ?? [], packAwarded: d.packAwarded ?? [] });
+      }
+    } finally {
+      setAttendanceToggling(null);
+    }
+  }
+
+  async function awardPacksToAttended() {
+    if (!attendanceWeekId || !attendancePackId || !attendance) return;
+    const toAward = attendance.attended.filter((id) => !attendance.packAwarded.includes(id));
+    if (toAward.length === 0) return;
+    setAttendanceAwarding(true);
+    try {
+      const res = await fetch("/api/admin/movie-night/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weekId: attendanceWeekId,
+          action: "award",
+          packId: attendancePackId,
+          userIds: toAward,
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setAttendance(d.attendance ?? attendance);
+      }
+    } finally {
+      setAttendanceAwarding(false);
+    }
+  }
+
   /* ─── Derived data ──────────────────────────────────────────────── */
 
   const weekMap = useMemo(() => {
@@ -1515,6 +1596,118 @@ export default function MovieNightPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── WHO SHOWED UP (ATTENDANCE) TAB ── */}
+      {activeTab === "attendance" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-white/80">Who Showed Up</h2>
+            <p className="text-sm text-white/40 mt-1">Track attendance and award a premium pack to those who showed up for movie night</p>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-5 space-y-4">
+            <div>
+              <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Week</label>
+              <select
+                value={attendanceWeekId}
+                onChange={(e) => setAttendanceWeekId(e.target.value)}
+                className="w-full max-w-xs bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors cursor-pointer"
+              >
+                <option value="" className="bg-[#1a1a2e]">Select week...</option>
+                {allWeeks.map((w) => (
+                  <option key={w.id} value={w.id} className="bg-[#1a1a2e]">
+                    #{w.id} — {w.theme} {!w.endedAt ? "(current)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {attendanceLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              </div>
+            ) : attendance && attendanceWeekId ? (
+              <>
+                <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <div>
+                    <label className="text-[11px] text-white/30 uppercase tracking-widest mb-1.5 block">Premium pack to award</label>
+                    <select
+                      value={attendancePackId}
+                      onChange={(e) => setAttendancePackId(e.target.value)}
+                      className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white/80 outline-none focus:border-purple-500/40 transition-colors cursor-pointer"
+                    >
+                      <option value="" className="bg-[#1a1a2e]">Select pack...</option>
+                      {packs.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-[#1a1a2e]">{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={awardPacksToAttended}
+                      disabled={attendanceAwarding || !attendancePackId || attendance.attended.filter((id) => !attendance.packAwarded.includes(id)).length === 0}
+                      className="px-5 py-2.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm font-medium hover:bg-amber-500/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {attendanceAwarding ? "Awarding..." : `Award pack to ${attendance.attended.filter((id) => !attendance.packAwarded.includes(id)).length} attended`}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-4">
+                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-3">Mark who showed up</h3>
+                  <p className="text-xs text-white/40 mb-4">Check each person who attended. Then award the premium pack above.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {users.map((u) => {
+                      const attended = attendance.attended.includes(u.id);
+                      const packAwarded = attendance.packAwarded.includes(u.id);
+                      const isToggling = attendanceToggling === u.id;
+                      return (
+                        <div
+                          key={u.id}
+                          className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                            attended ? "border-amber-500/30 bg-amber-500/10" : "border-white/[0.06] bg-white/[0.02]"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleAttendance(u.id)}
+                            disabled={isToggling}
+                            className={`flex-shrink-0 w-6 h-6 rounded flex items-center justify-center border-2 transition-all cursor-pointer disabled:opacity-50 ${
+                              attended
+                                ? "border-amber-400 bg-amber-500/30"
+                                : "border-white/20 bg-white/[0.02] hover:border-white/40"
+                            }`}
+                          >
+                            {isToggling ? (
+                              <div className="w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                            ) : attended ? (
+                              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : null}
+                          </button>
+                          <span className="flex-1 text-sm font-medium text-white/80 truncate">{u.name}</span>
+                          {packAwarded && (
+                            <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                              Pack awarded
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {users.length === 0 && (
+                    <p className="text-white/40 text-sm py-4">No users yet.</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-white/40 text-sm py-4">Select a week to track attendance.</p>
+            )}
+          </div>
         </div>
       )}
 

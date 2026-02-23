@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buyListing } from "@/lib/marketplace";
 import { getCompletedWinnerIds } from "@/lib/cards";
-import { getUsers, getListing, getWinners, addActivity, addNotification, addGlobalNotification, getSiteSettings } from "@/lib/data";
+import { getUsers, getListing, getWinners, addActivity, addNotification, addGlobalNotification, getSiteSettings, notifyAcquirerIfTracked } from "@/lib/data";
 
 export async function POST(request: Request) {
   const settings = getSiteSettings();
@@ -31,6 +31,12 @@ export async function POST(request: Request) {
       { error: result.error || "Failed to buy" },
       { status: 400 }
     );
+  }
+
+  // Notify buyer if others are tracking this card
+  if (result.card?.characterId) {
+    const displayName = result.card.characterName || result.card.actorName || "this card";
+    notifyAcquirerIfTracked(body.userId, result.card.characterId, displayName);
   }
 
   // --- Activity logging ---

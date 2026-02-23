@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { acceptTrade } from "@/lib/trades";
-import { getTradeById, getUsers, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
+import { getTradeById, getUsers, getWinners, getCardById, addActivity, addNotification, addGlobalNotification, notifyAcquirerIfTracked } from "@/lib/data";
 import { getCompletedWinnerIds } from "@/lib/cards";
 import { recordQuestProgress } from "@/lib/quests";
 
@@ -49,6 +49,22 @@ export async function POST(
       message: `completed a trade with ${counterpartyName} (${totalCards} card${totalCards !== 1 ? "s" : ""})`,
       meta: { tradeId, counterpartyName, counterpartyUserId: trade.counterpartyUserId },
     });
+
+    // Notify acquirers if others are tracking the cards they received
+    for (const cardId of trade.requestedCardIds) {
+      const card = getCardById(cardId);
+      if (card?.characterId && card.userId === trade.initiatorUserId) {
+        const displayName = card.characterName || card.actorName || "this card";
+        notifyAcquirerIfTracked(trade.initiatorUserId, card.characterId, displayName);
+      }
+    }
+    for (const cardId of trade.offeredCardIds) {
+      const card = getCardById(cardId);
+      if (card?.characterId && card.userId === trade.counterpartyUserId) {
+        const displayName = card.characterName || card.actorName || "this card";
+        notifyAcquirerIfTracked(trade.counterpartyUserId, card.characterId, displayName);
+      }
+    }
 
     // Personal notification to the trade initiator
     addNotification({

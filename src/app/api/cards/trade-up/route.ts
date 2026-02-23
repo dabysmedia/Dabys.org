@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { tradeUp } from "@/lib/cards";
-import { getCardById, getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
+import { getCardById, getUsers, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry, notifyAcquirerIfTracked } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import type { Rarity } from "@/lib/quests";
 
@@ -37,7 +37,12 @@ export async function POST(request: Request) {
     incrementUserLifetimeStat(body.userId, "tradeUpsByRarity", 1, inputRarity);
   }
 
-  if (result.card && (result.card.rarity === "epic" || result.card.rarity === "legendary")) {
+  if (result.card) {
+    if (result.card.characterId) {
+      const displayName = result.card.characterName || result.card.actorName || "this card";
+      notifyAcquirerIfTracked(body.userId, result.card.characterId, displayName);
+    }
+    if (result.card.rarity === "epic" || result.card.rarity === "legendary") {
     const users = getUsers();
     const userName = users.find((u) => u.id === body.userId)?.name || "Someone";
     addEpicLegendaryTimelineEntry({
@@ -65,6 +70,7 @@ export async function POST(request: Request) {
         actorName: userName,
         meta: { cardId: result.card.id, characterName: result.card.characterName, movieTitle: result.card.movieTitle },
       });
+    }
     }
   }
 

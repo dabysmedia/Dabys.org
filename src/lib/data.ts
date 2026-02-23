@@ -237,6 +237,59 @@ export function saveVotes(votes: Vote[]) {
   writeJson("votes.json", votes);
 }
 
+// ──── Movie Night Attendance (who showed up, pack awarded) ──────
+export interface WeekAttendance {
+  attended: string[]; // userIds who showed up
+  packAwarded: string[]; // userIds who received the premium pack
+}
+
+type MovieNightAttendanceStore = Record<string, WeekAttendance>;
+
+function getMovieNightAttendanceRaw(): MovieNightAttendanceStore {
+  try {
+    return readJson<MovieNightAttendanceStore>("movieNightAttendance.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveMovieNightAttendanceRaw(store: MovieNightAttendanceStore) {
+  writeJson("movieNightAttendance.json", store);
+}
+
+export function getWeekAttendance(weekId: string): WeekAttendance {
+  const store = getMovieNightAttendanceRaw();
+  const w = store[weekId];
+  return w ?? { attended: [], packAwarded: [] };
+}
+
+export function setWeekAttendance(weekId: string, attended: string[]): void {
+  const store = getMovieNightAttendanceRaw();
+  const existing = store[weekId] ?? { attended: [], packAwarded: [] };
+  store[weekId] = { ...existing, attended };
+  saveMovieNightAttendanceRaw(store);
+}
+
+export function toggleWeekAttendance(weekId: string, userId: string): void {
+  const store = getMovieNightAttendanceRaw();
+  const existing = store[weekId] ?? { attended: [], packAwarded: [] };
+  const idx = existing.attended.indexOf(userId);
+  const attended =
+    idx >= 0
+      ? existing.attended.filter((id) => id !== userId)
+      : [...existing.attended, userId];
+  store[weekId] = { ...existing, attended };
+  saveMovieNightAttendanceRaw(store);
+}
+
+export function markPackAwardedForWeek(weekId: string, userId: string): void {
+  const store = getMovieNightAttendanceRaw();
+  const existing = store[weekId] ?? { attended: [], packAwarded: [] };
+  if (existing.packAwarded.includes(userId)) return;
+  store[weekId] = { ...existing, packAwarded: [...existing.packAwarded, userId] };
+  saveMovieNightAttendanceRaw(store);
+}
+
 // ──── Ratings (thumbs + stars per user per winner) ──────
 export interface Rating {
   id: string;
@@ -455,6 +508,79 @@ export function removeWatchlistItem(userId: string, tmdbId: number): boolean {
   raw.splice(idx, 1);
   saveWatchlistRaw(raw);
   return true;
+}
+
+// ──── Tracked Cards (TCG: users track character IDs they want; acquirer gets notified) ─
+const TRACKED_CARDS_MAX_PER_USER = 10;
+
+function getTrackedCardsRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>("trackedCards.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveTrackedCardsRaw(data: Record<string, string[]>) {
+  writeJson("trackedCards.json", data);
+}
+
+export function getTrackedCharacterIds(userId: string): string[] {
+  const data = getTrackedCardsRaw();
+  const list = data[userId] ?? [];
+  return Array.isArray(list) ? list.slice(0, TRACKED_CARDS_MAX_PER_USER) : [];
+}
+
+export function addTrackedCharacter(userId: string, characterId: string): boolean {
+  const data = getTrackedCardsRaw();
+  const list = data[userId] ?? [];
+  if (!Array.isArray(list)) return false;
+  if (list.includes(characterId)) return true;
+  if (list.length >= TRACKED_CARDS_MAX_PER_USER) return false;
+  data[userId] = [...list, characterId];
+  saveTrackedCardsRaw(data);
+  return true;
+}
+
+export function removeTrackedCharacter(userId: string, characterId: string): boolean {
+  const data = getTrackedCardsRaw();
+  const list = data[userId] ?? [];
+  if (!Array.isArray(list)) return false;
+  const idx = list.indexOf(characterId);
+  if (idx < 0) return false;
+  data[userId] = list.filter((_, i) => i !== idx);
+  saveTrackedCardsRaw(data);
+  return true;
+}
+
+/** Returns count of users (excluding acquirerUserId) who are tracking this character. */
+export function getUsersTrackingCharacterCount(characterId: string, excludeUserId?: string): number {
+  const data = getTrackedCardsRaw();
+  let count = 0;
+  for (const [uid, list] of Object.entries(data)) {
+    if (uid === excludeUserId) continue;
+    if (Array.isArray(list) && list.includes(characterId)) count++;
+  }
+  return count;
+}
+
+/** If other users are tracking this character, notify the acquirer. Call when a user acquires a card. */
+export function notifyAcquirerIfTracked(
+  acquirerUserId: string,
+  characterId: string,
+  cardDisplayName: string
+): void {
+  const count = getUsersTrackingCharacterCount(characterId, acquirerUserId);
+  if (count < 1) return;
+  const msg = count === 1
+    ? `1 user is tracking ${cardDisplayName}`
+    : `${count} users are tracking ${cardDisplayName}`;
+  addNotification({
+    type: "card_tracked_by_others",
+    targetUserId: acquirerUserId,
+    message: msg,
+    meta: { characterId, cardDisplayName, trackerCount: count },
+  });
 }
 
 // ──── Credit Settings (reward amounts, editable in admin) ─
@@ -4008,7 +4134,8 @@ export type NotificationType =
   | "set_complete"
   | "trade_complete"
   | "market_sale"
-  | "market_order_filled";
+  | "market_order_filled"
+  | "card_tracked_by_others";
 
 export interface Notification {
   id: string;

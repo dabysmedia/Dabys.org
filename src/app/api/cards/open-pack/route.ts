@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { openPack, getCompletedWinnerIds } from "@/lib/cards";
-import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry } from "@/lib/data";
+import { getPacks, getUsers, getWinners, addActivity, addGlobalNotification, addEpicLegendaryTimelineEntry, notifyAcquirerIfTracked } from "@/lib/data";
 import { recordQuestProgress } from "@/lib/quests";
 import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
@@ -40,6 +40,10 @@ export async function POST(request: Request) {
 
   if (result.cards) {
     for (const card of result.cards) {
+      if (card.characterId) {
+        const displayName = card.characterName || card.actorName || "this card";
+        notifyAcquirerIfTracked(body.userId, card.characterId, displayName);
+      }
       if (card.rarity === "epic" || card.rarity === "legendary") {
         addEpicLegendaryTimelineEntry({
           userId: body.userId,

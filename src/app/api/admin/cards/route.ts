@@ -7,6 +7,7 @@ import {
   updateCard,
   removeCard,
   getUsers,
+  notifyAcquirerIfTracked,
 } from "@/lib/data";
 
 async function requireAdmin() {
@@ -77,6 +78,9 @@ export async function POST(request: Request) {
     profilePath: char.profilePath,
     cardType: char.cardType ?? "actor",
   });
+
+  const displayName = char.characterName || char.actorName || "this card";
+  notifyAcquirerIfTracked(userId, char.characterId, displayName);
 
   return NextResponse.json(card, { status: 201 });
 }

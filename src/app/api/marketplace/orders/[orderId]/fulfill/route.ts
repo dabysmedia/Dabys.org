@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { fulfillBuyOrder } from "@/lib/marketplace";
 import { getCompletedWinnerIds } from "@/lib/cards";
-import { getUsers, getBuyOrder, getCardById, getWinners, addActivity, addNotification, addGlobalNotification } from "@/lib/data";
+import { getUsers, getBuyOrder, getCardById, getWinners, addActivity, addNotification, addGlobalNotification, notifyAcquirerIfTracked } from "@/lib/data";
 
 export async function POST(
   request: Request,
@@ -28,6 +28,12 @@ export async function POST(
       { error: result.error || "Failed to fulfill order" },
       { status: 400 }
     );
+  }
+
+  // Notify requester (acquirer) if others are tracking this card
+  if (order && result.success && card?.characterId) {
+    const displayName = card.characterName || card.actorName || "this card";
+    notifyAcquirerIfTracked(order.requesterUserId, card.characterId, displayName);
   }
 
   // --- Activity logging ---
