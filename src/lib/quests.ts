@@ -513,7 +513,7 @@ function maybeAwardAllCompleteBonus(
 export function claimQuestReward(
   userId: string,
   questIndex: number
-): { success: boolean; reward?: number; rewardType?: QuestRewardType; allCompleteBonus?: number; error?: string } {
+): { success: boolean; reward?: number; rewardType?: QuestRewardType; rewardPackId?: string; allCompleteBonus?: number; error?: string } {
   const today = getTodayDateStr();
   const store = getDailyQuestsStore();
   const userQuests = store[today]?.[userId];
