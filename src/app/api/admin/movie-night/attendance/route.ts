@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     }
 
     const attendance = getWeekAttendance(weekId);
-    const toAward = userIds.filter((id) => attendance.attended.includes(id) && !attendance.packAwarded.includes(id));
+    const toAward = userIds.filter((id: string) => attendance.attended.includes(id) && !attendance.packAwarded.includes(id));
 
     const results: { userId: string; success: boolean; error?: string }[] = [];
     for (const uid of toAward) {
