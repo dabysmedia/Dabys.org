@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   if (action === "award") {
     const userId = typeof body.userId === "string" ? body.userId.trim() : "";
     const userIds = Array.isArray(body.userIds)
-      ? body.userIds.filter((id): id is string => typeof id === "string")
+      ? body.userIds.filter((id: unknown): id is string => typeof id === "string")
       : userId ? [userId] : [];
     const packId = typeof body.packId === "string" ? body.packId.trim() : "";
 

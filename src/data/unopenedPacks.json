@@ -1,0 +1,23 @@
+[
+  {
+    "id": "unopened-1771811811600-1gkh1drhz",
+    "userId": "1",
+    "packId": "pack-1770883960789-vqg92vi",
+    "acquiredAt": "2026-02-23T01:56:51.600Z",
+    "source": "daily_quest"
+  },
+  {
+    "id": "unopened-1771876907648-ns77rvnr6",
+    "userId": "1",
+    "packId": "pack-1771076755342-xbvgzn7",
+    "acquiredAt": "2026-02-23T20:01:47.648Z",
+    "source": "movie_night_attendance"
+  },
+  {
+    "id": "unopened-1771876907650-3y70qtyl4",
+    "userId": "2",
+    "packId": "pack-1771076755342-xbvgzn7",
+    "acquiredAt": "2026-02-23T20:01:47.650Z",
+    "source": "movie_night_attendance"
+  }
+]

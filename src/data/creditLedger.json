@@ -3135,5 +3135,15 @@
       "winnerId": "2"
     },
     "createdAt": "2026-02-22T07:38:38.736Z"
+  },
+  {
+    "id": "cl-1771811741267-wl16akf",
+    "userId": "2",
+    "amount": 25,
+    "reason": "daily_quest_reward",
+    "metadata": {
+      "questIndex": 0
+    },
+    "createdAt": "2026-02-23T01:55:41.266Z"
   }
 ]
