@@ -326,6 +326,7 @@ export default function AdminCardsCreditsPage() {
     quicksellUncommon: number;
     quicksellRare: number;
     quicksellEpic: number;
+    quicksellLegendary: number;
     tradeUpLegendaryFailureCredits: number;
     feedbackAccepted: number;
     setCompletionReward: number;
@@ -345,6 +346,7 @@ export default function AdminCardsCreditsPage() {
     quicksellUncommon: "5",
     quicksellRare: "20",
     quicksellEpic: "80",
+    quicksellLegendary: "200",
     tradeUpLegendaryFailureCredits: "100",
     feedbackAccepted: "10",
     setCompletionReward: "1000",
@@ -552,6 +554,7 @@ export default function AdminCardsCreditsPage() {
           quicksellUncommon: String(d.quicksellUncommon ?? 5),
           quicksellRare: String(d.quicksellRare ?? 20),
           quicksellEpic: String(d.quicksellEpic ?? 80),
+          quicksellLegendary: String(d.quicksellLegendary ?? 200),
           tradeUpLegendaryFailureCredits: String(d.tradeUpLegendaryFailureCredits ?? 100),
           feedbackAccepted: String(d.feedbackAccepted ?? 10),
           setCompletionReward: String(d.setCompletionReward ?? 1000),
@@ -1014,6 +1017,7 @@ export default function AdminCardsCreditsPage() {
         quicksellUncommon: parseInt(creditSettingsForm.quicksellUncommon, 10) ?? 0,
         quicksellRare: parseInt(creditSettingsForm.quicksellRare, 10) ?? 0,
         quicksellEpic: parseInt(creditSettingsForm.quicksellEpic, 10) ?? 0,
+        quicksellLegendary: parseInt(creditSettingsForm.quicksellLegendary, 10) ?? 0,
         tradeUpLegendaryFailureCredits: parseInt(creditSettingsForm.tradeUpLegendaryFailureCredits, 10) ?? 0,
         feedbackAccepted: parseInt(creditSettingsForm.feedbackAccepted, 10) ?? 0,
         setCompletionReward: parseInt(creditSettingsForm.setCompletionReward, 10) ?? 0,
@@ -2791,6 +2795,7 @@ export default function AdminCardsCreditsPage() {
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell rare</label><input type="number" min={0} value={creditSettingsForm.quicksellRare} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellRare: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell epic</label><input type="number" min={0} value={creditSettingsForm.quicksellEpic} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellEpic: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+              <div><label className="block text-xs text-white/40 mb-1">Quicksell legendary</label><input type="number" min={0} value={creditSettingsForm.quicksellLegendary} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellLegendary: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
               <div><label className="block text-xs text-white/40 mb-1" title="When 4 epics are traded up and the result is credits (67% chance) instead of a legendary">Epic→Legendary trade-up failure</label><input type="number" min={0} value={creditSettingsForm.tradeUpLegendaryFailureCredits} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, tradeUpLegendaryFailureCredits: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             </div>
             <div className="flex items-end"><button type="submit" disabled={savingCreditSettings} className="px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 cursor-pointer">{savingCreditSettings ? "Saving..." : "Save"}</button></div>

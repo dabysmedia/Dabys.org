@@ -43,12 +43,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (card.rarity === "legendary") {
-      return NextResponse.json(
-        { error: "Legendary cards cannot be quicksold" },
-        { status: 400 }
-      );
-    }
     const settings = getCreditSettings();
     const cr =
       card.rarity === "uncommon"
@@ -57,7 +51,9 @@ export async function POST(request: Request) {
           ? settings.quicksellRare
           : card.rarity === "epic"
             ? settings.quicksellEpic
-            : 0;
+            : card.rarity === "legendary"
+              ? settings.quicksellLegendary
+              : 0;
     if (cr <= 0) {
       return NextResponse.json(
         { error: `Invalid rarity for quicksell: ${card.rarity}` },

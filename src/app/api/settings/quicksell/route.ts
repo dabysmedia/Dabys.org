@@ -8,5 +8,6 @@ export async function GET() {
     quicksellUncommon: settings.quicksellUncommon,
     quicksellRare: settings.quicksellRare,
     quicksellEpic: settings.quicksellEpic,
+    quicksellLegendary: settings.quicksellLegendary,
   });
 }

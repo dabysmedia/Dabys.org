@@ -75,17 +75,17 @@ export function getDisenchantDust(rarity: string, finish: CardFinish, settings?:
   return map[rarity] ?? map.uncommon ?? DISENCHANT_DUST.uncommon;
 }
 
-/** Credits per rarity for quicksell (vendor). Used for client-side display. Legendary cannot be quicksold. Server uses getCreditSettings() for actual payouts. */
+/** Credits per rarity for quicksell (vendor). Used for client-side display. Server uses getCreditSettings() for actual payouts. */
 export const QUICKSELL_CREDITS: Record<string, number> = {
   uncommon: 5,
   rare: 20,
   epic: 80,
-  legendary: 0,
+  legendary: 200,
 };
 
 /** Client-safe: returns quicksell credits from default map. Server API uses credit settings for actual amount. */
 export function getQuicksellCredits(rarity: string): number {
-  return QUICKSELL_CREDITS[rarity] ?? (rarity === "legendary" ? 0 : QUICKSELL_CREDITS.uncommon);
+  return QUICKSELL_CREDITS[rarity] ?? QUICKSELL_CREDITS.uncommon;
 }
 
 /** Calculate prismatic craft success chance based on number of prisms applied. Pass settings from API or client-fetched config; uses fallback if omitted. */

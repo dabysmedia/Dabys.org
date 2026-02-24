@@ -618,7 +618,7 @@ function CardsContent() {
   const [quicksellVendingId, setQuicksellVendingId] = useState<string | null>(null);
   const [quicksellError, setQuicksellError] = useState("");
   /** Fetched from /api/settings/quicksell so display reflects admin-configured prices. */
-  const [quicksellPrices, setQuicksellPrices] = useState<{ quicksellUncommon: number; quicksellRare: number; quicksellEpic: number } | null>(null);
+  const [quicksellPrices, setQuicksellPrices] = useState<{ quicksellUncommon: number; quicksellRare: number; quicksellEpic: number; quicksellLegendary: number } | null>(null);
   const [stardustDelta, setStardustDelta] = useState<number | null>(null);
   const [stardustAnimClass, setStardustAnimClass] = useState("");
   const stardustPrevRef = useRef<number>(0);
@@ -1019,7 +1019,12 @@ function CardsContent() {
     if (quicksellPricesRes.ok) {
       const d = await quicksellPricesRes.json();
       if (typeof d?.quicksellUncommon === "number" && typeof d?.quicksellRare === "number" && typeof d?.quicksellEpic === "number") {
-        setQuicksellPrices({ quicksellUncommon: d.quicksellUncommon, quicksellRare: d.quicksellRare, quicksellEpic: d.quicksellEpic });
+        setQuicksellPrices({
+          quicksellUncommon: d.quicksellUncommon,
+          quicksellRare: d.quicksellRare,
+          quicksellEpic: d.quicksellEpic,
+          quicksellLegendary: typeof d?.quicksellLegendary === "number" ? d.quicksellLegendary : 200,
+        });
       }
     }
     if (codexRes.ok) {
@@ -1882,7 +1887,7 @@ function CardsContent() {
     const card = cards.find((c) => c.id === cardId);
     if (!card || quicksellBenchCardIds.includes(cardId)) return;
     if (quicksellBenchCardIds.length >= 5) return;
-    if (card.rarity === "legendary") return;
+    if (getQuicksellCreditsForDisplay(card.rarity) <= 0) return;
     setQuicksellBenchSlots((prev) => {
       const next = [...prev];
       const idx = next.findIndex((id) => id == null);
@@ -1902,7 +1907,7 @@ function CardsContent() {
     const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
-      c.rarity !== "legendary" &&
+      getQuicksellCreditsForDisplay(c.rarity) > 0 &&
       !filled.includes(c.id) &&
       isCardSlotAlreadyInCodex(c)
     );
@@ -1915,7 +1920,7 @@ function CardsContent() {
     const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
-      c.rarity !== "legendary" &&
+      getQuicksellCreditsForDisplay(c.rarity) > 0 &&
       !filled.includes(c.id)
     );
     const emptyCount = 5 - filled.length;
@@ -1936,7 +1941,7 @@ function CardsContent() {
     const eligible = filteredInventoryCards.filter((c) =>
       c.id &&
       !myListedCardIds.has(c.id) &&
-      c.rarity !== "legendary" &&
+      getQuicksellCreditsForDisplay(c.rarity) > 0 &&
       !filled.includes(c.id) &&
       isCardSlotAlreadyInCodex(c)
     );
@@ -1954,11 +1959,11 @@ function CardsContent() {
 
   /** Credits for quicksell display/confirm: use admin-configured prices when loaded, else defaults. */
   function getQuicksellCreditsForDisplay(rarity: string): number {
-    if (rarity === "legendary") return 0;
     if (quicksellPrices) {
       if (rarity === "uncommon") return quicksellPrices.quicksellUncommon;
       if (rarity === "rare") return quicksellPrices.quicksellRare;
       if (rarity === "epic") return quicksellPrices.quicksellEpic;
+      if (rarity === "legendary") return quicksellPrices.quicksellLegendary;
     }
     return getQuicksellCredits(rarity);
   }
@@ -2925,7 +2930,7 @@ function CardsContent() {
             >
               <p className="text-sm font-semibold text-amber-300 mb-2">How the TCG works</p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Credits:</strong> Trivia + quests. <strong className="text-amber-300/95">Store:</strong> Buy packs. <strong className="text-amber-300/95">Trade up:</strong> 4 same-rarity, same-type cards → 1 next rarity (Epic→Legendary: 33% card, 67% credits). <strong className="text-amber-300/95">Alchemy:</strong> Disenchant foils for Stardust or Pack-A-Punch normals to Holo. <strong className="text-amber-300/95">Quicksell:</strong> Vendor non-legendary for credits.
+                <strong className="text-amber-300/95">Credits:</strong> Trivia + quests. <strong className="text-amber-300/95">Store:</strong> Buy packs. <strong className="text-amber-300/95">Trade up:</strong> 4 same-rarity, same-type cards → 1 next rarity (Epic→Legendary: 33% card, 67% credits). <strong className="text-amber-300/95">Alchemy:</strong> Disenchant foils for Stardust or Pack-A-Punch normals to Holo. <strong className="text-amber-300/95">Quicksell:</strong> Vendor cards for credits (by rarity).
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
                 <strong className="text-amber-300/95">Marketplace</strong> & <strong className="text-amber-300/95">Trade</strong>: buy/sell and trade with others.
@@ -4018,7 +4023,7 @@ function CardsContent() {
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-2">
                   <h2 className="text-lg font-semibold text-amber-400/90 mb-2">Quicksell</h2>
                   <p className="text-sm text-white/60 mb-4">
-                    Vendor up to 5 non-legendary cards for credits (by rarity).
+                    Vendor up to 5 cards for credits (by rarity).
                   </p>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
@@ -4208,7 +4213,7 @@ function CardsContent() {
                 const canAddTradeUp = !inTrade && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
                 const canAddReroll = !inTrade && inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
                 const canAddAlchemy = !inTrade && inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!card.isFoil || (card.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && card.isFoil && (card.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !card.isFoil));
-                const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5;
+                const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(card.rarity) > 0;
                 const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && !canAddPrismaticForge && !onPrismaticForge && inventorySubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
@@ -4324,7 +4329,7 @@ function CardsContent() {
                         if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!c.isFoil || (c.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && c.isFoil && (c.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
                       }
                     } else if (inventorySubTab === "quicksell") {
-                      if (c.rarity !== "legendary" && !quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5) return { card: c, target: "quicksell" };
+                      if (!quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(c.rarity) > 0) return { card: c, target: "quicksell" };
                     } else {
                       if (c.rarity === "legendary" && !legendaryRerollCardIds.includes(c.id!) && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (c.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"))) return { card: c, target: "reroll" };
                       if (c.rarity !== "legendary" && !tradeUpCardIds.includes(c.id!) && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (c.rarity === tradeUpCards[0]?.rarity && (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")))) return { card: c, target: "tradeup" };
