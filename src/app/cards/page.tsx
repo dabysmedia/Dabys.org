@@ -556,6 +556,7 @@ function CardsContent() {
   const [legendaryBlockShown, setLegendaryBlockShown] = useState(false);
   const [packs, setPacks] = useState<Pack[]>([]);
   const [unopenedPacks, setUnopenedPacks] = useState<UnopenedPack[]>([]);
+  const [packDefinitionsForUnopened, setPackDefinitionsForUnopened] = useState<Record<string, { name: string; imageUrl: string }>>({});
   const [openingPackId, setOpeningPackId] = useState<string | null>(null);
   const [trades, setTrades] = useState<TradeOfferEnriched[]>([]);
   const [showTradeModal, setShowTradeModal] = useState(false);
@@ -935,6 +936,7 @@ function CardsContent() {
       const d = await packsRes.json();
       setPacks(d.packs || []);
       setUnopenedPacks(d.unopenedPacks || []);
+      setPackDefinitionsForUnopened(d.packDefinitionsForUnopened || {});
     }
     if (tradesRes.ok) setTrades(await tradesRes.json());
     let acceptedList: TradeOfferEnriched[] = [];
@@ -1172,7 +1174,7 @@ function CardsContent() {
     const uid = getUserId();
     if (!uid) return;
     const res = await fetch(`/api/cards/packs?userId=${encodeURIComponent(uid)}`);
-    if (res.ok) { const d = await res.json(); setPacks(d.packs || []); setUnopenedPacks(d.unopenedPacks || []); }
+    if (res.ok) { const d = await res.json(); setPacks(d.packs || []); setUnopenedPacks(d.unopenedPacks || []); setPackDefinitionsForUnopened(d.packDefinitionsForUnopened || {}); }
   }, [getUserId]);
 
   const refreshCodex = useCallback(async () => {
@@ -1330,6 +1332,16 @@ function CardsContent() {
     window.addEventListener("dabys-packs-refresh", handler);
     return () => window.removeEventListener("dabys-packs-refresh", handler);
   }, [refreshPacks]);
+
+  // Refresh packs (including unopened) when switching to Store tab or when page becomes visible — ensures unopened packs show up
+  useEffect(() => {
+    if (tab === "store") refreshPacks();
+  }, [tab, refreshPacks]);
+  useEffect(() => {
+    const onVisible = () => { if (tab === "store" && !document.hidden) refreshPacks(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [tab, refreshPacks]);
 
   // Keep incoming-trade refs in sync and notify header (red dot); sound only on accept
   useEffect(() => {
@@ -3162,7 +3174,7 @@ function CardsContent() {
                   </div>
                   <div className="flex flex-wrap gap-4">
                     {unopenedPacks.map((up) => {
-                      const packDef = packs.find((p) => p.id === up.packId);
+                      const packDef = packs.find((p) => p.id === up.packId) ?? packDefinitionsForUnopened[up.packId];
                       const isOpening = openingPackId === up.id;
                       return (
                         <div

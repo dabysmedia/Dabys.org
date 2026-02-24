@@ -2281,7 +2281,7 @@ export default function AdminCardsCreditsPage() {
               <label className="block text-[11px] text-white/50 mb-1">Pack</label>
               <select value={awardPackPackId} onChange={(e) => setAwardPackPackId(e.target.value)} className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]">
                 <option value="">-- Select pack --</option>
-                {packs.filter((p) => p.isActive && !(p as { comingSoon?: boolean }).comingSoon).map((p) => (
+                {packs.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>

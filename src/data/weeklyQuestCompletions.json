@@ -9,6 +9,16 @@
         "completed": false,
         "claimed": false
       }
+    },
+    "8": {
+      "submit_movie": {
+        "completed": false,
+        "claimed": false
+      },
+      "vote_movie": {
+        "completed": false,
+        "claimed": false
+      }
     }
   }
 }

@@ -37,6 +37,15 @@ export async function GET(request: Request) {
     : rawPacks;
 
   const unopenedPacks = userId ? getUnopenedPacks(userId) : [];
-  return NextResponse.json({ packs, unopenedPacks });
+  const allPacks = getPacks();
+  const packIdsInUnopened = [...new Set(unopenedPacks.map((u) => u.packId))];
+  const packDefinitionsForUnopened: Record<string, { name: string; imageUrl: string }> = {};
+  for (const packId of packIdsInUnopened) {
+    const pack = allPacks.find((p) => p.id === packId);
+    if (pack) {
+      packDefinitionsForUnopened[packId] = { name: pack.name, imageUrl: pack.imageUrl };
+    }
+  }
+  return NextResponse.json({ packs, unopenedPacks, packDefinitionsForUnopened });
 }
 

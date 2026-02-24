@@ -17,6 +17,7 @@ import {
   getListings,
   getPacks,
   getPacksRaw,
+  getAllowedCardTypeIds,
   getProfile,
   getPackPurchasesInWindow,
   getCodexUnlockedCharacterIds,
@@ -398,10 +399,21 @@ function rollAndAddPackCards(
     ? allPacks.find((p) => p.id === packId && p.isActive && !p.comingSoon)
     : undefined;
 
+  // When pack not found (inactive/coming-soon/deleted), fall back to raw config so card type filter still applies
+  const rawPack = packId ? getPacksRaw().find((p) => p.id === packId) : undefined;
+  const allowedIds = getAllowedCardTypeIds();
+  const fallbackAllowedCardTypes =
+    rawPack?.allowedCardTypes && Array.isArray(rawPack.allowedCardTypes) && rawPack.allowedCardTypes.length > 0
+      ? rawPack.allowedCardTypes.filter((t) => allowedIds.includes(String(t)))
+      : undefined;
+
   const effectivePackId = selectedPack?.id ?? "default";
   const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
   const allowedRarities = selectedPack?.allowedRarities;
-  const allowedCardTypes = selectedPack?.allowedCardTypes;
+  const allowedCardTypes =
+    selectedPack?.allowedCardTypes && selectedPack.allowedCardTypes.length > 0
+      ? selectedPack.allowedCardTypes
+      : fallbackAllowedCardTypes ?? ["actor"];
 
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
 
@@ -410,7 +422,11 @@ function rollAndAddPackCards(
     .filter((c) => {
       const rarityOk = !allowedRarities || allowedRarities.includes(norm(c.rarity) as any);
       const type = (c.cardType ?? "actor") as NonNullable<typeof c.cardType>;
-      const typeOk = !allowedCardTypes || allowedCardTypes.length === 0 || allowedCardTypes.includes(type as any);
+      const typeNorm = String(type).toLowerCase();
+      const typeOk =
+        allowedCardTypes.length === 0
+          ? true
+          : allowedCardTypes.some((at) => String(at).toLowerCase() === typeNorm);
       return rarityOk && typeOk;
     });
   const ownedLegendarySlotIds = getOwnedLegendarySlotIds();
@@ -538,10 +554,10 @@ export function awardPack(
   source?: string
 ): { success: boolean; unopenedPack?: { id: string; packId: string; acquiredAt: string }; error?: string } {
   migrateCommonToUncommon();
-  const allPacks = getPacks();
-  const pack = allPacks.find((p) => p.id === packId && p.isActive && !p.comingSoon);
+  const rawPacks = getPacksRaw();
+  const pack = rawPacks.find((p) => p.id === packId);
   if (!pack) {
-    return { success: false, error: "Pack not found or inactive" };
+    return { success: false, error: "Pack not found" };
   }
   const entry = addUnopenedPack(userId, packId, source);
   return {

@@ -265,5 +265,53 @@
     "movieTitle": "The Housemaid",
     "id": "tl_1771918580959_3tagor",
     "timestamp": "2026-02-24T07:36:20.959Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1771919683214-21u1tl7",
+    "characterName": "Unknown",
+    "actorName": "alt art nacho",
+    "movieTitle": "Nacho Libre",
+    "id": "tl_1771919683223_xl3b34",
+    "timestamp": "2026-02-24T07:54:43.223Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1771919683215-fjre0e0",
+    "characterName": "Pluinger head",
+    "actorName": "hunter",
+    "movieTitle": "The Housemaid",
+    "id": "tl_1771919683224_ee1k5m",
+    "timestamp": "2026-02-24T07:54:43.224Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1771919823221-gtxh40f",
+    "characterName": "Pluinger head",
+    "actorName": "hunter",
+    "movieTitle": "The Housemaid",
+    "id": "tl_1771919823231_75qscv",
+    "timestamp": "2026-02-24T07:57:03.231Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1771919823223-dfkl2me",
+    "characterName": "Unknown",
+    "actorName": "alt art nacho",
+    "movieTitle": "Nacho Libre",
+    "id": "tl_1771919823232_9duu04",
+    "timestamp": "2026-02-24T07:57:03.232Z"
   }
 ]

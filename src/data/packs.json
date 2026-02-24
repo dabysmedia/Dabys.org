@@ -89,7 +89,7 @@
     "allowedCardTypes": [
       "actor"
     ],
-    "isActive": true,
+    "isActive": false,
     "isFree": false,
     "restockHourUtc": 0,
     "restockMinuteUtc": 0,
@@ -100,8 +100,6 @@
       "rare": 50,
       "uncommon": 0
     },
-    "comingSoon": false,
-    "allowPrismatic": false,
-    "allowDarkMatter": false
+    "comingSoon": false
   }
 ]
