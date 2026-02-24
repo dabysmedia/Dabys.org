@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { getSiteSettings } from "@/lib/data";
+import { getSiteSettings, getCurrentWeek } from "@/lib/data";
 
 const DEFAULT_DATA_DIR = path.join(process.cwd(), "src", "data");
 const DATA_DIR = process.env.DATA_DIR || DEFAULT_DATA_DIR;
@@ -110,8 +110,8 @@ const DEFAULT_SETTINGS: QuestSettings = {
     pack_a_punch: { label: "Pack-a-Punch", description: "Pack-a-Punch a card", reward: 35, rewardType: "credits", alwaysActive: false, rarityParam: true },
     marketplace_request: { label: "Marketplace Request", description: "Place a buy order on the marketplace", reward: 20, rewardType: "credits", alwaysActive: false },
     find_rarity_in_pack: { label: "Find a Card in a Pack", description: "Find a card of a specific rarity in a pack", reward: 50, rewardType: "credits", alwaysActive: false, rarityParam: true },
-    submit_movie: { label: "Submit a Movie", description: "Submit a movie for this week's movie night", reward: 30, rewardType: "credits", alwaysActive: true },
-    vote_movie: { label: "Vote for a Movie", description: "Vote for a submission in this week's movie night", reward: 25, rewardType: "credits", alwaysActive: true },
+    submit_movie: { label: "Submit a Movie", description: "Submit a movie for this week's movie night", reward: 30, rewardType: "credits", alwaysActive: false },
+    vote_movie: { label: "Vote for a Movie", description: "Vote for a submission in this week's movie night", reward: 25, rewardType: "credits", alwaysActive: false },
   },
 };
 
@@ -187,6 +187,125 @@ export function setUserDailyQuestState(
   return { success: true };
 }
 
+// ──── Weekly Quest Store (submit_movie, vote_movie — once per week) ────
+
+type WeeklyQuestState = { completed: boolean; claimed: boolean };
+type WeeklyQuestsStore = Record<string, Record<string, Record<"submit_movie" | "vote_movie", WeeklyQuestState>>>;
+
+function getWeeklyQuestsStore(): WeeklyQuestsStore {
+  try {
+    return readJson<WeeklyQuestsStore>("weeklyQuestCompletions.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveWeeklyQuestsStore(store: WeeklyQuestsStore): void {
+  writeJson("weeklyQuestCompletions.json", store);
+}
+
+function getOrCreateWeeklyUserState(weekId: string, userId: string): Record<"submit_movie" | "vote_movie", WeeklyQuestState> {
+  const store = getWeeklyQuestsStore();
+  if (!store[weekId]) store[weekId] = {};
+  if (!store[weekId][userId]) {
+    store[weekId][userId] = {
+      submit_movie: { completed: false, claimed: false },
+      vote_movie: { completed: false, claimed: false },
+    };
+    saveWeeklyQuestsStore(store);
+  }
+  return store[weekId][userId];
+}
+
+/** Returns weekly submit/vote quests for the current week when they're available. */
+export function getWeeklySubmitVoteQuests(userId: string): DailyQuestInstance[] {
+  const week = getCurrentWeek();
+  if (!week) return [];
+
+  const settings = getQuestSettings();
+  const defs = settings.questDefinitions;
+  const state = getOrCreateWeeklyUserState(week.id, userId);
+  const result: DailyQuestInstance[] = [];
+
+  // submit_movie: show when subs are or were open (subs_open, subs_closed, vote_open, vote_closed, winner_published)
+  const showSubmit = ["subs_open", "subs_closed", "vote_open", "vote_closed", "winner_published"].includes(week.phase);
+  if (showSubmit) {
+    const def = defs.submit_movie;
+    result.push({
+      questType: "submit_movie",
+      completed: state.submit_movie.completed,
+      claimed: state.submit_movie.claimed,
+      reward: def.reward,
+      rewardType: def.rewardType,
+      rewardPackId: def.rewardPackId,
+      label: def.label,
+      description: def.description,
+    });
+  }
+
+  // vote_movie: show when voting is or was open (vote_open, vote_closed, winner_published)
+  const showVote = ["vote_open", "vote_closed", "winner_published"].includes(week.phase);
+  if (showVote) {
+    const def = defs.vote_movie;
+    result.push({
+      questType: "vote_movie",
+      completed: state.vote_movie.completed,
+      claimed: state.vote_movie.claimed,
+      reward: def.reward,
+      rewardType: def.rewardType,
+      rewardPackId: def.rewardPackId,
+      label: def.label,
+      description: def.description,
+    });
+  }
+
+  return result;
+}
+
+/** Record progress for weekly submit/vote quests. */
+function recordWeeklyQuestProgress(userId: string, questType: "submit_movie" | "vote_movie"): boolean {
+  const week = getCurrentWeek();
+  if (!week) return false;
+  if (questType !== "submit_movie" && questType !== "vote_movie") return false;
+
+  const state = getOrCreateWeeklyUserState(week.id, userId);
+  if (state[questType].completed) return false;
+
+  state[questType].completed = true;
+  const store = getWeeklyQuestsStore();
+  if (!store[week.id]) store[week.id] = {};
+  store[week.id][userId] = state;
+  saveWeeklyQuestsStore(store);
+  return true;
+}
+
+/** Claim reward for a weekly quest. */
+export function claimWeeklyQuestReward(
+  userId: string,
+  questType: "submit_movie" | "vote_movie"
+): { success: boolean; reward?: number; rewardType?: QuestRewardType; rewardPackId?: string; error?: string } {
+  const week = getCurrentWeek();
+  if (!week) return { success: false, error: "No active week" };
+
+  const state = getOrCreateWeeklyUserState(week.id, userId);
+  const q = state[questType];
+  if (!q.completed) return { success: false, error: "Quest not yet completed" };
+  if (q.claimed) return { success: false, error: "Reward already claimed" };
+
+  const def = getQuestSettings().questDefinitions[questType];
+  q.claimed = true;
+  const store = getWeeklyQuestsStore();
+  store[week.id][userId] = state;
+  saveWeeklyQuestsStore(store);
+
+  return {
+    success: true,
+    reward: def.reward,
+    rewardType: def.rewardType,
+    rewardPackId: def.rewardPackId,
+  };
+}
+
 /**
  * Returns the current "quest day" as YYYY-MM-DD.
  * If the reset hour is e.g. 6, then between 00:00-05:59 UTC the quest day
@@ -227,6 +346,9 @@ function aOrAn(word: string): string {
 /** Quest types that require the marketplace; excluded from pool when marketplace is disabled. */
 const MARKETPLACE_QUEST_TYPES: QuestType[] = ["marketplace_request"];
 
+/** Submit/vote quests are weekly-only; never appear in daily rotation. */
+const WEEKLY_ONLY_QUEST_TYPES: QuestType[] = ["submit_movie", "vote_movie"];
+
 function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
   const defs = settings.questDefinitions;
   const questTypes = Object.keys(defs) as QuestType[];
@@ -235,9 +357,12 @@ function generateDailyQuests(settings: QuestSettings): DailyQuestInstance[] {
     ? questTypes
     : questTypes.filter((t) => !MARKETPLACE_QUEST_TYPES.includes(t));
 
+  // Exclude weekly-only quests from daily rotation
+  const dailyAllowed = allowedTypes.filter((t) => !WEEKLY_ONLY_QUEST_TYPES.includes(t));
+
   // Always-active quests first
-  const alwaysActive = allowedTypes.filter((t) => defs[t].alwaysActive);
-  const optional = allowedTypes.filter((t) => !defs[t].alwaysActive);
+  const alwaysActive = dailyAllowed.filter((t) => defs[t].alwaysActive);
+  const optional = dailyAllowed.filter((t) => !defs[t].alwaysActive);
 
   const quests: DailyQuestInstance[] = [];
 
@@ -330,7 +455,8 @@ function generateSingleReplacementQuest(
   const allowedTypes = marketplaceEnabled
     ? questTypes
     : questTypes.filter((t) => !MARKETPLACE_QUEST_TYPES.includes(t));
-  const optional = allowedTypes.filter((t) => !defs[t].alwaysActive);
+  const dailyAllowed = allowedTypes.filter((t) => !WEEKLY_ONLY_QUEST_TYPES.includes(t));
+  const optional = dailyAllowed.filter((t) => !defs[t].alwaysActive);
   const existingTypes = new Set(existingQuests.map((q) => q.questType));
   const available = optional.filter((t) => !existingTypes.has(t) && t !== excludeQuestType);
   const pool = available.length > 0 ? available : optional.filter((t) => t !== excludeQuestType);
@@ -456,6 +582,12 @@ export function recordQuestProgress(
   questType: QuestType,
   context?: { rarity?: Rarity; packIsFree?: boolean }
 ): { questCompleted: boolean; questIndex: number } {
+  // Weekly quests: submit_movie, vote_movie — handled separately
+  if (questType === "submit_movie" || questType === "vote_movie") {
+    const ok = recordWeeklyQuestProgress(userId, questType);
+    return { questCompleted: ok, questIndex: ok ? 0 : -1 };
+  }
+
   const today = getTodayDateStr();
   const store = getDailyQuestsStore();
 

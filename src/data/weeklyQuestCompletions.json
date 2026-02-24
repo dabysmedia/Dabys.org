@@ -1,0 +1,14 @@
+{
+  "11": {
+    "2": {
+      "submit_movie": {
+        "completed": false,
+        "claimed": false
+      },
+      "vote_movie": {
+        "completed": false,
+        "claimed": false
+      }
+    }
+  }
+}

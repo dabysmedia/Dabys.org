@@ -1,8 +1,8 @@
 [
   {
     "userId": "4",
-    "balance": 100,
-    "updatedAt": "2026-02-15T18:59:25.879Z"
+    "balance": 0,
+    "updatedAt": "2026-02-24T07:34:34.059Z"
   },
   {
     "userId": "5",
@@ -26,7 +26,7 @@
   },
   {
     "userId": "2",
-    "balance": 56,
-    "updatedAt": "2026-02-23T01:55:41.266Z"
+    "balance": 686,
+    "updatedAt": "2026-02-24T07:31:51.636Z"
   }
 ]

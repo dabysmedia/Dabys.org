@@ -71,6 +71,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [trackedWinnerIds, setTrackedWinnerIds] = useState<string[]>([]);
   const [pinnedProgress, setPinnedProgress] = useState<PinnedProgressItem[]>([]);
   const [dailyQuests, setDailyQuests] = useState<DailyQuestInstance[]>([]);
+  const [weeklyQuests, setWeeklyQuests] = useState<DailyQuestInstance[]>([]);
   const [setCompletionQuests, setSetCompletionQuests] = useState<SetCompletionQuest[]>([]);
   const [questDate, setQuestDate] = useState<string>("");
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
@@ -83,10 +84,12 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [rerollingIndex, setRerollingIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"quests" | "collection">("quests");
   const [dailySectionCollapsed, setDailySectionCollapsed] = useState(false);
+  const [weeklySectionCollapsed, setWeeklySectionCollapsed] = useState(false);
   const [setCompletionSectionCollapsed, setSetCompletionSectionCollapsed] = useState(true);
   const [mainQuestSectionCollapsed, setMainQuestSectionCollapsed] = useState(false);
   const [mainQuestProgress, setMainQuestProgress] = useState<Array<{ definition: { id: string; label: string; description: string; targetCount: number; reward: number; rewardType: string }; current: number; target: number; completed: boolean; claimed: boolean }>>([]);
   const [claimingMainQuestId, setClaimingMainQuestId] = useState<string | null>(null);
+  const [claimingWeeklyQuestType, setClaimingWeeklyQuestType] = useState<string | null>(null);
 
   // Sync sleep preference from other sidebar (or same) when toggled
   useEffect(() => {
@@ -177,6 +180,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
       .then((r) => r.json())
       .then((data) => {
         if (data.quests) setDailyQuests(data.quests);
+        if (Array.isArray(data.weeklyQuests)) setWeeklyQuests(data.weeklyQuests);
         if (data.date) setQuestDate(data.date);
         if (typeof data.resetHourUTC === "number") setResetHourUTC(data.resetHourUTC);
         setRerollsUsed(typeof data.rerollsUsed === "number" ? data.rerollsUsed : 0);
@@ -339,6 +343,33 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     }
   }
 
+  async function claimWeeklyQuest(questType: string) {
+    setClaimingWeeklyQuestType(questType);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, claimWeeklyQuest: true, weeklyQuestType: questType }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchQuests();
+        const delta = data.reward ?? 0;
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+        if (data.rewardType === "pack") {
+          window.dispatchEvent(new CustomEvent("dabys-packs-refresh"));
+        }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingWeeklyQuestType(null);
+    }
+  }
+
   async function claimAllRewards() {
     setClaimingAll(true);
     try {
@@ -369,17 +400,19 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const completedCount = dailyQuests.filter((q) => q.completed).length;
   const totalCount = dailyQuests.length;
   const dailyClaimable = dailyQuests.filter((q) => q.completed && !q.claimed).length;
+  const weeklyClaimable = weeklyQuests.filter((q) => q.completed && !q.claimed).length;
   const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
   const mainQuestClaimable = mainQuestProgress.filter((q) => q.completed && !q.claimed).length;
-  const claimableCount = dailyClaimable + setCompletionClaimable + mainQuestClaimable;
+  const claimableCount = dailyClaimable + weeklyClaimable + setCompletionClaimable + mainQuestClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
   // Auto-expand sections when there are claimable quests
   useEffect(() => {
     if (dailyClaimable > 0) setDailySectionCollapsed(false);
+    if (weeklyClaimable > 0) setWeeklySectionCollapsed(false);
     if (setCompletionClaimable > 0) setSetCompletionSectionCollapsed(false);
     if (mainQuestClaimable > 0) setMainQuestSectionCollapsed(false);
-  }, [dailyClaimable, setCompletionClaimable, mainQuestClaimable]);
+  }, [dailyClaimable, weeklyClaimable, setCompletionClaimable, mainQuestClaimable]);
   const rerollsRemaining = Math.max(0, 1 - rerollsUsed);
 
   async function claimMainQuest(questId: string) {
@@ -581,9 +614,103 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto scrollbar-autocomplete">
-            {/* ─── QUESTS TAB (unified: Daily, Set completion, Main) ─── */}
+            {/* ─── QUESTS TAB (unified: Weekly, Daily, Set completion, Main) ─── */}
             {activeTab === "quests" && (
               <div className="py-3 space-y-4">
+                {/* ─── Weekly quests (submit/vote) — shown first when present ─── */}
+                {weeklyQuests.length > 0 && (
+                  <div className="px-4">
+                    <button
+                      type="button"
+                      onClick={() => setWeeklySectionCollapsed((c) => !c)}
+                      className="flex items-center gap-2 w-full text-left group cursor-pointer"
+                      aria-expanded={!weeklySectionCollapsed}
+                    >
+                      <span className="text-[10px] text-white/40 uppercase tracking-wider">This week</span>
+                      {weeklyClaimable > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold">
+                          {weeklyClaimable}
+                        </span>
+                      )}
+                      <span
+                        className={`ml-auto text-white/30 transition-transform ${weeklySectionCollapsed ? "" : "rotate-180"}`}
+                        aria-hidden
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </span>
+                    </button>
+                    {!weeklySectionCollapsed && (
+                      <div className="mt-2">
+                        <ul className="space-y-1">
+                          {weeklyQuests.map((quest) => {
+                            const isClaimable = quest.completed && !quest.claimed;
+                            const isClaiming = claimingWeeklyQuestType === quest.questType;
+                            return (
+                              <li
+                                key={quest.questType}
+                                className={`rounded-xl border transition-all ${
+                                  quest.claimed
+                                    ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                    : quest.completed
+                                      ? "border-amber-500/20 bg-amber-500/5"
+                                      : "border-white/[0.06] bg-white/[0.02]"
+                                } p-2.5`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    {quest.claimed ? (
+                                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </div>
+                                    ) : quest.completed ? (
+                                      <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center animate-pulse">
+                                        <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
+                                        </svg>
+                                      </div>
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full border border-white/10 bg-white/[0.03]" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-xs font-medium truncate block ${quest.claimed ? "text-white/40 line-through" : quest.completed ? "text-white/90" : "text-white/70"}`}>
+                                      {quest.label}
+                                    </span>
+                                    <p className="text-[10px] text-white/35 mt-0.5 truncate">{quest.description}</p>
+                                  </div>
+                                  <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                    <span className="text-[10px] text-amber-400/80 font-medium whitespace-nowrap">
+                                      {quest.rewardType === "pack" ? "1 pack" : `+${quest.reward} ${quest.rewardType === "stardust" ? "SD" : "cr"}`}
+                                    </span>
+                                    {isClaimable && (
+                                      <button
+                                        type="button"
+                                        onClick={() => claimWeeklyQuest(quest.questType)}
+                                        disabled={isClaiming}
+                                        className="px-2.5 py-1 rounded-md bg-amber-500/20 border border-amber-400/30 text-amber-400 text-[10px] font-semibold hover:bg-amber-500/30 transition-all cursor-pointer disabled:opacity-50"
+                                      >
+                                        {isClaiming ? (
+                                          <span className="inline-block w-2.5 h-2.5 border border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                                        ) : (
+                                          "Claim"
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* ─── Daily section ─── */}
                 <div className="px-4">
                   <button

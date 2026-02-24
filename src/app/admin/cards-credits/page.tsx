@@ -239,6 +239,9 @@ export default function AdminCardsCreditsPage() {
   const [reorderingPack, setReorderingPack] = useState(false);
   const [editingPackId, setEditingPackId] = useState<string | null>(null);
   const [showCreatePackForm, setShowCreatePackForm] = useState(false);
+  const [awardPackUserId, setAwardPackUserId] = useState("");
+  const [awardPackPackId, setAwardPackPackId] = useState("");
+  const [awardingPack, setAwardingPack] = useState(false);
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [shopItemsLoading, setShopItemsLoading] = useState(false);
   const [showCreateShopItem, setShowCreateShopItem] = useState(false);
@@ -2270,6 +2273,58 @@ export default function AdminCardsCreditsPage() {
           </div>
           {packsLoading && ( <div className="flex items-center gap-2 text-xs text-white/50"><div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />Loading packs...</div> )}
         </div>
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] p-4 mb-6">
+          <h3 className="text-sm font-medium text-amber-200/90 mb-3">Send pack to player</h3>
+          <p className="text-xs text-white/50 mb-3">Award an unopened pack to a player. It will appear in their inventory to open.</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-[11px] text-white/50 mb-1">Pack</label>
+              <select value={awardPackPackId} onChange={(e) => setAwardPackPackId(e.target.value)} className="min-w-[180px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]">
+                <option value="">-- Select pack --</option>
+                {packs.filter((p) => p.isActive && !(p as { comingSoon?: boolean }).comingSoon).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] text-white/50 mb-1">Player</label>
+              <select value={awardPackUserId} onChange={(e) => setAwardPackUserId(e.target.value)} className="min-w-[200px] px-3 py-2 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-amber-500/50 [color-scheme:dark]">
+                <option value="">-- Select player --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.id})</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              disabled={!awardPackPackId || !awardPackUserId || awardingPack}
+              onClick={async () => {
+                if (!awardPackPackId || !awardPackUserId || awardingPack) return;
+                setAwardingPack(true);
+                try {
+                  const res = await fetch("/api/cards/award-pack", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: awardPackUserId, packId: awardPackPackId, source: "admin" }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok) {
+                    alert(`Pack sent to ${users.find((u) => u.id === awardPackUserId)?.name ?? awardPackUserId}.`);
+                    setAwardPackUserId("");
+                    setAwardPackPackId("");
+                  } else {
+                    alert(data.error || "Failed to send pack");
+                  }
+                } finally {
+                  setAwardingPack(false);
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {awardingPack ? "Sending…" : "Send to player"}
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             {!(showCreatePackForm || editingPackId) ? (
@@ -3216,7 +3271,6 @@ export default function AdminCardsCreditsPage() {
                     const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId: c.characterId, variant, action: "add", ...(variant === "altart" && { isHolo }) }) });
                     if (res.ok) {
                       setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), c.characterId], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), c.characterId] }) } : null);
-                      loadData();
                     }
                   } finally {
                     setCodexBusy((b) => ({ ...b, [busyKey]: false }));
@@ -3235,7 +3289,6 @@ export default function AdminCardsCreditsPage() {
                     if (results.every((r) => r.ok)) {
                       const addedIds = toAdd.map((c) => c.characterId);
                       setUserCodex((prev) => prev ? { ...prev, [key]: [...(prev[key] ?? []), ...addedIds], ...(variant === "altart" && isHolo && { altArtHoloCharacterIds: [...(prev.altArtHoloCharacterIds ?? []), ...addedIds] }) } : null);
-                      loadData();
                     }
                   } finally {
                     setCodexAddSetBusy(false);
@@ -3275,7 +3328,7 @@ export default function AdminCardsCreditsPage() {
                           {codexAddSetDropdownOpen && setsWithAvailable.length > 0 && (
                             <>
                               <div className="fixed inset-0 z-40" aria-hidden onClick={() => setCodexAddSetDropdownOpen(false)} />
-                              <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] py-1 rounded-lg border border-white/[0.12] bg-[#1a1a24] shadow-xl">
+                              <div className="absolute right-0 top-full mt-1 z-50 min-w-[220px] max-h-[50vh] overflow-y-auto py-1 rounded-lg border border-white/[0.12] bg-[#1a1a24] shadow-xl scrollbar-autocomplete">
                                 {setsWithAvailable.map(([setName, cards]) => (
                                   <button key={setName} type="button" onClick={() => addSet(setName)} className="w-full px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.08] flex items-center justify-between gap-2">
                                     <span className="truncate">{setName}</span>
@@ -3327,7 +3380,7 @@ export default function AdminCardsCreditsPage() {
                             {setIds.map((characterId) => { const entry = pool.find((p) => p.characterId === characterId); const busyKey = `${variant}-remove-${characterId}`; const isAltHolo = variant === "altart" && (userCodex.altArtHoloCharacterIds ?? []).includes(characterId); const codexCard = entry ? { id: entry.characterId, rarity: entry.rarity, isFoil: variant === "holo" || variant === "prismatic" || variant === "darkMatter" || isAltHolo, finish: variant === "altart" ? (isAltHolo ? "holo" : "normal") : finish, actorName: entry.actorName ?? "", characterName: entry.characterName ?? "", movieTitle: entry.movieTitle ?? "", profilePath: entry.profilePath ?? "", cardType: entry.cardType ?? "actor", isAltArt: variant === "altart" } : null; if (!codexCard) return ( <div key={characterId} className="rounded-lg border border-white/10 bg-white/[0.04] aspect-[2/3.35] flex items-center justify-center"><span className="text-white/30 text-xs">?</span></div> ); return (
                               <div key={characterId} className="relative group/codexcard w-full min-w-0">
                                 <CardDisplay card={codexCard} size="sm" selectable />
-                                <button type="button" disabled={codexBusy[busyKey]} onClick={async (ev) => { ev.stopPropagation(); setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId), ...(variant === "altart" && { altArtHoloCharacterIds: (prev.altArtHoloCharacterIds ?? []).filter((id) => id !== characterId) }) } : null); loadData(); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/60 opacity-0 group-hover/codexcard:opacity-100 transition-opacity cursor-pointer border-2 border-red-500/50 hover:border-red-400">
+                                <button type="button" disabled={codexBusy[busyKey]} onClick={async (ev) => { ev.stopPropagation(); setCodexBusy((b) => ({ ...b, [busyKey]: true })); try { const res = await fetch("/api/admin/user-codex", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, characterId, variant, action: "remove" }) }); if (res.ok) { setUserCodex((prev) => prev ? { ...prev, [key]: prev[key].filter((id) => id !== characterId), ...(variant === "altart" && { altArtHoloCharacterIds: (prev.altArtHoloCharacterIds ?? []).filter((id) => id !== characterId) }) } : null); } } finally { setCodexBusy((b) => ({ ...b, [busyKey]: false })); } }} className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/60 opacity-0 group-hover/codexcard:opacity-100 transition-opacity cursor-pointer border-2 border-red-500/50 hover:border-red-400">
                                   <span className="px-2 py-1 rounded bg-red-600/90 text-white text-xs font-medium">{codexBusy[busyKey] ? "…" : "Remove"}</span>
                                 </button>
                               </div>

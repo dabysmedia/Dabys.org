@@ -326,6 +326,7 @@ export default function HomePage() {
     if (!user || !week) return;
     await fetch(`/api/submissions?userId=${user.id}&weekId=${week.id}`, { method: "DELETE" });
     loadData();
+    window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
   }
 
   async function castVote(submissionId: string) {
@@ -343,6 +344,7 @@ export default function HomePage() {
     if (!user || !week) return;
     await fetch(`/api/votes?userId=${user.id}&weekId=${week.id}`, { method: "DELETE" });
     loadData();
+    window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
   }
 
   function logout() { localStorage.removeItem("dabys_user"); router.replace("/login"); }

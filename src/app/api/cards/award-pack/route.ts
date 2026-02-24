@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { awardPack } from "@/lib/cards";
+
+async function requireAdmin() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("dabys_admin");
+  if (session?.value !== "authenticated") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 
 /**
  * Award a pack to a user. Adds the pack to their unopened inventory.
- * For use by the future awarding mechanic (e.g. quest rewards, lottery, etc.).
+ * Admin-only. Used by admin panel "Send to player" and other admin flows.
  */
 export async function POST(request: Request) {
+  const auth = await requireAdmin();
+  if (auth) return auth;
+
   const body = await request.json().catch(() => ({}));
 
   if (!body.userId || typeof body.userId !== "string") {

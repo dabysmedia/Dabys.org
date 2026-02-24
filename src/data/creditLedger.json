@@ -3145,5 +3145,128 @@
       "questIndex": 0
     },
     "createdAt": "2026-02-23T01:55:41.266Z"
+  },
+  {
+    "id": "cl-1771918191386-4wxwqk1",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:29:51.385Z"
+  },
+  {
+    "id": "cl-1771918259212-2ez672v",
+    "userId": "2",
+    "amount": 180,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771918191392-y6n6643",
+        "card-1771918191391-r38a2gi",
+        "card-1771918191391-64urwin",
+        "card-1771918191390-6kc7ysp",
+        "card-1771812957503-nyeunni"
+      ]
+    },
+    "createdAt": "2026-02-24T07:30:59.211Z"
+  },
+  {
+    "id": "cl-1771918259624-777f1gg",
+    "userId": "2",
+    "amount": 245,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771812957502-cekiuwv",
+        "card-1771812957501-thfy68l",
+        "card-1771812957501-vm17n96",
+        "card-1771812957500-aintvfa",
+        "card-1771462504732-t8lta6b"
+      ]
+    },
+    "createdAt": "2026-02-24T07:30:59.623Z"
+  },
+  {
+    "id": "cl-1771918259981-cmjdb31",
+    "userId": "2",
+    "amount": 145,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771918191393-dt5gxih",
+        "card-1771462497448-raxtryc",
+        "card-1771462495726-9yootmo",
+        "card-1771462493814-eswz6vx"
+      ]
+    },
+    "createdAt": "2026-02-24T07:30:59.980Z"
+  },
+  {
+    "id": "cl-1771918262343-qca7wau",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:31:02.343Z"
+  },
+  {
+    "id": "cl-1771918264902-akmpc7o",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:31:04.901Z"
+  },
+  {
+    "id": "cl-1771918294794-bikvm0b",
+    "userId": "2",
+    "amount": 260,
+    "reason": "quicksell",
+    "metadata": {
+      "cardIds": [
+        "card-1771918264906-8kmmjyg",
+        "card-1771918262349-56y4y11",
+        "card-1771918264905-ci0xjel",
+        "card-1771918264905-fq5b7qm",
+        "card-1771918262347-ps1wgp3"
+      ]
+    },
+    "createdAt": "2026-02-24T07:31:34.793Z"
+  },
+  {
+    "id": "cl-1771918311636-ox9738m",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:31:51.636Z"
+  },
+  {
+    "id": "cl-1771918471956-28xi36z",
+    "userId": "4",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:34:31.956Z"
+  },
+  {
+    "id": "cl-1771918474060-z3hvzsj",
+    "userId": "4",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1771918185739-xd99gy7"
+    },
+    "createdAt": "2026-02-24T07:34:34.059Z"
   }
 ]

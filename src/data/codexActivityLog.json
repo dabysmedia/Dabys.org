@@ -54,5 +54,33 @@
     "variant": "regular",
     "action": "add",
     "createdAt": "2026-02-22T21:28:10.993Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-115440-1368166",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-24T07:31:45.484Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-71070-1368166",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-24T07:35:04.845Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-2349355-1368166",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-24T07:35:05.432Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "custom-1771470369043-2mux2mt",
+    "variant": "regular",
+    "action": "add",
+    "createdAt": "2026-02-24T07:35:06.379Z"
   }
 ]

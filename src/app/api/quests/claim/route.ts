@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { claimQuestReward, claimAllQuestRewards } from "@/lib/quests";
+import { claimQuestReward, claimAllQuestRewards, claimWeeklyQuestReward } from "@/lib/quests";
 import { addCredits, addStardust, claimSetCompletionQuest, claimHoloSetCompletionQuest } from "@/lib/data";
 import { awardPack } from "@/lib/cards";
 import { incrementUserLifetimeStat } from "@/lib/mainQuests";
@@ -11,10 +11,32 @@ export async function POST(request: Request) {
   const claimAll = body.claimAll === true;
   const claimSetCompletion = body.claimSetCompletion === true;
   const claimHoloSetCompletion = body.claimHoloSetCompletion === true;
+  const claimWeeklyQuest = body.claimWeeklyQuest === true;
+  const weeklyQuestType = typeof body.weeklyQuestType === "string" && (body.weeklyQuestType === "submit_movie" || body.weeklyQuestType === "vote_movie") ? body.weeklyQuestType : undefined;
   const winnerId = typeof body.winnerId === "string" ? body.winnerId.trim() : "";
 
   if (!userId) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
+  }
+
+  if (claimWeeklyQuest && weeklyQuestType) {
+    const result = claimWeeklyQuestReward(userId, weeklyQuestType);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    if (result.rewardType === "stardust" && (result.reward ?? 0) > 0) {
+      addStardust(userId, result.reward!);
+    } else if (result.rewardType === "pack" && result.rewardPackId) {
+      awardPack(userId, result.rewardPackId, "weekly_quest");
+    } else if ((result.reward ?? 0) > 0) {
+      addCredits(userId, result.reward!, "weekly_quest_reward", { questType: weeklyQuestType });
+    }
+    return NextResponse.json({
+      success: true,
+      reward: result.reward,
+      rewardType: result.rewardType,
+      rewardPackId: result.rewardPackId,
+    });
   }
 
   if (claimHoloSetCompletion && winnerId) {

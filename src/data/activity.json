@@ -135,5 +135,89 @@
     },
     "id": "act_1771565136764_gmradc",
     "timestamp": "2026-02-20T05:25:36.764Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Sam Witwicky",
+    "meta": {
+      "cardId": "card-1771918262347-sgw9qm6",
+      "characterName": "Sam Witwicky",
+      "actorName": "Shia LaBeouf",
+      "movieTitle": "Transformers"
+    },
+    "id": "act_1771918262359_99aicn",
+    "timestamp": "2026-02-24T07:31:02.359Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Millie Calloway",
+    "meta": {
+      "cardId": "card-1771918262348-weaw9zu",
+      "characterName": "Millie Calloway",
+      "actorName": "Sydney Sweeney",
+      "movieTitle": "The Housemaid"
+    },
+    "id": "act_1771918262360_fequg5",
+    "timestamp": "2026-02-24T07:31:02.360Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Shrek (voice)",
+    "meta": {
+      "cardId": "card-1771918262349-tquigi4",
+      "characterName": "Shrek (voice)",
+      "actorName": "Mike Myers",
+      "movieTitle": "Shrek 2"
+    },
+    "id": "act_1771918262361_31tgl6",
+    "timestamp": "2026-02-24T07:31:02.361Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Manny Ray",
+    "meta": {
+      "cardId": "card-1771918264907-rbaxzme",
+      "characterName": "Manny Ray",
+      "actorName": "Steven Bauer",
+      "movieTitle": "Scarface"
+    },
+    "id": "act_1771918264914_fj9bz1",
+    "timestamp": "2026-02-24T07:31:04.914Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "2",
+    "userName": "Carlos",
+    "message": "pulled a Legendary — Gina",
+    "meta": {
+      "cardId": "card-1771918311641-06jices",
+      "characterName": "Gina",
+      "actorName": "Mary Elizabeth Mastrantonio",
+      "movieTitle": "Scarface"
+    },
+    "id": "act_1771918311651_5vjywn",
+    "timestamp": "2026-02-24T07:31:51.651Z"
+  },
+  {
+    "type": "legendary_pull",
+    "userId": "4",
+    "userName": "Carter",
+    "message": "pulled a Legendary — Millie Calloway",
+    "meta": {
+      "cardId": "card-1771918466073-wtx3moc",
+      "characterName": "Millie Calloway",
+      "actorName": "Sydney Sweeney",
+      "movieTitle": "The Housemaid"
+    },
+    "id": "act_1771918466084_nad572",
+    "timestamp": "2026-02-24T07:34:26.084Z"
   }
 ]

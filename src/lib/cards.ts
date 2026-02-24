@@ -401,11 +401,7 @@ function rollAndAddPackCards(
   const effectivePackId = selectedPack?.id ?? "default";
   const cardsPerPack = selectedPack?.cardsPerPack ?? CARDS_PER_PACK;
   const allowedRarities = selectedPack?.allowedRarities;
-  let allowedCardTypes = selectedPack?.allowedCardTypes;
-  if (selectedPack?.name?.toLowerCase().trim() === "character pack") {
-    allowedCardTypes = (allowedCardTypes ?? []).filter((t) => t !== "character");
-    if (allowedCardTypes.length === 0) allowedCardTypes = ["actor"];
-  }
+  const allowedCardTypes = selectedPack?.allowedCardTypes;
 
   const norm = (r: string | undefined) => (r === "common" ? "uncommon" : r) || "uncommon";
 
@@ -468,11 +464,24 @@ function rollAndAddPackCards(
   const adjSum = adjustedWeights.legendary + adjustedWeights.epic + adjustedWeights.rare + adjustedWeights.uncommon;
   const rollWeights = adjSum > 0 ? adjustedWeights : weights;
 
+  // Build rarity slots only from rarities that exist in the pool AND are allowed by the pack.
+  // Previously bulkRarity always returned 80% uncommon, causing wrong-pool/wrong-rarity bugs.
   const hitTier = rollPackTier(rollWeights);
-  const bulkRarity = (): Rarity => (Math.random() < 0.2 ? "rare" : "uncommon");
+  const bulkRarity = (): Rarity => rollPackTier(rollWeights);
   const bulkSlots: Rarity[] = Array.from({ length: Math.max(0, cardsToGive - 1) }, bulkRarity);
   let raritySlots: Rarity[] = [hitTier, ...bulkSlots];
   raritySlots = shuffleArray(raritySlots);
+
+  // Ensure at most 1 legendary per pack. Replace extras with next available tier.
+  const legendaryIndices = raritySlots
+    .map((r, i) => (r === "legendary" ? i : -1))
+    .filter((i) => i >= 0);
+  if (legendaryIndices.length > 1) {
+    const downgrade: Rarity = poolCounts.epic > 0 ? "epic" : poolCounts.rare > 0 ? "rare" : "uncommon";
+    for (let j = 1; j < legendaryIndices.length; j++) {
+      raritySlots[legendaryIndices[j]] = downgrade;
+    }
+  }
 
   const cards: ReturnType<typeof addCard>[] = [];
   const pickedCharacterIds = new Set<string>();
@@ -495,7 +504,10 @@ function rollAndAddPackCards(
       darkMatterChance: packAllowsDarkMatter && typeof packDarkMatterChance === "number" ? packDarkMatterChance : undefined,
       holoChance: typeof packHoloChance === "number" ? packHoloChance : undefined,
     });
-    const grantedRarity = wantedRarity;
+    // Use the character's actual rarity from the pool. When pickCardOfRarity cascades, we may
+    // have picked a character of a different rarity than wantedRarity; the card must reflect
+    // the character's true rarity.
+    const grantedRarity = normRarity(char.rarity);
     const card = addCard({
       userId,
       characterId: char.characterId,

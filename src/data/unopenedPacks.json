@@ -14,10 +14,38 @@
     "source": "movie_night_attendance"
   },
   {
-    "id": "unopened-1771876907650-3y70qtyl4",
-    "userId": "2",
-    "packId": "pack-1771076755342-xbvgzn7",
-    "acquiredAt": "2026-02-23T20:01:47.650Z",
+    "id": "unopened-1771918574027-wdtt0mumq",
+    "userId": "1",
+    "packId": "pack-1771918185739-xd99gy7",
+    "acquiredAt": "2026-02-24T07:36:14.027Z",
+    "source": "movie_night_attendance"
+  },
+  {
+    "id": "unopened-1771918574029-7f4lhd1eh",
+    "userId": "4",
+    "packId": "pack-1771918185739-xd99gy7",
+    "acquiredAt": "2026-02-24T07:36:14.029Z",
+    "source": "movie_night_attendance"
+  },
+  {
+    "id": "unopened-1771918574031-fc4bed1z5",
+    "userId": "7",
+    "packId": "pack-1771918185739-xd99gy7",
+    "acquiredAt": "2026-02-24T07:36:14.031Z",
+    "source": "movie_night_attendance"
+  },
+  {
+    "id": "unopened-1771918574033-hypaxmh92",
+    "userId": "10",
+    "packId": "pack-1771918185739-xd99gy7",
+    "acquiredAt": "2026-02-24T07:36:14.033Z",
+    "source": "movie_night_attendance"
+  },
+  {
+    "id": "unopened-1771918574037-frlbesa4s",
+    "userId": "5",
+    "packId": "pack-1771918185739-xd99gy7",
+    "acquiredAt": "2026-02-24T07:36:14.037Z",
     "source": "movie_night_attendance"
   }
 ]

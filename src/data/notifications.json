@@ -168,5 +168,89 @@
     "targetUserId": "__global__",
     "id": "ntf_1771565136765_2c7bck",
     "timestamp": "2026-02-20T05:25:36.765Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Sam Witwicky",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771918262347-sgw9qm6",
+      "characterName": "Sam Witwicky",
+      "movieTitle": "Transformers"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918262359_vtkbap",
+    "timestamp": "2026-02-24T07:31:02.359Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Millie Calloway",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771918262348-weaw9zu",
+      "characterName": "Millie Calloway",
+      "movieTitle": "The Housemaid"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918262361_5sre2y",
+    "timestamp": "2026-02-24T07:31:02.361Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Shrek (voice)",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771918262349-tquigi4",
+      "characterName": "Shrek (voice)",
+      "movieTitle": "Shrek 2"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918262362_kof1o9",
+    "timestamp": "2026-02-24T07:31:02.362Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Manny Ray",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771918264907-rbaxzme",
+      "characterName": "Manny Ray",
+      "movieTitle": "Scarface"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918264915_7kex65",
+    "timestamp": "2026-02-24T07:31:04.915Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Gina",
+    "actorUserId": "2",
+    "actorName": "Carlos",
+    "meta": {
+      "cardId": "card-1771918311641-06jices",
+      "characterName": "Gina",
+      "movieTitle": "Scarface"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918311652_lg3md1",
+    "timestamp": "2026-02-24T07:31:51.652Z"
+  },
+  {
+    "type": "legendary_pull",
+    "message": "pulled a Legendary — Millie Calloway",
+    "actorUserId": "4",
+    "actorName": "Carter",
+    "meta": {
+      "cardId": "card-1771918466073-wtx3moc",
+      "characterName": "Millie Calloway",
+      "movieTitle": "The Housemaid"
+    },
+    "targetUserId": "__global__",
+    "id": "ntf_1771918466085_cjowzp",
+    "timestamp": "2026-02-24T07:34:26.085Z"
   }
 ]

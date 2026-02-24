@@ -26,7 +26,9 @@
       "rare": 20,
       "uncommon": 71
     },
-    "holoChance": 3
+    "holoChance": 3,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
   },
   {
     "id": "pack-1771000454277-lsrtxlr",
@@ -70,6 +72,35 @@
     "restockHourUtc": 0,
     "restockMinuteUtc": 0,
     "discounted": false,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
+  },
+  {
+    "id": "pack-1771918185739-xd99gy7",
+    "name": "premo pac",
+    "imageUrl": "/api/uploads/1771918149427-rqged9.jpg",
+    "price": 50,
+    "cardsPerPack": 5,
+    "allowedRarities": [
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "actor"
+    ],
+    "isActive": true,
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": false,
+    "rarityWeights": {
+      "legendary": 10,
+      "epic": 40,
+      "rare": 50,
+      "uncommon": 0
+    },
+    "comingSoon": false,
     "allowPrismatic": false,
     "allowDarkMatter": false
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUserDailyQuests, getQuestSettings } from "@/lib/quests";
+import { getUserDailyQuests, getQuestSettings, getWeeklySubmitVoteQuests } from "@/lib/quests";
 import { getSetCompletionQuests } from "@/lib/data";
 
 export async function GET(request: Request) {
@@ -11,10 +11,12 @@ export async function GET(request: Request) {
   }
 
   const dailyQuests = getUserDailyQuests(userId);
+  const weeklyQuests = getWeeklySubmitVoteQuests(userId);
   const setCompletionQuests = getSetCompletionQuests(userId);
   const { resetHourUTC } = getQuestSettings();
   return NextResponse.json({
     ...dailyQuests,
+    weeklyQuests,
     setCompletionQuests,
     resetHourUTC,
   });
