@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  getCommunitySetById,
-  saveCommunitySet,
-  getCharacterPool,
-  saveCharacterPool,
-} from "@/lib/data";
-import type { CharacterPortrayal } from "@/lib/data";
+import { getCommunitySetById, saveCommunitySet } from "@/lib/data";
 
-/** POST - Publish a draft community set (add cards to pool) */
+/** POST - Submit a draft community set for admin approval (status → pending) */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -33,44 +27,19 @@ export async function POST(
     return NextResponse.json({ error: "Not the creator of this set" }, { status: 403 });
   }
   if (set.status !== "draft") {
-    return NextResponse.json({ error: "Set is already published" }, { status: 400 });
+    return NextResponse.json({ error: "Set is already submitted or published" }, { status: 400 });
   }
 
   if (set.cards.length < 6) {
     return NextResponse.json(
-      { error: "Set must have at least 6 cards before publishing" },
+      { error: "Set must have at least 6 cards before submitting" },
       { status: 400 }
     );
   }
 
-  const pool = getCharacterPool();
-  const existingIds = new Set(pool.map((c) => c.characterId));
-  const newEntries: CharacterPortrayal[] = [];
-
-  for (let i = 0; i < set.cards.length; i++) {
-    const card = set.cards[i];
-    const characterId = `${id}-${i}`;
-    if (existingIds.has(characterId)) continue;
-
-    const entry: CharacterPortrayal & { communitySetId?: string } = {
-      characterId,
-      actorName: card.actorName,
-      characterName: card.characterName,
-      profilePath: card.profilePath,
-      movieTmdbId: 0,
-      movieTitle: set.name,
-      popularity: 0,
-      rarity: card.rarity,
-      cardType: "community",
-      communitySetId: id,
-    };
-    newEntries.push(entry);
-    existingIds.add(characterId);
-  }
-
-  saveCharacterPool([...pool, ...newEntries]);
-  set.status = "published";
+  // Set to pending for admin approval; pool is updated when admin approves
+  set.status = "pending";
   saveCommunitySet(set);
 
-  return NextResponse.json({ success: true, set, entriesAdded: newEntries.length });
+  return NextResponse.json({ success: true, set, message: "Set submitted for admin approval" });
 }

@@ -1067,7 +1067,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                                     ? "border-white/[0.04] bg-white/[0.01] opacity-60"
                                     : isHolo
                                       ? "border-indigo-400/30 bg-indigo-500/[0.06]"
-                                      : "border-emerald-500/20 bg-emerald-500/[0.04]"
+                                      : "border-sky-500/20 bg-sky-500/[0.04]"
                                 }`}
                               >
                                 <div className="flex items-start gap-3 px-3 py-2.5">
@@ -1103,7 +1103,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                                         )}
                                       </button>
                                     ) : (
-                                      <span className={`text-[10px] font-medium ${isHolo ? "text-indigo-300/60" : "text-emerald-400/60"}`}>
+                                      <span className={`text-[10px] font-medium ${isHolo ? "text-indigo-300/60" : "text-sky-400/60"}`}>
                                         ✓
                                       </span>
                                     )}

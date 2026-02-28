@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { getCommunitySetById, saveCommunitySet } from "@/lib/data";
+import {
+  getCommunitySetById,
+  saveCommunitySet,
+  deleteCommunitySet,
+  getCreditSettings,
+  addCredits,
+  getCharacterPool,
+  saveCharacterPool,
+} from "@/lib/data";
 import type { CommunitySet, CommunitySetCard } from "@/lib/data";
 
 /** GET - Get a single community set by ID */
@@ -40,9 +48,6 @@ export async function PATCH(
   if (set.creatorId !== userId) {
     return NextResponse.json({ error: "Not the creator of this set" }, { status: 403 });
   }
-  if (set.status !== "draft") {
-    return NextResponse.json({ error: "Cannot edit a published set" }, { status: 400 });
-  }
 
   const updates: Partial<CommunitySet> = {};
   if (typeof body.name === "string" && body.name.trim()) {
@@ -70,5 +75,59 @@ export async function PATCH(
 
   const updated: CommunitySet = { ...set, ...updates };
   saveCommunitySet(updated);
+
+  if (updated.status === "published" && Array.isArray(updated.cards)) {
+    const pool = getCharacterPool();
+    const otherEntries = pool.filter((c) => (c as { communitySetId?: string }).communitySetId !== id);
+    const newEntries = updated.cards.map((card, i) => ({
+      characterId: `${id}-${i}`,
+      actorName: card.actorName,
+      characterName: card.characterName,
+      profilePath: card.profilePath,
+      movieTmdbId: 0,
+      movieTitle: updated.name,
+      popularity: 0,
+      rarity: card.rarity,
+      cardType: "community" as const,
+      communitySetId: id,
+    }));
+    saveCharacterPool([...otherEntries, ...newEntries]);
+  }
+
   return NextResponse.json(updated);
+}
+
+/** DELETE - Cancel a draft community set and refund credits - creator only */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("userId");
+  if (!userId || typeof userId !== "string") {
+    return NextResponse.json({ error: "userId required" }, { status: 400 });
+  }
+
+  const set = getCommunitySetById(id);
+  if (!set) {
+    return NextResponse.json({ error: "Set not found" }, { status: 404 });
+  }
+  if (set.creatorId !== userId) {
+    return NextResponse.json({ error: "Not the creator of this set" }, { status: 403 });
+  }
+  if (set.status !== "draft") {
+    return NextResponse.json({ error: "Cannot cancel a published set" }, { status: 400 });
+  }
+
+  const settings = getCreditSettings();
+  const createPrice = settings.communitySetCreatePrice;
+  const extraCardPrice = settings.communitySetExtraCardPrice;
+  const extraCardCount = set.cards?.length ?? 0;
+  const refund = createPrice + extraCardCount * extraCardPrice;
+
+  addCredits(userId, refund, "community_set_cancel", { setId: id });
+  deleteCommunitySet(id);
+
+  return NextResponse.json({ refund });
 }

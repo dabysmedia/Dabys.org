@@ -331,7 +331,7 @@ export default function Header() {
       {creditDelta !== null && (
         <span
           className={`absolute -top-1 -right-1 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold credits-delta-pop pointer-events-none ${
-            creditDelta > 0 ? "text-emerald-400 bg-emerald-500/20" : "text-amber-400 bg-amber-500/20"
+            creditDelta > 0 ? "text-sky-400 bg-sky-500/20" : "text-amber-400 bg-amber-500/20"
           }`}
         >
           {creditDelta > 0 ? `+${creditDelta}` : creditDelta}
@@ -382,7 +382,7 @@ export default function Header() {
       {creditDelta !== null && (
         <span
           className={`absolute -top-1 -right-1 min-w-[20px] px-1.5 py-0.5 rounded text-[10px] font-bold credits-delta-pop pointer-events-none ${
-            creditDelta > 0 ? "text-emerald-400 bg-emerald-500/20" : "text-amber-400 bg-amber-500/20"
+            creditDelta > 0 ? "text-sky-400 bg-sky-500/20" : "text-amber-400 bg-amber-500/20"
           }`}
         >
           {creditDelta > 0 ? `+${creditDelta}` : creditDelta}

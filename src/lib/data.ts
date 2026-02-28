@@ -2262,7 +2262,7 @@ export interface CommunitySet {
   creatorId: string;
   name: string;
   createdAt: string;
-  status: "draft" | "published";
+  status: "draft" | "pending" | "published" | "denied";
   cards: CommunitySetCard[];
 }
 
@@ -2298,6 +2298,11 @@ export function saveCommunitySet(set: CommunitySet): void {
   } else {
     sets.push(set);
   }
+  saveCommunitySetsRaw(sets);
+}
+
+export function deleteCommunitySet(id: string): void {
+  const sets = getCommunitySetsRaw().filter((s) => s.id !== id);
   saveCommunitySetsRaw(sets);
 }
 

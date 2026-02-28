@@ -15,6 +15,7 @@ import {
   getBuyOrders,
   getFeedback,
   getActivity,
+  getCommunitySets,
 } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -249,6 +250,7 @@ export async function GET() {
       activeListings: listings.length,
       activeBuyOrders: buyOrders.length,
       pendingFeedback: feedback.length,
+      pendingCommunitySets: getCommunitySets().filter((s) => s.status === "pending").length,
     },
     recentTransactions,
     legendaryTimeline: legendaryCards,

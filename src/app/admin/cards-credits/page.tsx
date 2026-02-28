@@ -50,6 +50,7 @@ interface CharacterPortrayal {
   movieTmdbId?: number;
   altArtOfCharacterId?: string;
   customSetId?: string;
+  communitySetId?: string;
 }
 
 interface Pack {
@@ -102,6 +103,7 @@ function poolOptionLabel(c: CharacterPortrayal): string {
   if (ct === "director") return `${c.actorName} (Director) (${c.movieTitle}) — ${c.rarity}`;
   if (ct === "scene") return `Scene from ${c.movieTitle} — ${c.rarity}`;
   if (ct === "character") return `${c.actorName} (Boys) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
+  if (ct === "community" || c.communitySetId) return `${c.actorName} (Community) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
   return `${c.actorName} (Actor) as ${c.characterName} (${c.movieTitle}) — ${c.rarity}`;
 }
 
@@ -109,6 +111,7 @@ function poolEntryLabelLines(c: CharacterPortrayal): { title: string; subtitle: 
   const ct = c.cardType ?? "actor";
   if (ct === "director") return { title: c.actorName, subtitle: "Director" };
   if (ct === "scene") return { title: "Scene", subtitle: `from ${c.movieTitle}` };
+  if (ct === "community" || c.communitySetId) return { title: c.characterName || c.actorName, subtitle: `${c.movieTitle} · Community` };
   return { title: c.actorName, subtitle: `as ${c.characterName}` };
 }
 
@@ -225,6 +228,7 @@ export default function AdminCardsCreditsPage() {
   const [rebuildConfirmInput, setRebuildConfirmInput] = useState("");
   const [poolSort, setPoolSort] = useState<"rarity" | "movie">("rarity");
   const [poolSortBoys, setPoolSortBoys] = useState<"rarity" | "set">("rarity");
+  const [poolSortCommunity, setPoolSortCommunity] = useState<"rarity" | "set">("set");
   const [poolSortCustom, setPoolSortCustom] = useState<"rarity" | "set">("rarity");
   const [showAddPoolModal, setShowAddPoolModal] = useState(false);
   const [newPoolTypeId, setNewPoolTypeId] = useState("");
@@ -2670,9 +2674,10 @@ export default function AdminCardsCreditsPage() {
               const customIds = new Set(customCardTypes.map((t) => t.id));
               const actorPool = pool.filter((c) => {
                 const ct = c.cardType ?? "actor";
-                return ct !== "character" && !customIds.has(ct);
+                return ct !== "character" && ct !== "community" && !customIds.has(ct);
               });
               const boysPool = pool.filter((c) => (c.cardType ?? "actor") === "character");
+              const communityPool = pool.filter((c) => c.communitySetId || (c.cardType ?? "actor") === "community");
               return (
                 <>
                   <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
@@ -2731,6 +2736,36 @@ export default function AdminCardsCreditsPage() {
                       </div>
                     )}
                   </div>
+                  {communityPool.length > 0 && (
+                    <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <h3 className="text-sm font-medium text-sky-300/90">Community Pool</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-white/40">{communityPool.length} cards</span>
+                          <select value={poolSortCommunity} onChange={(e) => setPoolSortCommunity(e.target.value as "rarity" | "set")} className="px-3 py-1.5 rounded-lg bg-[#12121a] border border-white/[0.12] text-white text-sm outline-none focus:border-sky-500/50 [color-scheme:dark]"><option value="rarity">Sort by rarity</option><option value="set">Sort by set</option></select>
+                        </div>
+                      </div>
+                      {poolLoading ? ( <div className="flex justify-center py-6"><div className="w-6 h-6 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin" /></div> ) : (
+                        <div className="space-y-4 max-h-[320px] overflow-y-auto pr-2">
+                          {poolSortCommunity === "rarity" ? (
+                            RARITY_ORDER.map((r) => { const entries = communityPool.filter((c) => c.rarity === r); if (entries.length === 0) return null; return (
+                              <div key={r}>
+                                <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${r === "legendary" ? "bg-amber-400" : r === "epic" ? "bg-purple-400" : r === "rare" ? "bg-blue-400" : "bg-white/40"}`} />{r} ({entries.length})</h4>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                              </div>
+                            ); })
+                          ) : (
+                            (() => { const bySet = new Map<string, typeof communityPool>(); for (const c of communityPool) { const s = (c.communitySetId ?? c.movieTitle ?? "(Uncategorized)").trim() || "(Uncategorized)"; if (!bySet.has(s)) bySet.set(s, []); bySet.get(s)!.push(c); } const sets = Array.from(bySet.keys()).sort(); return sets.map((setName) => { const entries = bySet.get(setName)!; return (
+                              <div key={setName}>
+                                <h4 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">{setName} ({entries.length})</h4>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">{entries.map((c) => ( <PoolEntryCard key={c.characterId} c={c} onEdit={() => openEditPoolEntry(c)} /> ))}</div>
+                              </div>
+                            ); }); })()
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {customCardTypes.map((ct) => {
                     const customPool = pool.filter((c) => (c.cardType ?? "actor") === ct.id);
                     const bySet = new Map<string, typeof customPool>();

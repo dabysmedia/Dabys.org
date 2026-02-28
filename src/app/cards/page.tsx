@@ -698,6 +698,7 @@ function CardsContent() {
   const [createSetLoading, setCreateSetLoading] = useState(false);
   const [createSetError, setCreateSetError] = useState("");
   const [createSetImageForIndex, setCreateSetImageForIndex] = useState<number | null>(null);
+  const [createSetIsEditingPublished, setCreateSetIsEditingPublished] = useState(false);
   const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
@@ -1248,6 +1249,14 @@ function CardsContent() {
       setCompletedDarkMatterBadgeWinnerIds(new Set(Array.isArray(d.completedDarkMatterWinnerIds) ? d.completedDarkMatterWinnerIds : []));
     }
   }, [getUserId]);
+
+  const refreshPool = useCallback(async () => {
+    const res = await fetch("/api/cards/character-pool?codex=1");
+    if (res.ok) {
+      const d = await res.json();
+      setPoolEntries(d?.pool ?? []);
+    }
+  }, []);
 
   const refreshShop = useCallback(async () => {
     const res = await fetch("/api/shop/items");
@@ -4665,7 +4674,7 @@ function CardsContent() {
               ) : (
                 <button
                   onClick={() => { setSelectedOrderCharacter(null); setOrderOfferPrice(""); setShowOrderModal(true); }}
-                  className="px-4 py-2.5 rounded-xl border border-emerald-500/50 bg-emerald-500/20 backdrop-blur-md text-emerald-300 font-medium hover:border-emerald-400 hover:bg-emerald-500/30 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-sky-500/50 bg-sky-500/20 backdrop-blur-md text-sky-300 font-medium hover:border-sky-400 hover:bg-sky-500/30 transition-colors cursor-pointer"
                 >
                   Request a Card
                 </button>
@@ -4906,7 +4915,7 @@ function CardsContent() {
                           <button
                             onClick={() => handleFulfillOrder(order.id, myCardsForOrder[0].id)}
                             disabled={fulfillingOrderId === order.id}
-                            className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-40 transition-colors cursor-pointer"
+                            className="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-500 disabled:opacity-40 transition-colors cursor-pointer"
                           >
                             {fulfillingOrderId === order.id ? "Trading..." : "Trade to them"}
                           </button>
@@ -4940,7 +4949,7 @@ function CardsContent() {
                             <button
                               key={entry.characterId}
                               onClick={() => setSelectedOrderCharacter(entry)}
-                              className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-emerald-500/60 focus:ring-emerald-500/60 transition-all cursor-pointer text-left"
+                              className="w-full max-w-[100px] mx-auto rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-sky-500/60 focus:ring-sky-500/60 transition-all cursor-pointer text-left"
                             >
                               <CardDisplay card={{ ...entry, isFoil: false, isAltArt: !!entry.altArtOfCharacterId }} inCodex={isCardSlotAlreadyInCodex({ ...entry, isFoil: false })} />
                             </button>
@@ -4953,7 +4962,7 @@ function CardsContent() {
                           <span className="text-sm text-white/60">Requesting this card</span>
                           <button
                             onClick={() => { setSelectedOrderCharacter(null); setOrderOfferPrice(""); }}
-                            className="text-xs text-emerald-400/80 hover:text-emerald-400 transition-colors cursor-pointer"
+                            className="text-xs text-sky-400/80 hover:text-sky-400 transition-colors cursor-pointer"
                           >
                             Change
                           </button>
@@ -4967,7 +4976,7 @@ function CardsContent() {
                           min={0}
                           value={orderOfferPrice}
                           onChange={(e) => setOrderOfferPrice(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-emerald-500/40 mb-4"
+                          className="w-full px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-sky-500/40 mb-4"
                           placeholder="0"
                         />
                         <div className="flex gap-2 w-full">
@@ -4980,7 +4989,7 @@ function CardsContent() {
                           <button
                             onClick={handleCreateOrder}
                             disabled={creatingOrder || (orderOfferPrice.trim() !== "" && (isNaN(parseInt(orderOfferPrice, 10)) || parseInt(orderOfferPrice, 10) < 0)) || (orderOfferPrice.trim() !== "" && creditBalance < parseInt(orderOfferPrice, 10))}
-                            className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-500 disabled:opacity-40 cursor-pointer"
+                            className="flex-1 px-4 py-2 rounded-lg bg-sky-600 text-white font-medium hover:bg-sky-500 disabled:opacity-40 cursor-pointer"
                           >
                             {creatingOrder ? "Creating..." : "Request"}
                           </button>
@@ -5777,7 +5786,7 @@ function CardsContent() {
             </div>
 
             {codexSubTab === "codex" && (() => {
-              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character");
+              const mainEntries = poolEntries.filter((e) => !e.altArtOfCharacterId && (e.cardType ?? "actor") !== "character" && !(e as PoolEntry & { communitySetId?: string }).communitySetId);
               const altArtMap = new Map<string, PoolEntry[]>();
               for (const e of poolEntries) {
                 if (e.altArtOfCharacterId) {
@@ -6421,11 +6430,12 @@ function CardsContent() {
             {codexSubTab === "community" && (() => {
               const communityEntries = poolEntries.filter((e) => (e as PoolEntry & { communitySetId?: string }).communitySetId);
               const setNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.name]));
+              const creatorsById = new Map(publishedCommunitySets.map((s) => [s.id, s.creatorId]));
               return (
           <>
             {communityEntries.length === 0 ? (
               <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No community cards in the pool yet.</p>
+                <p className="text-white/40 text-sm">No community cards in the pool yet. Create your own set — when others complete it, you earn cr.</p>
                 {user?.id && (
                   <button
                     type="button"
@@ -6436,8 +6446,10 @@ function CardsContent() {
                       setCreateSetName("");
                       setCreateSetCards([]);
                       setCreateSetError("");
+                      setCreateSetIsEditingPublished(false);
                     }}
-                    className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium text-sm hover:bg-emerald-500/30 transition-colors"
+                    className="mt-4 px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-300 font-medium text-sm hover:bg-sky-500/30 transition-colors"
+                    title="Create a set. When others complete your set, you earn cr."
                   >
                     Create a set
                   </button>
@@ -6473,8 +6485,10 @@ function CardsContent() {
                         setCreateSetName("");
                         setCreateSetCards([]);
                         setCreateSetError("");
+                        setCreateSetIsEditingPublished(false);
                       }}
-                      className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium text-sm hover:bg-emerald-500/30 transition-colors shrink-0"
+                      className="px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-300 font-medium text-sm hover:bg-sky-500/30 transition-colors shrink-0"
+                      title="Create a set. When others complete your set, you earn cr."
                     >
                       Create a set
                     </button>
@@ -6599,12 +6613,15 @@ function CardsContent() {
                           const completionPct = totalCount > 0 ? completedCount / totalCount : 0;
                           const hasLegendary = entries.some((e) => e.rarity === "legendary");
                           const title = setNamesById.get(k) ?? k;
+                          const creatorId = creatorsById.get(k);
                           return {
                             title,
                             entries,
                             completedCount,
                             completionPct,
                             hasLegendary,
+                            setId: k,
+                            creatorId,
                           };
                         })
                         .sort((a, b) => {
@@ -6617,8 +6634,33 @@ function CardsContent() {
                         setIndex > 0 ? (
                           <div key={`community-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
-                        <div key={`community-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
-                          {set.title}
+                        <div key={`community-set-title-${setIndex}`} className="col-span-full flex items-center justify-between gap-2 mb-2">
+                          <span className="text-sm font-semibold text-white/70">{set.title}</span>
+                          {user?.id && set.creatorId === user.id && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const s = publishedCommunitySets.find((x) => x.id === set.setId);
+                                if (s) {
+                                  setCreateSetId(s.id);
+                                  setCreateSetName(s.name);
+                                  setCreateSetCards((s.cards ?? []).map((c) => ({
+                                    actorName: c.actorName ?? "",
+                                    characterName: c.characterName ?? "",
+                                    profilePath: c.profilePath ?? "",
+                                    rarity: c.rarity ?? "uncommon",
+                                  })));
+                                  setCreateSetStep("edit");
+                                  setCreateSetError("");
+                                  setCreateSetIsEditingPublished(true);
+                                  setShowCreateCommunitySetModal(true);
+                                }
+                              }}
+                              className="px-2 py-1 rounded-lg text-xs font-medium text-sky-300 border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
                         </div>,
                         ...set.entries.map((entry) => renderEntry(entry)),
                       ]);
@@ -6984,11 +7026,11 @@ function CardsContent() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-5 border-b border-white/10 shrink-0">
-                <h3 className="text-lg font-bold text-white/90">Create community set</h3>
+                <h3 className="text-lg font-bold text-white/90">{createSetIsEditingPublished ? "Edit community set" : "Create community set"}</h3>
                 <p className="text-sm text-white/50 mt-1">
-                  {createSetStep === "pay" && "Pay to create a new set. You'll define 6 cards with custom art, names, and rarities."}
-                  {createSetStep === "edit" && "Define your set. Add at least 6 cards. You can add more cards for extra cr."}
-                  {createSetStep === "publishing" && "Publishing..."}
+                  {createSetStep === "pay" && "Pay to create a new set. You'll define 6 cards with custom art, names, and rarities. When others complete your set, you earn cr."}
+                  {createSetStep === "edit" && "Define your set. Add at least 6 cards. You can add more cards for extra cr. When others complete your set, you earn cr."}
+                  {createSetStep === "publishing" && "Submitting for approval..."}
                 </p>
               </div>
               <div className="p-5 overflow-y-auto flex-1 min-h-0">
@@ -6998,7 +7040,7 @@ function CardsContent() {
                 {createSetStep === "pay" && (
                   <div className="space-y-4">
                     <p className="text-white/70">
-                      Cost: <span className="font-bold text-emerald-400">{communityCreditPrices.createPrice} cr</span>
+                      Cost: <span className="font-bold text-sky-400">{communityCreditPrices.createPrice} cr</span>
                     </p>
                     <p className="text-sm text-white/50">Your balance: {creditBalance ?? "—"} cr</p>
                     <button
@@ -7026,7 +7068,7 @@ function CardsContent() {
                           setCreateSetLoading(false);
                         }
                       }}
-                      className="w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-full px-4 py-3 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 font-medium hover:bg-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {createSetLoading ? "Creating..." : "Create set"}
                     </button>
@@ -7065,25 +7107,27 @@ function CardsContent() {
                             </div>
                             <input
                               type="text"
-                              value={card.actorName}
-                              onChange={(e) => setCreateSetCards((prev) => {
-                                const next = [...prev];
-                                next[i] = { ...next[i], actorName: e.target.value };
-                                return next;
-                              })}
-                              placeholder="Name"
-                              className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
-                            />
-                            <input
-                              type="text"
                               value={card.characterName}
                               onChange={(e) => setCreateSetCards((prev) => {
                                 const next = [...prev];
                                 next[i] = { ...next[i], characterName: e.target.value };
                                 return next;
                               })}
-                              placeholder="Character / role"
+                              placeholder="Title"
                               className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                              title="Shows at the top of the card"
+                            />
+                            <input
+                              type="text"
+                              value={card.actorName}
+                              onChange={(e) => setCreateSetCards((prev) => {
+                                const next = [...prev];
+                                next[i] = { ...next[i], actorName: e.target.value };
+                                return next;
+                              })}
+                              placeholder="Bottom text"
+                              className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                              title="Shows at the bottom of the card"
                             />
                             <select
                               value={card.rarity}
@@ -7136,7 +7180,7 @@ function CardsContent() {
                         onClick={async () => {
                           setCreateSetLoading(true);
                           setCreateSetError("");
-                          setCreateSetStep("publishing");
+                          if (!createSetIsEditingPublished) setCreateSetStep("publishing");
                           try {
                             const cardsToSave = createSetCards.map((c) => ({
                               actorName: c.actorName,
@@ -7153,25 +7197,36 @@ function CardsContent() {
                               const j = await patchRes.json();
                               throw new Error(j.error || "Failed to save");
                             }
-                            const pubRes = await fetch(`/api/community-sets/${createSetId}/publish`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ userId: user.id }),
-                            });
-                            const pubJson = await pubRes.json();
-                            if (!pubRes.ok) throw new Error(pubJson.error || "Failed to publish");
-                            setShowCreateCommunitySetModal(false);
-                            refreshCodex();
+                            if (createSetIsEditingPublished) {
+                              setCreateSetId(null);
+                              setCreateSetStep("pay");
+                              setCreateSetName("");
+                              setCreateSetCards([]);
+                              setCreateSetImageForIndex(null);
+                              setCreateSetIsEditingPublished(false);
+                              setShowCreateCommunitySetModal(false);
+                              await Promise.all([refreshCodex(), refreshPool()]);
+                            } else {
+                              const pubRes = await fetch(`/api/community-sets/${createSetId}/publish`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ userId: user.id }),
+                              });
+                              const pubJson = await pubRes.json();
+                              if (!pubRes.ok) throw new Error(pubJson.error || "Failed to submit");
+                              setShowCreateCommunitySetModal(false);
+                              refreshCodex();
+                            }
                           } catch (e) {
-                            setCreateSetError(e instanceof Error ? e.message : "Failed to publish");
+                            setCreateSetError(e instanceof Error ? e.message : "Failed to submit");
                             setCreateSetStep("edit");
                           } finally {
                             setCreateSetLoading(false);
                           }
                         }}
-                        className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-medium hover:bg-emerald-500/30 disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-300 text-sm font-medium hover:bg-sky-500/30 disabled:opacity-50"
                       >
-                        Publish
+                        {createSetIsEditingPublished ? (createSetLoading ? "Saving..." : "Save") : "Submit for Approval"}
                       </button>
                     </div>
                   </div>
@@ -7180,10 +7235,38 @@ function CardsContent() {
               <div className="p-4 border-t border-white/10 shrink-0">
                 <button
                   type="button"
-                  onClick={() => !createSetLoading && setShowCreateCommunitySetModal(false)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08]"
+                  disabled={createSetLoading}
+                  onClick={async () => {
+                    if (createSetLoading) return;
+                    if (createSetStep === "edit" && createSetId && user && !createSetIsEditingPublished) {
+                      setCreateSetLoading(true);
+                      setCreateSetError("");
+                      try {
+                        const res = await fetch(`/api/community-sets/${createSetId}?userId=${encodeURIComponent(user.id)}`, { method: "DELETE" });
+                        const json = await res.json();
+                        if (!res.ok) throw new Error(json.error || "Failed to cancel");
+                        setCreateSetId(null);
+                        setCreateSetStep("pay");
+                        setCreateSetName("");
+                        setCreateSetCards([]);
+                        setCreateSetImageForIndex(null);
+                        setCreateSetIsEditingPublished(false);
+                        setShowCreateCommunitySetModal(false);
+                        window.dispatchEvent(new Event("dabys-credits-refresh"));
+                        await refreshCredits();
+                      } catch (e) {
+                        setCreateSetError(e instanceof Error ? e.message : "Failed to cancel");
+                      } finally {
+                        setCreateSetLoading(false);
+                      }
+                    } else {
+                      setCreateSetIsEditingPublished(false);
+                      setShowCreateCommunitySetModal(false);
+                    }
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08] disabled:opacity-50"
                 >
-                  {createSetStep === "edit" ? "Cancel" : "Close"}
+                  {createSetStep === "edit" ? (createSetLoading ? "Cancelling..." : "Cancel") : "Close"}
                 </button>
               </div>
             </div>

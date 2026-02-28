@@ -33,9 +33,6 @@ export async function POST(
   if (set.creatorId !== userId) {
     return NextResponse.json({ error: "Not the creator of this set" }, { status: 403 });
   }
-  if (set.status !== "draft") {
-    return NextResponse.json({ error: "Cannot add cards to a published set" }, { status: 400 });
-  }
 
   const settings = getCreditSettings();
   const price = settings.communitySetExtraCardPrice;

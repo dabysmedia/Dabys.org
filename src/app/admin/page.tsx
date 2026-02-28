@@ -46,6 +46,7 @@ interface DashboardData {
     activeListings: number;
     activeBuyOrders: number;
     pendingFeedback: number;
+    pendingCommunitySets?: number;
   };
   recentTransactions: {
     id: string;
@@ -1149,6 +1150,7 @@ export default function AdminDashboard() {
               { label: "Active Listings", value: data.site.activeListings, icon: "🏷️" },
               { label: "Active Buy Orders", value: data.site.activeBuyOrders, icon: "💰" },
               { label: "Pending Feedback", value: data.site.pendingFeedback, icon: "💬" },
+              { label: "Pending Community Sets", value: data.site.pendingCommunitySets ?? 0, icon: "🃏" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-1 border-b border-white/[0.04] last:border-0">
                 <span className="text-xs text-white/50 flex items-center gap-2">
@@ -1349,6 +1351,7 @@ export default function AdminDashboard() {
             { href: "/admin/movie-night", label: "Movie Night", icon: "M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-1.5A1.125 1.125 0 0118 18.375", iconCls: "bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20" },
             { href: "/admin/users", label: "Users", icon: "M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z", iconCls: "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20" },
             { href: "/admin/cards-credits", label: "Cards & Credits", icon: "M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z", iconCls: "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20" },
+            { href: "/admin/community-cards", label: `Community Cards${(data.site.pendingCommunitySets ?? 0) > 0 ? ` (${data.site.pendingCommunitySets})` : ""}`, icon: "M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122", iconCls: "bg-sky-500/10 text-sky-400 group-hover:bg-sky-500/20" },
             { href: "/admin/feedback", label: `Feedback${data.site.pendingFeedback > 0 ? ` (${data.site.pendingFeedback})` : ""}`, icon: "M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z", iconCls: "bg-pink-500/10 text-pink-400 group-hover:bg-pink-500/20" },
           ].map((action) => (
             <a
