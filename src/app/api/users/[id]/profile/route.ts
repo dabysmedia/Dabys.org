@@ -381,6 +381,11 @@ export async function GET(
   const allDisplayableWinnerIds = [...new Set([...completedWinnerIds, ...purchasedBadgeWinnerIds])];
   const completedCommunitySetIds = publishedCommunitySets.filter((s) => hasCompletedCommunitySet(id, s.id)).map((s) => s.id);
   const allUsers = getUsers();
+  const userById = new Map(allUsers.map((u) => [u.id, u]));
+  const publishedCommunitySetsWithCreator = publishedCommunitySets.map((set) => ({
+    ...set,
+    creatorName: userById.get(set.creatorId)?.name ?? "Unknown",
+  }));
   type BadgeTier = "normal" | "holo" | "prismatic" | "darkMatter";
   const completedBadges = [
     ...allDisplayableWinnerIds.map((wid) => {
@@ -474,7 +479,7 @@ export async function GET(
     completedWinnerIds,
     completedBadges,
     completedCommunitySetIds,
-    publishedCommunitySets,
+    publishedCommunitySets: publishedCommunitySetsWithCreator,
     communityCreditPrices: {
       createPrice: getCreditSettings().communitySetCreatePrice,
       extraCardPrice: getCreditSettings().communitySetExtraCardPrice,

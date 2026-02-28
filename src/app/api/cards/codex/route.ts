@@ -14,6 +14,7 @@ import {
   getPublishedCommunitySets,
   getCommunityCodexUnlockedCharacterIds,
   getCreditSettings,
+  getUsers,
 } from "@/lib/data";
 import { hasCompletedCommunitySet } from "@/lib/cards";
 
@@ -37,7 +38,13 @@ export async function GET(request: Request) {
   const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
   const legendaryOwnedBy = getLegendaryOwnershipBySlotId();
 
-  const publishedCommunitySets = getPublishedCommunitySets();
+  const publishedCommunitySetsRaw = getPublishedCommunitySets();
+  const users = getUsers();
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const publishedCommunitySets = publishedCommunitySetsRaw.map((set) => ({
+    ...set,
+    creatorName: userById.get(set.creatorId)?.name ?? "Unknown",
+  }));
   const communityCodexBySet: Record<string, string[]> = {};
   const completedCommunitySetIds: string[] = [];
   for (const set of publishedCommunitySets) {

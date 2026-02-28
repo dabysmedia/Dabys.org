@@ -64,6 +64,11 @@ interface CompletedBadge {
 
 type BadgeSelection = null | { type: "winner"; id: string } | { type: "shop"; id: string };
 
+const RARITY_ORDER: Record<string, number> = { uncommon: 0, rare: 1, epic: 2, legendary: 3 };
+function sortCommunityCardsByRarity<T extends { rarity?: string }>(cards: T[]): T[] {
+  return [...cards].sort((a, b) => (RARITY_ORDER[a.rarity ?? ""] ?? 0) - (RARITY_ORDER[b.rarity ?? ""] ?? 0));
+}
+
 interface FavoriteMovie {
   title: string;
   posterUrl: string;
@@ -170,7 +175,7 @@ interface FullProfile {
   completedBadges?: CompletedBadge[];
   featuredCards?: FeaturedCard[];
   completedCommunitySetIds?: string[];
-  publishedCommunitySets?: { id: string; name: string; creatorId: string; cards: unknown[] }[];
+  publishedCommunitySets?: { id: string; name: string; creatorId: string; creatorName?: string; cards: unknown[] }[];
   communityCreditPrices?: { createPrice: number; extraCardPrice: number };
 }
 
@@ -1756,7 +1761,7 @@ export default function ProfilePage() {
                           return (
                             <div key={set.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                               <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-sm font-semibold text-white/90">{set.name}</h4>
+                                <h4 className="text-sm font-semibold text-white/90 min-w-0 truncate">{set.name} <span className="text-[11px] font-normal text-white/40">by {set.creatorName ?? "Unknown"}</span></h4>
                                 <div className="flex items-center gap-2">
                                   {isOwnProfile && set.creatorId === currentUser?.id && (
                                     <button
@@ -1960,7 +1965,16 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-white/50 mb-2">Cards (min 6)</p>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-xs text-white/50">Cards (min 6)</p>
+                      <button
+                        type="button"
+                        onClick={() => setCreateSetCards((prev) => sortCommunityCardsByRarity(prev))}
+                        className="px-2 py-1 rounded text-xs text-white/60 hover:text-white/90 hover:bg-white/10"
+                      >
+                        Sort by rarity
+                      </button>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {createSetCards.map((card, i) => (
                         <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
@@ -2016,6 +2030,36 @@ export default function ProfilePage() {
                             <option value="epic">Epic</option>
                             <option value="legendary">Legendary</option>
                           </select>
+                          <div className="flex gap-1 pt-1">
+                            <button
+                              type="button"
+                              disabled={i === 0}
+                              onClick={() => setCreateSetCards((prev) => {
+                                if (i === 0) return prev;
+                                const next = [...prev];
+                                [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                return next;
+                              })}
+                              className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Move left"
+                            >
+                              ←
+                            </button>
+                            <button
+                              type="button"
+                              disabled={i === createSetCards.length - 1}
+                              onClick={() => setCreateSetCards((prev) => {
+                                if (i >= prev.length - 1) return prev;
+                                const next = [...prev];
+                                [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                                return next;
+                              })}
+                              className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Move right"
+                            >
+                              →
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

@@ -71,6 +71,11 @@ interface BuyOrderEnriched {
 
 const PACK_PRICE = 50;
 
+const RARITY_ORDER: Record<string, number> = { uncommon: 0, rare: 1, epic: 2, legendary: 3 };
+function sortCommunityCardsByRarity<T extends { rarity?: string }>(cards: T[]): T[] {
+  return [...cards].sort((a, b) => (RARITY_ORDER[a.rarity ?? ""] ?? 0) - (RARITY_ORDER[b.rarity ?? ""] ?? 0));
+}
+
 function getTimeUntilMidnightUTC(): string {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -686,7 +691,7 @@ function CardsContent() {
   const [completedHoloBadgeWinnerIds, setCompletedHoloBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedPrismaticBadgeWinnerIds, setCompletedPrismaticBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedDarkMatterBadgeWinnerIds, setCompletedDarkMatterBadgeWinnerIds] = useState<Set<string>>(new Set());
-  const [publishedCommunitySets, setPublishedCommunitySets] = useState<{ id: string; name: string; creatorId: string; cards: { actorName: string; characterName: string; profilePath: string; rarity: string }[] }[]>([]);
+  const [publishedCommunitySets, setPublishedCommunitySets] = useState<{ id: string; name: string; creatorId: string; creatorName?: string; cards: { actorName: string; characterName: string; profilePath: string; rarity: string }[] }[]>([]);
   const [communityCodexBySet, setCommunityCodexBySet] = useState<Record<string, string[]>>({});
   const [completedCommunitySetIds, setCompletedCommunitySetIds] = useState<Set<string>>(new Set());
   const [communityCreditPrices, setCommunityCreditPrices] = useState<{ createPrice: number; extraCardPrice: number }>({ createPrice: 500, extraCardPrice: 50 });
@@ -6431,6 +6436,7 @@ function CardsContent() {
               const communityEntries = poolEntries.filter((e) => (e as PoolEntry & { communitySetId?: string }).communitySetId);
               const setNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.name]));
               const creatorsById = new Map(publishedCommunitySets.map((s) => [s.id, s.creatorId]));
+              const creatorNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.creatorName ?? "Unknown"]));
               return (
           <>
             {communityEntries.length === 0 ? (
@@ -6614,6 +6620,7 @@ function CardsContent() {
                           const hasLegendary = entries.some((e) => e.rarity === "legendary");
                           const title = setNamesById.get(k) ?? k;
                           const creatorId = creatorsById.get(k);
+                          const creatorName = creatorNamesById.get(k) ?? "Unknown";
                           return {
                             title,
                             entries,
@@ -6622,6 +6629,7 @@ function CardsContent() {
                             hasLegendary,
                             setId: k,
                             creatorId,
+                            creatorName,
                           };
                         })
                         .sort((a, b) => {
@@ -6635,7 +6643,7 @@ function CardsContent() {
                           <div key={`community-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
                         ) : null,
                         <div key={`community-set-title-${setIndex}`} className="col-span-full flex items-center justify-between gap-2 mb-2">
-                          <span className="text-sm font-semibold text-white/70">{set.title}</span>
+                          <span className="text-sm font-semibold text-white/70 min-w-0 truncate">{set.title} <span className="text-[11px] font-normal text-white/40">by {set.creatorName}</span></span>
                           {user?.id && set.creatorId === user.id && (
                             <button
                               type="button"
@@ -7087,7 +7095,16 @@ function CardsContent() {
                       />
                     </div>
                     <div>
-                      <p className="text-xs text-white/50 mb-2">Cards (min 6)</p>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-xs text-white/50">Cards (min 6)</p>
+                        <button
+                          type="button"
+                          onClick={() => setCreateSetCards((prev) => sortCommunityCardsByRarity(prev))}
+                          className="px-2 py-1 rounded text-xs text-white/60 hover:text-white/90 hover:bg-white/10"
+                        >
+                          Sort by rarity
+                        </button>
+                      </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {createSetCards.map((card, i) => (
                           <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
@@ -7143,6 +7160,36 @@ function CardsContent() {
                               <option value="epic">Epic</option>
                               <option value="legendary">Legendary</option>
                             </select>
+                            <div className="flex gap-1 pt-1">
+                              <button
+                                type="button"
+                                disabled={i === 0}
+                                onClick={() => setCreateSetCards((prev) => {
+                                  if (i === 0) return prev;
+                                  const next = [...prev];
+                                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                  return next;
+                                })}
+                                className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Move left"
+                              >
+                                ←
+                              </button>
+                              <button
+                                type="button"
+                                disabled={i === createSetCards.length - 1}
+                                onClick={() => setCreateSetCards((prev) => {
+                                  if (i >= prev.length - 1) return prev;
+                                  const next = [...prev];
+                                  [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                                  return next;
+                                })}
+                                className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Move right"
+                              >
+                                →
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
