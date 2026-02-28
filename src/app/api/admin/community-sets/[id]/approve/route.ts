@@ -38,9 +38,10 @@ export async function POST(
   }
 
   const pool = getCharacterPool();
-  const otherEntries = pool.filter(
-    (c) => (c as { communitySetId?: string }).communitySetId !== id
-  );
+  const otherEntries = pool.filter((c) => {
+    const sid = (c as { communitySetId?: string }).communitySetId;
+    return sid === undefined || sid !== id;
+  });
   const newEntries: (CharacterPortrayal & { communitySetId?: string })[] =
     (set.cards ?? []).map((card, i) => ({
       characterId: `${id}-${i}`,

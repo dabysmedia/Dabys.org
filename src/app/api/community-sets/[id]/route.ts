@@ -76,9 +76,12 @@ export async function PATCH(
   const updated: CommunitySet = { ...set, ...updates };
   saveCommunitySet(updated);
 
-  if (updated.status === "published" && Array.isArray(updated.cards)) {
+  if (updated.status === "published" && Array.isArray(updated.cards) && id) {
     const pool = getCharacterPool();
-    const otherEntries = pool.filter((c) => (c as { communitySetId?: string }).communitySetId !== id);
+    const otherEntries = pool.filter((c) => {
+      const sid = (c as { communitySetId?: string }).communitySetId;
+      return sid === undefined || sid !== id;
+    });
     const newEntries = updated.cards.map((card, i) => ({
       characterId: `${id}-${i}`,
       actorName: card.actorName,
