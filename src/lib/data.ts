@@ -1373,7 +1373,7 @@ export const CARD_FINISH_ORDER: readonly CardFinish[] = ["normal", "holo", "pris
 export const CARD_FINISH_LABELS: Record<CardFinish, string> = {
   normal: "Normal",
   holo: "Holo",
-  prismatic: "Prismatic",
+  prismatic: "Radiant",
   darkMatter: "Dark Matter",
 };
 
@@ -1631,6 +1631,24 @@ export function addPendingPoolEntry(winnerId: string, entry: CharacterPortrayal)
 export function getOwnedLegendaryCharacterIds(): Set<string> {
   const cards = getCardsRaw();
   return new Set(cards.filter((c) => c.rarity === "legendary").map((c) => c.characterId));
+}
+
+/** For each legendary slot (altArtOfCharacterId ?? characterId) owned by someone, returns { userId, userName }. Used to show "owned by X" in codex when unobtainable. */
+export function getLegendaryOwnershipBySlotId(): Record<string, { userId: string; userName: string }> {
+  const cards = getCardsRaw();
+  const pool = getCharacterPool();
+  const poolById = new Map(pool.map((c) => [c.characterId, c]));
+  const users = getUsers();
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const result: Record<string, { userId: string; userName: string }> = {};
+  for (const c of cards) {
+    if (c.rarity !== "legendary" || !c.userId) continue;
+    const entry = poolById.get(c.characterId);
+    const slot = entry ? (entry.altArtOfCharacterId ?? entry.characterId) : c.characterId;
+    const user = userById.get(c.userId);
+    result[slot] = { userId: c.userId, userName: user?.name ?? "Unknown" };
+  }
+  return result;
 }
 
 /** Slot ids (base character: altArtOfCharacterId ?? characterId) for which a legendary is already owned. Used so main and alt-art legendaries are 1-of-1 per slot. */
@@ -2169,30 +2187,39 @@ export function clearCodexForUser(userId: string): void {
   }
 }
 
-// ──── Prestige: Prismatic Forge unlock (unlocked after Prestige Codex) ────
+// ──── Prestige: Radiant Forge unlock + prestige level (unlocked after Prestige Codex) ────
 const PRESTIGE_PRISMATIC_FORGE_FILE = "prestigePrismaticForge.json";
 
-function getPrestigePrismaticForgeRaw(): Record<string, boolean> {
+function getPrestigePrismaticForgeRaw(): Record<string, boolean | number> {
   try {
-    return readJson<Record<string, boolean>>(PRESTIGE_PRISMATIC_FORGE_FILE);
+    return readJson<Record<string, boolean | number>>(PRESTIGE_PRISMATIC_FORGE_FILE);
   } catch {
     return {};
   }
 }
 
-function savePrestigePrismaticForgeRaw(data: Record<string, boolean>) {
+function savePrestigePrismaticForgeRaw(data: Record<string, boolean | number>) {
   writeJson(PRESTIGE_PRISMATIC_FORGE_FILE, data);
 }
 
-export function getPrismaticForgeUnlocked(userId: string): boolean {
+/** Prestige level: 0 = never prestiged, 1+ = number of times prestiged. Backward compat: legacy boolean true → 1. */
+export function getPrestigeLevel(userId: string): number {
   const data = getPrestigePrismaticForgeRaw();
-  return data[userId] === true;
+  const v = data[userId];
+  if (v === true) return 1;
+  if (typeof v === "number" && v >= 0) return v;
+  return 0;
+}
+
+export function getPrismaticForgeUnlocked(userId: string): boolean {
+  return getPrestigeLevel(userId) >= 1;
 }
 
 export function setPrismaticForgeUnlocked(userId: string, unlocked: boolean): void {
   const data = getPrestigePrismaticForgeRaw();
   if (unlocked) {
-    data[userId] = true;
+    const current = getPrestigeLevel(userId);
+    data[userId] = current + 1;
   } else {
     delete data[userId];
   }

@@ -29,6 +29,7 @@ export async function GET() {
           characterId: card.characterId,
           rarity: card.rarity,
           isFoil: card.isFoil,
+          finish: card.finish,
           actorName: card.actorName,
           characterName: card.characterName,
           movieTitle: card.movieTitle,

@@ -681,6 +681,7 @@ function CardsContent() {
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
   const [prismaticForgeUnlocked, setPrismaticForgeUnlocked] = useState(false);
+  const [legendaryOwnedBy, setLegendaryOwnedBy] = useState<Record<string, { userId: string; userName: string }>>({});
   const [showPrestigeCodexConfirm, setShowPrestigeCodexConfirm] = useState(false);
   const [prestigeCodexLoading, setPrestigeCodexLoading] = useState(false);
   const [inspectedCodexCard, setInspectedCodexCard] = useState<{
@@ -1037,6 +1038,7 @@ function CardsContent() {
       setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
+      setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
@@ -1199,6 +1201,7 @@ function CardsContent() {
       setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
+      setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
@@ -2093,7 +2096,7 @@ function CardsContent() {
       return;
     }
     const chance = Math.min(100, (alchemySettings.prismaticCraftBaseChance ?? 5) + amount * (alchemySettings.prismaticCraftChancePerPrism ?? 10));
-    if (!confirm(`Apply ${amount} Prism(s) for a ${chance}% chance to craft Prismatic? Prisms are consumed. Failure awards ${alchemySettings.prismaticCraftFailureStardust ?? 25} Stardust.`)) return;
+    if (!confirm(`Apply ${amount} Prism(s) for a ${chance}% chance to craft Radiant? Prisms are consumed. Failure awards ${alchemySettings.prismaticCraftFailureStardust ?? 25} Stardust.`)) return;
     setAlchemyError("");
     setPrismaticCraftLoading(true);
     setPrismaticCraftResult(null);
@@ -2106,7 +2109,7 @@ function CardsContent() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAlchemyErrorFading(false);
-        setAlchemyError(data?.error ?? "Prismatic craft failed");
+        setAlchemyError(data?.error ?? "Radiant craft failed");
         return;
       }
       setPrismaticCraftResult({ success: data.success, stardustAwarded: data.stardustAwarded ?? 0 });
@@ -2116,7 +2119,7 @@ function CardsContent() {
         setTimeout(() => setAlchemySuccessFlash(false), 500);
         setPrismaticCraftCardId(null);
       } else {
-        setPAPFailureErrorAndFade(`Prismatic craft failed — ${data.stardustAwarded ?? 0} Stardust consolation awarded.`);
+        setPAPFailureErrorAndFade(`Radiant craft failed — ${data.stardustAwarded ?? 0} Stardust consolation awarded.`);
       }
       await Promise.all([refreshCards(), refreshPrisms(), refreshStardust()]);
     } finally {
@@ -2198,7 +2201,11 @@ function CardsContent() {
       if (f === "prismatic") return discoveredPrismaticCharacterIds.has(card.characterId);
       return discoveredHoloCharacterIds.has(card.characterId);
     }
-    if (isAltArt) return discoveredAltArtCharacterIds.has(card.characterId);
+    if (isAltArt) {
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      const isAltArtHolo = f === "holo" || f === "prismatic" || f === "darkMatter" || !!card.isFoil;
+      return isAltArtHolo ? discoveredAltArtHoloCharacterIds.has(card.characterId) : discoveredAltArtCharacterIds.has(card.characterId);
+    }
     if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
     return false;
   }
@@ -2215,8 +2222,8 @@ function CardsContent() {
     return discoveredCharacterIds.has(card.characterId) && !discoveredHoloCharacterIds.has(card.characterId);
   }
 
-  /** True if this is a main foil card but the regular version is NOT yet in the codex (holo upload blocked). */
-  function isHoloMissingRegularPrereq(card: { characterId?: string | null; isFoil?: boolean }): boolean {
+  /** True if this card cannot be uploaded because a prerequisite slot is not yet in the codex. */
+  function isCodexUploadBlockedByPrereq(card: { characterId?: string | null; isFoil?: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter" }): boolean {
     if (!card.characterId || !card.isFoil) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return false;
@@ -2224,6 +2231,9 @@ function CardsContent() {
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isMain = !isAltArt && !isBoys;
     if (!isMain) return false;
+    const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+    if (f === "darkMatter") return !discoveredPrismaticCharacterIds.has(card.characterId);
+    if (f === "prismatic") return !discoveredHoloCharacterIds.has(card.characterId);
     return !discoveredCharacterIds.has(card.characterId);
   }
 
@@ -2234,15 +2244,25 @@ function CardsContent() {
   }
 
   /** Unique key for the codex slot this card would fill (one upload per slot). */
-  function getCodexSlotKey(card: { characterId?: string | null; isFoil?: boolean }): string | null {
+  function getCodexSlotKey(card: { characterId?: string | null; isFoil?: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter" }): string | null {
     if (!card.characterId) return null;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return null;
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isMain = !isAltArt && !isBoys;
-    if (isMain) return card.isFoil ? `holo:${card.characterId}` : `regular:${card.characterId}`;
-    if (isAltArt) return `altart:${card.characterId}`;
+    if (isMain) {
+      if (!card.isFoil) return `regular:${card.characterId}`;
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      if (f === "darkMatter") return `darkMatter:${card.characterId}`;
+      if (f === "prismatic") return `prismatic:${card.characterId}`;
+      return `holo:${card.characterId}`;
+    }
+    if (isAltArt) {
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      const isAltArtHolo = f === "holo" || f === "prismatic" || f === "darkMatter" || !!card.isFoil;
+      return isAltArtHolo ? `altart_holo:${card.characterId}` : `altart:${card.characterId}`;
+    }
     if (isBoys) return `boys:${card.characterId}`;
     return null;
   }
@@ -2251,7 +2271,7 @@ function CardsContent() {
     if (!user || codexUploadSelectedIds.size === 0) return;
     const eligible = [...codexUploadSelectedIds].filter((cardId) => {
       const c = cards.find((x) => x.id === cardId);
-      return c && c.characterId != null && !inTradeCardIds.has(cardId) && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c);
+      return c && c.characterId != null && !inTradeCardIds.has(cardId) && !isCardSlotAlreadyInCodex(c) && !isCodexUploadBlockedByPrereq(c);
     });
     // One card per codex slot — never upload duplicates (e.g. multiple copies of same character regular).
     const seenSlots = new Set<string>();
@@ -2318,6 +2338,8 @@ function CardsContent() {
           const variant = data.variant ?? (data.isFoil ? "holo" : "regular");
           if (variant === "regular") setDiscoveredCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "holo") setDiscoveredHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "prismatic") setDiscoveredPrismaticCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "darkMatter") setDiscoveredDarkMatterCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "altart") {
             setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
             if (data.finish === "holo" || data.isFoil) setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
@@ -2936,7 +2958,7 @@ function CardsContent() {
                 <strong className="text-amber-300/95">Marketplace</strong> & <strong className="text-amber-300/95">Trade</strong>: buy/sell and trade with others.
               </p>
               <p className="text-xs text-white/70 leading-relaxed mb-2">
-                <strong className="text-amber-300/95">Codex:</strong> Upload to discover (card leaves collection; legendaries re-enter pool). Complete a set for <strong className="text-amber-300/95">badges</strong> (normal → Holo → Prismatic → Dark Matter).
+                <strong className="text-amber-300/95">Codex:</strong> Upload to discover (card leaves collection; legendaries re-enter pool). Complete a set for <strong className="text-amber-300/95">badges</strong> (normal → Holo → Radiant → Dark Matter).
               </p>
               <p className="text-xs text-white/50 leading-relaxed">
                 New cards weekly from winning movies.
@@ -3728,7 +3750,7 @@ function CardsContent() {
 
             {inventorySubTab === "alchemy" && (
               <>
-                {/* Alchemy: title + toggle (Bench | Prismatic Forge) — active = teal, inactive = dark */}
+                {/* Alchemy: title + toggle (Bench | Radiant Forge) — active = teal, inactive = dark */}
                 <div className="rounded-2xl rounded-tl-none rounded-tr-none border border-white/20 bg-white/[0.08] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] p-6 mb-2 transition-all duration-300">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -3755,7 +3777,7 @@ function CardsContent() {
                                 : "bg-transparent text-white/50 hover:text-white/70 border border-transparent"
                             }`}
                           >
-                            Prismatic Forge
+                            Radiant Forge
                             {prismaticCraftCardId && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300" />}
                           </button>
                         )}
@@ -3801,7 +3823,7 @@ function CardsContent() {
                   {alchemySubTab === "bench" && (
                   <>
                   <p className="text-sm text-white/60 mb-4">
-                    Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Prismatic and Dark Matter upgrades are Forge-only (with Prisms). Same type only.
+                    Foils → disenchant for Stardust (card becomes normal). Normals → Pack-A-Punch to Holo (costs Stardust, chance-based). Radiant and Dark Matter upgrades are Forge-only (with Prisms). Same type only.
                   </p>
                   <div className={`flex flex-col sm:flex-row sm:items-center gap-4 mb-4 transition-all duration-300 ${alchemySuccessFlash ? "alchemy-success-flash" : ""}`}>
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
@@ -3895,13 +3917,13 @@ function CardsContent() {
                   <>
                     {!prismaticForgeUnlocked ? (
                       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 text-center">
-                        <p className="text-amber-200/90 font-medium mb-1">Prismatic Forge is locked</p>
-                        <p className="text-white/70 text-sm">Complete 50% of sets in holo finish in the Codex, then use <strong>Prestige Codex</strong> to reset your TCG account and unlock the Prismatic Forge permanently.</p>
+                        <p className="text-amber-200/90 font-medium mb-1">Radiant Forge is locked</p>
+                        <p className="text-white/70 text-sm">Complete 50% of sets in holo finish in the Codex, then use <strong>Prestige Codex</strong> to reset your TCG account and unlock the Radiant Forge permanently.</p>
                       </div>
                     ) : (
                   <>
                     <p className="text-sm text-white/60 mb-4">
-                      Place a Holo Epic or Holo Legendary below. Epic Holo → disenchant for Prisms. Legendary Holo → apply Prisms to craft Prismatic.
+                      Place a Holo Epic or Holo Legendary below. Epic Holo → disenchant for Prisms. Legendary Holo → apply Prisms to craft Radiant.
                       {alchemySettings && <> Legendary failure awards {alchemySettings.prismaticCraftFailureStardust} Stardust; Prisms are consumed.</>}
                     </p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
@@ -3986,11 +4008,11 @@ function CardsContent() {
                                   disabled={prismaticCraftLoading || prisms < prismaticCraftPrisms}
                                   className="px-5 py-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/15 text-cyan-300 font-semibold hover:bg-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {prismaticCraftLoading ? <span className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin inline-block" /> : "Craft Prismatic"}
+                                  {prismaticCraftLoading ? <span className="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin inline-block" /> : "Craft Radiant"}
                                 </button>
                                 {prismaticCraftResult && (
                                   <span className={`text-xs font-medium text-right ${prismaticCraftResult.success ? "text-green-400" : "text-red-400"}`}>
-                                    {prismaticCraftResult.success ? "Prismatic crafted!" : `Failed — +${prismaticCraftResult.stardustAwarded} Stardust`}
+                                    {prismaticCraftResult.success ? "Radiant crafted!" : `Failed — +${prismaticCraftResult.stardustAwarded} Stardust`}
                                   </span>
                                 )}
                               </>
@@ -5535,7 +5557,7 @@ function CardsContent() {
                 <div className="rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/95 to-yellow-950/95 backdrop-blur-xl shadow-xl max-w-md w-full p-6 text-center">
                   <h3 className="text-lg font-bold text-amber-200 mb-2">Prestige Codex</h3>
                   <p className="text-white/80 text-sm mb-4">
-                    Reset your TCG account to fresh (all cards, credits, codex, stardust, prisms, etc. will be cleared) and <strong>unlock the Prismatic Forge</strong> permanently. This cannot be undone.
+                    Reset your TCG account to fresh (all cards, credits, codex, stardust, prisms, etc. will be cleared) and <strong>unlock the Radiant Forge</strong> permanently. This cannot be undone.
                   </p>
                   <p className="text-amber-200/90 text-sm mb-6">Are you sure you want to prestige?</p>
                   <div className="flex gap-3 justify-center">
@@ -5668,6 +5690,8 @@ function CardsContent() {
 
                       if (!slotDiscovered) {
                         const isTrackedChar = trackedCharacterIds.has(entry.characterId);
+                        const slotId = entry.altArtOfCharacterId ?? entry.characterId;
+                        const ownedByOther = legendaryOwnedBy[slotId] && legendaryOwnedBy[slotId].userId !== user?.id;
                         return (
                           <div
                             key={entry.characterId}
@@ -5684,6 +5708,11 @@ function CardsContent() {
                               </svg>
                               <span className="text-xs font-medium">?</span>
                             </div>
+                            {ownedByOther && (
+                              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/30 text-[9px] font-medium text-amber-300/90" title={`Unobtainable — owned by ${legendaryOwnedBy[slotId]?.userName ?? "another user"}`}>
+                                Owned by {legendaryOwnedBy[slotId]?.userName ?? "?"}
+                              </span>
+                            )}
                             {isTrackedChar && (
                               <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
                                 Tracked
@@ -5996,7 +6025,7 @@ function CardsContent() {
                               : set.isComplete
                                 ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
                                 : "col-span-full";
-                        const tierLabel = set.badgeTier === "darkMatter" ? "Dark Matter" : set.badgeTier === "prismatic" ? "Prismatic" : set.badgeTier === "holo" ? "Holo" : "Complete";
+                        const tierLabel = set.badgeTier === "darkMatter" ? "Dark Matter" : set.badgeTier === "prismatic" ? "Radiant" : set.badgeTier === "holo" ? "Holo" : "Complete";
                         const titleClass = set.badgeTier !== "normal" ? "text-white/90" : set.isComplete ? "text-amber-200" : "text-white/70";
                         const tierTagClass = set.badgeTier === "darkMatter"
                           ? "bg-violet-900/90 border border-violet-400/50 text-violet-200"
@@ -6088,6 +6117,8 @@ function CardsContent() {
                       const discovered = discoveredBoysCharacterIds.has(entry.characterId);
                       if (!discovered) {
                         const isTrackedBoys = trackedCharacterIds.has(`boys:${entry.characterId}`);
+                        const slotId = entry.altArtOfCharacterId ?? entry.characterId;
+                        const ownedByOther = legendaryOwnedBy[slotId] && legendaryOwnedBy[slotId].userId !== user?.id;
                         return (
                           <div
                             key={entry.characterId}
@@ -6104,6 +6135,11 @@ function CardsContent() {
                               </svg>
                               <span className="text-xs font-medium">?</span>
                             </div>
+                            {ownedByOther && (
+                              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/30 text-[9px] font-medium text-amber-300/90" title={`Unobtainable — owned by ${legendaryOwnedBy[slotId]?.userName ?? "another user"}`}>
+                                Owned by {legendaryOwnedBy[slotId]?.userName ?? "?"}
+                              </span>
+                            )}
                             {isTrackedBoys && (
                               <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
                                 Tracked
@@ -6315,7 +6351,7 @@ function CardsContent() {
                   background: "linear-gradient(135deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)",
                   boxShadow: "0 0 6px rgba(255,255,255,0.4)",
                 } : undefined;
-                const tierLabel = badgeTier === "darkMatter" ? "Dark Matter" : badgeTier === "prismatic" ? "Prismatic" : badgeTier === "holo" ? "Holo" : "Complete";
+                const tierLabel = badgeTier === "darkMatter" ? "Dark Matter" : badgeTier === "prismatic" ? "Radiant" : badgeTier === "holo" ? "Holo" : "Complete";
                 const checkBgClass = badgeTier === "darkMatter" ? "bg-violet-400" : badgeTier === "prismatic" ? "bg-amber-300" : badgeTier === "holo" ? "bg-white/90" : "bg-amber-400";
                 const checkTextClass = badgeTier === "darkMatter" ? "text-violet-950" : badgeTier === "prismatic" ? "text-amber-950" : badgeTier === "holo" ? "text-violet-900" : "text-amber-950";
                 const fallbackIconClass = badgeTier === "darkMatter" ? "text-violet-400/80" : badgeTier === "prismatic" ? "text-amber-300/80" : badgeTier === "holo" ? "text-white/80" : "text-amber-400/80";
@@ -6468,7 +6504,7 @@ function CardsContent() {
                       return sorted.map((card) => {
                         const selected = card.id != null && codexUploadSelectedIds.has(card.id);
                         const alreadyInCodex = isCardSlotAlreadyInCodex(card);
-                        const needsRegular = isHoloMissingRegularPrereq(card);
+                        const needsRegular = isCodexUploadBlockedByPrereq(card);
                         const inTrade = inTradeCardIds.has(card.id!);
                         const isDisabled = alreadyInCodex || needsRegular || inTrade;
                         return (
@@ -6477,7 +6513,7 @@ function CardsContent() {
                             type="button"
                             onClick={() => !isDisabled && card.id && toggleCodexUploadSelection(card.id)}
                             disabled={isDisabled}
-                            title={needsRegular ? "Upload regular version first" : undefined}
+                            title={needsRegular ? (() => { const f = card.finish ?? (card.isFoil ? "holo" : "normal"); return f === "darkMatter" ? "Upload Radiant first" : f === "prismatic" ? "Upload Holo first" : "Upload regular version first"; })() : undefined}
                             className={`relative text-left rounded-xl overflow-hidden transition-all border-2 ${
                               isDisabled
                                 ? "opacity-60 cursor-not-allowed border-white/5 grayscale"
@@ -6499,7 +6535,7 @@ function CardsContent() {
                             )}
                             {needsRegular && !alreadyInCodex && !inTrade && (
                               <span className="absolute inset-0 flex items-center justify-center z-10 bg-black/50 rounded-xl">
-                                <span className="text-[10px] uppercase tracking-wider text-amber-300/90 font-medium px-2 py-1 rounded bg-black/40 text-center leading-tight">Regular needed first</span>
+                                <span className="text-[10px] uppercase tracking-wider text-amber-300/90 font-medium px-2 py-1 rounded bg-black/40 text-center leading-tight">{(() => { const f = card.finish ?? (card.isFoil ? "holo" : "normal"); return f === "darkMatter" ? "Radiant needed first" : f === "prismatic" ? "Holo needed first" : "Regular needed first"; })()}</span>
                               </span>
                             )}
                             {selected && !isDisabled && (
@@ -6522,7 +6558,7 @@ function CardsContent() {
                   </span>
                   {(() => {
                     const eligibleCards = cards.filter(
-                      (c) => c.id != null && !myListedCardIds.has(c.id) && !inTradeCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isHoloMissingRegularPrereq(c)
+                      (c) => c.id != null && !myListedCardIds.has(c.id) && !inTradeCardIds.has(c.id) && c.characterId != null && !isCardSlotAlreadyInCodex(c) && !isCodexUploadBlockedByPrereq(c)
                     );
                     const onePerSlot: string[] = [];
                     const seenSlots = new Set<string>();

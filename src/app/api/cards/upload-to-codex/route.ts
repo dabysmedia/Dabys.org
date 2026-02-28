@@ -16,6 +16,7 @@ import {
   getCodexUnlockedPrismaticCharacterIds,
   getCodexUnlockedDarkMatterCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
+  getCodexUnlockedAltArtHoloCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
   getWinners,
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
     if (finish === "darkMatter") {
       if (!alreadyPrismatic) {
         return NextResponse.json(
-          { error: "Upload the Prismatic version to the codex first before upgrading to Dark Matter" },
+          { error: "Upload the Radiant version to the codex first before upgrading to Dark Matter" },
           { status: 400 }
         );
       }
@@ -115,13 +116,13 @@ export async function POST(request: Request) {
     } else if (finish === "prismatic") {
       if (!alreadyHolo) {
         return NextResponse.json(
-          { error: "Upload the Holo version to the codex first before upgrading to Prismatic" },
+          { error: "Upload the Holo version to the codex first before upgrading to Radiant" },
           { status: 400 }
         );
       }
       if (alreadyPrismatic) {
         return NextResponse.json(
-          { error: "This character's Prismatic is already in your codex" },
+          { error: "This character's Radiant is already in your codex" },
           { status: 400 }
         );
       }
@@ -148,11 +149,23 @@ export async function POST(request: Request) {
     }
   } else if (isAltArt) {
     const altArtIds = getCodexUnlockedAltArtCharacterIds(userId);
-    if (altArtIds.includes(characterId)) {
-      return NextResponse.json(
-        { error: "This alt-art is already in your codex" },
-        { status: 400 }
-      );
+    const altArtHoloIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
+    const finish = getCardFinish(card);
+    const isAltArtHolo = finish === "holo" || finish === "prismatic" || finish === "darkMatter" || !!card.isFoil;
+    if (isAltArtHolo) {
+      if (altArtHoloIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This alt-art holo is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (altArtIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This alt-art is already in your codex" },
+          { status: 400 }
+        );
+      }
     }
   } else if (isBoys) {
     const boysIds = getCodexUnlockedBoysCharacterIds(userId);
@@ -185,8 +198,8 @@ export async function POST(request: Request) {
         break;
     }
   } else if (isAltArt) {
-    const isHolo = finish === "holo";
-    addCodexUnlockAltArt(userId, characterId, isHolo);
+    const isAltArtHolo = finish === "holo" || finish === "prismatic" || finish === "darkMatter" || !!card.isFoil;
+    addCodexUnlockAltArt(userId, characterId, isAltArtHolo);
   } else if (isBoys) {
     addCodexUnlockBoys(userId, characterId);
   }

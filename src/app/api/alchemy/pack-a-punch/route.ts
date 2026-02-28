@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const currentFinish = getCardFinish(card);
   if (currentFinish !== "normal") {
     return NextResponse.json(
-      { error: "Pack-A-Punch only upgrades Normal→Holo. Prismatic and Dark Matter upgrades require the Forge with Prisms." },
+      { error: "Pack-A-Punch only upgrades Normal→Holo. Radiant and Dark Matter upgrades require the Forge with Prisms." },
       { status: 400 }
     );
   }

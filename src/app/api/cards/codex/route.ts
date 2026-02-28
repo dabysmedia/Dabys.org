@@ -8,6 +8,7 @@ import {
   getCodexUnlockedAltArtHoloCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getPrismaticForgeUnlocked,
+  getLegendaryOwnershipBySlotId,
 } from "@/lib/data";
 
 export async function GET(request: Request) {
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
   const altArtHoloCharacterIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
   const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
   const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
+  const legendaryOwnedBy = getLegendaryOwnershipBySlotId();
   return NextResponse.json({
     characterIds,
     holoCharacterIds,
@@ -35,5 +37,6 @@ export async function GET(request: Request) {
     altArtHoloCharacterIds,
     boysCharacterIds,
     prismaticForgeUnlocked,
+    legendaryOwnedBy,
   });
 }

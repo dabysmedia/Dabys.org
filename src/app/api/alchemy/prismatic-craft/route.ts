@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   // Only legendary can be crafted to prismatic in the forge
   if (card.rarity !== "legendary") {
     return NextResponse.json(
-      { error: "Only Legendary Holo cards can be crafted into Prismatic" },
+      { error: "Only Legendary Holo cards can be crafted into Radiant" },
       { status: 400 }
     );
   }

@@ -371,7 +371,7 @@ export default function AdminQuestsPage() {
       {wipeSetCompletionOpen && (
         <div className="rounded-2xl border border-amber-400/20 bg-amber-500/5 p-5 space-y-4">
           <h3 className="text-sm font-semibold text-amber-400/90">Wipe Set Completion Quest</h3>
-          <p className="text-xs text-white/50">Remove set bonus quest(s) for a specific user and set. This clears regular, holo, prismatic, and dark matter quests for that set.</p>
+          <p className="text-xs text-white/50">Remove set bonus quest(s) for a specific user and set. This clears regular, holo, radiant, and dark matter quests for that set.</p>
           <div className="flex flex-wrap gap-4 items-end">
             <div>
               <label className="block text-xs text-white/50 mb-1">User</label>

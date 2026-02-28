@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const finish = getCardFinish(card);
   if (finish !== "holo") {
     return NextResponse.json(
-      { error: "Only Holo cards can be disenchanted. Prismatic and Dark Matter cannot be disenchanted." },
+      { error: "Only Holo cards can be disenchanted. Radiant and Dark Matter cannot be disenchanted." },
       { status: 400 }
     );
   }

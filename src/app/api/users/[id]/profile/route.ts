@@ -14,6 +14,7 @@ import {
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getCharacterPool,
+  getPrestigeLevel,
 } from "@/lib/data";
 import { getCompletedWinnerIds, getCompletedHoloWinnerIds, getCompletedPrismaticWinnerIds, getCompletedDarkMatterWinnerIds } from "@/lib/cards";
 
@@ -411,8 +412,11 @@ export async function GET(
         })()
       : null;
 
+  const prestigeLevel = getPrestigeLevel(id);
+
   return NextResponse.json({
     user: { id: user.id, name: user.name },
+    prestigeLevel,
     hasPin: !!user.pin,
     profile: {
       avatarUrl: profile.avatarUrl,

@@ -2203,7 +2203,7 @@ export default function AdminCardsCreditsPage() {
 
                           {/* Finish tag */}
                           {isDM && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(135deg, #1e0a3c, #7c3aed, #4c1d95, #a855f7, #3b0764)", boxShadow: "0 0 12px rgba(139,92,246,0.7), 0 0 4px rgba(168,85,247,0.5)", letterSpacing: "0.05em" }}>DARK MATTER</span> )}
-                          {isPrismatic && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-amber-950 z-[5]" style={{ background: "linear-gradient(135deg, #fef3c7, #fde68a, #fcd34d, #fbbf24, #f59e0b)", backgroundSize: "200% 200%", animation: "prismatic-hover-shift 4s ease-in-out infinite", boxShadow: "0 0 12px rgba(251,191,36,0.6), 0 0 24px rgba(245,158,11,0.3)", letterSpacing: "0.05em" }}>PRISMATIC</span> )}
+                          {isPrismatic && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-amber-950 z-[5]" style={{ background: "linear-gradient(135deg, #fef3c7, #fde68a, #fcd34d, #fbbf24, #f59e0b)", backgroundSize: "200% 200%", animation: "prismatic-hover-shift 4s ease-in-out infinite", boxShadow: "0 0 12px rgba(251,191,36,0.6), 0 0 24px rgba(245,158,11,0.3)", letterSpacing: "0.05em" }}>RADIANT</span> )}
                           {isHolo && ( <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold text-white z-[5]" style={{ background: "linear-gradient(90deg, #ec4899, #f59e0b, #10b981, #3b82f6, #8b5cf6)", boxShadow: "0 0 8px rgba(255,255,255,0.5)" }}>HOLO</span> )}
 
                           {(() => { const entry = pool.find((p) => p.characterId === card.characterId); const altOfId = entry?.altArtOfCharacterId; const altOfName = altOfId ? pool.find((p) => p.characterId === altOfId)?.actorName : null; return altOfId ? ( <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white bg-amber-600/90 z-[5]" title={altOfName ? `Alt-art: counts as ${altOfName}` : "Alt-art"}>Alt</span> ) : null; })()}
@@ -2379,11 +2379,11 @@ export default function AdminCardsCreditsPage() {
                 </div>
                 <label className="flex items-center gap-2 text-sm text-white/70">
                   <input type="checkbox" checked={packForm.allowPrismatic} onChange={(e) => setPackForm((f) => ({ ...f, allowPrismatic: e.target.checked }))} className="rounded border-white/30 bg-white/5" />
-                  <span>Enable Prismatic drops</span>
+                  <span>Enable Radiant drops</span>
                 </label>
                 {packForm.allowPrismatic && (
                   <div>
-                    <label className="block text-[11px] text-white/50 mb-0.5">Prismatic chance (%) per card</label>
+                    <label className="block text-[11px] text-white/50 mb-0.5">Radiant chance (%) per card</label>
                     <input type="number" min={0} max={100} step={0.1} value={packForm.prismaticChance} onChange={(e) => setPackForm((f) => ({ ...f, prismaticChance: e.target.value }))} className="w-24 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/50" placeholder="2" />
                     <span className="text-[10px] text-white/40 ml-2">Default 2%</span>
                   </div>
@@ -2427,7 +2427,7 @@ export default function AdminCardsCreditsPage() {
                       {pack.rarityWeights && (() => { const w = pack.rarityWeights; const t = w.legendary + w.epic + w.rare + w.uncommon || 1; const p = (v: number) => ((v / t) * 100).toFixed(1); return ( <p className="text-[10px] text-purple-300/70 mt-0.5">Rates: L:{p(w.legendary)}% E:{p(w.epic)}% R:{p(w.rare)}% U:{p(w.uncommon)}%</p> ); })()}
                       {(pack.holoChance != null || pack.allowPrismatic || pack.allowDarkMatter) && (
                         <p className="text-[10px] text-cyan-300/70 mt-0.5">
-                          {[pack.holoChance != null && `Holo ${pack.holoChance}%`, pack.allowPrismatic && `Prismatic ${pack.prismaticChance ?? 2}%`, pack.allowDarkMatter && `DM ${pack.darkMatterChance ?? 0.5}%`].filter(Boolean).join(" · ")}
+                          {[pack.holoChance != null && `Holo ${pack.holoChance}%`, pack.allowPrismatic && `Radiant ${pack.prismaticChance ?? 2}%`, pack.allowDarkMatter && `DM ${pack.darkMatterChance ?? 0.5}%`].filter(Boolean).join(" · ")}
                         </p>
                       )}
                     </div>
@@ -2786,7 +2786,7 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1" title="When feedback is accepted in admin panel">Feedback accepted</label><input type="number" min={0} value={creditSettingsForm.feedbackAccepted} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, feedbackAccepted: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes a set and claims the quest">Set completion</label><input type="number" min={0} value={creditSettingsForm.setCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, setCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full holo set and claims the quest">Holo set completion</label><input type="number" min={0} value={creditSettingsForm.holoSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, holoSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
-            <div><label className="block text-xs text-white/40 mb-1" title="When player completes full prismatic set and claims the quest">Prismatic set completion</label><input type="number" min={0} value={creditSettingsForm.prismaticSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, prismaticSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="When player completes full prismatic set and claims the quest">Radiant set completion</label><input type="number" min={0} value={creditSettingsForm.prismaticSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, prismaticSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full dark matter set and claims the quest">Dark matter set completion</label><input type="number" min={0} value={creditSettingsForm.darkMatterSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, darkMatterSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="First watch of a Vault video (original Dabys Media content)">Vault video watch</label><input type="number" min={0} value={creditSettingsForm.vaultWatch} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultWatch: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="Minimum watch time in minutes for Vault video credit claim (timer only runs while playing)">Vault min watch</label><input type="number" min={0} value={creditSettingsForm.vaultMinWatchMinutes} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultMinWatchMinutes: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">min</span></div>
@@ -2829,7 +2829,7 @@ export default function AdminCardsCreditsPage() {
             <div>
               <span className="text-xs text-white/50 font-medium block mb-2">Upgrade Success Chances (Forge only)</span>
               <div className="flex flex-wrap gap-4">
-                <div><label className="block text-[11px] text-white/40 mb-1">Prismatic upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
+                <div><label className="block text-[11px] text-white/40 mb-1">Radiant upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
                 <div><label className="block text-[11px] text-white/40 mb-1">Dark Matter upgrade %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.darkMatterUpgradeChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, darkMatterUpgradeChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
               </div>
             </div>
@@ -2842,7 +2842,7 @@ export default function AdminCardsCreditsPage() {
               </div>
             </div>
             <div className="border-t border-white/[0.06] pt-4">
-              <span className="text-xs text-white/50 font-medium block mb-2">Prismatic Crafting (Prisms → Prismatic Card)</span>
+              <span className="text-xs text-white/50 font-medium block mb-2">Radiant Crafting (Prisms → Radiant Card)</span>
               <div className="flex flex-wrap gap-4">
                 <div><label className="block text-[11px] text-white/40 mb-1">Base chance %</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticCraftBaseChance} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftBaseChance: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
                 <div><label className="block text-[11px] text-white/40 mb-1">% per prism</label><input type="number" min={0} max={100} step={1} value={alchemySettingsForm.prismaticCraftChancePerPrism} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftChancePerPrism: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
@@ -2850,11 +2850,11 @@ export default function AdminCardsCreditsPage() {
                 <div><label className="block text-[11px] text-white/40 mb-1">Failure stardust</label><input type="number" min={0} max={10000} value={alchemySettingsForm.prismaticCraftFailureStardust} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, prismaticCraftFailureStardust: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
                 <div><label className="block text-[11px] text-white/40 mb-1">Epic Holo forge prisms</label><input type="number" min={0} max={100} value={alchemySettingsForm.epicHoloForgePrisms} onChange={(e) => setAlchemySettingsForm((f) => ({ ...f, epicHoloForgePrisms: e.target.value }))} className="w-20 px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-cyan-500/40" /></div>
               </div>
-              <p className="text-[10px] text-white/30 mt-2">Chance = base + (prisms applied × per-prism). Epic Holo in forge = disenchant for prisms; only Legendary Holo can be crafted to Prismatic.</p>
+              <p className="text-[10px] text-white/30 mt-2">Chance = base + (prisms applied × per-prism). Epic Holo in forge = disenchant for prisms; only Legendary Holo can be crafted to Radiant.</p>
             </div>
             <div className="border-t border-white/[0.06] pt-4">
               <span className="text-xs text-white/50 font-medium block mb-2">Stardust / Alchemy Bench Values</span>
-              <p className="text-[10px] text-white/30 mb-3">Stardust from disenchanting Holo by rarity; Stardust cost for Pack-A-Punch (Normal→Holo). Prismatic and Dark Matter upgrades are Forge-only with Prisms.</p>
+              <p className="text-[10px] text-white/30 mb-3">Stardust from disenchanting Holo by rarity; Stardust cost for Pack-A-Punch (Normal→Holo). Radiant and Dark Matter upgrades are Forge-only with Prisms.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <span className="text-[11px] text-cyan-400/80 font-medium">Disenchant Holo</span>
@@ -2966,7 +2966,7 @@ export default function AdminCardsCreditsPage() {
                           e.source === "trade_up" ? "bg-purple-500/20 text-purple-300" :
                           "bg-cyan-500/20 text-cyan-300"
                         }`}>
-                          {e.source === "pull" ? "Pull" : e.source === "reroll" ? "Reroll" : e.source === "trade_up" ? "Trade-up" : "Prismatic craft"}
+                          {e.source === "pull" ? "Pull" : e.source === "reroll" ? "Reroll" : e.source === "trade_up" ? "Trade-up" : "Radiant craft"}
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
@@ -3248,7 +3248,7 @@ export default function AdminCardsCreditsPage() {
             <div className="flex gap-1 px-4 pt-2 border-b border-white/[0.06] flex-shrink-0 overflow-x-auto">
               {(["regular", "holo", "prismatic", "darkMatter", "altart", "boys"] as const).map((tab) => (
                 <button key={tab} type="button" onClick={() => setManageCodexModalTab(tab)} className={`px-4 py-2.5 rounded-t-lg text-sm font-medium transition-colors whitespace-nowrap ${manageCodexModalTab === tab ? "bg-white/[0.08] text-white" : "text-white/50 hover:text-white/70 hover:bg-white/[0.04]"}`}>
-                  {tab === "regular" ? "Regular" : tab === "holo" ? "Holo" : tab === "prismatic" ? "Prismatic" : tab === "darkMatter" ? "Dark Matter" : tab === "altart" ? "Alt-art" : "Boys"}
+                  {tab === "regular" ? "Regular" : tab === "holo" ? "Holo" : tab === "prismatic" ? "Radiant" : tab === "darkMatter" ? "Dark Matter" : tab === "altart" ? "Alt-art" : "Boys"}
                 </button>
               ))}
             </div>
@@ -3257,7 +3257,7 @@ export default function AdminCardsCreditsPage() {
                 const variant = manageCodexModalTab;
                 const key = variant === "regular" ? "characterIds" : variant === "holo" ? "holoCharacterIds" : variant === "prismatic" ? "prismaticCharacterIds" : variant === "darkMatter" ? "darkMatterCharacterIds" : variant === "altart" ? "altArtCharacterIds" : "boysCharacterIds";
                 const ids = userCodex[key] ?? [];
-                const label = variant === "regular" ? "Regular" : variant === "holo" ? "Holo" : variant === "prismatic" ? "Prismatic" : variant === "darkMatter" ? "Dark Matter" : variant === "altart" ? "Alt-art" : "Boys";
+                const label = variant === "regular" ? "Regular" : variant === "holo" ? "Holo" : variant === "prismatic" ? "Radiant" : variant === "darkMatter" ? "Dark Matter" : variant === "altart" ? "Alt-art" : "Boys";
                 const poolForVariant = variant === "boys" ? pool.filter((c) => (c.cardType ?? "actor") === "character") : variant === "altart" ? pool.filter((c) => c.altArtOfCharacterId?.trim()) : pool.filter((c) => c.profilePath?.trim());
                 const available = poolForVariant.filter((c) => !ids.includes(c.characterId));
                 const finish: "normal" | "holo" | "prismatic" | "darkMatter" = variant === "darkMatter" ? "darkMatter" : variant === "prismatic" ? "prismatic" : variant === "holo" ? "holo" : "normal";

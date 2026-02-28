@@ -7,7 +7,7 @@ import {
 } from "@/lib/data";
 import { getCompletedHoloWinnerIds } from "@/lib/cards";
 
-/** Prestige Codex: requires 50% of sets completed in holo. Resets user TCG to fresh and unlocks Prismatic Forge. */
+/** Prestige Codex: requires 50% of sets completed in holo. Resets user TCG to fresh and unlocks Radiant Forge. */
 export async function POST(request: Request) {
   let body: { userId?: string };
   try {
@@ -48,6 +48,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    message: "Prestige complete. Your TCG account has been reset; Prismatic Forge is now unlocked.",
+    message: "Prestige complete. Your TCG account has been reset; Radiant Forge is now unlocked.",
   });
 }

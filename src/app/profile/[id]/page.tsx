@@ -151,6 +151,7 @@ interface TmdbSearchResult {
 
 interface FullProfile {
   user: { id: string; name: string };
+  prestigeLevel?: number;
   hasPin?: boolean;
   profile: ProfileData;
   stats: Stats;
@@ -600,6 +601,11 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0 pb-1">
             <div className="flex flex-wrap items-center gap-2 gap-y-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-white/95">{user.name}</h1>
+              {(data?.prestigeLevel ?? 0) > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Prestige {data?.prestigeLevel ?? 0}
+                </span>
+              )}
               {displayedBadge && <BadgePill movieTitle={displayedBadge.movieTitle} isHolo={displayedBadge.isHolo} />}
             </div>
             {!editing ? (

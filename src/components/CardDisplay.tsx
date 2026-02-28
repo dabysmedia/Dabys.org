@@ -264,7 +264,7 @@ export function CardDisplay({
                   letterSpacing: "0.05em",
                 }}
               >
-                PRISMATIC
+                RADIANT
               </span>
             )}
             {tier === "holo" && (
