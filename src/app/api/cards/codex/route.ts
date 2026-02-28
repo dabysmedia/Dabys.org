@@ -6,6 +6,8 @@ import {
   getCodexUnlockedDarkMatterCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedAltArtHoloCharacterIds,
+  getCodexUnlockedAltArtPrismaticCharacterIds,
+  getCodexUnlockedAltArtDarkMatterCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getPrismaticForgeUnlocked,
   getLegendaryOwnershipBySlotId,
@@ -25,6 +27,8 @@ export async function GET(request: Request) {
   const darkMatterCharacterIds = getCodexUnlockedDarkMatterCharacterIds(userId);
   const altArtCharacterIds = getCodexUnlockedAltArtCharacterIds(userId);
   const altArtHoloCharacterIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
+  const altArtPrismaticCharacterIds = getCodexUnlockedAltArtPrismaticCharacterIds(userId);
+  const altArtDarkMatterCharacterIds = getCodexUnlockedAltArtDarkMatterCharacterIds(userId);
   const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
   const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
   const legendaryOwnedBy = getLegendaryOwnershipBySlotId();
@@ -35,6 +39,8 @@ export async function GET(request: Request) {
     darkMatterCharacterIds,
     altArtCharacterIds,
     altArtHoloCharacterIds,
+    altArtPrismaticCharacterIds,
+    altArtDarkMatterCharacterIds,
     boysCharacterIds,
     prismaticForgeUnlocked,
     legendaryOwnedBy,

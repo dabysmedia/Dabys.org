@@ -1052,6 +1052,8 @@ export function rollbackUser(userId: string, rollbackDate: string): {
         break;
       case "altart":
       case "altart_holo":
+      case "altart_prismatic":
+      case "altart_darkmatter":
         removeCodexUnlockAltArt(userId, entry.characterId);
         break;
       case "boys":
@@ -1797,7 +1799,7 @@ export function updateCardsByCharacterId(
 interface CodexLogEntry {
   userId: string;
   characterId: string;
-  variant: "regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "altart_holo" | "boys";
+  variant: "regular" | "holo" | "prismatic" | "darkMatter" | "altart" | "altart_holo" | "altart_prismatic" | "altart_darkmatter" | "boys";
   action: "add" | "remove";
   createdAt: string;
 }
@@ -1846,6 +1848,8 @@ export function backfillCodexLog(backfillDate: string, userId?: string): number 
           getDarkMatterCodexUnlocksRaw(),
           getAltArtCodexUnlocksRaw(),
           getAltArtHoloCodexUnlocksRaw(),
+          getAltArtPrismaticCodexUnlocksRaw(),
+          getAltArtDarkMatterCodexUnlocksRaw(),
           getBoysCodexUnlocksRaw(),
         ]) {
           for (const uid of Object.keys(data)) ids.add(uid);
@@ -1861,6 +1865,8 @@ export function backfillCodexLog(backfillDate: string, userId?: string): number 
       { data: getDarkMatterCodexUnlocksRaw(), variant: "darkMatter" },
       { data: getAltArtCodexUnlocksRaw(), variant: "altart" },
       { data: getAltArtHoloCodexUnlocksRaw(), variant: "altart_holo" },
+      { data: getAltArtPrismaticCodexUnlocksRaw(), variant: "altart_prismatic" },
+      { data: getAltArtDarkMatterCodexUnlocksRaw(), variant: "altart_darkmatter" },
       { data: getBoysCodexUnlocksRaw(), variant: "boys" },
     ];
 
@@ -2049,9 +2055,11 @@ export function resetDarkMatterCodexUnlocks(): void {
   saveDarkMatterCodexUnlocksRaw({});
 }
 
-// ──── Alt-Art Codex (unlock by uploading an alt-art card; same lock-in behavior) ────
+// ──── Alt-Art Codex (unlock by uploading an alt-art card; same tier progression as main: regular → holo → prismatic → darkMatter) ────
 const ALTART_CODEX_UNLOCKS_FILE = "altArtCodexUnlocks.json";
 const ALTART_HOLO_CODEX_UNLOCKS_FILE = "altArtHoloCodexUnlocks.json";
+const ALTART_PRISMATIC_CODEX_UNLOCKS_FILE = "altArtPrismaticCodexUnlocks.json";
+const ALTART_DARK_MATTER_CODEX_UNLOCKS_FILE = "altArtDarkMatterCodexUnlocks.json";
 
 function getAltArtCodexUnlocksRaw(): Record<string, string[]> {
   try {
@@ -2077,58 +2085,110 @@ function saveAltArtHoloCodexUnlocksRaw(data: Record<string, string[]>) {
   writeJson(ALTART_HOLO_CODEX_UNLOCKS_FILE, data);
 }
 
+function getAltArtPrismaticCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(ALTART_PRISMATIC_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveAltArtPrismaticCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(ALTART_PRISMATIC_CODEX_UNLOCKS_FILE, data);
+}
+
+function getAltArtDarkMatterCodexUnlocksRaw(): Record<string, string[]> {
+  try {
+    return readJson<Record<string, string[]>>(ALTART_DARK_MATTER_CODEX_UNLOCKS_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveAltArtDarkMatterCodexUnlocksRaw(data: Record<string, string[]>) {
+  writeJson(ALTART_DARK_MATTER_CODEX_UNLOCKS_FILE, data);
+}
+
 export function getCodexUnlockedAltArtCharacterIds(userId: string): string[] {
   const data = getAltArtCodexUnlocksRaw();
   return Array.isArray(data[userId]) ? data[userId] : [];
 }
 
-/** Character IDs for alt arts that were uploaded as holo (show holo in codex). */
+/** Character IDs for alt arts uploaded as holo. */
 export function getCodexUnlockedAltArtHoloCharacterIds(userId: string): string[] {
   const data = getAltArtHoloCodexUnlocksRaw();
   return Array.isArray(data[userId]) ? data[userId] : [];
 }
 
-export function addCodexUnlockAltArt(userId: string, characterId: string, isHolo?: boolean): void {
+/** Character IDs for alt arts uploaded as prismatic (Radiant). */
+export function getCodexUnlockedAltArtPrismaticCharacterIds(userId: string): string[] {
+  const data = getAltArtPrismaticCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+/** Character IDs for alt arts uploaded as dark matter. */
+export function getCodexUnlockedAltArtDarkMatterCharacterIds(userId: string): string[] {
+  const data = getAltArtDarkMatterCodexUnlocksRaw();
+  return Array.isArray(data[userId]) ? data[userId] : [];
+}
+
+export function addCodexUnlockAltArt(userId: string, characterId: string, finish?: "holo" | "prismatic" | "darkMatter"): void {
   const data = getAltArtCodexUnlocksRaw();
   const list = Array.isArray(data[userId]) ? data[userId] : [];
-  if (list.includes(characterId)) {
-    if (isHolo) {
-      const holoData = getAltArtHoloCodexUnlocksRaw();
-      const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
-      if (!holoList.includes(characterId)) {
-        holoData[userId] = [...holoList, characterId];
-        saveAltArtHoloCodexUnlocksRaw(holoData);
-        logCodexActivity(userId, characterId, "altart_holo", "add");
-      }
-    }
-    return;
+  if (!list.includes(characterId)) {
+    data[userId] = [...list, characterId];
+    saveAltArtCodexUnlocksRaw(data);
+    logCodexActivity(userId, characterId, "altart", "add");
   }
-  data[userId] = [...list, characterId];
-  saveAltArtCodexUnlocksRaw(data);
-  logCodexActivity(userId, characterId, "altart", "add");
-  if (isHolo) {
+  if (finish === "holo" || finish === "prismatic" || finish === "darkMatter") {
     const holoData = getAltArtHoloCodexUnlocksRaw();
     const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
-    holoData[userId] = [...holoList, characterId];
-    saveAltArtHoloCodexUnlocksRaw(holoData);
-    logCodexActivity(userId, characterId, "altart_holo", "add");
+    if (!holoList.includes(characterId)) {
+      holoData[userId] = [...holoList, characterId];
+      saveAltArtHoloCodexUnlocksRaw(holoData);
+      logCodexActivity(userId, characterId, "altart_holo", "add");
+    }
+  }
+  if (finish === "prismatic" || finish === "darkMatter") {
+    const prismaticData = getAltArtPrismaticCodexUnlocksRaw();
+    const prismaticList = Array.isArray(prismaticData[userId]) ? prismaticData[userId] : [];
+    if (!prismaticList.includes(characterId)) {
+      prismaticData[userId] = [...prismaticList, characterId];
+      saveAltArtPrismaticCodexUnlocksRaw(prismaticData);
+      logCodexActivity(userId, characterId, "altart_prismatic", "add");
+    }
+  }
+  if (finish === "darkMatter") {
+    const dmData = getAltArtDarkMatterCodexUnlocksRaw();
+    const dmList = Array.isArray(dmData[userId]) ? dmData[userId] : [];
+    if (!dmList.includes(characterId)) {
+      dmData[userId] = [...dmList, characterId];
+      saveAltArtDarkMatterCodexUnlocksRaw(dmData);
+      logCodexActivity(userId, characterId, "altart_darkmatter", "add");
+    }
   }
 }
 
 export function removeCodexUnlockAltArt(userId: string, characterId: string): void {
   const data = getAltArtCodexUnlocksRaw();
-  const list = Array.isArray(data[userId]) ? data[userId] : [];
-  data[userId] = list.filter((id) => id !== characterId);
+  data[userId] = (Array.isArray(data[userId]) ? data[userId] : []).filter((id) => id !== characterId);
   saveAltArtCodexUnlocksRaw(data);
   const holoData = getAltArtHoloCodexUnlocksRaw();
-  const holoList = Array.isArray(holoData[userId]) ? holoData[userId] : [];
-  holoData[userId] = holoList.filter((id) => id !== characterId);
+  holoData[userId] = (Array.isArray(holoData[userId]) ? holoData[userId] : []).filter((id) => id !== characterId);
   saveAltArtHoloCodexUnlocksRaw(holoData);
+  const prismaticData = getAltArtPrismaticCodexUnlocksRaw();
+  prismaticData[userId] = (Array.isArray(prismaticData[userId]) ? prismaticData[userId] : []).filter((id) => id !== characterId);
+  saveAltArtPrismaticCodexUnlocksRaw(prismaticData);
+  const dmData = getAltArtDarkMatterCodexUnlocksRaw();
+  dmData[userId] = (Array.isArray(dmData[userId]) ? dmData[userId] : []).filter((id) => id !== characterId);
+  saveAltArtDarkMatterCodexUnlocksRaw(dmData);
 }
 
 export function resetAltArtCodexUnlocks(): void {
   saveAltArtCodexUnlocksRaw({});
   saveAltArtHoloCodexUnlocksRaw({});
+  saveAltArtPrismaticCodexUnlocksRaw({});
+  saveAltArtDarkMatterCodexUnlocksRaw({});
 }
 
 // ──── Boys Codex (unlock by uploading a character-type card; same lock-in behavior) ────

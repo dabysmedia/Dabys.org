@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       action === "add" ? addCodexUnlockDarkMatter(userId, id) : removeCodexUnlockDarkMatter(userId, id);
       break;
     case "altart":
-      action === "add" ? addCodexUnlockAltArt(userId, id, isHolo) : removeCodexUnlockAltArt(userId, id);
+      action === "add" ? addCodexUnlockAltArt(userId, id, isHolo ? "holo" : undefined) : removeCodexUnlockAltArt(userId, id);
       break;
     case "boys":
       action === "add" ? addCodexUnlockBoys(userId, id) : removeCodexUnlockBoys(userId, id);

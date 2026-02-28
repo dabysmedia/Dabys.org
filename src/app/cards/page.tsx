@@ -575,6 +575,8 @@ function CardsContent() {
     darkMatterCharacterIds: Set<string>;
     altArtCharacterIds: Set<string>;
     altArtHoloCharacterIds: Set<string>;
+    altArtPrismaticCharacterIds: Set<string>;
+    altArtDarkMatterCharacterIds: Set<string>;
     boysCharacterIds: Set<string>;
   } | null>(null);
   /** Cache of other users' codexes for expanded trade views (sent/received/history). */
@@ -585,6 +587,8 @@ function CardsContent() {
     darkMatterCharacterIds: Set<string>;
     altArtCharacterIds: Set<string>;
     altArtHoloCharacterIds: Set<string>;
+    altArtPrismaticCharacterIds: Set<string>;
+    altArtDarkMatterCharacterIds: Set<string>;
     boysCharacterIds: Set<string>;
   }>>({});
   const [tradeLoading, setTradeLoading] = useState(false);
@@ -662,6 +666,8 @@ function CardsContent() {
   const [discoveredDarkMatterCharacterIds, setDiscoveredDarkMatterCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredAltArtCharacterIds, setDiscoveredAltArtCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredAltArtHoloCharacterIds, setDiscoveredAltArtHoloCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredAltArtPrismaticCharacterIds, setDiscoveredAltArtPrismaticCharacterIds] = useState<Set<string>>(new Set());
+  const [discoveredAltArtDarkMatterCharacterIds, setDiscoveredAltArtDarkMatterCharacterIds] = useState<Set<string>>(new Set());
   const [discoveredBoysCharacterIds, setDiscoveredBoysCharacterIds] = useState<Set<string>>(new Set());
   const [showCodexUploadModal, setShowCodexUploadModal] = useState(false);
   const [codexUploadSelectedIds, setCodexUploadSelectedIds] = useState<Set<string>>(new Set());
@@ -1036,6 +1042,8 @@ function CardsContent() {
       setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
       setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
+      setDiscoveredAltArtPrismaticCharacterIds(new Set(Array.isArray(d.altArtPrismaticCharacterIds) ? d.altArtPrismaticCharacterIds : []));
+      setDiscoveredAltArtDarkMatterCharacterIds(new Set(Array.isArray(d.altArtDarkMatterCharacterIds) ? d.altArtDarkMatterCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
@@ -1199,6 +1207,8 @@ function CardsContent() {
       setDiscoveredDarkMatterCharacterIds(new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []));
       setDiscoveredAltArtCharacterIds(new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []));
       setDiscoveredAltArtHoloCharacterIds(new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []));
+      setDiscoveredAltArtPrismaticCharacterIds(new Set(Array.isArray(d.altArtPrismaticCharacterIds) ? d.altArtPrismaticCharacterIds : []));
+      setDiscoveredAltArtDarkMatterCharacterIds(new Set(Array.isArray(d.altArtDarkMatterCharacterIds) ? d.altArtDarkMatterCharacterIds : []));
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
@@ -2203,8 +2213,10 @@ function CardsContent() {
     }
     if (isAltArt) {
       const f = card.finish ?? (card.isFoil ? "holo" : "normal");
-      const isAltArtHolo = f === "holo" || f === "prismatic" || f === "darkMatter" || !!card.isFoil;
-      return isAltArtHolo ? discoveredAltArtHoloCharacterIds.has(card.characterId) : discoveredAltArtCharacterIds.has(card.characterId);
+      if (f === "darkMatter") return discoveredAltArtDarkMatterCharacterIds.has(card.characterId);
+      if (f === "prismatic") return discoveredAltArtPrismaticCharacterIds.has(card.characterId);
+      if (f === "holo" || !!card.isFoil) return discoveredAltArtHoloCharacterIds.has(card.characterId);
+      return discoveredAltArtCharacterIds.has(card.characterId);
     }
     if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
     return false;
@@ -2224,17 +2236,27 @@ function CardsContent() {
 
   /** True if this card cannot be uploaded because a prerequisite slot is not yet in the codex. */
   function isCodexUploadBlockedByPrereq(card: { characterId?: string | null; isFoil?: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter" }): boolean {
-    if (!card.characterId || !card.isFoil) return false;
+    if (!card.characterId) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return false;
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isMain = !isAltArt && !isBoys;
-    if (!isMain) return false;
     const f = card.finish ?? (card.isFoil ? "holo" : "normal");
-    if (f === "darkMatter") return !discoveredPrismaticCharacterIds.has(card.characterId);
-    if (f === "prismatic") return !discoveredHoloCharacterIds.has(card.characterId);
-    return !discoveredCharacterIds.has(card.characterId);
+    if (isMain) {
+      if (!card.isFoil) return false;
+      if (f === "darkMatter") return !discoveredPrismaticCharacterIds.has(card.characterId);
+      if (f === "prismatic") return !discoveredHoloCharacterIds.has(card.characterId);
+      return !discoveredCharacterIds.has(card.characterId);
+    }
+    if (isAltArt) {
+      if (!card.isFoil) return false;
+      if (f === "darkMatter") return !discoveredAltArtPrismaticCharacterIds.has(card.characterId);
+      if (f === "prismatic") return !discoveredAltArtHoloCharacterIds.has(card.characterId);
+      if (f === "holo") return !discoveredAltArtCharacterIds.has(card.characterId);
+      return false;
+    }
+    return false;
   }
 
   function isAltArtCard(card: { characterId?: string | null }): boolean {
@@ -2260,8 +2282,10 @@ function CardsContent() {
     }
     if (isAltArt) {
       const f = card.finish ?? (card.isFoil ? "holo" : "normal");
-      const isAltArtHolo = f === "holo" || f === "prismatic" || f === "darkMatter" || !!card.isFoil;
-      return isAltArtHolo ? `altart_holo:${card.characterId}` : `altart:${card.characterId}`;
+      if (f === "darkMatter") return `altart_darkmatter:${card.characterId}`;
+      if (f === "prismatic") return `altart_prismatic:${card.characterId}`;
+      if (f === "holo" || !!card.isFoil) return `altart_holo:${card.characterId}`;
+      return `altart:${card.characterId}`;
     }
     if (isBoys) return `boys:${card.characterId}`;
     return null;
@@ -2342,7 +2366,18 @@ function CardsContent() {
           else if (variant === "darkMatter") setDiscoveredDarkMatterCharacterIds((prev) => new Set([...prev, data.characterId]));
           else if (variant === "altart") {
             setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
-            if (data.finish === "holo" || data.isFoil) setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+          } else if (variant === "altart_holo") {
+            setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+          } else if (variant === "altart_prismatic") {
+            setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtPrismaticCharacterIds((prev) => new Set([...prev, data.characterId]));
+          } else if (variant === "altart_darkmatter") {
+            setDiscoveredAltArtCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtHoloCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtPrismaticCharacterIds((prev) => new Set([...prev, data.characterId]));
+            setDiscoveredAltArtDarkMatterCharacterIds((prev) => new Set([...prev, data.characterId]));
           } else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
           untrackCharacterId(data.characterId);
@@ -2619,6 +2654,8 @@ function CardsContent() {
           darkMatterCharacterIds: new Set(Array.isArray(codexData.darkMatterCharacterIds) ? codexData.darkMatterCharacterIds : []),
           altArtCharacterIds: new Set(Array.isArray(codexData.altArtCharacterIds) ? codexData.altArtCharacterIds : []),
           altArtHoloCharacterIds: new Set(Array.isArray(codexData.altArtHoloCharacterIds) ? codexData.altArtHoloCharacterIds : []),
+          altArtPrismaticCharacterIds: new Set(Array.isArray(codexData.altArtPrismaticCharacterIds) ? codexData.altArtPrismaticCharacterIds : []),
+          altArtDarkMatterCharacterIds: new Set(Array.isArray(codexData.altArtDarkMatterCharacterIds) ? codexData.altArtDarkMatterCharacterIds : []),
           boysCharacterIds: new Set(Array.isArray(codexData.boysCharacterIds) ? codexData.boysCharacterIds : []),
         });
       } else {
@@ -2634,6 +2671,8 @@ function CardsContent() {
     darkMatterCharacterIds: Set<string>;
     altArtCharacterIds: Set<string>;
     altArtHoloCharacterIds: Set<string>;
+    altArtPrismaticCharacterIds: Set<string>;
+    altArtDarkMatterCharacterIds: Set<string>;
     boysCharacterIds: Set<string>;
   };
   const myCodexSets = useMemo<CodexSets>(() => ({
@@ -2643,8 +2682,10 @@ function CardsContent() {
     darkMatterCharacterIds: discoveredDarkMatterCharacterIds,
     altArtCharacterIds: discoveredAltArtCharacterIds,
     altArtHoloCharacterIds: discoveredAltArtHoloCharacterIds,
+    altArtPrismaticCharacterIds: discoveredAltArtPrismaticCharacterIds,
+    altArtDarkMatterCharacterIds: discoveredAltArtDarkMatterCharacterIds,
     boysCharacterIds: discoveredBoysCharacterIds,
-  }), [discoveredCharacterIds, discoveredHoloCharacterIds, discoveredPrismaticCharacterIds, discoveredDarkMatterCharacterIds, discoveredAltArtCharacterIds, discoveredAltArtHoloCharacterIds, discoveredBoysCharacterIds]);
+  }), [discoveredCharacterIds, discoveredHoloCharacterIds, discoveredPrismaticCharacterIds, discoveredDarkMatterCharacterIds, discoveredAltArtCharacterIds, discoveredAltArtHoloCharacterIds, discoveredAltArtPrismaticCharacterIds, discoveredAltArtDarkMatterCharacterIds, discoveredBoysCharacterIds]);
   function isCardInCodex(card: Card, codex: CodexSets | null, poolEntries: PoolEntry[]): boolean {
     if (!codex || !card.characterId) return false;
     const cid = card.characterId;
@@ -2653,7 +2694,12 @@ function CardsContent() {
     const finish = card.finish ?? (card.isFoil ? "holo" : "normal");
     const ct = card.cardType ?? "actor";
     if (ct === "character") return codex.boysCharacterIds.has(cid);
-    if (isAltArt) return finish === "holo" || card.isFoil ? codex.altArtHoloCharacterIds.has(cid) : codex.altArtCharacterIds.has(cid);
+    if (isAltArt) {
+      if (finish === "darkMatter") return codex.altArtDarkMatterCharacterIds?.has(cid) ?? false;
+      if (finish === "prismatic") return codex.altArtPrismaticCharacterIds?.has(cid) ?? false;
+      if (finish === "holo" || card.isFoil) return codex.altArtHoloCharacterIds.has(cid);
+      return codex.altArtCharacterIds.has(cid);
+    }
     if (finish === "darkMatter") return codex.darkMatterCharacterIds.has(cid);
     if (finish === "prismatic") return codex.prismaticCharacterIds.has(cid);
     if (finish === "holo" || card.isFoil) return codex.holoCharacterIds.has(cid);
@@ -2696,6 +2742,8 @@ function CardsContent() {
                 darkMatterCharacterIds: new Set(Array.isArray(d.darkMatterCharacterIds) ? d.darkMatterCharacterIds : []),
                 altArtCharacterIds: new Set(Array.isArray(d.altArtCharacterIds) ? d.altArtCharacterIds : []),
                 altArtHoloCharacterIds: new Set(Array.isArray(d.altArtHoloCharacterIds) ? d.altArtHoloCharacterIds : []),
+                altArtPrismaticCharacterIds: new Set(Array.isArray(d.altArtPrismaticCharacterIds) ? d.altArtPrismaticCharacterIds : []),
+                altArtDarkMatterCharacterIds: new Set(Array.isArray(d.altArtDarkMatterCharacterIds) ? d.altArtDarkMatterCharacterIds : []),
                 boysCharacterIds: new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []),
               },
             }));
@@ -5682,7 +5730,12 @@ function CardsContent() {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const renderEntry = (entry: PoolEntry) => {
                       const altArts = altArtMap.get(entry.characterId) ?? [];
-                      const discoveredAltArts = altArts.filter(a => discoveredAltArtCharacterIds.has(a.characterId));
+                      const discoveredAltArts = altArts.filter(a =>
+                        discoveredAltArtCharacterIds.has(a.characterId) ||
+                        discoveredAltArtHoloCharacterIds.has(a.characterId) ||
+                        discoveredAltArtPrismaticCharacterIds.has(a.characterId) ||
+                        discoveredAltArtDarkMatterCharacterIds.has(a.characterId)
+                      );
                       const mainDiscovered =
                         discoveredCharacterIds.has(entry.characterId) ||
                         discoveredHoloCharacterIds.has(entry.characterId);
@@ -5760,15 +5813,18 @@ function CardsContent() {
                         });
                       }
                       for (const alt of discoveredAltArts) {
+                        const altDarkMatter = discoveredAltArtDarkMatterCharacterIds.has(alt.characterId);
+                        const altPrismatic = discoveredAltArtPrismaticCharacterIds.has(alt.characterId);
                         const altHolo = discoveredAltArtHoloCharacterIds.has(alt.characterId);
+                        const altFinish: "normal" | "holo" | "prismatic" | "darkMatter" = altDarkMatter ? "darkMatter" : altPrismatic ? "prismatic" : altHolo ? "holo" : "normal";
                         variants.push({
                           poolEntry: alt,
                           isAlt: true,
                           codexCard: {
                             id: alt.characterId,
                             rarity: alt.rarity,
-                            isFoil: altHolo,
-                            finish: altHolo ? "holo" : "normal",
+                            isFoil: altFinish !== "normal",
+                            finish: altFinish,
                             actorName: alt.actorName ?? "",
                             characterName: alt.characterName ?? "",
                             movieTitle: alt.movieTitle ?? "",
