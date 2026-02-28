@@ -1764,12 +1764,17 @@ export default function ProfilePage() {
                                       onClick={() => {
                                         setCreateSetId(set.id);
                                         setCreateSetName(set.name);
-                                        setCreateSetCards((set.cards ?? []).map((c: { actorName?: string; characterName?: string; profilePath?: string; rarity?: string }) => ({
-                                          actorName: c.actorName ?? "",
-                                          characterName: c.characterName ?? "",
-                                          profilePath: c.profilePath ?? "",
-                                          rarity: c.rarity ?? "uncommon",
-                                        })));
+                                        setCreateSetCards(
+                                          (set.cards ?? []).map((c) => {
+                                            const card = c as { actorName?: string; characterName?: string; profilePath?: string; rarity?: string };
+                                            return {
+                                              actorName: card.actorName ?? "",
+                                              characterName: card.characterName ?? "",
+                                              profilePath: card.profilePath ?? "",
+                                              rarity: card.rarity ?? "uncommon",
+                                            };
+                                          })
+                                        );
                                         setCreateSetStep("edit");
                                         setCreateSetError("");
                                         setCreateSetIsEditingPublished(true);
