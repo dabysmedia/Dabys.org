@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getUsers,
   getProfile,
+  getCreditSettings,
   saveProfile,
   getSubmissions,
   getWinners,
@@ -13,10 +14,12 @@ import {
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedBoysCharacterIds,
+  getCommunityCodexUnlockedCharacterIds,
+  getPublishedCommunitySets,
   getCharacterPool,
   getPrestigeLevel,
 } from "@/lib/data";
-import { getCompletedWinnerIds, getCompletedHoloWinnerIds, getCompletedPrismaticWinnerIds, getCompletedDarkMatterWinnerIds } from "@/lib/cards";
+import { getCompletedWinnerIds, getCompletedHoloWinnerIds, getCompletedPrismaticWinnerIds, getCompletedDarkMatterWinnerIds, hasCompletedCommunitySet } from "@/lib/cards";
 
 // GET /api/users/[id]/profile — full profile + stats + submissions + comments
 export async function GET(
@@ -220,6 +223,7 @@ export async function GET(
     movieTitle: string;
     profilePath: string;
     cardType?: string;
+    communitySetId?: string;
   };
 
   const codexCards: CodexCardItem[] = [];
@@ -293,6 +297,28 @@ export async function GET(
     }
   }
 
+  // Community set cards
+  const publishedCommunitySets = getPublishedCommunitySets();
+  for (const set of publishedCommunitySets) {
+    const unlockedIds = getCommunityCodexUnlockedCharacterIds(id, set.id);
+    for (const charId of unlockedIds) {
+      const e = poolById.get(charId);
+      if (e && e.communitySetId) {
+        codexCards.push({
+          id: e.characterId,
+          rarity: e.rarity,
+          isFoil: false,
+          actorName: e.actorName ?? "",
+          characterName: e.characterName ?? "",
+          movieTitle: e.movieTitle ?? "",
+          profilePath: e.profilePath ?? "",
+          cardType: e.cardType,
+          communitySetId: e.communitySetId,
+        });
+      }
+    }
+  }
+
   // Featured cards: resolve profile.featuredCardIds (plain charId = regular, holo:charId = holo, altart:charId = alt-art), order preserved, max 6
   const featuredIds = (profile.featuredCardIds ?? [])
     .filter((slotId) => validFeaturedIds.has(slotId))
@@ -345,7 +371,7 @@ export async function GET(
     })
     .filter((e) => e != null) as CodexCardItem[];
 
-  // Completed badges (winner-based + tier) + purchased movie badges + standalone purchased badges
+  // Completed badges (winner-based + tier) + purchased movie badges + standalone purchased badges + community sets
   const completedWinnerIds = getCompletedWinnerIds(id);
   const completedHoloWinnerIds = getCompletedHoloWinnerIds(id);
   const completedPrismaticWinnerIds = getCompletedPrismaticWinnerIds(id);
@@ -353,6 +379,8 @@ export async function GET(
   const purchasedBadgeWinnerIds = profile.purchasedBadgeWinnerIds ?? [];
   const purchasedBadges = profile.purchasedBadges ?? [];
   const allDisplayableWinnerIds = [...new Set([...completedWinnerIds, ...purchasedBadgeWinnerIds])];
+  const completedCommunitySetIds = publishedCommunitySets.filter((s) => hasCompletedCommunitySet(id, s.id)).map((s) => s.id);
+  const allUsers = getUsers();
   type BadgeTier = "normal" | "holo" | "prismatic" | "darkMatter";
   const completedBadges = [
     ...allDisplayableWinnerIds.map((wid) => {
@@ -381,6 +409,17 @@ export async function GET(
       isHolo: false as const,
       badgeTier: "normal" as BadgeTier,
     })),
+    ...completedCommunitySetIds.map((setId) => {
+      const set = publishedCommunitySets.find((s) => s.id === setId);
+      const creator = set ? allUsers.find((u) => u.id === set.creatorId) : null;
+      return {
+        communitySetId: setId,
+        movieTitle: set?.name ?? "Community Set",
+        creatorName: creator?.name ?? "Unknown",
+        isHolo: false as const,
+        badgeTier: "normal" as BadgeTier,
+      };
+    }),
   ];
 
   // Single displayed badge: either a shop standalone badge or a winner badge
@@ -434,6 +473,12 @@ export async function GET(
     displayedBadges: displayedBadge ? [displayedBadge] : [],
     completedWinnerIds,
     completedBadges,
+    completedCommunitySetIds,
+    publishedCommunitySets,
+    communityCreditPrices: {
+      createPrice: getCreditSettings().communitySetCreatePrice,
+      extraCardPrice: getCreditSettings().communitySetExtraCardPrice,
+    },
     stats: {
       totalSubmissions,
       totalWins,

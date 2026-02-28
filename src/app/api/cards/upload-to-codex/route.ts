@@ -27,12 +27,17 @@ import {
   addHoloSetCompletionQuest,
   addPrismaticSetCompletionQuest,
   addDarkMatterSetCompletionQuest,
+  addCommunityCodexUnlock,
+  addCommunitySetCompletionQuest,
+  getCommunitySetById,
+  getCommunityCodexUnlockedCharacterIds,
 } from "@/lib/data";
 import {
   hasCompletedMovie,
   hasCompletedMovieHoloCodex,
   hasCompletedMoviePrismaticCodex,
   hasCompletedMovieDarkMatterCodex,
+  hasCompletedCommunitySet,
 } from "@/lib/cards";
 
 /** Upload a card to the codex: removes it from your collection and unlocks that slot. Legendaries re-enter the pool.
@@ -87,11 +92,21 @@ export async function POST(request: Request) {
 
   const pool = getCharacterPool();
   const poolEntry = pool.find((e) => e.characterId === characterId);
+  const isCommunity = !!(poolEntry as { communitySetId?: string } | undefined)?.communitySetId;
   const isAltArt = (poolEntry?.altArtOfCharacterId ?? null) != null;
   const isBoys = (poolEntry?.cardType ?? "actor") === "character" && !isAltArt;
-  const isMain = !isAltArt && !isBoys;
+  const isMain = !isAltArt && !isBoys && !isCommunity;
 
-  if (isMain) {
+  if (isCommunity) {
+    const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
+    const existingIds = getCommunityCodexUnlockedCharacterIds(userId, communitySetId);
+    if (existingIds.includes(characterId)) {
+      return NextResponse.json(
+        { error: "This community card is already in your codex" },
+        { status: 400 }
+      );
+    }
+  } else if (isMain) {
     const regularIds = getCodexUnlockedCharacterIds(userId);
     const holoIds = getCodexUnlockedHoloCharacterIds(userId);
     const prismaticIds = getCodexUnlockedPrismaticCharacterIds(userId);
@@ -237,6 +252,9 @@ export async function POST(request: Request) {
     addCodexUnlockAltArt(userId, characterId, altArtFinish);
   } else if (isBoys) {
     addCodexUnlockBoys(userId, characterId);
+  } else if (isCommunity) {
+    const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
+    addCommunityCodexUnlock(userId, communitySetId, characterId);
   }
 
   // Track quest progress: upload_codex
@@ -248,6 +266,15 @@ export async function POST(request: Request) {
   let holoSetCompleted: { winnerId: string; movieTitle: string } | undefined;
   let prismaticSetCompleted: { winnerId: string; movieTitle: string } | undefined;
   let darkMatterSetCompleted: { winnerId: string; movieTitle: string } | undefined;
+  let communitySetCompleted: { communitySetId: string; setName: string } | undefined;
+  if (isCommunity) {
+    const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
+    if (hasCompletedCommunitySet(userId, communitySetId)) {
+      const set = getCommunitySetById(communitySetId);
+      const added = addCommunitySetCompletionQuest(userId, communitySetId, set?.creatorId ?? "");
+      if (added && set) communitySetCompleted = { communitySetId, setName: set.name };
+    }
+  }
   const tmdbId = card.movieTmdbId;
   if (tmdbId) {
     const winner = getWinners().find((w) => w.tmdbId === tmdbId);
@@ -283,10 +310,12 @@ export async function POST(request: Request) {
     characterId,
     isFoil: card.isFoil ?? false,
     finish,
-    variant: isMain ? (variantMap[finish] ?? "regular") : isAltArt ? (finish === "darkMatter" ? "altart_darkmatter" : finish === "prismatic" ? "altart_prismatic" : finish === "holo" ? "altart_holo" : "altart") : "boys",
+    variant: isCommunity ? "community" : isMain ? (variantMap[finish] ?? "regular") : isAltArt ? (finish === "darkMatter" ? "altart_darkmatter" : finish === "prismatic" ? "altart_prismatic" : finish === "holo" ? "altart_holo" : "altart") : "boys",
+    ...(isCommunity && { communitySetId: (poolEntry as { communitySetId?: string }).communitySetId }),
     ...(setCompleted && { setCompleted }),
     ...(holoSetCompleted && { holoSetCompleted }),
     ...(prismaticSetCompleted && { prismaticSetCompleted }),
     ...(darkMatterSetCompleted && { darkMatterSetCompleted }),
+    ...(communitySetCompleted && { communitySetCompleted }),
   });
 }

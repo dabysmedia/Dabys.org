@@ -11,7 +11,11 @@ import {
   getCodexUnlockedBoysCharacterIds,
   getPrismaticForgeUnlocked,
   getLegendaryOwnershipBySlotId,
+  getPublishedCommunitySets,
+  getCommunityCodexUnlockedCharacterIds,
+  getCreditSettings,
 } from "@/lib/data";
+import { hasCompletedCommunitySet } from "@/lib/cards";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,6 +36,20 @@ export async function GET(request: Request) {
   const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
   const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
   const legendaryOwnedBy = getLegendaryOwnershipBySlotId();
+
+  const publishedCommunitySets = getPublishedCommunitySets();
+  const communityCodexBySet: Record<string, string[]> = {};
+  const completedCommunitySetIds: string[] = [];
+  for (const set of publishedCommunitySets) {
+    const unlocked = getCommunityCodexUnlockedCharacterIds(userId, set.id);
+    communityCodexBySet[set.id] = unlocked;
+    if (hasCompletedCommunitySet(userId, set.id)) completedCommunitySetIds.push(set.id);
+  }
+  const communityCreditPrices = {
+    createPrice: getCreditSettings().communitySetCreatePrice,
+    extraCardPrice: getCreditSettings().communitySetExtraCardPrice,
+  };
+
   return NextResponse.json({
     characterIds,
     holoCharacterIds,
@@ -44,5 +62,9 @@ export async function GET(request: Request) {
     boysCharacterIds,
     prismaticForgeUnlocked,
     legendaryOwnedBy,
+    publishedCommunitySets,
+    communityCodexBySet,
+    completedCommunitySetIds,
+    communityCreditPrices,
   });
 }

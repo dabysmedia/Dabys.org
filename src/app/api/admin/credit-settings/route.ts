@@ -51,6 +51,10 @@ export async function PATCH(request: Request) {
     darkMatterSetCompletionReward: parse(body.darkMatterSetCompletionReward, current.darkMatterSetCompletionReward),
     vaultWatch: parse(body.vaultWatch, current.vaultWatch),
     vaultMinWatchMinutes: Math.max(0, parse(body.vaultMinWatchMinutes, current.vaultMinWatchMinutes)),
+    communitySetCreatePrice: parse(body.communitySetCreatePrice, current.communitySetCreatePrice),
+    communitySetExtraCardPrice: parse(body.communitySetExtraCardPrice, current.communitySetExtraCardPrice),
+    communitySetCompletionReward: parse(body.communitySetCompletionReward, current.communitySetCompletionReward),
+    communitySetCompletionCreatorReward: parse(body.communitySetCompletionCreatorReward, current.communitySetCompletionCreatorReward),
   };
 
   saveCreditSettings(settings);

@@ -3268,5 +3268,43 @@
       "packId": "pack-1771918185739-xd99gy7"
     },
     "createdAt": "2026-02-24T07:34:34.059Z"
+  },
+  {
+    "id": "cl-1772297581598-blrckzv",
+    "userId": "2",
+    "amount": -500,
+    "reason": "community_set_create",
+    "metadata": {},
+    "createdAt": "2026-02-28T16:53:01.597Z"
+  },
+  {
+    "id": "cl-1772297712838-lsxg3gl",
+    "userId": "2",
+    "amount": -50,
+    "reason": "community_set_extra_card",
+    "metadata": {
+      "setId": "community-1772297581599-g81ij4z"
+    },
+    "createdAt": "2026-02-28T16:55:12.837Z"
+  },
+  {
+    "id": "cl-1772298181417-8rsi768",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1772298173532-wp7qgx7"
+    },
+    "createdAt": "2026-02-28T17:03:01.416Z"
+  },
+  {
+    "id": "cl-1772298185519-ydsakox",
+    "userId": "2",
+    "amount": -50,
+    "reason": "pack_purchase",
+    "metadata": {
+      "packId": "pack-1772298173532-wp7qgx7"
+    },
+    "createdAt": "2026-02-28T17:03:05.518Z"
   }
 ]

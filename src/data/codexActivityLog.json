@@ -82,5 +82,26 @@
     "variant": "regular",
     "action": "add",
     "createdAt": "2026-02-24T07:35:06.379Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "custom-1770993986099-ha56a75",
+    "variant": "altart_holo",
+    "action": "add",
+    "createdAt": "2026-02-28T16:15:44.245Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1158-111",
+    "variant": "holo",
+    "action": "add",
+    "createdAt": "2026-02-28T16:40:04.278Z"
+  },
+  {
+    "userId": "2",
+    "characterId": "actor-1158-111",
+    "variant": "prismatic",
+    "action": "add",
+    "createdAt": "2026-02-28T16:40:16.182Z"
   }
 ]

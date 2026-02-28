@@ -30,6 +30,7 @@ import {
   getUnopenedPackById,
   removeUnopenedPack,
   addUnopenedPack,
+  getCommunityCodexUnlockedCharacterIds,
 } from "@/lib/data";
 import type { CharacterPortrayal, Winner, Pack, CardFinish } from "@/lib/data";
 
@@ -792,6 +793,30 @@ export function legendaryReroll(
 /** Character pool entries for a movie (tmdbId). Returns all entries so sets with more than 6 cards and newly added cards are fully represented. */
 export function getPoolEntriesForMovie(tmdbId: number): CharacterPortrayal[] {
   return getCharacterPool().filter((c) => c.movieTmdbId === tmdbId && c.profilePath?.trim());
+}
+
+/** Character pool entries for a community set. */
+export function getPoolEntriesForCommunitySet(communitySetId: string): CharacterPortrayal[] {
+  return getCharacterPool().filter(
+    (c) => c.communitySetId === communitySetId && c.profilePath?.trim()
+  );
+}
+
+/** Character IDs the user has unlocked in the codex for a community set. */
+export function getUserCodexCharacterIdsForCommunitySet(userId: string, communitySetId: string): Set<string> {
+  return new Set(getCommunityCodexUnlockedCharacterIds(userId, communitySetId));
+}
+
+/** True if user has discovered all cards for a community set in the codex. */
+export function hasCompletedCommunitySet(userId: string, communitySetId: string): boolean {
+  const pool = getPoolEntriesForCommunitySet(communitySetId);
+  if (pool.length === 0) return false;
+  const discovered = getUserCodexCharacterIdsForCommunitySet(userId, communitySetId);
+  const required = new Set(pool.map((c) => c.characterId));
+  for (const id of required) {
+    if (!discovered.has(id)) return false;
+  }
+  return true;
 }
 
 /** Distinct characterIds the user owns for a given movie. */

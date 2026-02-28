@@ -313,5 +313,31 @@
     "movieTitle": "Nacho Libre",
     "id": "tl_1771919823232_9duu04",
     "timestamp": "2026-02-24T07:57:03.232Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1772298181422-20r2jw8",
+    "characterName": "Star wars",
+    "actorName": "Test",
+    "movieTitle": "Star wars",
+    "packId": "pack-1772298173532-wp7qgx7",
+    "id": "tl_1772298181432_70v05t",
+    "timestamp": "2026-02-28T17:03:01.432Z"
+  },
+  {
+    "userId": "2",
+    "userName": "Carlos",
+    "source": "pull",
+    "rarity": "epic",
+    "cardId": "card-1772298185525-g7xij1u",
+    "characterName": "Star wars",
+    "actorName": "Test",
+    "movieTitle": "Star wars",
+    "packId": "pack-1772298173532-wp7qgx7",
+    "id": "tl_1772298185532_s82hce",
+    "timestamp": "2026-02-28T17:03:05.532Z"
   }
 ]

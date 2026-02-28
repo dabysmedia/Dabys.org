@@ -615,5 +615,89 @@
     "popularity": 0,
     "rarity": "epic",
     "cardType": "actor"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-0",
+    "actorName": "The Mandalorian",
+    "characterName": "The Mandalorian",
+    "profilePath": "/api/uploads/1772297631828-yc4ujz.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "legendary",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-1",
+    "actorName": "Test",
+    "characterName": "Star wars",
+    "profilePath": "/api/uploads/1772297696934-4t8h5a.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "epic",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-2",
+    "actorName": "Star wars",
+    "characterName": "Star wars",
+    "profilePath": "/api/uploads/1772297700318-t6slym.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "rare",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-3",
+    "actorName": "Star wars",
+    "characterName": "Star wars",
+    "profilePath": "/api/uploads/1772297693771-07b5y0.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "rare",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-4",
+    "actorName": "Star wars",
+    "characterName": "Star wars",
+    "profilePath": "/api/uploads/1772297703529-o9pr6o.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "uncommon",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-5",
+    "actorName": "Star wars",
+    "characterName": "Star wars",
+    "profilePath": "/api/uploads/1772297707451-qd4oxu.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "uncommon",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
+  },
+  {
+    "characterId": "community-1772297581599-g81ij4z-6",
+    "actorName": "asd",
+    "characterName": "asd",
+    "profilePath": "/api/uploads/1772297718565-gvcr30.jpg",
+    "movieTmdbId": 0,
+    "movieTitle": "Star wars",
+    "popularity": 0,
+    "rarity": "uncommon",
+    "cardType": "community",
+    "communitySetId": "community-1772297581599-g81ij4z"
   }
 ]

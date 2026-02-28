@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CardDisplay } from "@/components/CardDisplay";
+import ImageCropModal from "@/components/ImageCropModal";
 import { BadgePill } from "@/components/BadgePill";
 import { getDisenchantDust, getPackAPunchCost, getQuicksellCredits } from "@/lib/alchemy";
 import { RARITY_BADGE } from "@/lib/constants";
@@ -93,7 +94,7 @@ function useMidnightUTCCountdown(active: boolean): string {
 type TabKey = "store" | "inventory" | "marketplace" | "trivia" | "trade" | "codex";
 const TCG_TAB_STORAGE_KEY = "dabys_tcg_tab";
 const TAB_KEYS: TabKey[] = ["store", "inventory", "marketplace", "trivia", "trade", "codex"];
-type CodexSubTab = "codex" | "boys" | "badges";
+type CodexSubTab = "codex" | "boys" | "community" | "badges";
 type StoreSubTab = "packs" | "other";
 /** Pool entry shape from /api/cards/character-pool (matches CharacterPortrayal). */
 interface PoolEntry {
@@ -108,6 +109,8 @@ interface PoolEntry {
   altArtOfCharacterId?: string;
   /** For Boys: custom set name to group by in codex instead of movie. */
   customSetId?: string;
+  /** For community cards: the set this card belongs to. */
+  communitySetId?: string;
 }
 type InventorySubTab = "tradeup" | "alchemy" | "quicksell";
 
@@ -506,7 +509,7 @@ function CardsContent() {
   const [filterRarity, setFilterRarity] = useState<string>("");
   const [filterFoil, setFilterFoil] = useState<"all" | "foil" | "normal">("all");
   const [filterSort, setFilterSort] = useState<"recent" | "name" | "movie" | "type">("recent");
-  const [filterCardType, setFilterCardType] = useState<"all" | "actor" | "character">("all");
+  const [filterCardType, setFilterCardType] = useState<"all" | "actor" | "character" | "community">("all");
   const [showListModal, setShowListModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [listPrice, setListPrice] = useState("");
@@ -683,6 +686,18 @@ function CardsContent() {
   const [completedHoloBadgeWinnerIds, setCompletedHoloBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedPrismaticBadgeWinnerIds, setCompletedPrismaticBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [completedDarkMatterBadgeWinnerIds, setCompletedDarkMatterBadgeWinnerIds] = useState<Set<string>>(new Set());
+  const [publishedCommunitySets, setPublishedCommunitySets] = useState<{ id: string; name: string; creatorId: string; cards: { actorName: string; characterName: string; profilePath: string; rarity: string }[] }[]>([]);
+  const [communityCodexBySet, setCommunityCodexBySet] = useState<Record<string, string[]>>({});
+  const [completedCommunitySetIds, setCompletedCommunitySetIds] = useState<Set<string>>(new Set());
+  const [communityCreditPrices, setCommunityCreditPrices] = useState<{ createPrice: number; extraCardPrice: number }>({ createPrice: 500, extraCardPrice: 50 });
+  const [showCreateCommunitySetModal, setShowCreateCommunitySetModal] = useState(false);
+  const [createSetStep, setCreateSetStep] = useState<"pay" | "edit" | "publishing">("pay");
+  const [createSetId, setCreateSetId] = useState<string | null>(null);
+  const [createSetName, setCreateSetName] = useState("");
+  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
+  const [createSetLoading, setCreateSetLoading] = useState(false);
+  const [createSetError, setCreateSetError] = useState("");
+  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<number | null>(null);
   const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
@@ -1047,6 +1062,12 @@ function CardsContent() {
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
+      setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
+      setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
+      setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
+      if (d.communityCreditPrices && typeof d.communityCreditPrices.createPrice === "number" && typeof d.communityCreditPrices.extraCardPrice === "number") {
+        setCommunityCreditPrices({ createPrice: d.communityCreditPrices.createPrice, extraCardPrice: d.communityCreditPrices.extraCardPrice });
+      }
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
@@ -1212,6 +1233,12 @@ function CardsContent() {
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
+      setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
+      setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
+      setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
+      if (d.communityCreditPrices && typeof d.communityCreditPrices.createPrice === "number" && typeof d.communityCreditPrices.extraCardPrice === "number") {
+        setCommunityCreditPrices({ createPrice: d.communityCreditPrices.createPrice, extraCardPrice: d.communityCreditPrices.extraCardPrice });
+      }
     }
     if (badgeProgressRes.ok) {
       const d = await badgeProgressRes.json();
@@ -1469,7 +1496,11 @@ function CardsContent() {
         setRevealCount((prev) => {
           const next = prev < idx + 1 ? idx + 1 : prev;
           if (next === idx + 1) {
-            const isTrackedPull = card.characterId && trackedCharacterIds.has(card.characterId);
+            const isTrackedPull = card.characterId && (
+              trackedCharacterIds.has(card.characterId) ||
+              ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)) ||
+              ((card.cardType as string) === "community" && trackedCharacterIds.has(`community:${card.characterId}`))
+            );
             if (isTrackedPull && !trackedSoundPlayed) {
               trackedSoundPlayed = true;
               void playTrackedFoundSound();
@@ -2203,7 +2234,8 @@ function CardsContent() {
     if (!entry) return false;
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
-    const isMain = !isAltArt && !isBoys;
+    const isCommunity = !!(entry as PoolEntry & { communitySetId?: string }).communitySetId;
+    const isMain = !isAltArt && !isBoys && !isCommunity;
     if (isMain) {
       if (!card.isFoil) return discoveredCharacterIds.has(card.characterId);
       const f = card.finish ?? (card.isFoil ? "holo" : "normal");
@@ -2219,6 +2251,10 @@ function CardsContent() {
       return discoveredAltArtCharacterIds.has(card.characterId);
     }
     if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
+    if (isCommunity) {
+      const setId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
+      return (communityCodexBySet[setId] ?? []).includes(card.characterId);
+    }
     return false;
   }
 
@@ -2272,7 +2308,8 @@ function CardsContent() {
     if (!entry) return null;
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
-    const isMain = !isAltArt && !isBoys;
+    const isCommunity = !!(entry as PoolEntry & { communitySetId?: string }).communitySetId;
+    const isMain = !isAltArt && !isBoys && !isCommunity;
     if (isMain) {
       if (!card.isFoil) return `regular:${card.characterId}`;
       const f = card.finish ?? (card.isFoil ? "holo" : "normal");
@@ -2288,6 +2325,7 @@ function CardsContent() {
       return `altart:${card.characterId}`;
     }
     if (isBoys) return `boys:${card.characterId}`;
+    if (isCommunity) return `community:${card.characterId}`;
     return null;
   }
 
@@ -2379,9 +2417,19 @@ function CardsContent() {
             setDiscoveredAltArtPrismaticCharacterIds((prev) => new Set([...prev, data.characterId]));
             setDiscoveredAltArtDarkMatterCharacterIds((prev) => new Set([...prev, data.characterId]));
           } else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
+          else if (variant === "community") {
+            const setId = data.communitySetId;
+            if (setId) {
+              setCommunityCodexBySet((prev) => ({
+                ...prev,
+                [setId]: [...(prev[setId] ?? []), data.characterId],
+              }));
+            }
+          }
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
           untrackCharacterId(data.characterId);
           if (variant === "boys") untrackCharacterId(`boys:${data.characterId}`);
+          if (variant === "community") untrackCharacterId(`community:${data.characterId}`);
           window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
@@ -2918,11 +2966,18 @@ function CardsContent() {
   const filteredInventoryCards = useMemo(() => {
     const cardTypeKey = (c: Card) => (c.cardType ?? "actor") as string;
     return cards
-      .filter((c) => filterCardType === "all" || (filterCardType === "actor" && cardTypeKey(c) !== "character") || (filterCardType === "character" && cardTypeKey(c) === "character"))
+      .filter((c) => {
+        const key = cardTypeKey(c);
+        if (filterCardType === "all") return true;
+        if (filterCardType === "actor") return key !== "character" && key !== "community";
+        if (filterCardType === "character") return key === "character";
+        if (filterCardType === "community") return key === "community";
+        return true;
+      })
       .filter((c) => !filterRarity || c.rarity === filterRarity)
       .filter((c) => filterFoil === "all" || (filterFoil === "foil" && c.isFoil) || (filterFoil === "normal" && !c.isFoil))
       .sort((a, b) => {
-        const typeOrder = (t: string) => (t === "character" ? 1 : 0);
+        const typeOrder = (t: string) => (t === "character" ? 1 : t === "community" ? 2 : 0);
         const secondary = () => {
           if (filterSort === "recent" || filterSort === "type") {
             const at = new Date(a.acquiredAt ?? 0).getTime();
@@ -3399,7 +3454,11 @@ function CardsContent() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 max-sm:mx-auto">
                       {newCards.map((card, i) => {
                         const revealed = i < revealCount;
-                        const isTrackedPull = revealed && card.characterId && trackedCharacterIds.has(card.characterId);
+                        const isTrackedPull = revealed && card.characterId && (
+                          trackedCharacterIds.has(card.characterId) ||
+                          ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)) ||
+                          ((card.cardType as string) === "community" && trackedCharacterIds.has(`community:${card.characterId}`))
+                        );
                         return (
                           <div key={card.id} className="relative">
                             {!revealed && (
@@ -3518,9 +3577,9 @@ function CardsContent() {
                     {tradeUpResult ? (
                       <>
                         <div className="w-36 mx-auto relative">
-                          <div className={tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`))) ? "tracked-card-found" : ""}>
+                          <div className={tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`)) || ((tradeUpResult.cardType as string) === "community" && trackedCharacterIds.has(`community:${tradeUpResult.characterId}`))) ? "tracked-card-found" : ""}>
                             <CardDisplay card={tradeUpResult} />
-                            {tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`))) && (
+                            {tradeUpResult.characterId && (trackedCharacterIds.has(tradeUpResult.characterId) || ((tradeUpResult.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${tradeUpResult.characterId}`)) || ((tradeUpResult.cardType as string) === "community" && trackedCharacterIds.has(`community:${tradeUpResult.characterId}`))) && (
                               <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2 pointer-events-none">
                                 <span className="px-2.5 py-1 rounded-lg bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(245,158,11,0.6)] animate-pulse">
                                   Tracked
@@ -4182,29 +4241,21 @@ function CardsContent() {
             )}
 
             {/* Your inventory - always visible */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 mt-8">
-              <h2 className="text-lg font-semibold text-white/90">Your inventory ({cards.length})</h2>
-              <div className="flex items-center gap-3">
-                <select
-                  value={filterCardType}
-                  onChange={(e) => setFilterCardType(e.target.value as "all" | "actor" | "character")}
-                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
-                >
-                  <option value="all">All types</option>
-                  <option value="actor">Actor</option>
-                  <option value="character">Boys</option>
-                </select>
-                <select
-                  value={filterRarity}
-                  onChange={(e) => setFilterRarity(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
-                >
-                  <option value="">All rarities</option>
-                  <option value="uncommon">Uncommon</option>
-                  <option value="rare">Rare</option>
-                  <option value="epic">Epic</option>
-                  <option value="legendary">Legendary</option>
-                </select>
+            <div className="mb-4 mt-8">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
+                <h2 className="text-lg font-semibold text-white/90">Your inventory ({cards.length})</h2>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={filterRarity}
+                    onChange={(e) => setFilterRarity(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-sm outline-none focus:border-purple-500/40 cursor-pointer"
+                  >
+                    <option value="">All rarities</option>
+                    <option value="uncommon">Uncommon</option>
+                    <option value="rare">Rare</option>
+                    <option value="epic">Epic</option>
+                    <option value="legendary">Legendary</option>
+                  </select>
                 <select
                   value={filterFoil}
                   onChange={(e) => setFilterFoil(e.target.value as "all" | "foil" | "normal")}
@@ -4226,12 +4277,34 @@ function CardsContent() {
                 </select>
               </div>
             </div>
-            {cards.length === 0 ? (
-              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
-                <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
+            {/* Types subtabs */}
+            <div className="rounded-t-lg rounded-b-2xl border border-white/[0.08] overflow-hidden">
+              <div className="flex gap-0 border-b border-white/[0.08] bg-white/[0.04] p-0.5">
+                {(["all", "actor", "character", "community"] as const).map((t) => {
+                  const label = t === "all" ? "All" : t === "actor" ? "Actor" : t === "character" ? "Boys" : "Community";
+                  const selected = filterCardType === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setFilterCardType(t)}
+                      className={`min-h-[36px] px-4 py-2 text-sm font-medium rounded-t-md transition-all cursor-pointer ${
+                        selected
+                          ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                          : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
-            ) : (() => {
-              const filtered = filteredInventoryCards;
+              {cards.length === 0 ? (
+                <div className="rounded-b-2xl bg-white/[0.03] p-12 text-center">
+                  <p className="text-white/40 text-sm">No cards yet. Buy a pack in Shop to get started!</p>
+                </div>
+              ) : (() => {
+                const filtered = filteredInventoryCards;
 
               /* ── Stacking: group identical cards ── */
               const stackKeyFn = (c: Card) =>
@@ -4316,7 +4389,7 @@ function CardsContent() {
                 };
                 const isSelectable = (canAddTradeUp && inventorySubTab === "tradeup") || (canAddReroll && inventorySubTab === "tradeup") || (canAddAlchemy && inventorySubTab === "alchemy") || (canAddPrismaticForge && inventorySubTab === "alchemy") || (canAddQuicksell && inventorySubTab === "quicksell");
                 const isOnBench = (inSlots && inventorySubTab === "tradeup") || (inRerollSlots && inventorySubTab === "tradeup") || (onAlchemyBench && inventorySubTab === "alchemy") || (onPrismaticForge && inventorySubTab === "alchemy") || (onQuicksellBench && inventorySubTab === "quicksell");
-                const isTrackedCard = card.characterId && (trackedCharacterIds.has(card.characterId) || ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)));
+                const isTrackedCard = card.characterId && (trackedCharacterIds.has(card.characterId) || ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)) || ((card.cardType as string) === "community" && trackedCharacterIds.has(`community:${card.characterId}`)));
                 return (
                   <div
                     key={card.id}
@@ -4481,7 +4554,7 @@ function CardsContent() {
                       style={{ zIndex: cascadeLayers + 1 }}
                     >
                       {(() => {
-                        const isTrackedFront = front.characterId && (trackedCharacterIds.has(front.characterId) || ((front.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${front.characterId}`)));
+                        const isTrackedFront = front.characterId && (trackedCharacterIds.has(front.characterId) || ((front.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${front.characterId}`)) || ((front.cardType as string) === "community" && trackedCharacterIds.has(`community:${front.characterId}`)));
                         return (
                           <div className={`relative rounded-xl ${isTrackedFront ? "ring-2 ring-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.25)]" : ""}`}>
                             {isTrackedFront && (
@@ -4524,14 +4597,15 @@ function CardsContent() {
               const gridClasses = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4";
               if (filterSort === "type") {
                 const byType = filtered.reduce((acc, c) => {
-                  const t = (c.cardType ?? "actor") === "character" ? "Boys" : "Actor";
+                  const ct = (c.cardType ?? "actor") as string;
+                  const t = ct === "character" ? "Boys" : ct === "community" ? "Community" : "Actor";
                   if (!acc[t]) acc[t] = [];
                   acc[t].push(c);
                   return acc;
                 }, {} as Record<string, Card[]>);
-                const typeOrder = ["Actor", "Boys"];
+                const typeOrder = ["Actor", "Boys", "Community"];
                 return (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-8 p-4 sm:p-6 bg-white/[0.03]">
                     {typeOrder.filter((t) => byType[t]?.length).map((typeLabel) => (
                       <div key={typeLabel}>
                         <h3 className="text-sm font-medium text-white/70 mb-3">{typeLabel} ({byType[typeLabel].length})</h3>
@@ -4551,7 +4625,7 @@ function CardsContent() {
                   return acc;
                 }, {} as Record<string, Card[]>);
                 return (
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-8 p-4 sm:p-6 bg-white/[0.03]">
                     {Object.entries(byMovie).map(([movieTitle, movieCards]) => (
                       <div key={movieTitle}>
                         <h3 className="text-sm font-medium text-white/70 mb-3">{movieTitle}</h3>
@@ -4564,11 +4638,13 @@ function CardsContent() {
                 );
               }
               return (
-                <div className={gridClasses}>
+                <div className={`${gridClasses} p-4 sm:p-6 bg-white/[0.03]`}>
                   {buildDisplayItems(filtered).map(renderDisplayItem)}
                 </div>
               );
             })()}
+            </div>
+          </div>
           </div>
         )}
 
@@ -5677,6 +5753,17 @@ function CardsContent() {
               </button>
               <button
                 type="button"
+                onClick={() => setCodexSubTab("community")}
+                className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
+                  codexSubTab === "community"
+                    ? "bg-white/[0.1] border border-white/20 border-b-0 -mb-px text-amber-400 shadow-sm"
+                    : "text-white/35 hover:text-white/55 bg-transparent border border-transparent"
+                }`}
+              >
+                Community
+              </button>
+              <button
+                type="button"
                 onClick={() => setCodexSubTab("badges")}
                 className={`min-h-[44px] px-4 py-3 sm:py-2.5 text-base sm:text-sm font-medium rounded-t-md transition-all cursor-pointer touch-manipulation whitespace-nowrap ${
                   codexSubTab === "badges"
@@ -6331,8 +6418,230 @@ function CardsContent() {
             );
             })()}
 
+            {codexSubTab === "community" && (() => {
+              const communityEntries = poolEntries.filter((e) => (e as PoolEntry & { communitySetId?: string }).communitySetId);
+              const setNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.name]));
+              return (
+          <>
+            {communityEntries.length === 0 ? (
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
+                <p className="text-white/40 text-sm">No community cards in the pool yet.</p>
+                {user?.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateCommunitySetModal(true);
+                      setCreateSetStep("pay");
+                      setCreateSetId(null);
+                      setCreateSetName("");
+                      setCreateSetCards([]);
+                      setCreateSetError("");
+                    }}
+                    className="mt-4 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium text-sm hover:bg-emerald-500/30 transition-colors"
+                  >
+                    Create a set
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                  <span className="text-white/50 text-sm">Sort:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {(["rarity", "set", "name"] as const).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setCodexSort(key)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                          codexSort === key
+                            ? "bg-amber-500/20 border border-amber-400/50 text-amber-300"
+                            : "bg-white/[0.06] border border-white/[0.12] text-white/70 hover:bg-white/[0.1] hover:text-white/90"
+                        }`}
+                      >
+                        {key === "set" ? "Set" : key === "name" ? "Name" : "Rarity"}
+                      </button>
+                    ))}
+                  </div>
+                  {user?.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateCommunitySetModal(true);
+                        setCreateSetStep("pay");
+                        setCreateSetId(null);
+                        setCreateSetName("");
+                        setCreateSetCards([]);
+                        setCreateSetError("");
+                      }}
+                      className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium text-sm hover:bg-emerald-500/30 transition-colors shrink-0"
+                    >
+                      Create a set
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {(() => {
+                    const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                    const renderEntry = (entry: PoolEntry) => {
+                      const communitySetId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
+                      const discovered = (communityCodexBySet[communitySetId] ?? []).includes(entry.characterId);
+                      if (!discovered) {
+                        const isTrackedCommunity = trackedCharacterIds.has(`community:${entry.characterId}`);
+                        return (
+                          <div
+                            key={entry.characterId}
+                            className={`group/missing relative rounded-xl overflow-hidden border flex flex-col items-center justify-center transition-colors ${
+                              isTrackedCommunity
+                                ? "border-amber-400/40 bg-amber-500/[0.06]"
+                                : "border-white/10 bg-white/[0.04] hover:border-white/20"
+                            }`}
+                            style={{ aspectRatio: "2 / 3.35" }}
+                          >
+                            <div className={`flex flex-col items-center justify-center gap-2 ${isTrackedCommunity ? "text-amber-400/50" : "text-white/25"}`}>
+                              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                              <span className="text-xs font-medium">?</span>
+                            </div>
+                            {isTrackedCommunity && (
+                              <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(`community:${entry.characterId}`); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
+                                isTrackedCommunity
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30 opacity-100"
+                                  : "bg-white/[0.06] text-white/40 border border-white/10 opacity-0 group-hover/missing:opacity-100"
+                              }`}
+                              title={isTrackedCommunity ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
+                              disabled={!isTrackedCommunity && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedCommunity ? "Untrack" : "Track"}
+                            </button>
+                          </div>
+                        );
+                      }
+                      const codexCard = {
+                        id: entry.characterId,
+                        rarity: entry.rarity,
+                        isFoil: false,
+                        actorName: entry.actorName ?? "",
+                        characterName: entry.characterName ?? "",
+                        movieTitle: entry.movieTitle ?? "",
+                        profilePath: entry.profilePath ?? "",
+                        cardType: entry.cardType,
+                      };
+                      const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
+                      const clearNewDot = () => {
+                        if (!isNewlyUploaded) return;
+                        setNewlyUploadedToCodexCharacterIds((prev) => {
+                          const next = new Set(prev);
+                          next.delete(entry.characterId);
+                          return next;
+                        });
+                      };
+                      const communityTrackKey = `community:${entry.characterId}`;
+                      const isTrackedCommunityCodex = trackedCharacterIds.has(communityTrackKey);
+                      return (
+                        <div
+                          key={entry.characterId}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setInspectedCodexCard(codexCard)}
+                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
+                          className={`relative cursor-pointer group/communitycodex ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
+                          onMouseEnter={clearNewDot}
+                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
+                        >
+                          {isNewlyUploaded && (
+                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                          )}
+                          {isTrackedCommunityCodex && (
+                            <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider pointer-events-none">
+                              Tracked
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleTrackCharacter(communityTrackKey); }}
+                            className={`absolute bottom-1.5 inset-x-1.5 z-10 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/communitycodex:opacity-100 ${
+                              isTrackedCommunityCodex
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                            }`}
+                            title={isTrackedCommunityCodex ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
+                            disabled={!isTrackedCommunityCodex && trackedCharacterIds.size >= MAX_TRACKED}
+                          >
+                            {isTrackedCommunityCodex ? "Untrack" : "Track"}
+                          </button>
+                          <CardDisplay card={codexCard} selectable />
+                        </div>
+                      );
+                    };
+                    if (codexSort === "set") {
+                      const key = (e: PoolEntry) => (e as PoolEntry & { communitySetId?: string }).communitySetId ?? "(Uncategorized)";
+                      const bySet = new Map<string, PoolEntry[]>();
+                      for (const entry of communityEntries) {
+                        const k = String(key(entry));
+                        if (!bySet.has(k)) bySet.set(k, []);
+                        bySet.get(k)!.push(entry);
+                      }
+                      const discoveredCount = (entries: PoolEntry[]) =>
+                        entries.filter((e) => ((e as PoolEntry & { communitySetId?: string }).communitySetId && (communityCodexBySet[(e as PoolEntry & { communitySetId?: string }).communitySetId!] ?? []).includes(e.characterId))).length;
+                      const sets = Array.from(bySet.entries())
+                        .map(([k, entries]) => {
+                          const totalCount = entries.length;
+                          const completedCount = discoveredCount(entries);
+                          const completionPct = totalCount > 0 ? completedCount / totalCount : 0;
+                          const hasLegendary = entries.some((e) => e.rarity === "legendary");
+                          const title = setNamesById.get(k) ?? k;
+                          return {
+                            title,
+                            entries,
+                            completedCount,
+                            completionPct,
+                            hasLegendary,
+                          };
+                        })
+                        .sort((a, b) => {
+                          if (a.completionPct !== b.completionPct) return b.completionPct - a.completionPct;
+                          if (a.hasLegendary !== b.hasLegendary) return a.hasLegendary ? -1 : 1;
+                          if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
+                          return a.title.localeCompare(b.title);
+                        });
+                      return sets.flatMap((set, setIndex) => [
+                        setIndex > 0 ? (
+                          <div key={`community-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
+                        ) : null,
+                        <div key={`community-set-title-${setIndex}`} className="col-span-full text-sm font-semibold text-white/70 mb-2">
+                          {set.title}
+                        </div>,
+                        ...set.entries.map((entry) => renderEntry(entry)),
+                      ]);
+                    }
+                    const sorted =
+                      codexSort === "name"
+                        ? [...communityEntries].sort((a, b) =>
+                            ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? "")
+                          )
+                        : [...communityEntries].sort(
+                            (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
+                          );
+                    return sorted.map((entry) => renderEntry(entry));
+                  })()}
+                </div>
+              </div>
+            )}
+          </>
+            );
+            })()}
+
             {/* Codex card inspect overlay — centered, large scale; animated enter/exit */}
-            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "boys") && inspectedCodexCard && (
+            {tab === "codex" && (codexSubTab === "codex" || codexSubTab === "boys" || codexSubTab === "community") && inspectedCodexCard && (
               <>
                 <div
                   className={`fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm cursor-pointer transition-opacity duration-200 ${codexInspectClosing ? "opacity-0" : "opacity-100"}`}
@@ -6657,6 +6966,245 @@ function CardsContent() {
                 </div>
               </div>
             </div>
+          </>
+        )}
+
+        {/* Create Community Set modal */}
+        {showCreateCommunitySetModal && user?.id && (
+          <>
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => !createSetLoading && setShowCreateCommunitySetModal(false)}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+              role="dialog"
+              aria-label="Create community set"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 border-b border-white/10 shrink-0">
+                <h3 className="text-lg font-bold text-white/90">Create community set</h3>
+                <p className="text-sm text-white/50 mt-1">
+                  {createSetStep === "pay" && "Pay to create a new set. You'll define 6 cards with custom art, names, and rarities."}
+                  {createSetStep === "edit" && "Define your set. Add at least 6 cards. You can add more cards for extra cr."}
+                  {createSetStep === "publishing" && "Publishing..."}
+                </p>
+              </div>
+              <div className="p-5 overflow-y-auto flex-1 min-h-0">
+                {createSetError && (
+                  <p className="text-sm text-red-400 mb-4">{createSetError}</p>
+                )}
+                {createSetStep === "pay" && (
+                  <div className="space-y-4">
+                    <p className="text-white/70">
+                      Cost: <span className="font-bold text-emerald-400">{communityCreditPrices.createPrice} cr</span>
+                    </p>
+                    <p className="text-sm text-white/50">Your balance: {creditBalance ?? "—"} cr</p>
+                    <button
+                      type="button"
+                      disabled={createSetLoading || (creditBalance ?? 0) < communityCreditPrices.createPrice}
+                      onClick={async () => {
+                        setCreateSetLoading(true);
+                        setCreateSetError("");
+                        try {
+                          const res = await fetch("/api/community-sets", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: user.id }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error || "Failed to create set");
+                          setCreateSetId(json.setId);
+                          setCreateSetName(json.set?.name ?? "Untitled Set");
+                          setCreateSetCards(Array(6).fill(null).map(() => ({ actorName: "", characterName: "", profilePath: "", rarity: "uncommon" })));
+                          setCreateSetStep("edit");
+                          window.dispatchEvent(new Event("dabys-credits-refresh"));
+                        } catch (e) {
+                          setCreateSetError(e instanceof Error ? e.message : "Failed to create set");
+                        } finally {
+                          setCreateSetLoading(false);
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {createSetLoading ? "Creating..." : "Create set"}
+                    </button>
+                  </div>
+                )}
+                {createSetStep === "edit" && createSetId && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-white/50 mb-1">Set name</label>
+                      <input
+                        type="text"
+                        value={createSetName}
+                        onChange={(e) => setCreateSetName(e.target.value)}
+                        placeholder="My Awesome Set"
+                        className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/90 placeholder:text-white/30"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs text-white/50 mb-2">Cards (min 6)</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {createSetCards.map((card, i) => (
+                          <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+                            <div className="aspect-[2/3] rounded overflow-hidden bg-white/5 relative">
+                              {card.profilePath ? (
+                                <img src={card.profilePath} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">No image</div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setCreateSetImageForIndex(i)}
+                                className="absolute bottom-1 right-1 px-2 py-1 rounded text-[10px] bg-black/60 text-white/90 hover:bg-black/80"
+                              >
+                                {card.profilePath ? "Change" : "Upload"}
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={card.actorName}
+                              onChange={(e) => setCreateSetCards((prev) => {
+                                const next = [...prev];
+                                next[i] = { ...next[i], actorName: e.target.value };
+                                return next;
+                              })}
+                              placeholder="Name"
+                              className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                            />
+                            <input
+                              type="text"
+                              value={card.characterName}
+                              onChange={(e) => setCreateSetCards((prev) => {
+                                const next = [...prev];
+                                next[i] = { ...next[i], characterName: e.target.value };
+                                return next;
+                              })}
+                              placeholder="Character / role"
+                              className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                            />
+                            <select
+                              value={card.rarity}
+                              onChange={(e) => setCreateSetCards((prev) => {
+                                const next = [...prev];
+                                next[i] = { ...next[i], rarity: e.target.value };
+                                return next;
+                              })}
+                              className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 [color-scheme:dark]"
+                            >
+                              <option value="uncommon">Uncommon</option>
+                              <option value="rare">Rare</option>
+                              <option value="epic">Epic</option>
+                              <option value="legendary">Legendary</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        disabled={createSetLoading || (creditBalance ?? 0) < communityCreditPrices.extraCardPrice}
+                        onClick={async () => {
+                          setCreateSetLoading(true);
+                          setCreateSetError("");
+                          try {
+                            const res = await fetch(`/api/community-sets/${createSetId}/add-card`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ userId: user.id }),
+                            });
+                            const json = await res.json();
+                            if (!res.ok) throw new Error(json.error || "Failed to add card");
+                            setCreateSetCards((prev) => [...prev, { actorName: "", characterName: "", profilePath: "", rarity: "uncommon" }]);
+                            window.dispatchEvent(new Event("dabys-credits-refresh"));
+                          } catch (e) {
+                            setCreateSetError(e instanceof Error ? e.message : "Failed to add card");
+                          } finally {
+                            setCreateSetLoading(false);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-lg border border-purple-500/40 text-purple-300 text-sm hover:bg-purple-500/10 disabled:opacity-50"
+                      >
+                        + Add card ({communityCreditPrices.extraCardPrice} cr)
+                      </button>
+                      <button
+                        type="button"
+                        disabled={createSetLoading || createSetCards.length < 6 || createSetCards.some((c) => !c.profilePath?.trim() || !c.actorName?.trim())}
+                        onClick={async () => {
+                          setCreateSetLoading(true);
+                          setCreateSetError("");
+                          setCreateSetStep("publishing");
+                          try {
+                            const cardsToSave = createSetCards.map((c) => ({
+                              actorName: c.actorName,
+                              characterName: c.characterName,
+                              profilePath: c.profilePath,
+                              rarity: c.rarity,
+                            }));
+                            const patchRes = await fetch(`/api/community-sets/${createSetId}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ userId: user.id, name: createSetName, cards: cardsToSave }),
+                            });
+                            if (!patchRes.ok) {
+                              const j = await patchRes.json();
+                              throw new Error(j.error || "Failed to save");
+                            }
+                            const pubRes = await fetch(`/api/community-sets/${createSetId}/publish`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ userId: user.id }),
+                            });
+                            const pubJson = await pubRes.json();
+                            if (!pubRes.ok) throw new Error(pubJson.error || "Failed to publish");
+                            setShowCreateCommunitySetModal(false);
+                            refreshCodex();
+                          } catch (e) {
+                            setCreateSetError(e instanceof Error ? e.message : "Failed to publish");
+                            setCreateSetStep("edit");
+                          } finally {
+                            setCreateSetLoading(false);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-medium hover:bg-emerald-500/30 disabled:opacity-50"
+                      >
+                        Publish
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t border-white/10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => !createSetLoading && setShowCreateCommunitySetModal(false)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08]"
+                >
+                  {createSetStep === "edit" ? "Cancel" : "Close"}
+                </button>
+              </div>
+            </div>
+            <ImageCropModal
+              open={createSetImageForIndex !== null}
+              onClose={() => setCreateSetImageForIndex(null)}
+              onComplete={(url) => {
+                const idx = createSetImageForIndex;
+                if (idx !== null) {
+                  setCreateSetCards((prev) => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], profilePath: url };
+                    return next;
+                  });
+                  setCreateSetImageForIndex(null);
+                }
+              }}
+              aspect={2 / 3}
+              title="Card image"
+              cropShape="rect"
+            />
           </>
         )}
 

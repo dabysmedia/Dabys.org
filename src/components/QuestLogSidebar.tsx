@@ -38,6 +38,16 @@ interface SetCompletionQuest {
   firstCompletion?: boolean;
 }
 
+interface CommunitySetCompletionQuest {
+  communitySetId: string;
+  creatorId: string;
+  reward: number;
+  creatorReward: number;
+  claimed: boolean;
+  completedAt: string;
+  setName: string;
+}
+
 interface QuestLogSidebarProps {
   currentUserId: string;
 }
@@ -73,10 +83,12 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const [dailyQuests, setDailyQuests] = useState<DailyQuestInstance[]>([]);
   const [weeklyQuests, setWeeklyQuests] = useState<DailyQuestInstance[]>([]);
   const [setCompletionQuests, setSetCompletionQuests] = useState<SetCompletionQuest[]>([]);
+  const [communitySetCompletionQuests, setCommunitySetCompletionQuests] = useState<CommunitySetCompletionQuest[]>([]);
   const [questDate, setQuestDate] = useState<string>("");
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
   const [claimingSetCompletionWinnerId, setClaimingSetCompletionWinnerId] = useState<string | null>(null);
   const [claimingHoloSetCompletionWinnerId, setClaimingHoloSetCompletionWinnerId] = useState<string | null>(null);
+  const [claimingCommunitySetCompletionId, setClaimingCommunitySetCompletionId] = useState<string | null>(null);
   const [claimingAll, setClaimingAll] = useState(false);
   const [resetHourUTC, setResetHourUTC] = useState<number>(0);
   const [rerollsUsed, setRerollsUsed] = useState<number>(0);
@@ -185,6 +197,7 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
         if (typeof data.resetHourUTC === "number") setResetHourUTC(data.resetHourUTC);
         setRerollsUsed(typeof data.rerollsUsed === "number" ? data.rerollsUsed : 0);
         setSetCompletionQuests(Array.isArray(data.setCompletionQuests) ? data.setCompletionQuests : []);
+        setCommunitySetCompletionQuests(Array.isArray(data.communitySetCompletionQuests) ? data.communitySetCompletionQuests : []);
       })
       .catch(() => {});
     fetch(`/api/main-quests?userId=${encodeURIComponent(currentUserId)}`)
@@ -343,6 +356,30 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
     }
   }
 
+  async function claimCommunitySetCompletion(communitySetId: string) {
+    setClaimingCommunitySetCompletionId(communitySetId);
+    try {
+      const res = await fetch("/api/quests/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: currentUserId, claimCommunitySetCompletion: true, communitySetId }),
+      });
+      if (res.ok) {
+        fetchQuests();
+        const data = await res.json();
+        const delta = (data.reward ?? 0) + (data.creatorReward ?? 0);
+        if (delta > 0) {
+          window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta } }));
+        }
+        window.dispatchEvent(new CustomEvent("dabys-notifications-refresh"));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setClaimingCommunitySetCompletionId(null);
+    }
+  }
+
   async function claimWeeklyQuest(questType: string) {
     setClaimingWeeklyQuestType(questType);
     try {
@@ -402,8 +439,9 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
   const dailyClaimable = dailyQuests.filter((q) => q.completed && !q.claimed).length;
   const weeklyClaimable = weeklyQuests.filter((q) => q.completed && !q.claimed).length;
   const setCompletionClaimable = setCompletionQuests.filter((q) => !q.claimed).length;
+  const communitySetClaimable = communitySetCompletionQuests.filter((q) => !q.claimed).length;
   const mainQuestClaimable = mainQuestProgress.filter((q) => q.completed && !q.claimed).length;
-  const claimableCount = dailyClaimable + weeklyClaimable + setCompletionClaimable + mainQuestClaimable;
+  const claimableCount = dailyClaimable + weeklyClaimable + setCompletionClaimable + communitySetClaimable + mainQuestClaimable;
   const allClaimed = dailyQuests.length > 0 && dailyQuests.every((q) => q.claimed);
 
   // Auto-expand sections when there are claimable quests
@@ -1068,6 +1106,58 @@ export function QuestLogSidebar({ currentUserId }: QuestLogSidebarProps) {
                                       <span className={`text-[10px] font-medium ${isHolo ? "text-indigo-300/60" : "text-emerald-400/60"}`}>
                                         ✓
                                       </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                      {communitySetCompletionQuests.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {communitySetCompletionQuests.map((q) => {
+                            const isClaimable = !q.claimed;
+                            const isClaiming = claimingCommunitySetCompletionId === q.communitySetId;
+                            return (
+                              <li
+                                key={q.communitySetId}
+                                className={`rounded-xl border transition-all ${
+                                  q.claimed
+                                    ? "border-white/[0.04] bg-white/[0.01] opacity-60"
+                                    : "border-teal-500/20 bg-teal-500/[0.04]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3 px-3 py-2.5">
+                                  <div className="flex-1 min-w-0">
+                                    <span className={`text-xs font-medium truncate block ${q.claimed ? "text-white/40 line-through" : "text-white/90"}`}>
+                                      Community: {q.setName}
+                                    </span>
+                                    <p className="text-[10px] text-white/35 mt-0.5">
+                                      {q.reward} cr (+{q.creatorReward} to creator)
+                                    </p>
+                                  </div>
+                                  <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                    {q.reward > 0 && (
+                                      <span className="text-[10px] font-medium whitespace-nowrap text-teal-300/80">
+                                        +{q.reward} cr
+                                      </span>
+                                    )}
+                                    {isClaimable ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => claimCommunitySetCompletion(q.communitySetId)}
+                                        disabled={isClaiming}
+                                        className="px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50 bg-teal-500/20 border border-teal-400/30 text-teal-300 hover:bg-teal-500/30"
+                                      >
+                                        {isClaiming ? (
+                                          <span className="inline-block w-2.5 h-2.5 border border-teal-400/30 border-t-teal-400 rounded-full animate-spin" />
+                                        ) : (
+                                          "Claim"
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] font-medium text-teal-400/60">✓</span>
                                     )}
                                   </div>
                                 </div>

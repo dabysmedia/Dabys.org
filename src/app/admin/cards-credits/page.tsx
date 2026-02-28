@@ -91,6 +91,7 @@ interface ShopItem {
 
 function cardTypeDisplayLabel(t: string, customTypes?: CustomCardType[]): string {
   if (t === "character") return "Boys";
+  if (t === "community") return "Community";
   const custom = customTypes?.find((c) => c.id === t);
   if (custom) return custom.label;
   return t.charAt(0).toUpperCase() + t.slice(1);
@@ -335,6 +336,10 @@ export default function AdminCardsCreditsPage() {
     darkMatterSetCompletionReward: number;
     vaultWatch: number;
     vaultMinWatchMinutes: number;
+    communitySetCreatePrice: number;
+    communitySetExtraCardPrice: number;
+    communitySetCompletionReward: number;
+    communitySetCompletionCreatorReward: number;
   } | null>(null);
   const [creditSettingsForm, setCreditSettingsForm] = useState({
     submission: "50",
@@ -355,6 +360,10 @@ export default function AdminCardsCreditsPage() {
     darkMatterSetCompletionReward: "5000",
     vaultWatch: "25",
     vaultMinWatchMinutes: "1",
+    communitySetCreatePrice: "500",
+    communitySetExtraCardPrice: "50",
+    communitySetCompletionReward: "500",
+    communitySetCompletionCreatorReward: "250",
   });
   const [savingCreditSettings, setSavingCreditSettings] = useState(false);
   const [creditSettingsLoading, setCreditSettingsLoading] = useState(true);
@@ -563,6 +572,10 @@ export default function AdminCardsCreditsPage() {
           darkMatterSetCompletionReward: String(d.darkMatterSetCompletionReward ?? 5000),
           vaultWatch: String(d.vaultWatch ?? 25),
           vaultMinWatchMinutes: String(d.vaultMinWatchMinutes ?? 1),
+          communitySetCreatePrice: String(d.communitySetCreatePrice ?? 500),
+          communitySetExtraCardPrice: String(d.communitySetExtraCardPrice ?? 50),
+          communitySetCompletionReward: String(d.communitySetCompletionReward ?? 500),
+          communitySetCompletionCreatorReward: String(d.communitySetCompletionCreatorReward ?? 250),
         });
       }
     } catch {
@@ -1026,6 +1039,10 @@ export default function AdminCardsCreditsPage() {
         darkMatterSetCompletionReward: parseInt(creditSettingsForm.darkMatterSetCompletionReward, 10) ?? 0,
         vaultWatch: parseInt(creditSettingsForm.vaultWatch, 10) ?? 0,
         vaultMinWatchMinutes: Math.max(0, parseInt(creditSettingsForm.vaultMinWatchMinutes, 10) ?? 1),
+        communitySetCreatePrice: parseInt(creditSettingsForm.communitySetCreatePrice, 10) ?? 500,
+        communitySetExtraCardPrice: parseInt(creditSettingsForm.communitySetExtraCardPrice, 10) ?? 50,
+        communitySetCompletionReward: parseInt(creditSettingsForm.communitySetCompletionReward, 10) ?? 500,
+        communitySetCompletionCreatorReward: parseInt(creditSettingsForm.communitySetCompletionCreatorReward, 10) ?? 250,
       };
       const res = await fetch("/api/admin/credit-settings", {
         method: "PATCH",
@@ -2361,7 +2378,7 @@ export default function AdminCardsCreditsPage() {
               </div>
               <div className="flex flex-wrap gap-4">
                 <div><label className="block text-xs text-white/40 mb-1">Rarities this pack can drop</label><div className="flex flex-wrap gap-2">{["uncommon", "rare", "epic", "legendary"].map((r) => { const selected = packForm.allowedRarities.includes(r as any); return ( <button key={r} type="button" onClick={() => setPackForm((f) => { const current = f.allowedRarities; const has = current.includes(r as any); if (has) { const next = current.filter((x) => x !== r); return { ...f, allowedRarities: next.length ? next : ["uncommon", "rare", "epic", "legendary"] }; } return { ...f, allowedRarities: [...current, r as any] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-amber-400/70 bg-amber-500/20 text-amber-200" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-amber-400/40 hover:text-amber-200"}`}>{r}</button> ); })}</div></div>
-                <div><label className="block text-xs text-white/40 mb-1">Card types this pack can drop</label><div className="flex flex-wrap gap-2">{(["actor", "director", "character", "scene"] as CardType[]).map((t) => { const selected = packForm.allowedCardTypes.includes(t); return ( <button key={t} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t); const fallback = ["actor", "director", "character", "scene", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{cardTypeDisplayLabel(t, customCardTypes)}</button> ); })}{customCardTypes.map((t) => { const selected = packForm.allowedCardTypes.includes(t.id); return ( <button key={t.id} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t.id); const fallback = ["actor", "director", "character", "scene", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t.id); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t.id] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{t.label}</button> ); })}</div></div>
+                <div><label className="block text-xs text-white/40 mb-1">Card types this pack can drop</label><div className="flex flex-wrap gap-2">{(["actor", "director", "character", "scene", "community"] as (CardType | "community")[]).map((t) => { const selected = packForm.allowedCardTypes.includes(t); return ( <button key={t} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t); const fallback = ["actor", "director", "character", "scene", "community", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{cardTypeDisplayLabel(t, customCardTypes)}</button> ); })}{customCardTypes.map((t) => { const selected = packForm.allowedCardTypes.includes(t.id); return ( <button key={t.id} type="button" onClick={() => setPackForm((f) => { const current = f.allowedCardTypes; const has = current.includes(t.id); const fallback = ["actor", "director", "character", "scene", "community", ...customCardTypes.map((ct) => ct.id)]; if (has) { const next = current.filter((x) => x !== t.id); return { ...f, allowedCardTypes: next.length ? next : fallback }; } return { ...f, allowedCardTypes: [...current, t.id] }; })} className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors cursor-pointer ${selected ? "border-purple-400/70 bg-purple-500/20 text-purple-100" : "border-white/15 bg-white/[0.04] text-white/60 hover:border-purple-400/40 hover:text-purple-100"}`}>{t.label}</button> ); })}</div></div>
               </div>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.isActive} onChange={(e) => setPackForm((f) => ({ ...f, isActive: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Active in store</label>
               <label className="flex items-center gap-2 text-sm text-white/70"><input type="checkbox" checked={packForm.discounted} onChange={(e) => setPackForm((f) => ({ ...f, discounted: e.target.checked }))} className="rounded border-white/30 bg-white/5" />Discounted (show &quot;Sale&quot; label in shop)</label>
@@ -2790,6 +2807,10 @@ export default function AdminCardsCreditsPage() {
             <div><label className="block text-xs text-white/40 mb-1" title="When player completes full dark matter set and claims the quest">Dark matter set completion</label><input type="number" min={0} value={creditSettingsForm.darkMatterSetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, darkMatterSetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="First watch of a Vault video (original Dabys Media content)">Vault video watch</label><input type="number" min={0} value={creditSettingsForm.vaultWatch} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultWatch: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div><label className="block text-xs text-white/40 mb-1" title="Minimum watch time in minutes for Vault video credit claim (timer only runs while playing)">Vault min watch</label><input type="number" min={0} value={creditSettingsForm.vaultMinWatchMinutes} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, vaultMinWatchMinutes: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">min</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="Cost to create a new community set">Community set create</label><input type="number" min={0} value={creditSettingsForm.communitySetCreatePrice} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, communitySetCreatePrice: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="Xcr per extra card beyond 6 in a community set">Community extra card</label><input type="number" min={0} value={creditSettingsForm.communitySetExtraCardPrice} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, communitySetExtraCardPrice: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="Credits for user who completes a community set">Community completion</label><input type="number" min={0} value={creditSettingsForm.communitySetCompletionReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, communitySetCompletionReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
+            <div><label className="block text-xs text-white/40 mb-1" title="Credits for set creator when someone completes their community set">Community creator reward</label><input type="number" min={0} value={creditSettingsForm.communitySetCompletionCreatorReward} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, communitySetCompletionCreatorReward: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>
             <div className="w-full border-t border-white/[0.06] pt-4 mt-2 flex flex-wrap gap-6">
               <span className="text-xs text-white/40 w-full">Quicksell (vendor) credits per rarity</span>
               <div><label className="block text-xs text-white/40 mb-1">Quicksell uncommon</label><input type="number" min={0} value={creditSettingsForm.quicksellUncommon} onChange={(e) => setCreditSettingsForm((f) => ({ ...f, quicksellUncommon: e.target.value }))} className="w-24 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 outline-none focus:border-amber-500/40" /><span className="ml-1 text-xs text-white/40">cr</span></div>

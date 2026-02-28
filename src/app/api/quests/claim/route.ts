@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { claimQuestReward, claimAllQuestRewards, claimWeeklyQuestReward } from "@/lib/quests";
-import { addCredits, addStardust, claimSetCompletionQuest, claimHoloSetCompletionQuest } from "@/lib/data";
+import { addCredits, addStardust, claimSetCompletionQuest, claimHoloSetCompletionQuest, claimCommunitySetCompletionQuest } from "@/lib/data";
 import { awardPack } from "@/lib/cards";
 import { incrementUserLifetimeStat } from "@/lib/mainQuests";
 
@@ -11,6 +11,8 @@ export async function POST(request: Request) {
   const claimAll = body.claimAll === true;
   const claimSetCompletion = body.claimSetCompletion === true;
   const claimHoloSetCompletion = body.claimHoloSetCompletion === true;
+  const claimCommunitySetCompletion = body.claimCommunitySetCompletion === true;
+  const communitySetId = typeof body.communitySetId === "string" ? body.communitySetId.trim() : "";
   const claimWeeklyQuest = body.claimWeeklyQuest === true;
   const weeklyQuestType = typeof body.weeklyQuestType === "string" && (body.weeklyQuestType === "submit_movie" || body.weeklyQuestType === "vote_movie") ? body.weeklyQuestType : undefined;
   const winnerId = typeof body.winnerId === "string" ? body.winnerId.trim() : "";
@@ -49,6 +51,26 @@ export async function POST(request: Request) {
       addCredits(userId, result.reward, "holo_set_completion_quest", { winnerId });
     }
     return NextResponse.json({ success: true, reward: result.reward, type: "holo_set_completion" });
+  }
+
+  if (claimCommunitySetCompletion && communitySetId) {
+    const result = claimCommunitySetCompletionQuest(userId, communitySetId);
+    if (!result.didClaim) {
+      return NextResponse.json({ error: "Quest not found or already claimed" }, { status: 400 });
+    }
+    if (result.didClaim) incrementUserLifetimeStat(userId, "setsCompleted");
+    if (result.reward > 0) {
+      addCredits(userId, result.reward, "community_set_completion", { communitySetId });
+    }
+    if (result.creatorReward > 0 && result.creatorId) {
+      addCredits(result.creatorId, result.creatorReward, "community_set_creator_reward", { communitySetId });
+    }
+    return NextResponse.json({
+      success: true,
+      reward: result.reward,
+      creatorReward: result.creatorReward,
+      type: "community_set_completion",
+    });
   }
 
   if (claimSetCompletion && winnerId) {

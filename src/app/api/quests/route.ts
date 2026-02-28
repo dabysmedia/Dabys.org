@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUserDailyQuests, getQuestSettings, getWeeklySubmitVoteQuests } from "@/lib/quests";
-import { getSetCompletionQuests } from "@/lib/data";
+import { getSetCompletionQuests, getCommunitySetCompletionQuests, getCommunitySetById } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,11 +13,17 @@ export async function GET(request: Request) {
   const dailyQuests = getUserDailyQuests(userId);
   const weeklyQuests = getWeeklySubmitVoteQuests(userId);
   const setCompletionQuests = getSetCompletionQuests(userId);
+  const rawCommunityQuests = getCommunitySetCompletionQuests(userId);
+  const communitySetCompletionQuests = rawCommunityQuests.map((q) => {
+    const set = getCommunitySetById(q.communitySetId);
+    return { ...q, setName: set?.name ?? "Community Set" };
+  });
   const { resetHourUTC } = getQuestSettings();
   return NextResponse.json({
     ...dailyQuests,
     weeklyQuests,
     setCompletionQuests,
+    communitySetCompletionQuests,
     resetHourUTC,
   });
 }

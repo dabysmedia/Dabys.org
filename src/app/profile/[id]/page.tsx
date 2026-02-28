@@ -35,6 +35,7 @@ interface FeaturedCard {
   movieTitle: string;
   profilePath: string;
   cardType?: string;
+  communitySetId?: string;
 }
 
 interface DisplayedBadge {
@@ -51,10 +52,12 @@ type BadgeTier = "normal" | "holo" | "prismatic" | "darkMatter";
 interface CompletedBadge {
   winnerId?: string;
   shopItemId?: string;
+  communitySetId?: string;
   movieTitle: string;
   name?: string;
   imageUrl?: string;
   posterUrl?: string;
+  creatorName?: string;
   isHolo?: boolean;
   badgeTier?: BadgeTier;
 }
@@ -166,6 +169,9 @@ interface FullProfile {
   completedWinnerIds?: string[];
   completedBadges?: CompletedBadge[];
   featuredCards?: FeaturedCard[];
+  completedCommunitySetIds?: string[];
+  publishedCommunitySets?: { id: string; name: string; creatorId: string; cards: unknown[] }[];
+  communityCreditPrices?: { createPrice: number; extraCardPrice: number };
 }
 
 export default function ProfilePage() {
@@ -212,8 +218,18 @@ export default function ProfilePage() {
   const [showCodexModal, setShowCodexModal] = useState(false);
   type CodexViewSortKey = "set" | "name" | "rarity";
   const [codexViewSort, setCodexViewSort] = useState<CodexViewSortKey>("set");
-  type CodexViewSubTab = "codex" | "holo" | "boys" | "badges";
+  type CodexViewSubTab = "codex" | "holo" | "boys" | "community" | "badges";
   const [codexViewSubTab, setCodexViewSubTab] = useState<CodexViewSubTab>("codex");
+
+  // Create community set modal
+  const [showCreateCommunitySetModal, setShowCreateCommunitySetModal] = useState(false);
+  const [createSetStep, setCreateSetStep] = useState<"pay" | "edit" | "publishing">("pay");
+  const [createSetId, setCreateSetId] = useState<string | null>(null);
+  const [createSetName, setCreateSetName] = useState("");
+  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
+  const [createSetLoading, setCreateSetLoading] = useState(false);
+  const [createSetError, setCreateSetError] = useState("");
+  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<number | null>(null);
 
   // Feature cards (pick from codex, max 6) — edit state
   const [showFeaturedCardsModal, setShowFeaturedCardsModal] = useState(false);
@@ -939,6 +955,24 @@ export default function ProfilePage() {
                   Edit featured
                 </button>
               )}
+              {isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCodexModal(true);
+                    setCodexViewSubTab("community");
+                    setShowCreateCommunitySetModal(true);
+                    setCreateSetStep("pay");
+                    setCreateSetId(null);
+                    setCreateSetName("");
+                    setCreateSetCards([]);
+                    setCreateSetError("");
+                  }}
+                  className="text-xs font-medium text-emerald-400/90 hover:text-emerald-400 border border-emerald-500/30 rounded-lg px-3 py-1.5 hover:bg-emerald-500/10 transition-colors"
+                >
+                  Create a set
+                </button>
+              )}
               <button
                 onClick={() => setShowCodexModal(true)}
                 className="text-xs font-medium text-sky-400/90 hover:text-sky-400 border border-sky-500/30 rounded-lg px-3 py-1.5 hover:bg-sky-500/10 transition-colors"
@@ -995,8 +1029,9 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {completedBadges.map((b) => {
                 const isWinner = !!b.winnerId;
-                const imageUrl = isWinner ? (b.posterUrl ?? "") : (b.imageUrl ?? "");
-                const key = isWinner ? `w-${b.winnerId}` : `s-${b.shopItemId}`;
+                const isCommunity = !!b.communitySetId;
+                const imageUrl = isWinner ? (b.posterUrl ?? "") : isCommunity ? "" : (b.imageUrl ?? "");
+                const key = isWinner ? `w-${b.winnerId}` : isCommunity ? `c-${b.communitySetId}` : `s-${b.shopItemId}`;
                 const tier = b.badgeTier ?? "normal";
                 const wrapperClass =
                   tier === "darkMatter"
@@ -1628,6 +1663,7 @@ export default function ProfilePage() {
                   { key: "codex" as const, label: "Codex" },
                   { key: "holo" as const, label: "Holo Cards" },
                   { key: "boys" as const, label: "Boys" },
+                  { key: "community" as const, label: "Community" },
                   { key: "badges" as const, label: "Badges" },
                 ] as const).map((tab) => (
                   <button
@@ -1675,6 +1711,71 @@ export default function ProfilePage() {
                 return renderCodexCardGrid(filtered, codexViewSort);
               })()}
 
+              {/* Community tab — player-created sets */}
+              {codexViewSubTab === "community" && (() => {
+                const communityCards = codexCards.filter((c) => c.communitySetId);
+                const publishedSets = data?.publishedCommunitySets ?? [];
+                const completedSetIds = new Set(data?.completedCommunitySetIds ?? []);
+                return (
+                  <div className="space-y-6">
+                    {isOwnProfile && (
+                      <div className="flex items-center gap-3 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateCommunitySetModal(true);
+                            setCreateSetStep("pay");
+                            setCreateSetId(null);
+                            setCreateSetName("");
+                            setCreateSetCards([]);
+                            setCreateSetError("");
+                          }}
+                          className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium text-sm hover:bg-emerald-500/30 transition-colors"
+                        >
+                          Create a set
+                        </button>
+                      </div>
+                    )}
+                    {publishedSets.length === 0 && communityCards.length === 0 ? (
+                      <p className="text-sm text-white/40 text-center py-8">
+                        {isOwnProfile
+                          ? "No community sets yet. Create your own set or open Community Packs to discover cards."
+                          : "No community sets discovered yet."}
+                      </p>
+                    ) : (
+                      <div className="space-y-6">
+                        {publishedSets.map((set) => {
+                          const setCards = communityCards.filter((c) => c.communitySetId === set.id);
+                          const totalCards = set.cards?.length ?? 6;
+                          const isComplete = completedSetIds.has(set.id);
+                          return (
+                            <div key={set.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-semibold text-white/90">{set.name}</h4>
+                                <span className="text-xs text-white/50">
+                                  {setCards.length}/{totalCards} {isComplete && "✓"}
+                                </span>
+                              </div>
+                              {setCards.length === 0 ? (
+                                <p className="text-xs text-white/40 py-4">No cards discovered yet.</p>
+                              ) : (
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                                  {setCards.map((card) => (
+                                    <div key={card.id} className="w-full max-w-[120px] mx-auto">
+                                      <CardDisplay card={card} />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Badges tab */}
               {codexViewSubTab === "badges" && (
                 completedBadges.length === 0 ? (
@@ -1684,8 +1785,9 @@ export default function ProfilePage() {
                     {completedBadges.map((b) => {
                       const badge = b as CompletedBadge;
                       const isWinner = !!badge.winnerId;
-                      const imageUrl = isWinner ? (badge.posterUrl ?? "") : (badge.imageUrl ?? "");
-                      const key = isWinner ? `w-${badge.winnerId}` : `s-${badge.shopItemId}`;
+                      const isCommunity = !!badge.communitySetId;
+                      const imageUrl = isWinner ? (badge.posterUrl ?? "") : isCommunity ? "" : (badge.imageUrl ?? "");
+                      const key = isWinner ? `w-${badge.winnerId}` : isCommunity ? `c-${badge.communitySetId}` : `s-${badge.shopItemId}`;
                       const tier = badge.badgeTier ?? "normal";
                       const wrapperClass =
                         tier === "darkMatter"
@@ -1728,7 +1830,7 @@ export default function ProfilePage() {
                               </div>
                             )}
                             <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                              {badge.movieTitle || badge.name || "Badge"}
+                              {b.movieTitle || b.name || (b.creatorName ? `by ${b.creatorName}` : "Badge")}
                             </span>
                             <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
                               <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -1745,6 +1847,245 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+        </>
+      )}
+
+      {/* Create Community Set modal */}
+      {showCreateCommunitySetModal && currentUser?.id && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => !createSetLoading && setShowCreateCommunitySetModal(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-2xl shadow-[0_22px_70px_rgba(0,0,0,0.85)] overflow-hidden flex flex-col"
+            role="dialog"
+            aria-label="Create community set"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-white/10 shrink-0">
+              <h3 className="text-lg font-bold text-white/90">Create community set</h3>
+              <p className="text-sm text-white/50 mt-1">
+                {createSetStep === "pay" && "Pay to create a new set. You'll define 6 cards with custom art, names, and rarities."}
+                {createSetStep === "edit" && "Define your set. Add at least 6 cards. You can add more cards for extra cr."}
+                {createSetStep === "publishing" && "Publishing..."}
+              </p>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1 min-h-0">
+              {createSetError && (
+                <p className="text-sm text-red-400 mb-4">{createSetError}</p>
+              )}
+              {createSetStep === "pay" && (
+                <div className="space-y-4">
+                  <p className="text-white/70">
+                    Cost: <span className="font-bold text-emerald-400">{data?.communityCreditPrices?.createPrice ?? 500} cr</span>
+                  </p>
+                  <p className="text-sm text-white/50">Your balance: {creditBalance ?? "—"} cr</p>
+                  <button
+                    type="button"
+                    disabled={createSetLoading || (creditBalance ?? 0) < (data?.communityCreditPrices?.createPrice ?? 500)}
+                    onClick={async () => {
+                      setCreateSetLoading(true);
+                      setCreateSetError("");
+                      try {
+                        const res = await fetch("/api/community-sets", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: currentUser.id }),
+                        });
+                        const json = await res.json();
+                        if (!res.ok) throw new Error(json.error || "Failed to create set");
+                        setCreateSetId(json.setId);
+                        setCreateSetName(json.set?.name ?? "Untitled Set");
+                        setCreateSetCards(Array(6).fill(null).map(() => ({ actorName: "", characterName: "", profilePath: "", rarity: "uncommon" })));
+                        setCreateSetStep("edit");
+                        window.dispatchEvent(new Event("dabys-credits-refresh"));
+                      } catch (e) {
+                        setCreateSetError(e instanceof Error ? e.message : "Failed to create set");
+                      } finally {
+                        setCreateSetLoading(false);
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium hover:bg-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {createSetLoading ? "Creating..." : "Create set"}
+                  </button>
+                </div>
+              )}
+              {createSetStep === "edit" && createSetId && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-white/50 mb-1">Set name</label>
+                    <input
+                      type="text"
+                      value={createSetName}
+                      onChange={(e) => setCreateSetName(e.target.value)}
+                      placeholder="My Awesome Set"
+                      className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/90 placeholder:text-white/30"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/50 mb-2">Cards (min 6)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {createSetCards.map((card, i) => (
+                        <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+                          <div className="aspect-[2/3] rounded overflow-hidden bg-white/5 relative">
+                            {card.profilePath ? (
+                              <img src={card.profilePath} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">No image</div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setCreateSetImageForIndex(i)}
+                              className="absolute bottom-1 right-1 px-2 py-1 rounded text-[10px] bg-black/60 text-white/90 hover:bg-black/80"
+                            >
+                              {card.profilePath ? "Change" : "Upload"}
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={card.actorName}
+                            onChange={(e) => setCreateSetCards((prev) => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], actorName: e.target.value };
+                              return next;
+                            })}
+                            placeholder="Name"
+                            className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                          />
+                          <input
+                            type="text"
+                            value={card.characterName}
+                            onChange={(e) => setCreateSetCards((prev) => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], characterName: e.target.value };
+                              return next;
+                            })}
+                            placeholder="Character / role"
+                            className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 placeholder:text-white/30"
+                          />
+                          <select
+                            value={card.rarity}
+                            onChange={(e) => setCreateSetCards((prev) => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], rarity: e.target.value };
+                              return next;
+                            })}
+                            className="w-full rounded px-2 py-1 text-xs bg-white/[0.04] border border-white/10 text-white/90 [color-scheme:dark]"
+                          >
+                            <option value="uncommon">Uncommon</option>
+                            <option value="rare">Rare</option>
+                            <option value="epic">Epic</option>
+                            <option value="legendary">Legendary</option>
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      disabled={createSetLoading || (creditBalance ?? 0) < (data?.communityCreditPrices?.extraCardPrice ?? 50)}
+                      onClick={async () => {
+                        setCreateSetLoading(true);
+                        setCreateSetError("");
+                        try {
+                          const res = await fetch(`/api/community-sets/${createSetId}/add-card`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: currentUser.id }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error || "Failed to add card");
+                          setCreateSetCards((prev) => [...prev, { actorName: "", characterName: "", profilePath: "", rarity: "uncommon" }]);
+                          window.dispatchEvent(new Event("dabys-credits-refresh"));
+                        } catch (e) {
+                          setCreateSetError(e instanceof Error ? e.message : "Failed to add card");
+                        } finally {
+                          setCreateSetLoading(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg border border-purple-500/40 text-purple-300 text-sm hover:bg-purple-500/10 disabled:opacity-50"
+                    >
+                      + Add card ({(data?.communityCreditPrices?.extraCardPrice ?? 50)} cr)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={createSetLoading || createSetCards.length < 6 || createSetCards.some((c) => !c.profilePath?.trim() || !c.actorName?.trim())}
+                      onClick={async () => {
+                        setCreateSetLoading(true);
+                        setCreateSetError("");
+                        setCreateSetStep("publishing");
+                        try {
+                          const cardsToSave = createSetCards.map((c) => ({
+                            actorName: c.actorName,
+                            characterName: c.characterName,
+                            profilePath: c.profilePath,
+                            rarity: c.rarity,
+                          }));
+                          const patchRes = await fetch(`/api/community-sets/${createSetId}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: currentUser.id, name: createSetName, cards: cardsToSave }),
+                          });
+                          if (!patchRes.ok) {
+                            const j = await patchRes.json();
+                            throw new Error(j.error || "Failed to save");
+                          }
+                          const pubRes = await fetch(`/api/community-sets/${createSetId}/publish`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: currentUser.id }),
+                          });
+                          const pubJson = await pubRes.json();
+                          if (!pubRes.ok) throw new Error(pubJson.error || "Failed to publish");
+                          setShowCreateCommunitySetModal(false);
+                          loadProfile();
+                        } catch (e) {
+                          setCreateSetError(e instanceof Error ? e.message : "Failed to publish");
+                          setCreateSetStep("edit");
+                        } finally {
+                          setCreateSetLoading(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm font-medium hover:bg-emerald-500/30 disabled:opacity-50"
+                    >
+                      Publish
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => !createSetLoading && setShowCreateCommunitySetModal(false)}
+                className="w-full px-4 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.04] text-white/80 font-medium hover:bg-white/[0.08]"
+              >
+                {createSetStep === "edit" ? "Cancel" : "Close"}
+              </button>
+            </div>
+          </div>
+          <ImageCropModal
+            open={createSetImageForIndex !== null}
+            onClose={() => setCreateSetImageForIndex(null)}
+            onComplete={(url) => {
+              const idx = createSetImageForIndex;
+              if (idx !== null) {
+                setCreateSetCards((prev) => {
+                  const next = [...prev];
+                  next[idx] = { ...next[idx], profilePath: url };
+                  return next;
+                });
+                setCreateSetImageForIndex(null);
+              }
+            }}
+            aspect={2 / 3}
+            title="Card image"
+            cropShape="rect"
+          />
         </>
       )}
 

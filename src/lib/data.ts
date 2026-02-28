@@ -613,6 +613,14 @@ export interface CreditSettings {
   vaultWatch: number;
   /** Minimum watch time in minutes for Vault video credit claim (timer only runs while playing). */
   vaultMinWatchMinutes: number;
+  /** Cost to create a new community set. */
+  communitySetCreatePrice: number;
+  /** Xcr per extra card beyond 6 in a community set. */
+  communitySetExtraCardPrice: number;
+  /** Credits for user who completes a community set. */
+  communitySetCompletionReward: number;
+  /** Credits for set creator when someone completes their community set. */
+  communitySetCompletionCreatorReward: number;
 }
 
 const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
@@ -634,6 +642,10 @@ const DEFAULT_CREDIT_SETTINGS: CreditSettings = {
   darkMatterSetCompletionReward: 5000,
   vaultWatch: 25,
   vaultMinWatchMinutes: 1,
+  communitySetCreatePrice: 500,
+  communitySetExtraCardPrice: 50,
+  communitySetCompletionReward: 500,
+  communitySetCompletionCreatorReward: 250,
 };
 
 function getCreditSettingsRaw(): CreditSettings {
@@ -658,6 +670,10 @@ function getCreditSettingsRaw(): CreditSettings {
       darkMatterSetCompletionReward: typeof raw.darkMatterSetCompletionReward === "number" ? raw.darkMatterSetCompletionReward : DEFAULT_CREDIT_SETTINGS.darkMatterSetCompletionReward,
       vaultWatch: typeof raw.vaultWatch === "number" ? raw.vaultWatch : DEFAULT_CREDIT_SETTINGS.vaultWatch,
       vaultMinWatchMinutes: typeof raw.vaultMinWatchMinutes === "number" ? raw.vaultMinWatchMinutes : DEFAULT_CREDIT_SETTINGS.vaultMinWatchMinutes,
+      communitySetCreatePrice: typeof raw.communitySetCreatePrice === "number" ? raw.communitySetCreatePrice : DEFAULT_CREDIT_SETTINGS.communitySetCreatePrice,
+      communitySetExtraCardPrice: typeof raw.communitySetExtraCardPrice === "number" ? raw.communitySetExtraCardPrice : DEFAULT_CREDIT_SETTINGS.communitySetExtraCardPrice,
+      communitySetCompletionReward: typeof raw.communitySetCompletionReward === "number" ? raw.communitySetCompletionReward : DEFAULT_CREDIT_SETTINGS.communitySetCompletionReward,
+      communitySetCompletionCreatorReward: typeof raw.communitySetCompletionCreatorReward === "number" ? raw.communitySetCompletionCreatorReward : DEFAULT_CREDIT_SETTINGS.communitySetCompletionCreatorReward,
     };
   } catch {
     return { ...DEFAULT_CREDIT_SETTINGS };
@@ -1422,11 +1438,11 @@ export function getCustomCardTypes(): CustomCardType[] {
   return getCustomCardTypesRaw();
 }
 
-/** All card type IDs (base + custom) for validation. */
+/** All card type IDs (base + custom + community) for validation. */
 export function getAllowedCardTypeIds(): string[] {
   const base: CardType[] = ["actor", "director", "character", "scene"];
   const custom = getCustomCardTypesRaw().map((t) => t.id);
-  return [...base, ...custom];
+  return [...base, ...custom, "community"];
 }
 
 export function addCustomCardType(id: string, label: string): CustomCardType | null {
@@ -1466,6 +1482,8 @@ export interface CharacterPortrayal {
   altArtOfCharacterId?: string;
   /** For Boys (cardType "character"): custom set name to group by in codex instead of movie. */
   customSetId?: string;
+  /** For community sets: links pool entry to a community set. */
+  communitySetId?: string;
 }
 
 export interface Card {
@@ -2229,6 +2247,158 @@ export function removeCodexUnlockBoys(userId: string, characterId: string): void
 
 export function resetBoysCodexUnlocks(): void {
   saveBoysCodexUnlocksRaw({});
+}
+
+// ──── Community Sets (player-created sets with custom cards) ────
+export interface CommunitySetCard {
+  actorName: string;
+  characterName: string;
+  profilePath: string;
+  rarity: "uncommon" | "rare" | "epic" | "legendary";
+}
+
+export interface CommunitySet {
+  id: string;
+  creatorId: string;
+  name: string;
+  createdAt: string;
+  status: "draft" | "published";
+  cards: CommunitySetCard[];
+}
+
+function getCommunitySetsRaw(): CommunitySet[] {
+  try {
+    return readJson<CommunitySet[]>("communitySets.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveCommunitySetsRaw(sets: CommunitySet[]) {
+  writeJson("communitySets.json", sets);
+}
+
+export function getCommunitySets(): CommunitySet[] {
+  return getCommunitySetsRaw();
+}
+
+export function getPublishedCommunitySets(): CommunitySet[] {
+  return getCommunitySetsRaw().filter((s) => s.status === "published");
+}
+
+export function getCommunitySetById(id: string): CommunitySet | undefined {
+  return getCommunitySetsRaw().find((s) => s.id === id);
+}
+
+export function saveCommunitySet(set: CommunitySet): void {
+  const sets = getCommunitySetsRaw();
+  const idx = sets.findIndex((s) => s.id === set.id);
+  if (idx >= 0) {
+    sets[idx] = set;
+  } else {
+    sets.push(set);
+  }
+  saveCommunitySetsRaw(sets);
+}
+
+// ──── Community Codex Unlocks ────
+/** Record<userId, Record<communitySetId, characterId[]>> */
+type CommunityCodexUnlocksStore = Record<string, Record<string, string[]>>;
+
+function getCommunityCodexUnlocksRaw(): CommunityCodexUnlocksStore {
+  try {
+    return readJson<CommunityCodexUnlocksStore>("communityCodexUnlocks.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveCommunityCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
+  writeJson("communityCodexUnlocks.json", data);
+}
+
+export function getCommunityCodexUnlockedCharacterIds(userId: string, communitySetId: string): string[] {
+  const data = getCommunityCodexUnlocksRaw();
+  const byUser = data[userId];
+  if (!byUser) return [];
+  const ids = byUser[communitySetId];
+  return Array.isArray(ids) ? ids : [];
+}
+
+export function addCommunityCodexUnlock(userId: string, communitySetId: string, characterId: string): void {
+  const data = getCommunityCodexUnlocksRaw();
+  const byUser = data[userId] ?? {};
+  const ids = byUser[communitySetId] ?? [];
+  if (ids.includes(characterId)) return;
+  byUser[communitySetId] = [...ids, characterId];
+  data[userId] = byUser;
+  saveCommunityCodexUnlocksRaw(data);
+}
+
+// ──── Community Set Completion Quests ────
+export interface CommunitySetCompletionQuest {
+  communitySetId: string;
+  creatorId: string;
+  reward: number;
+  creatorReward: number;
+  claimed: boolean;
+  completedAt: string;
+}
+
+type CommunitySetCompletionQuestsStore = Record<string, CommunitySetCompletionQuest[]>;
+
+function getCommunitySetCompletionQuestsRaw(): CommunitySetCompletionQuestsStore {
+  try {
+    return readJson<CommunitySetCompletionQuestsStore>("communitySetCompletionQuests.json");
+  } catch {
+    return {};
+  }
+}
+
+function saveCommunitySetCompletionQuestsRaw(store: CommunitySetCompletionQuestsStore) {
+  writeJson("communitySetCompletionQuests.json", store);
+}
+
+export function addCommunitySetCompletionQuest(
+  userId: string,
+  communitySetId: string,
+  creatorId: string
+): boolean {
+  const store = getCommunitySetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  if (userQuests.some((q) => q.communitySetId === communitySetId)) return false;
+  const settings = getCreditSettings();
+  userQuests.push({
+    communitySetId,
+    creatorId,
+    reward: settings.communitySetCompletionReward,
+    creatorReward: settings.communitySetCompletionCreatorReward,
+    claimed: false,
+    completedAt: new Date().toISOString(),
+  });
+  store[userId] = userQuests;
+  saveCommunitySetCompletionQuestsRaw(store);
+  return true;
+}
+
+export function getCommunitySetCompletionQuests(userId: string): CommunitySetCompletionQuest[] {
+  const store = getCommunitySetCompletionQuestsRaw();
+  return store[userId] ?? [];
+}
+
+export function claimCommunitySetCompletionQuest(
+  userId: string,
+  communitySetId: string
+): { reward: number; creatorReward: number; creatorId: string; didClaim: boolean } {
+  const store = getCommunitySetCompletionQuestsRaw();
+  const userQuests = store[userId] ?? [];
+  const idx = userQuests.findIndex((q) => q.communitySetId === communitySetId && !q.claimed);
+  if (idx < 0) return { reward: 0, creatorReward: 0, creatorId: "", didClaim: false };
+  const quest = userQuests[idx];
+  quest.claimed = true;
+  store[userId] = userQuests;
+  saveCommunitySetCompletionQuestsRaw(store);
+  return { reward: quest.reward, creatorReward: quest.creatorReward, creatorId: quest.creatorId, didClaim: true };
 }
 
 /** Clear all codex unlocks for a single user (used by Prestige Codex). */

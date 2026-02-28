@@ -100,6 +100,38 @@
       "rare": 50,
       "uncommon": 0
     },
-    "comingSoon": false
+    "comingSoon": false,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
+  },
+  {
+    "id": "pack-1772298173532-wp7qgx7",
+    "name": "Community pack",
+    "imageUrl": "/api/uploads/1772298172355-6qrco2.jpg",
+    "price": 50,
+    "cardsPerPack": 5,
+    "allowedRarities": [
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary"
+    ],
+    "allowedCardTypes": [
+      "community"
+    ],
+    "isActive": true,
+    "isFree": false,
+    "restockHourUtc": 0,
+    "restockMinuteUtc": 0,
+    "discounted": false,
+    "rarityWeights": {
+      "legendary": 1,
+      "epic": 10,
+      "rare": 25,
+      "uncommon": 64
+    },
+    "comingSoon": false,
+    "allowPrismatic": false,
+    "allowDarkMatter": false
   }
 ]

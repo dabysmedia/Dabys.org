@@ -1,12 +1,1 @@
-{
-  "submission": 50,
-  "vote": 50,
-  "submissionWin": 250,
-  "votesReceivedPerVote": 50,
-  "rating": 25,
-  "comment": 25,
-  "quicksellUncommon": 5,
-  "quicksellRare": 20,
-  "quicksellEpic": 100,
-  "tradeUpLegendaryFailureCredits": 250
-}
+{"submission":50,"vote":50,"submissionWin":250,"votesReceivedPerVote":50,"rating":25,"comment":25,"quicksellUncommon":5,"quicksellRare":20,"quicksellEpic":100,"quicksellLegendary":200,"tradeUpLegendaryFailureCredits":250,"feedbackAccepted":10,"setCompletionReward":1000,"holoSetCompletionReward":1500,"prismaticSetCompletionReward":3000,"darkMatterSetCompletionReward":5000,"vaultWatch":25,"vaultMinWatchMinutes":1,"communitySetCreatePrice":500,"communitySetExtraCardPrice":50,"communitySetCompletionReward":500,"communitySetCompletionCreatorReward":250}
