@@ -2255,6 +2255,8 @@ export interface CommunitySetCard {
   characterName: string;
   profilePath: string;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
+  /** Alt-art variants: same card, different image only. */
+  altArts?: { profilePath: string }[];
 }
 
 export interface CommunitySet {

@@ -702,7 +702,7 @@ function CardsContent() {
   const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
   const [createSetLoading, setCreateSetLoading] = useState(false);
   const [createSetError, setCreateSetError] = useState("");
-  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<number | null>(null);
+  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<{ cardIndex: number; altIndex?: number } | null>(null);
   const [createSetIsEditingPublished, setCreateSetIsEditingPublished] = useState(false);
   const [expandedCodexStack, setExpandedCodexStack] = useState<string | null>(null);
   const [codexSubTab, setCodexSubTab] = useState<CodexSubTab>("codex");
@@ -799,6 +799,25 @@ function CardsContent() {
   }, [isMobileTouch, expandedCodexStack]);
 
   const CODEX_SOUND_MUTED_KEY = "dabys_codex_sound_muted";
+  const CODEX_PINNED_ALT_KEY = "dabys_codex_pinned_alt";
+  const [codexPinnedBySlot, setCodexPinnedBySlot] = useState<Record<string, string>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(CODEX_PINNED_ALT_KEY) : null;
+      const obj = raw ? JSON.parse(raw) : {};
+      return typeof obj === "object" && obj !== null ? obj : {};
+    } catch {
+      return {};
+    }
+  });
+  function setCodexPinned(slotId: string, characterId: string) {
+    setCodexPinnedBySlot((prev) => {
+      const next = { ...prev, [slotId]: characterId };
+      try {
+        localStorage.setItem(CODEX_PINNED_ALT_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
   const [codexSoundMuted, setCodexSoundMuted] = useState<boolean>(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem(CODEX_SOUND_MUTED_KEY) : null;
@@ -2284,26 +2303,31 @@ function CardsContent() {
     return discoveredCharacterIds.has(card.characterId) && !discoveredHoloCharacterIds.has(card.characterId);
   }
 
-  /** True if this card cannot be uploaded because a prerequisite slot is not yet in the codex. */
+  /** True if this card cannot be uploaded because a prerequisite slot is not yet in the codex. Any combo of alt-art and regular counts. */
   function isCodexUploadBlockedByPrereq(card: { characterId?: string | null; isFoil?: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter" }): boolean {
     if (!card.characterId) return false;
     const entry = poolEntries.find((e) => e.characterId === card.characterId);
     if (!entry) return false;
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
-    const isMain = !isAltArt && !isBoys;
+    const isCommunity = !!(entry as PoolEntry & { communitySetId?: string }).communitySetId;
+    const isMain = !isAltArt && !isBoys && !isCommunity;
     const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+    const slotId = (entry as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId ?? card.characterId;
+    const hasRegularInSlot = discoveredCharacterIds.has(slotId) || poolEntries.some((e) => (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && discoveredAltArtCharacterIds.has(e.characterId));
+    const hasHoloInSlot = discoveredHoloCharacterIds.has(slotId) || poolEntries.some((e) => (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && discoveredAltArtHoloCharacterIds.has(e.characterId));
+    const hasPrismaticInSlot = discoveredPrismaticCharacterIds.has(slotId) || poolEntries.some((e) => (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && discoveredAltArtPrismaticCharacterIds.has(e.characterId));
     if (isMain) {
       if (!card.isFoil) return false;
-      if (f === "darkMatter") return !discoveredPrismaticCharacterIds.has(card.characterId);
-      if (f === "prismatic") return !discoveredHoloCharacterIds.has(card.characterId);
-      return !discoveredCharacterIds.has(card.characterId);
+      if (f === "darkMatter") return !hasPrismaticInSlot;
+      if (f === "prismatic") return !hasHoloInSlot;
+      return !hasRegularInSlot;
     }
     if (isAltArt) {
       if (!card.isFoil) return false;
-      if (f === "darkMatter") return !discoveredAltArtPrismaticCharacterIds.has(card.characterId);
-      if (f === "prismatic") return !discoveredAltArtHoloCharacterIds.has(card.characterId);
-      if (f === "holo") return !discoveredAltArtCharacterIds.has(card.characterId);
+      if (f === "darkMatter") return !hasPrismaticInSlot;
+      if (f === "prismatic") return !hasHoloInSlot;
+      if (f === "holo") return !hasRegularInSlot;
       return false;
     }
     return false;
@@ -5936,6 +5960,16 @@ function CardsContent() {
                         });
                       }
 
+                      const slotId = entry.characterId;
+                      const pinnedCharId = codexPinnedBySlot[slotId];
+                      if (variants.length > 1 && pinnedCharId) {
+                        const pinnedIdx = variants.findIndex((v) => v.poolEntry.characterId === pinnedCharId);
+                        if (pinnedIdx > 0) {
+                          const [pinned] = variants.splice(pinnedIdx, 1);
+                          variants.unshift(pinned);
+                        }
+                      }
+
                       if (variants.length <= 1) {
                         const v = variants[0];
                         const isNewlyUploaded =
@@ -6038,29 +6072,47 @@ function CardsContent() {
                             );
                           })}
 
-                          {variants.map((v, idx) => (
-                            <div
-                              key={v.poolEntry.characterId}
-                              role="button"
-                              tabIndex={0}
-                              className="relative cursor-pointer focus:outline-none"
-                              style={{
-                                position: idx === 0 ? "relative" : "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                transform: `translateX(${isExpanded ? idx * 55 : 0}%)`,
-                                zIndex: isExpanded ? variants.length + 1 - idx : cascadeLayers + 1,
-                                opacity: !isExpanded && idx > 0 ? 0 : 1,
-                                transition: "transform 300ms ease-out, opacity 200ms ease-out",
-                              }}
-                              onClick={() => setInspectedCodexCard(v.codexCard)}
-                              onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
-                              aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}${v.isAlt ? " (Alt-Art)" : ""}`}
-                            >
-                              <CardDisplay card={v.codexCard} selectable />
-                            </div>
-                          ))}
+                          {variants.map((v, idx) => {
+                            const isPinned = codexPinnedBySlot[slotId] === v.poolEntry.characterId;
+                            return (
+                              <div
+                                key={v.poolEntry.characterId}
+                                role="button"
+                                tabIndex={0}
+                                className="relative cursor-pointer focus:outline-none group/variant"
+                                style={{
+                                  position: idx === 0 ? "relative" : "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  transform: `translateX(${isExpanded ? idx * 55 : 0}%)`,
+                                  zIndex: isExpanded ? variants.length + 1 - idx : cascadeLayers + 1,
+                                  opacity: !isExpanded && idx > 0 ? 0 : 1,
+                                  transition: "transform 300ms ease-out, opacity 200ms ease-out",
+                                }}
+                                onClick={() => setInspectedCodexCard(v.codexCard)}
+                                onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
+                                aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}${v.isAlt ? " (Alt-Art)" : ""}`}
+                              >
+                                <CardDisplay card={v.codexCard} selectable />
+                                {variants.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setCodexPinned(slotId, v.poolEntry.characterId); }}
+                                    className={`absolute top-1 right-1 z-10 px-2 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/codexstack:opacity-100 group-hover/variant:opacity-100 ${
+                                      isPinned
+                                        ? "bg-cyan-500/30 text-cyan-200 border border-cyan-400/50"
+                                        : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                                    }`}
+                                    style={{ zIndex: variants.length + 5 }}
+                                    title={isPinned ? "Default art" : "Pin as default"}
+                                  >
+                                    {isPinned ? "✓ Default" : "Pin"}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
 
                           {anyNewlyUploaded && (
                             <span
@@ -6657,6 +6709,7 @@ function CardsContent() {
                                     characterName: c.characterName ?? "",
                                     profilePath: c.profilePath ?? "",
                                     rarity: c.rarity ?? "uncommon",
+                                    altArts: (c as { altArts?: { profilePath: string }[] }).altArts,
                                   })));
                                   setCreateSetStep("edit");
                                   setCreateSetError("");
@@ -7067,7 +7120,7 @@ function CardsContent() {
                           if (!res.ok) throw new Error(json.error || "Failed to create set");
                           setCreateSetId(json.setId);
                           setCreateSetName(json.set?.name ?? "Untitled Set");
-                          setCreateSetCards(Array(6).fill(null).map(() => ({ actorName: "", characterName: "", profilePath: "", rarity: "uncommon" })));
+                          setCreateSetCards(Array(6).fill(null).map(() => ({ actorName: "", characterName: "", profilePath: "", rarity: "uncommon" as const })));
                           setCreateSetStep("edit");
                           window.dispatchEvent(new Event("dabys-credits-refresh"));
                         } catch (e) {
@@ -7116,10 +7169,55 @@ function CardsContent() {
                               )}
                               <button
                                 type="button"
-                                onClick={() => setCreateSetImageForIndex(i)}
+                                onClick={() => setCreateSetImageForIndex({ cardIndex: i })}
                                 className="absolute bottom-1 right-1 px-2 py-1 rounded text-[10px] bg-black/60 text-white/90 hover:bg-black/80"
                               >
                                 {card.profilePath ? "Change" : "Upload"}
+                              </button>
+                            </div>
+                            <div className="space-y-1">
+                              {(card.altArts ?? []).map((alt, j) => (
+                                <div key={j} className="flex gap-1 items-center">
+                                  <div className="aspect-[2/3] w-12 rounded overflow-hidden bg-white/5 shrink-0">
+                                    {alt.profilePath ? (
+                                      <img src={alt.profilePath} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-white/20 text-[8px]">Alt</div>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCreateSetImageForIndex({ cardIndex: i, altIndex: j })}
+                                    className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
+                                  >
+                                    {alt.profilePath ? "Change" : "Upload"} alt-art
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCreateSetCards((prev) => {
+                                      const next = [...prev];
+                                      const alts = (next[i].altArts ?? []).filter((_, k) => k !== j);
+                                      next[i] = { ...next[i], altArts: alts.length ? alts : undefined };
+                                      return next;
+                                    })}
+                                    className="px-2 py-1 rounded text-[10px] text-red-400 hover:bg-red-500/20"
+                                    title="Remove alt-art"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => setCreateSetCards((prev) => {
+                                  const next = [...prev];
+                                  const alts = [...(next[i].altArts ?? []), { profilePath: "" }];
+                                  next[i] = { ...next[i], altArts: alts };
+                                  return next;
+                                })}
+                                className="w-full px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
+                              >
+                                + Add alt-art
                               </button>
                             </div>
                             <input
@@ -7209,7 +7307,7 @@ function CardsContent() {
                             });
                             const json = await res.json();
                             if (!res.ok) throw new Error(json.error || "Failed to add card");
-                            setCreateSetCards((prev) => [...prev, { actorName: "", characterName: "", profilePath: "", rarity: "uncommon" }]);
+                            setCreateSetCards((prev) => [...prev, { actorName: "", characterName: "", profilePath: "", rarity: "uncommon" as const }]);
                             window.dispatchEvent(new Event("dabys-credits-refresh"));
                           } catch (e) {
                             setCreateSetError(e instanceof Error ? e.message : "Failed to add card");
@@ -7234,6 +7332,7 @@ function CardsContent() {
                               characterName: c.characterName,
                               profilePath: c.profilePath,
                               rarity: c.rarity,
+                              altArts: c.altArts?.length ? c.altArts : undefined,
                             }));
                             const patchRes = await fetch(`/api/community-sets/${createSetId}`, {
                               method: "PATCH",
@@ -7321,11 +7420,17 @@ function CardsContent() {
               open={createSetImageForIndex !== null}
               onClose={() => setCreateSetImageForIndex(null)}
               onComplete={(url) => {
-                const idx = createSetImageForIndex;
-                if (idx !== null) {
+                const target = createSetImageForIndex;
+                if (target !== null) {
                   setCreateSetCards((prev) => {
                     const next = [...prev];
-                    next[idx] = { ...next[idx], profilePath: url };
+                    if (target.altIndex !== undefined) {
+                      const alts = [...(next[target.cardIndex].altArts ?? [])];
+                      alts[target.altIndex] = { profilePath: url };
+                      next[target.cardIndex] = { ...next[target.cardIndex], altArts: alts };
+                    } else {
+                      next[target.cardIndex] = { ...next[target.cardIndex], profilePath: url };
+                    }
                     return next;
                   });
                   setCreateSetImageForIndex(null);

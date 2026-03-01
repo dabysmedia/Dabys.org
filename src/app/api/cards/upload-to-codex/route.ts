@@ -106,111 +106,86 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-  } else if (isMain) {
+  } else if (isMain || isAltArt) {
     const regularIds = getCodexUnlockedCharacterIds(userId);
     const holoIds = getCodexUnlockedHoloCharacterIds(userId);
     const prismaticIds = getCodexUnlockedPrismaticCharacterIds(userId);
     const darkMatterIds = getCodexUnlockedDarkMatterCharacterIds(userId);
-    const alreadyRegular = regularIds.includes(characterId);
-    const alreadyHolo = holoIds.includes(characterId);
-    const alreadyPrismatic = prismaticIds.includes(characterId);
-    const alreadyDarkMatter = darkMatterIds.includes(characterId);
+    const altArtIds = getCodexUnlockedAltArtCharacterIds(userId);
+    const altArtHoloIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
+    const altArtPrismaticIds = getCodexUnlockedAltArtPrismaticCharacterIds(userId);
+    const altArtDarkMatterIds = getCodexUnlockedAltArtDarkMatterCharacterIds(userId);
+    const slotId = poolEntry?.altArtOfCharacterId ?? characterId;
+    const hasRegularInSlot = regularIds.includes(slotId) || pool.some((e) => (e as { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && altArtIds.includes(e.characterId));
+    const hasHoloInSlot = holoIds.includes(slotId) || pool.some((e) => (e as { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && altArtHoloIds.includes(e.characterId));
+    const hasPrismaticInSlot = prismaticIds.includes(slotId) || pool.some((e) => (e as { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && altArtPrismaticIds.includes(e.characterId));
     const finish = getCardFinish(card);
 
     if (finish === "darkMatter") {
-      if (!alreadyPrismatic) {
+      if (!hasPrismaticInSlot) {
         return NextResponse.json(
           { error: "Upload the Radiant version to the codex first before upgrading to Dark Matter" },
           { status: 400 }
         );
       }
-      if (alreadyDarkMatter) {
+      if (isMain && darkMatterIds.includes(characterId)) {
         return NextResponse.json(
           { error: "This character's Dark Matter is already in your codex" },
           { status: 400 }
         );
       }
-    } else if (finish === "prismatic") {
-      if (!alreadyHolo) {
-        return NextResponse.json(
-          { error: "Upload the Holo version to the codex first before upgrading to Radiant" },
-          { status: 400 }
-        );
-      }
-      if (alreadyPrismatic) {
-        return NextResponse.json(
-          { error: "This character's Radiant is already in your codex" },
-          { status: 400 }
-        );
-      }
-    } else if (finish === "holo") {
-      if (!alreadyRegular) {
-        return NextResponse.json(
-          { error: "Upload the regular version to the codex first before upgrading to Holo" },
-          { status: 400 }
-        );
-      }
-      if (alreadyHolo) {
-        return NextResponse.json(
-          { error: "This character's Holo is already in your codex" },
-          { status: 400 }
-        );
-      }
-    } else {
-      if (alreadyRegular) {
-        return NextResponse.json(
-          { error: "This character's regular card is already in your codex" },
-          { status: 400 }
-        );
-      }
-    }
-  } else if (isAltArt) {
-    const altArtIds = getCodexUnlockedAltArtCharacterIds(userId);
-    const altArtHoloIds = getCodexUnlockedAltArtHoloCharacterIds(userId);
-    const altArtPrismaticIds = getCodexUnlockedAltArtPrismaticCharacterIds(userId);
-    const altArtDarkMatterIds = getCodexUnlockedAltArtDarkMatterCharacterIds(userId);
-    const finish = getCardFinish(card);
-    if (finish === "darkMatter") {
-      if (!altArtPrismaticIds.includes(characterId)) {
-        return NextResponse.json(
-          { error: "Upload the Radiant alt-art to the codex first before upgrading to Dark Matter" },
-          { status: 400 }
-        );
-      }
-      if (altArtDarkMatterIds.includes(characterId)) {
+      if (isAltArt && altArtDarkMatterIds.includes(characterId)) {
         return NextResponse.json(
           { error: "This alt-art Dark Matter is already in your codex" },
           { status: 400 }
         );
       }
     } else if (finish === "prismatic") {
-      if (!altArtHoloIds.includes(characterId)) {
+      if (!hasHoloInSlot) {
         return NextResponse.json(
-          { error: "Upload the Holo alt-art to the codex first before upgrading to Radiant" },
+          { error: "Upload the Holo version to the codex first before upgrading to Radiant" },
           { status: 400 }
         );
       }
-      if (altArtPrismaticIds.includes(characterId)) {
+      if (isMain && prismaticIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This character's Radiant is already in your codex" },
+          { status: 400 }
+        );
+      }
+      if (isAltArt && altArtPrismaticIds.includes(characterId)) {
         return NextResponse.json(
           { error: "This alt-art Radiant is already in your codex" },
           { status: 400 }
         );
       }
     } else if (finish === "holo") {
-      if (!altArtIds.includes(characterId)) {
+      if (!hasRegularInSlot) {
         return NextResponse.json(
-          { error: "Upload the regular alt-art to the codex first before upgrading to Holo" },
+          { error: "Upload the regular version to the codex first before upgrading to Holo" },
           { status: 400 }
         );
       }
-      if (altArtHoloIds.includes(characterId)) {
+      if (isMain && holoIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This character's Holo is already in your codex" },
+          { status: 400 }
+        );
+      }
+      if (isAltArt && altArtHoloIds.includes(characterId)) {
         return NextResponse.json(
           { error: "This alt-art Holo is already in your codex" },
           { status: 400 }
         );
       }
     } else {
-      if (altArtIds.includes(characterId)) {
+      if (isMain && regularIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This character's regular card is already in your codex" },
+          { status: 400 }
+        );
+      }
+      if (isAltArt && altArtIds.includes(characterId)) {
         return NextResponse.json(
           { error: "This alt-art is already in your codex" },
           { status: 400 }

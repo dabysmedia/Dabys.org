@@ -234,7 +234,7 @@ export default function ProfilePage() {
   const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
   const [createSetLoading, setCreateSetLoading] = useState(false);
   const [createSetError, setCreateSetError] = useState("");
-  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<number | null>(null);
+  const [createSetImageForIndex, setCreateSetImageForIndex] = useState<{ cardIndex: number; altIndex?: number } | null>(null);
   const [createSetIsEditingPublished, setCreateSetIsEditingPublished] = useState(false);
 
   // Feature cards (pick from codex, max 6) — edit state
@@ -1771,12 +1771,13 @@ export default function ProfilePage() {
                                         setCreateSetName(set.name);
                                         setCreateSetCards(
                                           (set.cards ?? []).map((c) => {
-                                            const card = c as { actorName?: string; characterName?: string; profilePath?: string; rarity?: string };
+                                            const card = c as { actorName?: string; characterName?: string; profilePath?: string; rarity?: string; altArts?: { profilePath: string }[] };
                                             return {
                                               actorName: card.actorName ?? "",
                                               characterName: card.characterName ?? "",
                                               profilePath: card.profilePath ?? "",
                                               rarity: card.rarity ?? "uncommon",
+                                              altArts: card.altArts,
                                             };
                                           })
                                         );
@@ -1986,10 +1987,55 @@ export default function ProfilePage() {
                             )}
                             <button
                               type="button"
-                              onClick={() => setCreateSetImageForIndex(i)}
+                              onClick={() => setCreateSetImageForIndex({ cardIndex: i })}
                               className="absolute bottom-1 right-1 px-2 py-1 rounded text-[10px] bg-black/60 text-white/90 hover:bg-black/80"
                             >
                               {card.profilePath ? "Change" : "Upload"}
+                            </button>
+                          </div>
+                          <div className="space-y-1">
+                            {(card.altArts ?? []).map((alt, j) => (
+                              <div key={j} className="flex gap-1 items-center">
+                                <div className="aspect-[2/3] w-12 rounded overflow-hidden bg-white/5 shrink-0">
+                                  {alt.profilePath ? (
+                                    <img src={alt.profilePath} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-white/20 text-[8px]">Alt</div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setCreateSetImageForIndex({ cardIndex: i, altIndex: j })}
+                                  className="flex-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
+                                >
+                                  {alt.profilePath ? "Change" : "Upload"} alt-art
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setCreateSetCards((prev) => {
+                                    const next = [...prev];
+                                    const alts = (next[i].altArts ?? []).filter((_, k) => k !== j);
+                                    next[i] = { ...next[i], altArts: alts.length ? alts : undefined };
+                                    return next;
+                                  })}
+                                  className="px-2 py-1 rounded text-[10px] text-red-400 hover:bg-red-500/20"
+                                  title="Remove alt-art"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setCreateSetCards((prev) => {
+                                const next = [...prev];
+                                const alts = [...(next[i].altArts ?? []), { profilePath: "" }];
+                                next[i] = { ...next[i], altArts: alts };
+                                return next;
+                              })}
+                              className="w-full px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
+                            >
+                              + Add alt-art
                             </button>
                           </div>
                           <input
@@ -2104,6 +2150,7 @@ export default function ProfilePage() {
                             characterName: c.characterName,
                             profilePath: c.profilePath,
                             rarity: c.rarity,
+                            altArts: c.altArts?.length ? c.altArts : undefined,
                           }));
                           const patchRes = await fetch(`/api/community-sets/${createSetId}`, {
                             method: "PATCH",
@@ -2190,11 +2237,17 @@ export default function ProfilePage() {
             open={createSetImageForIndex !== null}
             onClose={() => setCreateSetImageForIndex(null)}
             onComplete={(url) => {
-              const idx = createSetImageForIndex;
-              if (idx !== null) {
+              const target = createSetImageForIndex;
+              if (target !== null) {
                 setCreateSetCards((prev) => {
                   const next = [...prev];
-                  next[idx] = { ...next[idx], profilePath: url };
+                  if (target.altIndex !== undefined) {
+                    const alts = [...(next[target.cardIndex].altArts ?? [])];
+                    alts[target.altIndex] = { profilePath: url };
+                    next[target.cardIndex] = { ...next[target.cardIndex], altArts: alts };
+                  } else {
+                    next[target.cardIndex] = { ...next[target.cardIndex], profilePath: url };
+                  }
                   return next;
                 });
                 setCreateSetImageForIndex(null);

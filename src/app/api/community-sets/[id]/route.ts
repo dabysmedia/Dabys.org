@@ -69,6 +69,11 @@ export async function PATCH(
         rarity: ["uncommon", "rare", "epic", "legendary"].includes(c.rarity as string)
           ? (c.rarity as CommunitySetCard["rarity"])
           : "uncommon",
+        altArts: Array.isArray(c.altArts)
+          ? c.altArts
+              .filter((a) => a && typeof a.profilePath === "string" && a.profilePath.trim())
+              .map((a) => ({ profilePath: (a.profilePath as string).trim() }))
+          : undefined,
       }));
     updates.cards = validCards;
   }
@@ -82,18 +87,42 @@ export async function PATCH(
       const sid = (c as { communitySetId?: string }).communitySetId;
       return sid === undefined || sid !== id;
     });
-    const newEntries = updated.cards.map((card, i) => ({
-      characterId: `${id}-${i}`,
-      actorName: card.actorName,
-      characterName: card.characterName,
-      profilePath: card.profilePath,
-      movieTmdbId: 0,
-      movieTitle: updated.name,
-      popularity: 0,
-      rarity: card.rarity,
-      cardType: "community" as const,
-      communitySetId: id,
-    }));
+    const newEntries: { characterId: string; actorName: string; characterName: string; profilePath: string; movieTmdbId: number; movieTitle: string; popularity: number; rarity: string; cardType: "community"; communitySetId: string; altArtOfCharacterId?: string }[] = [];
+    for (let i = 0; i < updated.cards.length; i++) {
+      const card = updated.cards[i];
+      const baseId = `${id}-${i}`;
+      newEntries.push({
+        characterId: baseId,
+        actorName: card.actorName,
+        characterName: card.characterName,
+        profilePath: card.profilePath,
+        movieTmdbId: 0,
+        movieTitle: updated.name,
+        popularity: 0,
+        rarity: card.rarity,
+        cardType: "community",
+        communitySetId: id,
+      });
+      const alts = card.altArts ?? [];
+      for (let j = 0; j < alts.length; j++) {
+        const alt = alts[j];
+        if (alt?.profilePath?.trim()) {
+          newEntries.push({
+            characterId: `${baseId}-alt-${j}`,
+            altArtOfCharacterId: baseId,
+            actorName: card.actorName,
+            characterName: card.characterName,
+            profilePath: alt.profilePath.trim(),
+            movieTmdbId: 0,
+            movieTitle: updated.name,
+            popularity: 0,
+            rarity: card.rarity,
+            cardType: "community",
+            communitySetId: id,
+          });
+        }
+      }
+    }
     saveCharacterPool([...otherEntries, ...newEntries]);
   }
 

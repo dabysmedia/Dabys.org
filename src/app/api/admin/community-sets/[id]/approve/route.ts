@@ -42,9 +42,12 @@ export async function POST(
     const sid = (c as { communitySetId?: string }).communitySetId;
     return sid === undefined || sid !== id;
   });
-  const newEntries: (CharacterPortrayal & { communitySetId?: string })[] =
-    (set.cards ?? []).map((card, i) => ({
-      characterId: `${id}-${i}`,
+  const newEntries: (CharacterPortrayal & { communitySetId?: string; altArtOfCharacterId?: string })[] = [];
+  for (let i = 0; i < (set.cards ?? []).length; i++) {
+    const card = set.cards![i];
+    const baseId = `${id}-${i}`;
+    newEntries.push({
+      characterId: baseId,
       actorName: card.actorName,
       characterName: card.characterName,
       profilePath: card.profilePath,
@@ -54,7 +57,27 @@ export async function POST(
       rarity: card.rarity,
       cardType: "community",
       communitySetId: id,
-    }));
+    });
+    const alts = card.altArts ?? [];
+    for (let j = 0; j < alts.length; j++) {
+      const alt = alts[j];
+      if (alt?.profilePath?.trim()) {
+        newEntries.push({
+          characterId: `${baseId}-alt-${j}`,
+          altArtOfCharacterId: baseId,
+          actorName: card.actorName,
+          characterName: card.characterName,
+          profilePath: alt.profilePath.trim(),
+          movieTmdbId: 0,
+          movieTitle: set.name,
+          popularity: 0,
+          rarity: card.rarity,
+          cardType: "community",
+          communitySetId: id,
+        });
+      }
+    }
+  }
 
   saveCharacterPool([...otherEntries, ...newEntries]);
   set.status = "published";

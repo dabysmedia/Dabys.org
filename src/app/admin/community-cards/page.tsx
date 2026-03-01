@@ -570,6 +570,55 @@ export default function AdminCommunityCardsPage() {
                           →
                         </button>
                       </div>
+                      <div className="space-y-1 pt-1 border-t border-white/10">
+                        {(card.altArts ?? []).map((alt, j) => (
+                          <div key={j} className="flex gap-1 items-center">
+                            <div className="flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={alt.profilePath}
+                                onChange={(e) => setEditingSet((s) => {
+                                  if (!s?.cards) return s;
+                                  const next = [...s.cards];
+                                  const alts = [...(next[i].altArts ?? [])];
+                                  alts[j] = { profilePath: e.target.value };
+                                  next[i] = { ...next[i], altArts: alts };
+                                  return { ...s, cards: next };
+                                })}
+                                placeholder="Alt-art image URL"
+                                className="w-full rounded px-2 py-1 text-[10px] bg-white/[0.04] border border-white/10 text-white/90"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSet((s) => {
+                                if (!s?.cards) return s;
+                                const next = [...s.cards];
+                                const alts = (next[i].altArts ?? []).filter((_, k) => k !== j);
+                                next[i] = { ...next[i], altArts: alts.length ? alts : undefined };
+                                return { ...s, cards: next };
+                              })}
+                              className="px-2 py-1 rounded text-[10px] text-red-400 hover:bg-red-500/20"
+                              title="Remove alt-art"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setEditingSet((s) => {
+                            if (!s?.cards) return s;
+                            const next = [...s.cards];
+                            const alts = [...(next[i].altArts ?? []), { profilePath: "" }];
+                            next[i] = { ...next[i], altArts: alts };
+                            return { ...s, cards: next };
+                          })}
+                          className="w-full px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
+                        >
+                          + Add alt-art
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
