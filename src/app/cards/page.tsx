@@ -699,7 +699,7 @@ function CardsContent() {
   const [createSetStep, setCreateSetStep] = useState<"pay" | "edit" | "publishing">("pay");
   const [createSetId, setCreateSetId] = useState<string | null>(null);
   const [createSetName, setCreateSetName] = useState("");
-  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
+  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string; altArts?: { profilePath: string }[] }[]>([]);
   const [createSetLoading, setCreateSetLoading] = useState(false);
   const [createSetError, setCreateSetError] = useState("");
   const [createSetImageForIndex, setCreateSetImageForIndex] = useState<{ cardIndex: number; altIndex?: number } | null>(null);
@@ -720,7 +720,7 @@ function CardsContent() {
     characterName: string;
     movieTitle: string;
     profilePath: string;
-    cardType?: CardType;
+    cardType?: CardType | string;
     isAltArt?: boolean;
   } | null>(null);
   const TRACKED_CHARS_KEY = "tcg-tracked-character-ids";
@@ -2311,7 +2311,8 @@ function CardsContent() {
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isCommunity = !!(entry as PoolEntry & { communitySetId?: string }).communitySetId;
-    const isMain = !isAltArt && !isBoys && !isCommunity;
+    if (isCommunity) return false;
+    const isMain = !isAltArt && !isBoys;
     const f = card.finish ?? (card.isFoil ? "holo" : "normal");
     const slotId = (entry as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId ?? card.characterId;
     const hasRegularInSlot = discoveredCharacterIds.has(slotId) || poolEntries.some((e) => (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId && discoveredAltArtCharacterIds.has(e.characterId));
@@ -6485,13 +6486,22 @@ function CardsContent() {
             })()}
 
             {codexSubTab === "community" && (() => {
-              const communityEntries = poolEntries.filter((e) => (e as PoolEntry & { communitySetId?: string }).communitySetId);
+              const allCommunityEntries = poolEntries.filter((e) => (e as PoolEntry & { communitySetId?: string }).communitySetId);
+              const communityMainEntries = allCommunityEntries.filter((e) => !(e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId);
+              const communityAltArtMap = new Map<string, PoolEntry[]>();
+              for (const e of allCommunityEntries) {
+                const baseId = (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId;
+                if (baseId) {
+                  if (!communityAltArtMap.has(baseId)) communityAltArtMap.set(baseId, []);
+                  communityAltArtMap.get(baseId)!.push(e);
+                }
+              }
               const setNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.name]));
               const creatorsById = new Map(publishedCommunitySets.map((s) => [s.id, s.creatorId]));
               const creatorNamesById = new Map(publishedCommunitySets.map((s) => [s.id, s.creatorName ?? "Unknown"]));
               return (
           <>
-            {communityEntries.length === 0 ? (
+            {communityMainEntries.length === 0 ? (
               <div className="rounded-t-none rounded-b-2xl border border-white/[0.08] border-t-0 bg-white/[0.03] backdrop-blur-xl p-12 text-center">
                 <p className="text-white/40 text-sm">No community cards in the pool yet. Create your own set — when others complete it, you earn cr.</p>
                 {user?.id && (
@@ -6555,10 +6565,14 @@ function CardsContent() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
+                    const unlockedForSet = (setId: string) => new Set(communityCodexBySet[setId] ?? []);
                     const renderEntry = (entry: PoolEntry) => {
                       const communitySetId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
-                      const discovered = (communityCodexBySet[communitySetId] ?? []).includes(entry.characterId);
-                      if (!discovered) {
+                      const unlocked = unlockedForSet(communitySetId);
+                      const altArts = communityAltArtMap.get(entry.characterId) ?? [];
+                      const discoveredAltArts = altArts.filter((a) => unlocked.has(a.characterId));
+                      const slotDiscovered = unlocked.has(entry.characterId) || discoveredAltArts.length > 0;
+                      if (!slotDiscovered) {
                         const isTrackedCommunity = trackedCharacterIds.has(`community:${entry.characterId}`);
                         return (
                           <div
@@ -6597,50 +6611,212 @@ function CardsContent() {
                           </div>
                         );
                       }
-                      const codexCard = {
-                        id: entry.characterId,
-                        rarity: entry.rarity,
-                        isFoil: false,
-                        actorName: entry.actorName ?? "",
-                        characterName: entry.characterName ?? "",
-                        movieTitle: entry.movieTitle ?? "",
-                        profilePath: entry.profilePath ?? "",
-                        cardType: entry.cardType,
-                      };
-                      const isNewlyUploaded = newlyUploadedToCodexCharacterIds.has(entry.characterId);
+                      type CommunityVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: string; isAltArt: boolean } };
+                      const variants: CommunityVariant[] = [];
+                      for (const alt of discoveredAltArts) {
+                        variants.push({
+                          poolEntry: alt,
+                          isAlt: true,
+                          codexCard: {
+                            id: alt.characterId,
+                            rarity: alt.rarity,
+                            isFoil: false,
+                            actorName: alt.actorName ?? "",
+                            characterName: alt.characterName ?? "",
+                            movieTitle: alt.movieTitle ?? "",
+                            profilePath: alt.profilePath ?? "",
+                            cardType: alt.cardType,
+                            isAltArt: true,
+                          },
+                        });
+                      }
+                      if (unlocked.has(entry.characterId)) {
+                        variants.push({
+                          poolEntry: entry,
+                          isAlt: false,
+                          codexCard: {
+                            id: entry.characterId,
+                            rarity: entry.rarity,
+                            isFoil: false,
+                            actorName: entry.actorName ?? "",
+                            characterName: entry.characterName ?? "",
+                            movieTitle: entry.movieTitle ?? "",
+                            profilePath: entry.profilePath ?? "",
+                            cardType: entry.cardType,
+                            isAltArt: false,
+                          },
+                        });
+                      }
+                      const slotId = entry.characterId;
+                      const pinnedCharId = codexPinnedBySlot[slotId];
+                      if (variants.length > 1 && pinnedCharId) {
+                        const pinnedIdx = variants.findIndex((v) => v.poolEntry.characterId === pinnedCharId);
+                        if (pinnedIdx > 0) {
+                          const [pinned] = variants.splice(pinnedIdx, 1);
+                          variants.unshift(pinned);
+                        }
+                      }
+                      const anyNewlyUploaded = variants.some((v) =>
+                        newlyUploadedToCodexCharacterIds.has(v.poolEntry.characterId)
+                      );
                       const clearNewDot = () => {
-                        if (!isNewlyUploaded) return;
+                        if (!anyNewlyUploaded) return;
                         setNewlyUploadedToCodexCharacterIds((prev) => {
                           const next = new Set(prev);
-                          next.delete(entry.characterId);
+                          variants.forEach((v) => next.delete(v.poolEntry.characterId));
                           return next;
                         });
                       };
                       const communityTrackKey = `community:${entry.characterId}`;
                       const isTrackedCommunityCodex = trackedCharacterIds.has(communityTrackKey);
+                      if (variants.length <= 1) {
+                        const v = variants[0];
+                        return (
+                          <div
+                            key={entry.characterId}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setInspectedCodexCard(v.codexCard)}
+                            onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
+                            className={`relative cursor-pointer group/communitycodex ${anyNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
+                            onMouseEnter={clearNewDot}
+                            aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}`}
+                          >
+                            {anyNewlyUploaded && (
+                              <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                            )}
+                            {isTrackedCommunityCodex && (
+                              <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider pointer-events-none">
+                                Tracked
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleTrackCharacter(communityTrackKey); }}
+                              className={`absolute bottom-1.5 inset-x-1.5 z-10 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/communitycodex:opacity-100 ${
+                                isTrackedCommunityCodex
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
+                                  : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                              }`}
+                              title={isTrackedCommunityCodex ? "Untrack" : trackedCharacterIds.size < MAX_TRACKED ? "Track (notify when you pull)" : `Limit (${MAX_TRACKED})`}
+                              disabled={!isTrackedCommunityCodex && trackedCharacterIds.size >= MAX_TRACKED}
+                            >
+                              {isTrackedCommunityCodex ? "Untrack" : "Track"}
+                            </button>
+                            <CardDisplay card={v.codexCard} selectable />
+                          </div>
+                        );
+                      }
+                      const isExpanded = expandedCodexStack === entry.characterId;
+                      const cascadeLayers = Math.min(variants.length - 1, 3);
+                      const cascadeOffset = cascadeLayers * 3;
                       return (
                         <div
                           key={entry.characterId}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setInspectedCodexCard(codexCard)}
-                          onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(codexCard)}
-                          className={`relative cursor-pointer group/communitycodex ${isNewlyUploaded ? "codex-card-reveal" : ""} focus:outline-none`}
-                          onMouseEnter={clearNewDot}
-                          aria-label={`Inspect ${codexCard.characterName || codexCard.actorName}`}
+                          data-codex-stack
+                          className="relative group/codexstack"
+                          style={{
+                            zIndex: isExpanded ? 20 : "auto",
+                            marginBottom: isExpanded ? 0 : cascadeOffset,
+                            marginRight: isExpanded ? 0 : cascadeOffset,
+                            transition: "margin 300ms ease-out",
+                          }}
+                          onMouseEnter={() => setExpandedCodexStack(entry.characterId)}
+                          onMouseLeave={() => setExpandedCodexStack(null)}
+                          onClickCapture={(e) => {
+                            if (!isMobileTouch || variants.length <= 1) return;
+                            if (!isExpanded) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setExpandedCodexStack(entry.characterId);
+                            }
+                          }}
                         >
-                          {isNewlyUploaded && (
-                            <span className="absolute top-1 left-1 z-10 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none" aria-label="Newly added to codex" />
+                          {Array.from({ length: cascadeLayers }, (_, i) => {
+                            const layer = cascadeLayers - i;
+                            const offset = layer * 3;
+                            return (
+                              <div
+                                key={`shadow-${i}`}
+                                className="absolute inset-0 rounded-xl pointer-events-none"
+                                style={{
+                                  transform: `translate(${offset}px, ${offset}px)`,
+                                  background: `rgba(255,255,255,${0.02 + i * 0.01})`,
+                                  border: `1px solid rgba(255,255,255,${0.04 + i * 0.015})`,
+                                  zIndex: i,
+                                  opacity: isExpanded ? 0 : 1,
+                                  transition: "opacity 200ms ease-out",
+                                }}
+                              />
+                            );
+                          })}
+                          {variants.map((v, idx) => {
+                            const isPinned = codexPinnedBySlot[slotId] === v.poolEntry.characterId;
+                            return (
+                              <div
+                                key={v.poolEntry.characterId}
+                                role="button"
+                                tabIndex={0}
+                                className="relative cursor-pointer focus:outline-none group/variant"
+                                style={{
+                                  position: idx === 0 ? "relative" : "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  transform: `translateX(${isExpanded ? idx * 55 : 0}%)`,
+                                  zIndex: isExpanded ? variants.length + 1 - idx : cascadeLayers + 1,
+                                  opacity: !isExpanded && idx > 0 ? 0 : 1,
+                                  transition: "transform 300ms ease-out, opacity 200ms ease-out",
+                                }}
+                                onClick={() => setInspectedCodexCard(v.codexCard)}
+                                onKeyDown={(e) => e.key === "Enter" && setInspectedCodexCard(v.codexCard)}
+                                aria-label={`Inspect ${v.codexCard.characterName || v.codexCard.actorName}${v.isAlt ? " (Alt-Art)" : ""}`}
+                              >
+                                <CardDisplay card={v.codexCard} selectable />
+                                {variants.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setCodexPinned(slotId, v.poolEntry.characterId); }}
+                                    className={`absolute top-1 right-1 z-10 px-2 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/codexstack:opacity-100 group-hover/variant:opacity-100 ${
+                                      isPinned
+                                        ? "bg-cyan-500/30 text-cyan-200 border border-cyan-400/50"
+                                        : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
+                                    }`}
+                                    style={{ zIndex: variants.length + 5 }}
+                                    title={isPinned ? "Default art" : "Pin as default"}
+                                  >
+                                    {isPinned ? "✓ Default" : "Pin"}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {anyNewlyUploaded && (
+                            <span
+                              className="absolute top-1 left-1 w-3 h-3 rounded-full bg-red-500/80 backdrop-blur-sm ring-1 ring-white/20 shadow-[0_0_8px_rgba(239,68,68,0.5)] pointer-events-none"
+                              style={{ zIndex: variants.length + 2 }}
+                              aria-label="Newly added to codex"
+                            />
                           )}
-                          {isTrackedCommunityCodex && (
-                            <span className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80 text-[9px] font-bold text-amber-950 uppercase tracking-wider pointer-events-none">
-                              Tracked
-                            </span>
-                          )}
+                          <div
+                            className="absolute flex items-center justify-center rounded-full bg-black/70 border border-white/20 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                            style={{
+                              top: -8,
+                              right: isExpanded ? -8 : -8 + cascadeOffset,
+                              minWidth: 24,
+                              height: 24,
+                              padding: "0 6px",
+                              zIndex: variants.length + 3,
+                              opacity: isExpanded ? 0 : 1,
+                              transition: "opacity 200ms ease-out, right 300ms ease-out",
+                            }}
+                          >
+                            <span className="text-[11px] font-bold text-white/90 tabular-nums">{variants.length} arts</span>
+                          </div>
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggleTrackCharacter(communityTrackKey); }}
-                            className={`absolute bottom-1.5 inset-x-1.5 z-10 py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer opacity-0 group-hover/communitycodex:opacity-100 ${
+                            onClick={(e) => { e.stopPropagation(); toggleTrackCharacter(communityTrackKey); }}
+                            className={`absolute bottom-1.5 left-1.5 right-1.5 z-[10] py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${isExpanded ? "opacity-100" : "opacity-0 group-hover/codexstack:opacity-100"} ${
                               isTrackedCommunityCodex
                                 ? "bg-amber-500/20 text-amber-300 border border-amber-400/30"
                                 : "bg-white/[0.08] text-white/70 border border-white/20 hover:bg-white/[0.12]"
@@ -6650,20 +6826,28 @@ function CardsContent() {
                           >
                             {isTrackedCommunityCodex ? "Untrack" : "Track"}
                           </button>
-                          <CardDisplay card={codexCard} selectable />
                         </div>
                       );
                     };
                     if (codexSort === "set") {
                       const key = (e: PoolEntry) => (e as PoolEntry & { communitySetId?: string }).communitySetId ?? "(Uncategorized)";
                       const bySet = new Map<string, PoolEntry[]>();
-                      for (const entry of communityEntries) {
+                      for (const entry of communityMainEntries) {
                         const k = String(key(entry));
                         if (!bySet.has(k)) bySet.set(k, []);
                         bySet.get(k)!.push(entry);
                       }
-                      const discoveredCount = (entries: PoolEntry[]) =>
-                        entries.filter((e) => ((e as PoolEntry & { communitySetId?: string }).communitySetId && (communityCodexBySet[(e as PoolEntry & { communitySetId?: string }).communitySetId!] ?? []).includes(e.characterId))).length;
+                      const discoveredCount = (entries: PoolEntry[]) => {
+                        const unlocked = (setId: string) => new Set(communityCodexBySet[setId] ?? []);
+                        return entries.filter((e) => {
+                          const setId = (e as PoolEntry & { communitySetId?: string }).communitySetId;
+                          if (!setId) return false;
+                          const u = unlocked(setId);
+                          if (u.has(e.characterId)) return true;
+                          const alts = communityAltArtMap.get(e.characterId) ?? [];
+                          return alts.some((a) => u.has(a.characterId));
+                        }).length;
+                      };
                       const sets = Array.from(bySet.entries())
                         .map(([k, entries]) => {
                           const totalCount = entries.length;
@@ -6728,10 +6912,10 @@ function CardsContent() {
                     }
                     const sorted =
                       codexSort === "name"
-                        ? [...communityEntries].sort((a, b) =>
+                        ? [...communityMainEntries].sort((a, b) =>
                             ((a.characterName || a.actorName) ?? "").localeCompare((b.characterName || b.actorName) ?? "")
                           )
-                        : [...communityEntries].sort(
+                        : [...communityMainEntries].sort(
                             (a, b) => (rarityOrder[b.rarity] ?? 0) - (rarityOrder[a.rarity] ?? 0)
                           );
                     return sorted.map((entry) => renderEntry(entry));

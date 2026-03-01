@@ -308,6 +308,7 @@ export async function GET(
           id: e.characterId,
           rarity: e.rarity,
           isFoil: false,
+          isAltArt: !!(e as { altArtOfCharacterId?: string }).altArtOfCharacterId,
           actorName: e.actorName ?? "",
           characterName: e.characterName ?? "",
           movieTitle: e.movieTitle ?? "",
@@ -362,11 +363,13 @@ export async function GET(
         id: slotId,
         rarity: e.rarity,
         isFoil: false,
+        isAltArt: !!(e as { altArtOfCharacterId?: string }).altArtOfCharacterId,
         actorName: e.actorName ?? "",
         characterName: e.characterName ?? "",
         movieTitle: e.movieTitle ?? "",
         profilePath: e.profilePath ?? "",
         cardType: e.cardType,
+        communitySetId: (e as { communitySetId?: string }).communitySetId,
       };
     })
     .filter((e) => e != null) as CodexCardItem[];

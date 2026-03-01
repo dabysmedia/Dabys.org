@@ -222,14 +222,14 @@ export async function POST(request: Request) {
         addCodexUnlock(userId, characterId);
         break;
     }
+  } else if (isCommunity) {
+    const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
+    addCommunityCodexUnlock(userId, communitySetId, characterId);
   } else if (isAltArt) {
     const altArtFinish = finish === "darkMatter" ? "darkMatter" : finish === "prismatic" ? "prismatic" : finish === "holo" ? "holo" : undefined;
     addCodexUnlockAltArt(userId, characterId, altArtFinish);
   } else if (isBoys) {
     addCodexUnlockBoys(userId, characterId);
-  } else if (isCommunity) {
-    const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
-    addCommunityCodexUnlock(userId, communitySetId, characterId);
   }
 
   // Track quest progress: upload_codex

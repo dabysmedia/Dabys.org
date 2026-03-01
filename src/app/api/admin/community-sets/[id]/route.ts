@@ -9,7 +9,7 @@ import {
   getCreditSettings,
   addCredits,
 } from "@/lib/data";
-import type { CommunitySet, CommunitySetCard } from "@/lib/data";
+import type { CommunitySet, CommunitySetCard, CharacterPortrayal } from "@/lib/data";
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -79,7 +79,7 @@ export async function PATCH(
       const sid = (c as { communitySetId?: string }).communitySetId;
       return sid === undefined || sid !== id;
     });
-    const newEntries: { characterId: string; actorName: string; characterName: string; profilePath: string; movieTmdbId: number; movieTitle: string; popularity: number; rarity: string; cardType: "community"; communitySetId: string; altArtOfCharacterId?: string }[] = [];
+    const newEntries: (CharacterPortrayal & { communitySetId?: string })[] = [];
     for (let i = 0; i < updated.cards.length; i++) {
       const card = updated.cards[i];
       const baseId = `${id}-${i}`;

@@ -231,7 +231,7 @@ export default function ProfilePage() {
   const [createSetStep, setCreateSetStep] = useState<"pay" | "edit" | "publishing">("pay");
   const [createSetId, setCreateSetId] = useState<string | null>(null);
   const [createSetName, setCreateSetName] = useState("");
-  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string }[]>([]);
+  const [createSetCards, setCreateSetCards] = useState<{ actorName: string; characterName: string; profilePath: string; rarity: string; altArts?: { profilePath: string }[] }[]>([]);
   const [createSetLoading, setCreateSetLoading] = useState(false);
   const [createSetError, setCreateSetError] = useState("");
   const [createSetImageForIndex, setCreateSetImageForIndex] = useState<{ cardIndex: number; altIndex?: number } | null>(null);

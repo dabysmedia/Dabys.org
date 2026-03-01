@@ -2327,9 +2327,11 @@ function saveCommunityCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
 export function getCommunityCodexUnlockedCharacterIds(userId: string, communitySetId: string): string[] {
   const data = getCommunityCodexUnlocksRaw();
   const byUser = data[userId];
-  if (!byUser) return [];
-  const ids = byUser[communitySetId];
-  return Array.isArray(ids) ? ids : [];
+  const baseIds = Array.isArray(byUser?.[communitySetId]) ? byUser[communitySetId] : [];
+  const prefix = `${communitySetId}-`;
+  const altArtIds = getCodexUnlockedAltArtCharacterIds(userId);
+  const communityAlts = altArtIds.filter((id) => id.startsWith(prefix) && id.includes("-alt-"));
+  return [...new Set([...baseIds, ...communityAlts])];
 }
 
 export function addCommunityCodexUnlock(userId: string, communitySetId: string, characterId: string): void {
