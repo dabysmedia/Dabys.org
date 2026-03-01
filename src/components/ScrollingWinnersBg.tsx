@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const PAGES_WITH_SCROLL = ["/", "/login", "/wheel", "/stats", "/cards", "/casino"];
+const PAGES_WITH_SCROLL = ["/", "/login", "/wheel", "/stats", "/cards", "/casino", "/wallet"];
 
 function shouldShowScroll(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -58,7 +58,12 @@ export function ScrollingWinnersBg() {
           ))}
         </div>
       </div>
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--background)] via-transparent via-15% via-85% to-[var(--background)]" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(to right, var(--background) 0%, transparent 15%, transparent 85%, var(--background) 100%)",
+        }}
+      />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--background)]/60 to-[var(--background)]" />
     </div>
   );

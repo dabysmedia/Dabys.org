@@ -310,15 +310,16 @@ export default function Header() {
   const isCards = pathname === "/cards";
   const isCasino = pathname === "/casino";
   const isVault = pathname === "/vault";
+  const isWallet = pathname === "/wallet";
 
   const closeMenu = () => setMenuOpen(false);
 
   const creditsBlock = (
     <Link
-      href="/cards"
+      href="/wallet"
       onClick={isNarrow ? closeMenu : undefined}
       className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors relative overflow-visible ${
-        isCards
+        isWallet
           ? "bg-sky-400/15 border-sky-400/30 text-sky-300"
           : "bg-sky-400/10 border-sky-400/20 text-sky-300 hover:bg-sky-400/15"
       }`}
@@ -366,10 +367,10 @@ export default function Header() {
 
   const creditsBlockMenu = (
     <Link
-      href="/cards"
+      href="/wallet"
       onClick={closeMenu}
       className={`flex items-center gap-3 min-h-[48px] px-4 py-3 rounded-xl border text-base font-medium transition-colors relative overflow-visible touch-manipulation ${
-        isCards
+        isWallet
           ? "bg-sky-400/15 border-sky-400/30 text-sky-300"
           : "bg-sky-400/10 border-sky-400/20 text-sky-300 hover:bg-sky-400/15"
       }`}

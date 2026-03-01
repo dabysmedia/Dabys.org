@@ -4692,3 +4692,51 @@ export function removeTradeBlockEntry(userId: string, entryId: string): boolean 
 export function getTradeBlockForUser(userId: string): TradeBlockEntry[] {
   return getTradeBlockRaw().filter((e) => e.userId === userId);
 }
+
+// ──── Legendary Slot Notes (notes owners add to their held legendaries, like trade block) ─────
+type LegendarySlotNotesStore = { userId: string; slotId: string; note: string }[];
+
+function getLegendarySlotNotesRaw(): LegendarySlotNotesStore {
+  try {
+    return readJson<LegendarySlotNotesStore>("legendarySlotNotes.json");
+  } catch {
+    return [];
+  }
+}
+
+function saveLegendarySlotNotesRaw(data: LegendarySlotNotesStore) {
+  writeJson("legendarySlotNotes.json", data);
+}
+
+export function getLegendarySlotNote(userId: string, slotId: string): string {
+  const data = getLegendarySlotNotesRaw();
+  const entry = data.find((e) => e.userId === userId && e.slotId === slotId);
+  return entry?.note ?? "";
+}
+
+export function setLegendarySlotNote(userId: string, slotId: string, note: string): void {
+  const data = getLegendarySlotNotesRaw();
+  const trimmed = typeof note === "string" ? note.trim().slice(0, 100) : "";
+  const idx = data.findIndex((e) => e.userId === userId && e.slotId === slotId);
+  if (trimmed) {
+    const entry = { userId, slotId, note: trimmed };
+    if (idx >= 0) data[idx] = entry;
+    else data.push(entry);
+  } else if (idx >= 0) {
+    data.splice(idx, 1);
+  } else {
+    return;
+  }
+  saveLegendarySlotNotesRaw(data);
+}
+
+/** Notes for each legendary slot (from the owner). Used for Held Legendaries display. */
+export function getLegendarySlotNotesBySlot(legendaryOwnedBy: Record<string, { userId: string; userName: string }>): Record<string, string> {
+  const raw = getLegendarySlotNotesRaw();
+  const result: Record<string, string> = {};
+  for (const [slotId, owner] of Object.entries(legendaryOwnedBy)) {
+    const entry = raw.find((e) => e.userId === owner.userId && e.slotId === slotId);
+    if (entry?.note) result[slotId] = entry.note;
+  }
+  return result;
+}

@@ -709,6 +709,8 @@ function CardsContent() {
   const [codexInspectClosing, setCodexInspectClosing] = useState(false);
   const [prismaticForgeUnlocked, setPrismaticForgeUnlocked] = useState(false);
   const [legendaryOwnedBy, setLegendaryOwnedBy] = useState<Record<string, { userId: string; userName: string }>>({});
+  const [legendarySlotNotes, setLegendarySlotNotes] = useState<Record<string, string>>({});
+  const [legendarySlotNoteSaving, setLegendarySlotNoteSaving] = useState<string | null>(null);
   const [showPrestigeCodexConfirm, setShowPrestigeCodexConfirm] = useState(false);
   const [prestigeCodexLoading, setPrestigeCodexLoading] = useState(false);
   const [inspectedCodexCard, setInspectedCodexCard] = useState<{
@@ -1087,6 +1089,7 @@ function CardsContent() {
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
+      setLegendarySlotNotes(typeof d.legendarySlotNotes === "object" && d.legendarySlotNotes != null ? d.legendarySlotNotes : {});
       setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
       setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
       setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
@@ -1258,6 +1261,7 @@ function CardsContent() {
       setDiscoveredBoysCharacterIds(new Set(Array.isArray(d.boysCharacterIds) ? d.boysCharacterIds : []));
       setPrismaticForgeUnlocked(d.prismaticForgeUnlocked === true);
       setLegendaryOwnedBy(typeof d.legendaryOwnedBy === "object" && d.legendaryOwnedBy != null ? d.legendaryOwnedBy : {});
+      setLegendarySlotNotes(typeof d.legendarySlotNotes === "object" && d.legendarySlotNotes != null ? d.legendarySlotNotes : {});
       setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
       setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
       setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
@@ -2707,6 +2711,29 @@ function CardsContent() {
     fetch("/api/users?includeProfile=1")
       .then((r) => r.json())
       .then((data: UserWithAvatar[]) => setTradeUsers(data.filter((u) => u.id !== user?.id)))
+      .catch(() => setTradeUsers([]));
+  }
+
+  function initiateTradeWithUser(targetUserId: string, targetUserName: string) {
+    if (!user || targetUserId === user.id) return;
+    setEditingTradeId(null);
+    setShowTradeModal(true);
+    setTradeStep(1);
+    setTradeOfferedIds(new Set());
+    setTradeRequestedIds(new Set());
+    setTradeOfferedCredits(0);
+    setTradeRequestedCredits(0);
+    setCounterpartyCards([]);
+    setTradeError("");
+    fetch("/api/users?includeProfile=1")
+      .then((r) => r.json())
+      .then((data: UserWithAvatar[]) => {
+        const others = data.filter((u) => u.id !== user.id);
+        setTradeUsers(others);
+        const target = others.find((u) => u.id === targetUserId) ?? { id: targetUserId, name: targetUserName };
+        setTradeCounterparty(target);
+        setTradeStep(2);
+      })
       .catch(() => setTradeUsers([]));
   }
 
@@ -5198,6 +5225,78 @@ function CardsContent() {
                 </div>
               )}
             </div>
+
+            {/* Held Legendaries — who owns which cards; click to initiate trade */}
+            {(() => {
+              const heldLegendaries = Object.entries(legendaryOwnedBy)
+                .map(([slotId, owner]) => {
+                  const poolEntry = poolEntries.find((e) => e.characterId === slotId) ?? poolEntries.find((e) => (e as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId === slotId);
+                  return poolEntry?.profilePath ? { slotId, owner, poolEntry } : null;
+                })
+                .filter((x): x is NonNullable<typeof x> => x != null);
+              if (heldLegendaries.length === 0) return null;
+              return (
+                <div className="mb-10">
+                  <h3 className="text-sm font-semibold text-white/70 uppercase tracking-widest mb-3">Held Legendaries</h3>
+                  <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                      {heldLegendaries.map(({ slotId, owner, poolEntry }) => {
+                        const isOwn = owner.userId === user?.id;
+                        const card = { ...poolEntry, isFoil: false, isAltArt: !!(poolEntry as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId };
+                        return (
+                          <button
+                            key={slotId}
+                            onClick={() => !isOwn && initiateTradeWithUser(owner.userId, owner.userName)}
+                            disabled={isOwn}
+                            className={`flex flex-col rounded-xl border overflow-hidden transition-all text-left ${
+                              isOwn
+                                ? "border-white/10 bg-white/[0.06] cursor-default opacity-70 shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                                : "border-white/20 bg-white/[0.06] hover:border-amber-500/40 hover:bg-amber-500/10 cursor-pointer backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+                            }`}
+                            title={isOwn ? `${poolEntry.characterName || poolEntry.actorName} (yours)` : `Click to trade with ${owner.userName}`}
+                          >
+                            <CardDisplay card={card} />
+                            <div className="border-t border-white/10 bg-white/[0.02] p-3">
+                              <span className="text-[10px] text-white/60 truncate block">Owned by {owner.userName}</span>
+                              {isOwn ? (
+                                <input
+                                  type="text"
+                                  maxLength={100}
+                                  value={legendarySlotNotes[slotId] ?? ""}
+                                  onChange={(e) => setLegendarySlotNotes((prev) => ({ ...prev, [slotId]: e.target.value }))}
+                                  placeholder="Add note (optional)"
+                                  onBlur={async () => {
+                                    const val = (legendarySlotNotes[slotId] ?? "").trim().slice(0, 100);
+                                    if (!user) return;
+                                    setLegendarySlotNoteSaving(slotId);
+                                    try {
+                                      const res = await fetch("/api/legendary-slot-note", {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ userId: user.id, slotId, note: val }),
+                                      });
+                                      if (res.ok) {
+                                        setLegendarySlotNotes((p) => (val ? { ...p, [slotId]: val } : (() => { const n = { ...p }; delete n[slotId]; return n; })()));
+                                      }
+                                    } catch { /* ignore */ }
+                                    setLegendarySlotNoteSaving(null);
+                                  }}
+                                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                                  disabled={legendarySlotNoteSaving === slotId}
+                                  className="mt-1.5 w-full px-2 py-1.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 text-[10px] outline-none focus:border-teal-500/40 placeholder:text-white/30 disabled:opacity-60"
+                                />
+                              ) : legendarySlotNotes[slotId] ? (
+                                <p className="text-[10px] text-white/40 mt-1.5 line-clamp-2 italic">&quot;{legendarySlotNotes[slotId]}&quot;</p>
+                              ) : null}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Sent offers — compact by default, expand on View */}
             {sentTrades.length > 0 && (
@@ -7786,7 +7885,7 @@ function CardsContent() {
                         {availableForOffer.length === 0 ? (
                           <p className="text-white/25 text-xs text-center py-8">No cards available to offer.</p>
                         ) : (
-                          <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             {availableForOffer.map((c) => {
                               const selected = tradeOfferedIds.has(c.id!);
                               const inMyCodex = isCardInCodex(c, myCodexSets, poolEntries);
@@ -7797,7 +7896,7 @@ function CardsContent() {
                                   className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-red-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
                                   title={inMyCodex ? "In your codex" : undefined}
                                 >
-                                  <CardDisplay card={c} compact inCodex={inMyCodex} />
+                                  <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={inMyCodex} />
                                   {selected && (
                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                                       <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
@@ -7827,7 +7926,7 @@ function CardsContent() {
                             {(() => {
                               const offeredCards = availableForOffer.filter(c => tradeOfferedIds.has(c.id!));
                               return offeredCards.length > 0 ? (
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   {offeredCards.map((c) => (
                                     <button
                                       key={c.id}
@@ -7835,7 +7934,7 @@ function CardsContent() {
                                       className="relative rounded-xl overflow-hidden ring-1 ring-red-500/20 hover:ring-red-400/50 transition-all cursor-pointer group"
                                       title={isCardInCodex(c, myCodexSets, poolEntries) ? "In your codex" : undefined}
                                     >
-                                      <CardDisplay card={c} compact inCodex={isCardInCodex(c, myCodexSets, poolEntries)} />
+                                      <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={isCardInCodex(c, myCodexSets, poolEntries)} />
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
                                         <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
                                       </div>
@@ -7884,7 +7983,7 @@ function CardsContent() {
                             {(() => {
                               const requestedCards = availableToRequest.filter(c => tradeRequestedIds.has(c.id!));
                               return requestedCards.length > 0 ? (
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   {requestedCards.map((c) => (
                                     <button
                                       key={c.id}
@@ -7892,7 +7991,7 @@ function CardsContent() {
                                       className="relative rounded-xl overflow-hidden ring-1 ring-green-500/20 hover:ring-green-400/50 transition-all cursor-pointer group"
                                       title={isCardInCodex(c, counterpartyCodex, poolEntries) ? `In ${tradeCounterparty?.name}'s codex` : undefined}
                                     >
-                                      <CardDisplay card={c} compact inCodex={isCardInCodex(c, counterpartyCodex, poolEntries)} />
+                                      <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={isCardInCodex(c, counterpartyCodex, poolEntries)} />
                                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
                                         <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
                                       </div>
@@ -7949,7 +8048,7 @@ function CardsContent() {
                         {availableToRequest.length === 0 ? (
                           <p className="text-white/25 text-xs text-center py-8">{tradeCounterparty?.name} has no cards available.</p>
                         ) : (
-                          <div className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-5 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             {availableToRequest.map((c) => {
                               const selected = tradeRequestedIds.has(c.id!);
                               const inTheirCodex = isCardInCodex(c, counterpartyCodex, poolEntries);
@@ -7960,7 +8059,7 @@ function CardsContent() {
                                   className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-green-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
                                   title={inTheirCodex ? `In ${tradeCounterparty?.name}'s codex` : undefined}
                                 >
-                                  <CardDisplay card={c} compact inCodex={inTheirCodex} />
+                                  <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={inTheirCodex} />
                                   {selected && (
                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                                       <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>

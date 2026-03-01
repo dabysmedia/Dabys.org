@@ -11,6 +11,7 @@ import {
   getCodexUnlockedBoysCharacterIds,
   getPrismaticForgeUnlocked,
   getLegendaryOwnershipBySlotId,
+  getLegendarySlotNotesBySlot,
   getPublishedCommunitySets,
   getCommunityCodexUnlockedCharacterIds,
   getCreditSettings,
@@ -37,6 +38,7 @@ export async function GET(request: Request) {
   const boysCharacterIds = getCodexUnlockedBoysCharacterIds(userId);
   const prismaticForgeUnlocked = getPrismaticForgeUnlocked(userId);
   const legendaryOwnedBy = getLegendaryOwnershipBySlotId();
+  const legendarySlotNotes = getLegendarySlotNotesBySlot(legendaryOwnedBy);
 
   const publishedCommunitySetsRaw = getPublishedCommunitySets();
   const users = getUsers();
@@ -69,6 +71,7 @@ export async function GET(request: Request) {
     boysCharacterIds,
     prismaticForgeUnlocked,
     legendaryOwnedBy,
+    legendarySlotNotes,
     publishedCommunitySets,
     communityCodexBySet,
     completedCommunitySetIds,
