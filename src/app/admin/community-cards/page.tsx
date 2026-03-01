@@ -9,6 +9,7 @@ interface CommunitySetCard {
   characterName: string;
   profilePath: string;
   rarity: "uncommon" | "rare" | "epic" | "legendary";
+  altArts?: { profilePath: string }[];
 }
 
 interface CommunitySetWithCreator {
