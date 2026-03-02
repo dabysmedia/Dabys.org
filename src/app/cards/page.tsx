@@ -693,6 +693,10 @@ function CardsContent() {
   const [completedDarkMatterBadgeWinnerIds, setCompletedDarkMatterBadgeWinnerIds] = useState<Set<string>>(new Set());
   const [publishedCommunitySets, setPublishedCommunitySets] = useState<{ id: string; name: string; creatorId: string; creatorName?: string; cards: { actorName: string; characterName: string; profilePath: string; rarity: string }[] }[]>([]);
   const [communityCodexBySet, setCommunityCodexBySet] = useState<Record<string, string[]>>({});
+  const [communityCodexBaseBySet, setCommunityCodexBaseBySet] = useState<Record<string, string[]>>({});
+  const [communityCodexHoloBySet, setCommunityCodexHoloBySet] = useState<Record<string, string[]>>({});
+  const [communityCodexPrismaticBySet, setCommunityCodexPrismaticBySet] = useState<Record<string, string[]>>({});
+  const [communityCodexDarkMatterBySet, setCommunityCodexDarkMatterBySet] = useState<Record<string, string[]>>({});
   const [completedCommunitySetIds, setCompletedCommunitySetIds] = useState<Set<string>>(new Set());
   const [communityCreditPrices, setCommunityCreditPrices] = useState<{ createPrice: number; extraCardPrice: number }>({ createPrice: 500, extraCardPrice: 50 });
   const [showCreateCommunitySetModal, setShowCreateCommunitySetModal] = useState(false);
@@ -1092,6 +1096,10 @@ function CardsContent() {
       setLegendarySlotNotes(typeof d.legendarySlotNotes === "object" && d.legendarySlotNotes != null ? d.legendarySlotNotes : {});
       setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
       setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
+      setCommunityCodexBaseBySet(typeof d.communityCodexBaseBySet === "object" && d.communityCodexBaseBySet != null ? d.communityCodexBaseBySet : {});
+      setCommunityCodexHoloBySet(typeof d.communityCodexHoloBySet === "object" && d.communityCodexHoloBySet != null ? d.communityCodexHoloBySet : {});
+      setCommunityCodexPrismaticBySet(typeof d.communityCodexPrismaticBySet === "object" && d.communityCodexPrismaticBySet != null ? d.communityCodexPrismaticBySet : {});
+      setCommunityCodexDarkMatterBySet(typeof d.communityCodexDarkMatterBySet === "object" && d.communityCodexDarkMatterBySet != null ? d.communityCodexDarkMatterBySet : {});
       setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
       if (d.communityCreditPrices && typeof d.communityCreditPrices.createPrice === "number" && typeof d.communityCreditPrices.extraCardPrice === "number") {
         setCommunityCreditPrices({ createPrice: d.communityCreditPrices.createPrice, extraCardPrice: d.communityCreditPrices.extraCardPrice });
@@ -1264,6 +1272,10 @@ function CardsContent() {
       setLegendarySlotNotes(typeof d.legendarySlotNotes === "object" && d.legendarySlotNotes != null ? d.legendarySlotNotes : {});
       setPublishedCommunitySets(Array.isArray(d.publishedCommunitySets) ? d.publishedCommunitySets : []);
       setCommunityCodexBySet(typeof d.communityCodexBySet === "object" && d.communityCodexBySet != null ? d.communityCodexBySet : {});
+      setCommunityCodexBaseBySet(typeof d.communityCodexBaseBySet === "object" && d.communityCodexBaseBySet != null ? d.communityCodexBaseBySet : {});
+      setCommunityCodexHoloBySet(typeof d.communityCodexHoloBySet === "object" && d.communityCodexHoloBySet != null ? d.communityCodexHoloBySet : {});
+      setCommunityCodexPrismaticBySet(typeof d.communityCodexPrismaticBySet === "object" && d.communityCodexPrismaticBySet != null ? d.communityCodexPrismaticBySet : {});
+      setCommunityCodexDarkMatterBySet(typeof d.communityCodexDarkMatterBySet === "object" && d.communityCodexDarkMatterBySet != null ? d.communityCodexDarkMatterBySet : {});
       setCompletedCommunitySetIds(new Set(Array.isArray(d.completedCommunitySetIds) ? d.completedCommunitySetIds : []));
       if (d.communityCreditPrices && typeof d.communityCreditPrices.createPrice === "number" && typeof d.communityCreditPrices.extraCardPrice === "number") {
         setCommunityCreditPrices({ createPrice: d.communityCreditPrices.createPrice, extraCardPrice: d.communityCreditPrices.extraCardPrice });
@@ -2290,7 +2302,11 @@ function CardsContent() {
     if (isBoys) return discoveredBoysCharacterIds.has(card.characterId);
     if (isCommunity) {
       const setId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
-      return (communityCodexBySet[setId] ?? []).includes(card.characterId);
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      if (f === "darkMatter") return (communityCodexDarkMatterBySet[setId] ?? []).includes(card.characterId);
+      if (f === "prismatic") return (communityCodexPrismaticBySet[setId] ?? []).includes(card.characterId);
+      if (f === "holo" || card.isFoil) return (communityCodexHoloBySet[setId] ?? []).includes(card.characterId);
+      return (communityCodexBaseBySet[setId] ?? []).includes(card.characterId);
     }
     return false;
   }
@@ -2315,7 +2331,20 @@ function CardsContent() {
     const isAltArt = (entry.altArtOfCharacterId ?? null) != null;
     const isBoys = (entry.cardType ?? "actor") === "character" && !isAltArt;
     const isCommunity = !!(entry as PoolEntry & { communitySetId?: string }).communitySetId;
-    if (isCommunity) return false;
+    if (isCommunity) {
+      const setId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
+      const baseIds = new Set(communityCodexBaseBySet[setId] ?? []);
+      const holoIds = new Set(communityCodexHoloBySet[setId] ?? []);
+      const prismaticIds = new Set(communityCodexPrismaticBySet[setId] ?? []);
+      const darkMatterIds = new Set(communityCodexDarkMatterBySet[setId] ?? []);
+      const hasAny = baseIds.has(card.characterId!) || holoIds.has(card.characterId!) || prismaticIds.has(card.characterId!) || darkMatterIds.has(card.characterId!);
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      if (!card.isFoil && f === "normal") return false;
+      if (f === "darkMatter") return !prismaticIds.has(card.characterId!);
+      if (f === "prismatic") return !holoIds.has(card.characterId!) && hasAny;
+      if (f === "holo") return !baseIds.has(card.characterId!) && hasAny;
+      return false;
+    }
     const isMain = !isAltArt && !isBoys;
     const f = card.finish ?? (card.isFoil ? "holo" : "normal");
     const slotId = (entry as PoolEntry & { altArtOfCharacterId?: string }).altArtOfCharacterId ?? card.characterId;
@@ -2368,7 +2397,14 @@ function CardsContent() {
       return `altart:${card.characterId}`;
     }
     if (isBoys) return `boys:${card.characterId}`;
-    if (isCommunity) return `community:${card.characterId}`;
+    if (isCommunity) {
+      const setId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
+      const f = card.finish ?? (card.isFoil ? "holo" : "normal");
+      if (f === "darkMatter") return `community_darkmatter:${setId}:${card.characterId}`;
+      if (f === "prismatic") return `community_prismatic:${setId}:${card.characterId}`;
+      if (f === "holo" || card.isFoil) return `community_holo:${setId}:${card.characterId}`;
+      return `community:${setId}:${card.characterId}`;
+    }
     return null;
   }
 
@@ -2460,19 +2496,38 @@ function CardsContent() {
             setDiscoveredAltArtPrismaticCharacterIds((prev) => new Set([...prev, data.characterId]));
             setDiscoveredAltArtDarkMatterCharacterIds((prev) => new Set([...prev, data.characterId]));
           } else if (variant === "boys") setDiscoveredBoysCharacterIds((prev) => new Set([...prev, data.characterId]));
-          else if (variant === "community") {
+          else if (variant === "community" || variant === "community_holo" || variant === "community_prismatic" || variant === "community_darkmatter") {
             const setId = data.communitySetId;
             if (setId) {
-              setCommunityCodexBySet((prev) => ({
+              const addChar = (prev: Record<string, string[]>) => ({
                 ...prev,
-                [setId]: [...(prev[setId] ?? []), data.characterId],
-              }));
+                [setId]: [...(prev[setId] ?? []).filter((id) => id !== data.characterId), data.characterId],
+              });
+              setCommunityCodexBySet(addChar);
+              if (variant === "community") {
+                setCommunityCodexBaseBySet(addChar);
+              } else if (variant === "community_holo") {
+                setCommunityCodexHoloBySet((prev) => ({
+                  ...prev,
+                  [setId]: [...(prev[setId] ?? []).filter((id) => id !== data.characterId), data.characterId],
+                }));
+              } else if (variant === "community_prismatic") {
+                setCommunityCodexPrismaticBySet((prev) => ({
+                  ...prev,
+                  [setId]: [...(prev[setId] ?? []).filter((id) => id !== data.characterId), data.characterId],
+                }));
+              } else if (variant === "community_darkmatter") {
+                setCommunityCodexDarkMatterBySet((prev) => ({
+                  ...prev,
+                  [setId]: [...(prev[setId] ?? []).filter((id) => id !== data.characterId), data.characterId],
+                }));
+              }
             }
           }
           setNewlyUploadedToCodexCharacterIds((prev) => new Set([...prev, data.characterId]));
           untrackCharacterId(data.characterId);
           if (variant === "boys") untrackCharacterId(`boys:${data.characterId}`);
-          if (variant === "community") untrackCharacterId(`community:${data.characterId}`);
+          if (variant?.startsWith("community")) untrackCharacterId(`community:${data.characterId}`);
           window.dispatchEvent(new CustomEvent("dabys-quests-refresh"));
         }
       } catch {
@@ -6665,6 +6720,12 @@ function CardsContent() {
                   {(() => {
                     const rarityOrder: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1 };
                     const unlockedForSet = (setId: string) => new Set(communityCodexBySet[setId] ?? []);
+                    const getCommunityFinish = (setId: string, charId: string): "normal" | "holo" | "prismatic" | "darkMatter" => {
+                      if ((communityCodexDarkMatterBySet[setId] ?? []).includes(charId)) return "darkMatter";
+                      if ((communityCodexPrismaticBySet[setId] ?? []).includes(charId)) return "prismatic";
+                      if ((communityCodexHoloBySet[setId] ?? []).includes(charId)) return "holo";
+                      return "normal";
+                    };
                     const renderEntry = (entry: PoolEntry) => {
                       const communitySetId = (entry as PoolEntry & { communitySetId?: string }).communitySetId!;
                       const unlocked = unlockedForSet(communitySetId);
@@ -6710,7 +6771,7 @@ function CardsContent() {
                           </div>
                         );
                       }
-                      type CommunityVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: string; isAltArt: boolean } };
+                      type CommunityVariant = { poolEntry: PoolEntry; isAlt: boolean; codexCard: { id: string; rarity: string; isFoil: boolean; finish?: "normal" | "holo" | "prismatic" | "darkMatter"; actorName: string; characterName: string; movieTitle: string; profilePath: string; cardType?: string; isAltArt: boolean } };
                       const variants: CommunityVariant[] = [];
                       for (const alt of discoveredAltArts) {
                         variants.push({
@@ -6730,13 +6791,15 @@ function CardsContent() {
                         });
                       }
                       if (unlocked.has(entry.characterId)) {
+                        const finish = getCommunityFinish(communitySetId, entry.characterId);
                         variants.push({
                           poolEntry: entry,
                           isAlt: false,
                           codexCard: {
                             id: entry.characterId,
                             rarity: entry.rarity,
-                            isFoil: false,
+                            isFoil: finish !== "normal",
+                            finish,
                             actorName: entry.actorName ?? "",
                             characterName: entry.characterName ?? "",
                             movieTitle: entry.movieTitle ?? "",
@@ -6956,6 +7019,7 @@ function CardsContent() {
                           const title = setNamesById.get(k) ?? k;
                           const creatorId = creatorsById.get(k);
                           const creatorName = creatorNamesById.get(k) ?? "Unknown";
+                          const isComplete = completedCommunitySetIds.has(k);
                           return {
                             title,
                             entries,
@@ -6965,6 +7029,7 @@ function CardsContent() {
                             setId: k,
                             creatorId,
                             creatorName,
+                            isComplete,
                           };
                         })
                         .sort((a, b) => {
@@ -6973,41 +7038,56 @@ function CardsContent() {
                           if (a.completedCount !== b.completedCount) return b.completedCount - a.completedCount;
                           return a.title.localeCompare(b.title);
                         });
-                      return sets.flatMap((set, setIndex) => [
-                        setIndex > 0 ? (
-                          <div key={`community-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
-                        ) : null,
-                        <div key={`community-set-title-${setIndex}`} className="col-span-full flex items-center justify-between gap-2 mb-2">
-                          <span className="text-sm font-semibold text-white/70 min-w-0 truncate">{set.title} <span className="text-[11px] font-normal text-white/40">by {set.creatorName}</span></span>
-                          {user?.id && set.creatorId === user.id && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const s = publishedCommunitySets.find((x) => x.id === set.setId);
-                                if (s) {
-                                  setCreateSetId(s.id);
-                                  setCreateSetName(s.name);
-                                  setCreateSetCards((s.cards ?? []).map((c) => ({
-                                    actorName: c.actorName ?? "",
-                                    characterName: c.characterName ?? "",
-                                    profilePath: c.profilePath ?? "",
-                                    rarity: c.rarity ?? "uncommon",
-                                    altArts: (c as { altArts?: { profilePath: string }[] }).altArts,
-                                  })));
-                                  setCreateSetStep("edit");
-                                  setCreateSetError("");
-                                  setCreateSetIsEditingPublished(true);
-                                  setShowCreateCommunitySetModal(true);
-                                }
-                              }}
-                              className="px-2 py-1 rounded-lg text-xs font-medium text-sky-300 border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>,
-                        ...set.entries.map((entry) => renderEntry(entry)),
-                      ]);
+                      return sets.flatMap((set, setIndex) => {
+                        const setWrapperClass = set.isComplete
+                          ? "col-span-full rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4 mb-4"
+                          : "col-span-full";
+                        const titleClass = set.isComplete ? "text-amber-200" : "text-white/70";
+                        return [
+                          setIndex > 0 ? (
+                            <div key={`community-break-${setIndex}`} className="col-span-full border-t border-white/10 mt-1 mb-3" aria-hidden />
+                          ) : null,
+                          <div key={`community-set-wrap-${setIndex}`} className={setWrapperClass}>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span className={`text-sm font-semibold min-w-0 truncate ${titleClass}`}>{set.title} <span className="text-[11px] font-normal text-white/40">by {set.creatorName}</span></span>
+                              {set.isComplete ? (
+                                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm bg-amber-500/90 text-amber-950">
+                                  Complete
+                                </span>
+                              ) : null}
+                              {user?.id && set.creatorId === user.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const s = publishedCommunitySets.find((x) => x.id === set.setId);
+                                    if (s) {
+                                      setCreateSetId(s.id);
+                                      setCreateSetName(s.name);
+                                      setCreateSetCards((s.cards ?? []).map((c) => ({
+                                        actorName: c.actorName ?? "",
+                                        characterName: c.characterName ?? "",
+                                        profilePath: c.profilePath ?? "",
+                                        rarity: c.rarity ?? "uncommon",
+                                        altArts: (c as { altArts?: { profilePath: string }[] }).altArts,
+                                      })));
+                                      setCreateSetStep("edit");
+                                      setCreateSetError("");
+                                      setCreateSetIsEditingPublished(true);
+                                      setShowCreateCommunitySetModal(true);
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded-lg text-xs font-medium text-sky-300 border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                              {set.entries.map((entry) => renderEntry(entry))}
+                            </div>
+                          </div>,
+                        ];
+                      });
                     }
                     const sorted =
                       codexSort === "name"
@@ -7161,6 +7241,52 @@ function CardsContent() {
             </div>
             {winners.length === 0 && (
               <p className="text-white/40 text-sm text-center py-8">No sets yet. Win some movies to unlock badge achievements.</p>
+            )}
+
+            {/* Community Sets — completed community sets in their own area */}
+            {completedCommunitySetIds.size > 0 && publishedCommunitySets.length > 0 && (
+              <>
+                <h4 className="text-sm font-semibold text-white/60 uppercase tracking-widest mt-10 mb-4">Community Sets</h4>
+                <p className="text-white/40 text-sm mb-4">Completed player-created sets from the Codex.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {publishedCommunitySets
+                    .filter((s) => completedCommunitySetIds.has(s.id))
+                    .map((set) => {
+                      const wrapperClass = "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30";
+                      const tierTagClass = "bg-amber-500/90 text-amber-950";
+                      const checkBgClass = "bg-amber-400";
+                      const checkTextClass = "text-amber-950";
+                      const fallbackIconClass = "text-amber-400/80";
+                      return (
+                        <div
+                          key={set.id}
+                          className={`rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${wrapperClass}`}
+                          style={{ aspectRatio: "1" }}
+                        >
+                          <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+                            <div className="w-full h-full absolute inset-0 flex items-center justify-center bg-amber-500/20">
+                              <svg className={`w-10 h-10 ${fallbackIconClass}`} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                              </svg>
+                            </div>
+                            <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                              {set.name || "Community Set"}
+                            </span>
+                            {set.creatorName && (
+                              <span className="relative z-10 text-[10px] text-white/60 mt-0.5">by {set.creatorName}</span>
+                            )}
+                            <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
+                              <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                            </span>
+                            <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`} aria-hidden>
+                              Complete
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
             )}
               </div>
             )}

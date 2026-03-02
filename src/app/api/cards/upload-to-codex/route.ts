@@ -28,9 +28,16 @@ import {
   addPrismaticSetCompletionQuest,
   addDarkMatterSetCompletionQuest,
   addCommunityCodexUnlock,
+  addCommunityCodexUnlockHolo,
+  addCommunityCodexUnlockPrismatic,
+  addCommunityCodexUnlockDarkMatter,
   addCommunitySetCompletionQuest,
   getCommunitySetById,
   getCommunityCodexUnlockedCharacterIds,
+  getCommunityCodexUnlockedBaseCharacterIds,
+  getCommunityCodexUnlockedHoloCharacterIds,
+  getCommunityCodexUnlockedPrismaticCharacterIds,
+  getCommunityCodexUnlockedDarkMatterCharacterIds,
 } from "@/lib/data";
 import {
   hasCompletedMovie,
@@ -99,12 +106,61 @@ export async function POST(request: Request) {
 
   if (isCommunity) {
     const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
-    const existingIds = getCommunityCodexUnlockedCharacterIds(userId, communitySetId);
-    if (existingIds.includes(characterId)) {
-      return NextResponse.json(
-        { error: "This community card is already in your codex" },
-        { status: 400 }
-      );
+    const baseIds = getCommunityCodexUnlockedBaseCharacterIds(userId, communitySetId);
+    const holoIds = getCommunityCodexUnlockedHoloCharacterIds(userId, communitySetId);
+    const prismaticIds = getCommunityCodexUnlockedPrismaticCharacterIds(userId, communitySetId);
+    const darkMatterIds = getCommunityCodexUnlockedDarkMatterCharacterIds(userId, communitySetId);
+    const finish = getCardFinish(card);
+
+    if (finish === "darkMatter") {
+      const hasAny = baseIds.includes(characterId) || holoIds.includes(characterId) || prismaticIds.includes(characterId) || darkMatterIds.includes(characterId);
+      if (hasAny && !prismaticIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "Upload the Radiant version to the codex first before upgrading to Dark Matter" },
+          { status: 400 }
+        );
+      }
+      if (darkMatterIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This community card's Dark Matter is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else if (finish === "prismatic") {
+      const hasAny = baseIds.includes(characterId) || holoIds.includes(characterId) || prismaticIds.includes(characterId) || darkMatterIds.includes(characterId);
+      if (hasAny && !holoIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "Upload the Holo version to the codex first before upgrading to Radiant" },
+          { status: 400 }
+        );
+      }
+      if (prismaticIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This community card's Radiant is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else if (finish === "holo") {
+      const hasAny = baseIds.includes(characterId) || holoIds.includes(characterId) || prismaticIds.includes(characterId) || darkMatterIds.includes(characterId);
+      if (hasAny && !baseIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "Upload the regular version to the codex first before upgrading to Holo" },
+          { status: 400 }
+        );
+      }
+      if (holoIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This community card's Holo is already in your codex" },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (baseIds.includes(characterId) || holoIds.includes(characterId) || prismaticIds.includes(characterId) || darkMatterIds.includes(characterId)) {
+        return NextResponse.json(
+          { error: "This community card is already in your codex" },
+          { status: 400 }
+        );
+      }
     }
   } else if (isMain || isAltArt) {
     const regularIds = getCodexUnlockedCharacterIds(userId);
@@ -224,7 +280,20 @@ export async function POST(request: Request) {
     }
   } else if (isCommunity) {
     const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
-    addCommunityCodexUnlock(userId, communitySetId, characterId);
+    switch (finish) {
+      case "darkMatter":
+        addCommunityCodexUnlockDarkMatter(userId, communitySetId, characterId);
+        break;
+      case "prismatic":
+        addCommunityCodexUnlockPrismatic(userId, communitySetId, characterId);
+        break;
+      case "holo":
+        addCommunityCodexUnlockHolo(userId, communitySetId, characterId);
+        break;
+      default:
+        addCommunityCodexUnlock(userId, communitySetId, characterId);
+        break;
+    }
   } else if (isAltArt) {
     const altArtFinish = finish === "darkMatter" ? "darkMatter" : finish === "prismatic" ? "prismatic" : finish === "holo" ? "holo" : undefined;
     addCodexUnlockAltArt(userId, characterId, altArtFinish);
@@ -285,7 +354,9 @@ export async function POST(request: Request) {
     characterId,
     isFoil: card.isFoil ?? false,
     finish,
-    variant: isCommunity ? "community" : isMain ? (variantMap[finish] ?? "regular") : isAltArt ? (finish === "darkMatter" ? "altart_darkmatter" : finish === "prismatic" ? "altart_prismatic" : finish === "holo" ? "altart_holo" : "altart") : "boys",
+    variant: isCommunity
+      ? (finish === "darkMatter" ? "community_darkmatter" : finish === "prismatic" ? "community_prismatic" : finish === "holo" ? "community_holo" : "community")
+      : isMain ? (variantMap[finish] ?? "regular") : isAltArt ? (finish === "darkMatter" ? "altart_darkmatter" : finish === "prismatic" ? "altart_prismatic" : finish === "holo" ? "altart_holo" : "altart") : "boys",
     ...(isCommunity && { communitySetId: (poolEntry as { communitySetId?: string }).communitySetId }),
     ...(setCompleted && { setCompleted }),
     ...(holoSetCompleted && { holoSetCompleted }),

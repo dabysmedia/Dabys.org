@@ -14,6 +14,10 @@ import {
   getLegendarySlotNotesBySlot,
   getPublishedCommunitySets,
   getCommunityCodexUnlockedCharacterIds,
+  getCommunityCodexUnlockedBaseCharacterIds,
+  getCommunityCodexUnlockedHoloCharacterIds,
+  getCommunityCodexUnlockedPrismaticCharacterIds,
+  getCommunityCodexUnlockedDarkMatterCharacterIds,
   getCreditSettings,
   getUsers,
 } from "@/lib/data";
@@ -48,10 +52,17 @@ export async function GET(request: Request) {
     creatorName: userById.get(set.creatorId)?.name ?? "Unknown",
   }));
   const communityCodexBySet: Record<string, string[]> = {};
+  const communityCodexBaseBySet: Record<string, string[]> = {};
+  const communityCodexHoloBySet: Record<string, string[]> = {};
+  const communityCodexPrismaticBySet: Record<string, string[]> = {};
+  const communityCodexDarkMatterBySet: Record<string, string[]> = {};
   const completedCommunitySetIds: string[] = [];
   for (const set of publishedCommunitySets) {
-    const unlocked = getCommunityCodexUnlockedCharacterIds(userId, set.id);
-    communityCodexBySet[set.id] = unlocked;
+    communityCodexBySet[set.id] = getCommunityCodexUnlockedCharacterIds(userId, set.id);
+    communityCodexBaseBySet[set.id] = getCommunityCodexUnlockedBaseCharacterIds(userId, set.id);
+    communityCodexHoloBySet[set.id] = getCommunityCodexUnlockedHoloCharacterIds(userId, set.id);
+    communityCodexPrismaticBySet[set.id] = getCommunityCodexUnlockedPrismaticCharacterIds(userId, set.id);
+    communityCodexDarkMatterBySet[set.id] = getCommunityCodexUnlockedDarkMatterCharacterIds(userId, set.id);
     if (hasCompletedCommunitySet(userId, set.id)) completedCommunitySetIds.push(set.id);
   }
   const communityCreditPrices = {
@@ -74,6 +85,10 @@ export async function GET(request: Request) {
     legendarySlotNotes,
     publishedCommunitySets,
     communityCodexBySet,
+    communityCodexBaseBySet,
+    communityCodexHoloBySet,
+    communityCodexPrismaticBySet,
+    communityCodexDarkMatterBySet,
     completedCommunitySetIds,
     communityCreditPrices,
   });

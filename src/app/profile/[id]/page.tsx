@@ -1026,16 +1026,16 @@ export default function ProfilePage() {
           })()}
         </div>
 
-        {/* Achievements — full-size badges (codex completion styling) */}
+        {/* Achievements — movie badges + purchased (codex completion styling) */}
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
           <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Achievements</h3>
-          {completedBadges.length === 0 ? (
+          {completedBadges.filter((b) => !b.communitySetId).length === 0 ? (
             <p className="text-sm text-white/40">
               No badges yet. Complete card sets in the Codex (discover all cards for a movie) or buy badges in the Shop.
             </p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {completedBadges.map((b) => {
+              {completedBadges.filter((b) => !b.communitySetId).map((b) => {
                 const isWinner = !!b.winnerId;
                 const isCommunity = !!b.communitySetId;
                 const imageUrl = isWinner ? (b.posterUrl ?? "") : isCommunity ? "" : (b.imageUrl ?? "");
@@ -1101,6 +1101,50 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Community Sets — completed community sets in their own area */}
+        {completedBadges.filter((b) => !!b.communitySetId).length > 0 && (
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-6 mb-6">
+            <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">Community Sets</h3>
+            <p className="text-sm text-white/40 mb-4">Completed player-created sets from the Codex.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {completedBadges.filter((b) => !!b.communitySetId).map((b) => {
+                const wrapperClass = "border-amber-400/60 bg-gradient-to-b from-amber-500/20 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-2 ring-amber-400/30";
+                const tierTagClass = "bg-amber-500/90 text-amber-950";
+                const checkBgClass = "bg-amber-400";
+                const checkTextClass = "text-amber-950";
+                const fallbackIconClass = "text-amber-400/80";
+                return (
+                  <div
+                    key={`c-${b.communitySetId}`}
+                    className={`rounded-xl overflow-hidden border-2 transition-all hover:ring-2 hover:ring-amber-400/40 ${wrapperClass}`}
+                    style={{ aspectRatio: "1" }}
+                  >
+                    <div className="relative w-full h-full flex flex-col items-center justify-center p-3">
+                      <div className="w-full h-full absolute inset-0 flex items-center justify-center bg-amber-500/20">
+                        <svg className={`w-10 h-10 ${fallbackIconClass}`} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                      </div>
+                      <span className="relative z-10 text-xs font-medium text-center line-clamp-2 mt-auto text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                        {b.movieTitle || "Community Set"}
+                      </span>
+                      {b.creatorName && (
+                        <span className="relative z-10 text-[10px] text-white/60 mt-0.5">by {b.creatorName}</span>
+                      )}
+                      <span className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center ${checkBgClass}`} aria-hidden>
+                        <svg className={`w-3 h-3 ${checkTextClass}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      </span>
+                      <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${tierTagClass}`} aria-hidden>
+                        Complete
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Thumbs summary */}
         {stats.totalRatings > 0 && (
@@ -1703,7 +1747,7 @@ export default function ProfilePage() {
 
               {/* Holo tab — foil cards only */}
               {codexViewSubTab === "holo" && (() => {
-                const filtered = codexCards.filter((c) => c.isFoil && (c.cardType ?? "actor") !== "community" && !c.communitySetId);
+                const filtered = codexCards.filter((c) => c.isFoil);
                 if (filtered.length === 0) {
                   return <p className="text-sm text-white/40 text-center py-8">No holo cards discovered.</p>;
                 }
@@ -1758,10 +1802,21 @@ export default function ProfilePage() {
                           const setCards = communityCards.filter((c) => c.communitySetId === set.id);
                           const totalCards = set.cards?.length ?? 6;
                           const isComplete = completedSetIds.has(set.id);
+                          const setWrapperClass = isComplete
+                            ? "rounded-xl border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 to-amber-600/5 shadow-[0_0_20px_rgba(245,158,11,0.12)] ring-2 ring-amber-400/25 p-4"
+                            : "rounded-xl border border-white/[0.08] bg-white/[0.02] p-4";
+                          const titleClass = isComplete ? "text-amber-200" : "text-white/90";
                           return (
-                            <div key={set.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                            <div key={set.id} className={setWrapperClass}>
                               <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-sm font-semibold text-white/90 min-w-0 truncate">{set.name} <span className="text-[11px] font-normal text-white/40">by {set.creatorName ?? "Unknown"}</span></h4>
+                                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                  <h4 className={`text-sm font-semibold min-w-0 truncate ${titleClass}`}>{set.name} <span className="text-[11px] font-normal text-white/40">by {set.creatorName ?? "Unknown"}</span></h4>
+                                  {isComplete && (
+                                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm bg-amber-500/90 text-amber-950 shrink-0">
+                                      Complete
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-2">
                                   {isOwnProfile && set.creatorId === currentUser?.id && (
                                     <button

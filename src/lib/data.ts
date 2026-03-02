@@ -446,6 +446,114 @@ export function saveVaultVideos(videos: VaultVideo[]) {
   writeJson("vaultVideos.json", videos);
 }
 
+// ──── Hivemind YouTube (user-submitted videos, no credits) ────
+export interface HivemindVideo {
+  id: string;
+  youtubeId: string;
+  title?: string;
+  addedByUserId?: string;
+  addedAt: string;
+  /** Optional note from the submitter (editable only by them). */
+  note?: string;
+}
+
+function getHivemindVideosRaw(): HivemindVideo[] {
+  try {
+    return readJson<HivemindVideo[]>("hivemindVideos.json");
+  } catch {
+    return [];
+  }
+}
+
+export function getHivemindVideos(): HivemindVideo[] {
+  return getHivemindVideosRaw().sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+}
+
+function saveHivemindVideosRaw(videos: HivemindVideo[]) {
+  writeJson("hivemindVideos.json", videos);
+}
+
+export function addHivemindVideo(entry: Omit<HivemindVideo, "id" | "addedAt">): HivemindVideo {
+  const videos = getHivemindVideosRaw();
+  const newVideo: HivemindVideo = {
+    ...entry,
+    id: `hm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    addedAt: new Date().toISOString(),
+  };
+  videos.push(newVideo);
+  saveHivemindVideosRaw(videos);
+  return newVideo;
+}
+
+export function updateHivemindVideoNote(
+  videoId: string,
+  userId: string,
+  note: string
+): HivemindVideo | null {
+  const videos = getHivemindVideosRaw();
+  const idx = videos.findIndex((v) => v.id === videoId);
+  if (idx < 0) return null;
+  const v = videos[idx];
+  if (!v.addedByUserId || v.addedByUserId !== userId) return null;
+  const trimmed = typeof note === "string" ? note.trim().slice(0, 500) : "";
+  videos[idx] = { ...v, note: trimmed || undefined };
+  saveHivemindVideosRaw(videos);
+  return videos[idx];
+}
+
+// ──── Hivemind video votes (thumbs up/down) ────
+export interface HivemindVideoVote {
+  videoId: string;
+  userId: string;
+  vote: 1 | -1;
+}
+
+function getHivemindVideoVotesRaw(): HivemindVideoVote[] {
+  try {
+    return readJson<HivemindVideoVote[]>("hivemindVideoVotes.json");
+  } catch {
+    return [];
+  }
+}
+
+export function getHivemindVideoVoteCounts(videoIds: string[]): Record<string, { thumbsUp: number; thumbsDown: number }> {
+  const votes = getHivemindVideoVotesRaw();
+  const result: Record<string, { thumbsUp: number; thumbsDown: number }> = {};
+  for (const id of videoIds) {
+    result[id] = { thumbsUp: 0, thumbsDown: 0 };
+  }
+  for (const v of votes) {
+    if (videoIds.includes(v.videoId)) {
+      if (v.vote === 1) result[v.videoId].thumbsUp++;
+      else result[v.videoId].thumbsDown++;
+    }
+  }
+  return result;
+}
+
+export function getUserVotesForVideos(userId: string, videoIds: string[]): Record<string, 1 | -1> {
+  const votes = getHivemindVideoVotesRaw();
+  const result: Record<string, 1 | -1> = {};
+  for (const v of votes) {
+    if (v.userId === userId && videoIds.includes(v.videoId)) {
+      result[v.videoId] = v.vote;
+    }
+  }
+  return result;
+}
+
+export function setHivemindVideoVote(videoId: string, userId: string, vote: 1 | -1): boolean {
+  const votes = getHivemindVideoVotesRaw();
+  const idx = votes.findIndex((v) => v.videoId === videoId && v.userId === userId);
+  if (idx >= 0) {
+    votes[idx] = { ...votes[idx], vote };
+  } else {
+    votes.push({ videoId, userId, vote });
+  }
+  writeJson("hivemindVideoVotes.json", votes);
+  return true;
+}
+
 // ──── Watchlist (per-user: movies to suggest in the future) ────
 export interface WatchlistItem {
   id: string;
@@ -2312,6 +2420,10 @@ export function deleteCommunitySet(id: string): void {
 /** Record<userId, Record<communitySetId, characterId[]>> */
 type CommunityCodexUnlocksStore = Record<string, Record<string, string[]>>;
 
+const COMMUNITY_HOLO_CODEX_FILE = "communityHoloCodexUnlocks.json";
+const COMMUNITY_PRISMATIC_CODEX_FILE = "communityPrismaticCodexUnlocks.json";
+const COMMUNITY_DARK_MATTER_CODEX_FILE = "communityDarkMatterCodexUnlocks.json";
+
 function getCommunityCodexUnlocksRaw(): CommunityCodexUnlocksStore {
   try {
     return readJson<CommunityCodexUnlocksStore>("communityCodexUnlocks.json");
@@ -2324,14 +2436,73 @@ function saveCommunityCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
   writeJson("communityCodexUnlocks.json", data);
 }
 
-export function getCommunityCodexUnlockedCharacterIds(userId: string, communitySetId: string): string[] {
+function getCommunityHoloCodexUnlocksRaw(): CommunityCodexUnlocksStore {
+  try {
+    return readJson<CommunityCodexUnlocksStore>(COMMUNITY_HOLO_CODEX_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveCommunityHoloCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
+  writeJson(COMMUNITY_HOLO_CODEX_FILE, data);
+}
+
+function getCommunityPrismaticCodexUnlocksRaw(): CommunityCodexUnlocksStore {
+  try {
+    return readJson<CommunityCodexUnlocksStore>(COMMUNITY_PRISMATIC_CODEX_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveCommunityPrismaticCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
+  writeJson(COMMUNITY_PRISMATIC_CODEX_FILE, data);
+}
+
+function getCommunityDarkMatterCodexUnlocksRaw(): CommunityCodexUnlocksStore {
+  try {
+    return readJson<CommunityCodexUnlocksStore>(COMMUNITY_DARK_MATTER_CODEX_FILE);
+  } catch {
+    return {};
+  }
+}
+
+function saveCommunityDarkMatterCodexUnlocksRaw(data: CommunityCodexUnlocksStore) {
+  writeJson(COMMUNITY_DARK_MATTER_CODEX_FILE, data);
+}
+
+/** Base (regular) tier only. Use getCommunityCodexUnlockedCharacterIds for "discovered" union. */
+export function getCommunityCodexUnlockedBaseCharacterIds(userId: string, communitySetId: string): string[] {
   const data = getCommunityCodexUnlocksRaw();
   const byUser = data[userId];
-  const baseIds = Array.isArray(byUser?.[communitySetId]) ? byUser[communitySetId] : [];
+  return Array.isArray(byUser?.[communitySetId]) ? byUser[communitySetId] : [];
+}
+
+export function getCommunityCodexUnlockedCharacterIds(userId: string, communitySetId: string): string[] {
+  const baseIds = getCommunityCodexUnlockedBaseCharacterIds(userId, communitySetId);
+  const holoIds = getCommunityCodexUnlockedHoloCharacterIds(userId, communitySetId);
+  const prismaticIds = getCommunityCodexUnlockedPrismaticCharacterIds(userId, communitySetId);
+  const darkMatterIds = getCommunityCodexUnlockedDarkMatterCharacterIds(userId, communitySetId);
   const prefix = `${communitySetId}-`;
   const altArtIds = getCodexUnlockedAltArtCharacterIds(userId);
   const communityAlts = altArtIds.filter((id) => id.startsWith(prefix) && id.includes("-alt-"));
-  return [...new Set([...baseIds, ...communityAlts])];
+  return [...new Set([...baseIds, ...holoIds, ...prismaticIds, ...darkMatterIds, ...communityAlts])];
+}
+
+export function getCommunityCodexUnlockedHoloCharacterIds(userId: string, communitySetId: string): string[] {
+  const data = getCommunityHoloCodexUnlocksRaw();
+  return Array.isArray(data[userId]?.[communitySetId]) ? data[userId]![communitySetId]! : [];
+}
+
+export function getCommunityCodexUnlockedPrismaticCharacterIds(userId: string, communitySetId: string): string[] {
+  const data = getCommunityPrismaticCodexUnlocksRaw();
+  return Array.isArray(data[userId]?.[communitySetId]) ? data[userId]![communitySetId]! : [];
+}
+
+export function getCommunityCodexUnlockedDarkMatterCharacterIds(userId: string, communitySetId: string): string[] {
+  const data = getCommunityDarkMatterCodexUnlocksRaw();
+  return Array.isArray(data[userId]?.[communitySetId]) ? data[userId]![communitySetId]! : [];
 }
 
 export function addCommunityCodexUnlock(userId: string, communitySetId: string, characterId: string): void {
@@ -2342,6 +2513,36 @@ export function addCommunityCodexUnlock(userId: string, communitySetId: string, 
   byUser[communitySetId] = [...ids, characterId];
   data[userId] = byUser;
   saveCommunityCodexUnlocksRaw(data);
+}
+
+export function addCommunityCodexUnlockHolo(userId: string, communitySetId: string, characterId: string): void {
+  const data = getCommunityHoloCodexUnlocksRaw();
+  const byUser = data[userId] ?? {};
+  const ids = byUser[communitySetId] ?? [];
+  if (ids.includes(characterId)) return;
+  byUser[communitySetId] = [...ids, characterId];
+  data[userId] = byUser;
+  saveCommunityHoloCodexUnlocksRaw(data);
+}
+
+export function addCommunityCodexUnlockPrismatic(userId: string, communitySetId: string, characterId: string): void {
+  const data = getCommunityPrismaticCodexUnlocksRaw();
+  const byUser = data[userId] ?? {};
+  const ids = byUser[communitySetId] ?? [];
+  if (ids.includes(characterId)) return;
+  byUser[communitySetId] = [...ids, characterId];
+  data[userId] = byUser;
+  saveCommunityPrismaticCodexUnlocksRaw(data);
+}
+
+export function addCommunityCodexUnlockDarkMatter(userId: string, communitySetId: string, characterId: string): void {
+  const data = getCommunityDarkMatterCodexUnlocksRaw();
+  const byUser = data[userId] ?? {};
+  const ids = byUser[communitySetId] ?? [];
+  if (ids.includes(characterId)) return;
+  byUser[communitySetId] = [...ids, characterId];
+  data[userId] = byUser;
+  saveCommunityDarkMatterCodexUnlocksRaw(data);
 }
 
 // ──── Community Set Completion Quests ────

@@ -261,6 +261,8 @@ function UserDetailModal({
 }) {
   const [detail, setDetail] = useState<UserDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showManualPrestigeConfirm, setShowManualPrestigeConfirm] = useState(false);
+  const [manualPrestigeLoading, setManualPrestigeLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -321,27 +323,98 @@ function UserDetailModal({
               <h2 className="text-lg font-bold text-white/90">Loading...</h2>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowManualPrestigeConfirm(true)}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer disabled:opacity-50 text-xs font-medium"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+              Manual Prestige
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-lg border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.06] transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {showManualPrestigeConfirm && detail && (
+          <>
+            <div
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
+              onClick={() => !manualPrestigeLoading && setShowManualPrestigeConfirm(false)}
+              aria-hidden
+            />
+            <div
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] rounded-xl border border-amber-500/20 bg-[#0f0f14] p-5 shadow-2xl min-w-[280px]"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirm manual prestige"
+            >
+              <h3 className="text-lg font-bold text-amber-200 mb-2">Manual Prestige</h3>
+              <p className="text-amber-200/90 text-sm mb-6">
+                Prestige <strong>{detail.user.name}</strong>? This will reset their TCG inventory and codex, then unlock Radiant Forge. This bypasses the normal 50% holo requirement.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => !manualPrestigeLoading && setShowManualPrestigeConfirm(false)}
+                  disabled={manualPrestigeLoading}
+                  className="px-3 py-1.5 rounded-lg border border-white/20 text-white/70 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (manualPrestigeLoading) return;
+                    setManualPrestigeLoading(true);
+                    try {
+                      const res = await fetch("/api/admin/manual-prestige", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setShowManualPrestigeConfirm(false);
+                        onClose();
+                        window.location.reload();
+                      } else {
+                        alert(data.error || "Manual prestige failed");
+                      }
+                    } catch (e) {
+                      alert("Manual prestige failed");
+                    } finally {
+                      setManualPrestigeLoading(false);
+                    }
+                  }}
+                  disabled={manualPrestigeLoading}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {manualPrestigeLoading ? "Prestiging…" : "Yes, Prestige"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 custom-scrollbar min-h-0">

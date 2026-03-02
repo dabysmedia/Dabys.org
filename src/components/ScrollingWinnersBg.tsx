@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
-const PAGES_WITH_SCROLL = ["/", "/login", "/wheel", "/stats", "/cards", "/casino", "/wallet"];
+const PAGES_WITH_SCROLL = ["/", "/login", "/wheel", "/stats", "/cards", "/casino", "/wallet", "/vault"];
 
 function shouldShowScroll(pathname: string | null): boolean {
   if (!pathname) return false;

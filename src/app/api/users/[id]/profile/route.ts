@@ -15,6 +15,10 @@ import {
   getCodexUnlockedAltArtCharacterIds,
   getCodexUnlockedBoysCharacterIds,
   getCommunityCodexUnlockedCharacterIds,
+  getCommunityCodexUnlockedBaseCharacterIds,
+  getCommunityCodexUnlockedHoloCharacterIds,
+  getCommunityCodexUnlockedPrismaticCharacterIds,
+  getCommunityCodexUnlockedDarkMatterCharacterIds,
   getPublishedCommunitySets,
   getCharacterPool,
   getPrestigeLevel,
@@ -297,11 +301,14 @@ export async function GET(
     }
   }
 
-  // Community set cards
+  // Community set cards (regular + holo + prismatic + darkMatter)
   const publishedCommunitySets = getPublishedCommunitySets();
   for (const set of publishedCommunitySets) {
-    const unlockedIds = getCommunityCodexUnlockedCharacterIds(id, set.id);
-    for (const charId of unlockedIds) {
+    const baseIds = getCommunityCodexUnlockedBaseCharacterIds(id, set.id);
+    const holoIds = getCommunityCodexUnlockedHoloCharacterIds(id, set.id);
+    const prismaticIds = getCommunityCodexUnlockedPrismaticCharacterIds(id, set.id);
+    const darkMatterIds = getCommunityCodexUnlockedDarkMatterCharacterIds(id, set.id);
+    for (const charId of baseIds) {
       const e = poolById.get(charId);
       if (e && e.communitySetId) {
         codexCards.push({
@@ -316,18 +323,76 @@ export async function GET(
           cardType: e.cardType,
           communitySetId: e.communitySetId,
         });
+        validFeaturedIds.add(e.characterId);
+      }
+    }
+    for (const charId of holoIds) {
+      const e = poolById.get(charId);
+      if (e && e.communitySetId) {
+        const slotId = `holo:${e.characterId}`;
+        codexCards.push({
+          id: slotId,
+          rarity: e.rarity,
+          isFoil: true,
+          isAltArt: !!(e as { altArtOfCharacterId?: string }).altArtOfCharacterId,
+          actorName: e.actorName ?? "",
+          characterName: e.characterName ?? "",
+          movieTitle: e.movieTitle ?? "",
+          profilePath: e.profilePath ?? "",
+          cardType: e.cardType,
+          communitySetId: e.communitySetId,
+        });
+        validFeaturedIds.add(slotId);
+      }
+    }
+    for (const charId of prismaticIds) {
+      const e = poolById.get(charId);
+      if (e && e.communitySetId) {
+        const slotId = `prismatic:${e.characterId}`;
+        codexCards.push({
+          id: slotId,
+          rarity: e.rarity,
+          isFoil: true,
+          isAltArt: !!(e as { altArtOfCharacterId?: string }).altArtOfCharacterId,
+          actorName: e.actorName ?? "",
+          characterName: e.characterName ?? "",
+          movieTitle: e.movieTitle ?? "",
+          profilePath: e.profilePath ?? "",
+          cardType: e.cardType,
+          communitySetId: e.communitySetId,
+        });
+        validFeaturedIds.add(slotId);
+      }
+    }
+    for (const charId of darkMatterIds) {
+      const e = poolById.get(charId);
+      if (e && e.communitySetId) {
+        const slotId = `darkmatter:${e.characterId}`;
+        codexCards.push({
+          id: slotId,
+          rarity: e.rarity,
+          isFoil: true,
+          isAltArt: !!(e as { altArtOfCharacterId?: string }).altArtOfCharacterId,
+          actorName: e.actorName ?? "",
+          characterName: e.characterName ?? "",
+          movieTitle: e.movieTitle ?? "",
+          profilePath: e.profilePath ?? "",
+          cardType: e.cardType,
+          communitySetId: e.communitySetId,
+        });
+        validFeaturedIds.add(slotId);
       }
     }
   }
 
-  // Featured cards: resolve profile.featuredCardIds (plain charId = regular, holo:charId = holo, altart:charId = alt-art), order preserved, max 6
+  // Featured cards: resolve profile.featuredCardIds (plain charId = regular, holo:charId = holo, prismatic:charId, darkmatter:charId, altart:charId = alt-art), order preserved, max 6
   const featuredIds = (profile.featuredCardIds ?? [])
     .filter((slotId) => validFeaturedIds.has(slotId))
     .slice(0, 6);
   const featuredCards: CodexCardItem[] = featuredIds
     .map((slotId) => {
-      if (slotId.startsWith("holo:")) {
-        const charId = slotId.slice(5);
+      if (slotId.startsWith("holo:") || slotId.startsWith("prismatic:") || slotId.startsWith("darkmatter:")) {
+        const charId = slotId.includes(":") ? slotId.slice(slotId.indexOf(":") + 1) : slotId;
         const e = poolById.get(charId);
         if (!e) return null;
         return {
@@ -339,6 +404,7 @@ export async function GET(
           movieTitle: e.movieTitle ?? "",
           profilePath: e.profilePath ?? "",
           cardType: e.cardType,
+          communitySetId: (e as { communitySetId?: string }).communitySetId,
         };
       }
       if (slotId.startsWith("altart:")) {
