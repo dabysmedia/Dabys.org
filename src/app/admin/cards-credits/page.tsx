@@ -317,6 +317,10 @@ export default function AdminCardsCreditsPage() {
   const [wipingUserInvCurr, setWipingUserInvCurr] = useState(false);
   const [wipingServerInvCurr, setWipingServerInvCurr] = useState(false);
   const [resettingCodex, setResettingCodex] = useState(false);
+  const [restorePointCreating, setRestorePointCreating] = useState(false);
+  const [restorePointRollbackLoading, setRestorePointRollbackLoading] = useState(false);
+  const [restorePointRollbackConfirm, setRestorePointRollbackConfirm] = useState("");
+  const [restorePointStatus, setRestorePointStatus] = useState<{ hasRestorePoint: boolean; createdAt?: string } | null>(null);
   const [legendaryInInventory, setLegendaryInInventory] = useState<(Card & { inPool: boolean })[]>([]);
   const [legendaryInInventoryLoading, setLegendaryInInventoryLoading] = useState(false);
   const [returnToPoolCardId, setReturnToPoolCardId] = useState<string | null>(null);
@@ -772,6 +776,14 @@ export default function AdminCardsCreditsPage() {
       .catch(() => setTimelineEntries([]))
       .finally(() => setTimelineLoading(false));
   }, [activeTab, timelineFilterUserId]);
+
+  useEffect(() => {
+    if (activeTab !== "danger") return;
+    fetch("/api/admin/restore-point/status")
+      .then((r) => r.json())
+      .then((d) => setRestorePointStatus(d))
+      .catch(() => setRestorePointStatus(null));
+  }, [activeTab]);
 
   function resetShopItemForm() {
     setEditingShopItemId(null);
@@ -3022,6 +3034,76 @@ export default function AdminCardsCreditsPage() {
           </div>
         </div>
         <div className="space-y-6">
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
+            <h3 className="text-sm font-medium text-emerald-400/90 mb-2">Create restore point</h3>
+            <p className="text-[11px] text-white/40 mb-3">Snapshot all /data JSON files (except movie night: weeks, submissions, votes, winners, attendance, hivemind). Use this before risky changes. Rollback restores to this snapshot.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (restorePointCreating) return;
+                  setRestorePointCreating(true);
+                  setError("");
+                  try {
+                    const res = await fetch("/api/admin/restore-point/create", { method: "POST" });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok) {
+                      const statusRes = await fetch("/api/admin/restore-point/status");
+                      const statusData = await statusRes.json().catch(() => ({}));
+                      setRestorePointStatus(statusData);
+                      alert(data.message || "Restore point created.");
+                    } else {
+                      setError(data.error || "Failed to create restore point");
+                    }
+                  } finally {
+                    setRestorePointCreating(false);
+                  }
+                }}
+                disabled={restorePointCreating}
+                className="px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {restorePointCreating ? "Creating…" : "Create restore point"}
+              </button>
+              {restorePointStatus?.hasRestorePoint && restorePointStatus?.createdAt && (
+                <span className="text-[11px] text-white/40">
+                  Last: {new Date(restorePointStatus.createdAt).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] p-4">
+            <h3 className="text-sm font-medium text-orange-400/90 mb-2">Rollback to last restore point</h3>
+            <p className="text-[11px] text-white/40 mb-3">Restore all /data from the last snapshot. Movie night data (weeks, submissions, votes, winners, attendance, hivemind) is not changed. Type <strong className="text-orange-400/80">ROLLBACK</strong> to confirm.</p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (restorePointRollbackLoading || restorePointRollbackConfirm.trim().toUpperCase() !== "ROLLBACK") return;
+                setRestorePointRollbackLoading(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/admin/restore-point/rollback", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ confirm: restorePointRollbackConfirm.trim().toUpperCase() }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok) {
+                    setRestorePointRollbackConfirm("");
+                    loadData();
+                    alert(data.message || "Rollback complete.");
+                  } else {
+                    setError(data.error || "Failed to rollback");
+                  }
+                } finally {
+                  setRestorePointRollbackLoading(false);
+                }
+              }}
+              className="flex flex-wrap gap-3 items-end"
+            >
+              <input type="text" value={restorePointRollbackConfirm} onChange={(e) => setRestorePointRollbackConfirm(e.target.value)} placeholder="Type ROLLBACK to confirm" className="px-4 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-white/90 placeholder:text-white/30 outline-none focus:border-orange-500/40 w-48" />
+              <button type="submit" disabled={restorePointRollbackLoading || restorePointRollbackConfirm.trim().toUpperCase() !== "ROLLBACK" || !restorePointStatus?.hasRestorePoint} className="px-4 py-2.5 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">{restorePointRollbackLoading ? "Rolling back…" : "Rollback to restore point"}</button>
+            </form>
+          </div>
           <div className="rounded-lg border border-orange-500/20 bg-orange-500/[0.03] p-4">
             <h3 className="text-sm font-medium text-orange-400/90 mb-2">Rollback user to a selected date</h3>
             <p className="text-[11px] text-white/40 mb-3">Revert selected user to the state they were in at the <strong className="text-white/60">start</strong> of the selected date (midnight UTC). Everything that happened on or after that date is undone: credits, inventory (cards), codex, lottery tickets, trades, and marketplace listings. Type <strong className="text-orange-400/80">ROLLBACK</strong> to confirm.</p>

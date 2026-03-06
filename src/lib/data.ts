@@ -2557,6 +2557,44 @@ export function addCommunityCodexUnlockDarkMatter(userId: string, communitySetId
   saveCommunityDarkMatterCodexUnlocksRaw(data);
 }
 
+/** One-time migration: move community characterIds from main codex files to community codex. */
+export function migrateCommunityCodexMisplaced(): number {
+  const COMMUNITY_ID_RE = /^(community-\d+-\w+)(-\d+(-alt-\d+)?)?$/;
+  function deriveSetId(id: string): string | null {
+    const m = id.match(COMMUNITY_ID_RE);
+    return m ? m[1] : null;
+  }
+  let moved = 0;
+  const sets = getCommunitySetsRaw();
+  const setIds = new Set(sets.map((s) => s.id));
+  const tiers: { get: () => Record<string, string[]>; save: (d: Record<string, string[]>) => void; addCommunity: (userId: string, setId: string, charId: string) => void }[] = [
+    { get: getCodexUnlocksRaw, save: saveCodexUnlocksRaw, addCommunity: addCommunityCodexUnlock },
+    { get: getHoloCodexUnlocksRaw, save: saveHoloCodexUnlocksRaw, addCommunity: addCommunityCodexUnlockHolo },
+    { get: getPrismaticCodexUnlocksRaw, save: savePrismaticCodexUnlocksRaw, addCommunity: addCommunityCodexUnlockPrismatic },
+    { get: getDarkMatterCodexUnlocksRaw, save: saveDarkMatterCodexUnlocksRaw, addCommunity: addCommunityCodexUnlockDarkMatter },
+  ];
+  for (const tier of tiers) {
+    const data = tier.get();
+    for (const [userId, ids] of Object.entries(data)) {
+      if (!Array.isArray(ids)) continue;
+      const toRemove: string[] = [];
+      for (const id of ids) {
+        const setId = deriveSetId(id);
+        if (setId && setIds.has(setId)) {
+          tier.addCommunity(userId, setId, id);
+          toRemove.push(id);
+          moved++;
+        }
+      }
+      if (toRemove.length > 0) {
+        data[userId] = ids.filter((x) => !toRemove.includes(x));
+        tier.save(data);
+      }
+    }
+  }
+  return moved;
+}
+
 // ──── Community Set Completion Quests ────
 export interface CommunitySetCompletionQuest {
   communitySetId: string;

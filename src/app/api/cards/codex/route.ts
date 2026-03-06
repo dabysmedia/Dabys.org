@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  migrateCommunityCodexMisplaced,
   getCodexUnlockedCharacterIds,
   getCodexUnlockedHoloCharacterIds,
   getCodexUnlockedPrismaticCharacterIds,
@@ -24,6 +25,7 @@ import {
 import { hasCompletedCommunitySet } from "@/lib/cards";
 
 export async function GET(request: Request) {
+  migrateCommunityCodexMisplaced();
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 

@@ -3,6 +3,7 @@ import {
   getCardById,
   removeCard,
   cancelPendingTradesInvolvingCards,
+  migrateCommunityCodexMisplaced,
   addCodexUnlock,
   addCodexUnlockHolo,
   addCodexUnlockPrismatic,
@@ -51,6 +52,7 @@ import {
  * Main codex: you can upload both regular and holo per character (two slots). Holo requires regular to be in codex first.
  * Alt-arts and Boys tabs: one slot per character (lock-in). */
 export async function POST(request: Request) {
+  migrateCommunityCodexMisplaced();
   let body: { userId?: string; cardId?: string };
   try {
     body = await request.json();
@@ -98,11 +100,31 @@ export async function POST(request: Request) {
   }
 
   const pool = getCharacterPool();
-  const poolEntry = pool.find((e) => e.characterId === characterId);
+  let poolEntry = pool.find((e) => e.characterId === characterId);
+  // #region agent log
+  const communityMatch = characterId.match(/^(community-\d+-\w+)(-\d+(-alt-\d+)?)?$/);
+  const derivedCommunitySetId = communityMatch ? communityMatch[1] : null;
+  if (communityMatch && !poolEntry) {
+    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'402c3e'},body:JSON.stringify({sessionId:'402c3e',location:'upload-to-codex/route.ts:pool-miss',message:'Community card poolEntry null, using derived setId',data:{characterId,derivedCommunitySetId,userId},timestamp:Date.now(),hypothesisId:'A,D'})}).catch(()=>{});
+  }
+  // #endregion
+  // Fallback: when poolEntry is null but characterId is a community card, derive communitySetId so we route to community codex
+  if (!poolEntry && derivedCommunitySetId) {
+    const setId = derivedCommunitySetId;
+    const setExists = getCommunitySetById(setId);
+    if (setExists) {
+      poolEntry = { characterId, communitySetId: setId } as typeof poolEntry;
+    }
+  }
   const isCommunity = !!(poolEntry as { communitySetId?: string } | undefined)?.communitySetId;
   const isAltArt = (poolEntry?.altArtOfCharacterId ?? null) != null;
   const isBoys = (poolEntry?.cardType ?? "actor") === "character" && !isAltArt;
   const isMain = !isAltArt && !isBoys && !isCommunity;
+  // #region agent log
+  if (characterId.startsWith("community-")) {
+    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'402c3e'},body:JSON.stringify({sessionId:'402c3e',location:'upload-to-codex/route.ts:branch',message:'Community card routing',data:{characterId,poolEntryFound:!!poolEntry,isCommunity,isAltArt,isMain,communitySetId:(poolEntry as { communitySetId?: string })?.communitySetId},timestamp:Date.now(),hypothesisId:'A,B,C'})}).catch(()=>{});
+  }
+  // #endregion
 
   if (isCommunity) {
     const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
@@ -264,6 +286,11 @@ export async function POST(request: Request) {
   const finish = getCardFinish(card);
 
   if (isMain) {
+    // #region agent log
+    if (characterId.startsWith("community-")) {
+      fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'402c3e'},body:JSON.stringify({sessionId:'402c3e',location:'upload-to-codex/route.ts:add-main-bug',message:'BUG: Community card routed to main codex',data:{characterId,userId,finish},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
     switch (finish) {
       case "darkMatter":
         addCodexUnlockDarkMatter(userId, characterId);
@@ -280,6 +307,9 @@ export async function POST(request: Request) {
     }
   } else if (isCommunity) {
     const communitySetId = (poolEntry as { communitySetId?: string }).communitySetId!;
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/88a448bc-4012-4db6-8fa4-f19b51163fe5',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'402c3e'},body:JSON.stringify({sessionId:'402c3e',location:'upload-to-codex/route.ts:add-community',message:'Adding to community codex',data:{characterId,communitySetId,finish},timestamp:Date.now(),hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
     switch (finish) {
       case "darkMatter":
         addCommunityCodexUnlockDarkMatter(userId, communitySetId, characterId);
