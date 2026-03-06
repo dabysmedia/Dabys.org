@@ -492,10 +492,10 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen">
       {/* Ambient background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
-        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
+      <div className="app-ambient" aria-hidden>
+        <div className="app-ambient-orb app-ambient-orb-1" />
+        <div className="app-ambient-orb app-ambient-orb-2" />
+        <div className="app-ambient-orb app-ambient-orb-3" />
       </div>
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">

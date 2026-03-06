@@ -381,34 +381,33 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/10 blur-[160px]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
-        <div className="absolute top-1/3 left-1/2 w-[400px] h-[400px] rounded-full bg-amber-600/5 blur-[120px]" />
+    <div className="page-shell min-h-screen">
+      <div className="app-ambient" aria-hidden>
+        <div className="app-ambient-orb app-ambient-orb-1" />
+        <div className="app-ambient-orb app-ambient-orb-2" />
+        <div className="app-ambient-orb app-ambient-orb-3" />
       </div>
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 py-12">
 
         {/* ═══ THEME + PHASE BANNER ═══ */}
         {!week ? (
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center mb-8">
-            <p className="text-white/30 text-xs uppercase tracking-widest mb-2">Current Theme</p>
-            <h2 className="text-3xl font-bold text-white/90">Coming Soon</h2>
-            <p className="mt-3 text-white/40 text-sm">The admin will set the weekly theme and open submissions.</p>
+          <div className="glass-panel rounded-[2rem] p-8 text-center mb-8">
+            <p className="section-kicker mb-2">Current Theme</p>
+            <h2 className="section-heading text-3xl text-white/92">Coming Soon</h2>
+            <p className="mt-3 text-white/45 text-sm">The admin will set the weekly theme and open submissions.</p>
           </div>
         ) : (
           <>
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-8 text-center mb-6">
-              <p className="text-white/30 text-xs uppercase tracking-widest mb-2">This Week&apos;s Theme</p>
-              <h2 className="text-3xl font-bold text-white/90 mb-3">{week.theme}</h2>
+            <div className="glass-panel rounded-[2rem] p-8 text-center mb-6">
+              <p className="section-kicker mb-2">This Week&apos;s Theme</p>
+              <h2 className="section-heading text-3xl text-white/92 mb-3 sm:text-4xl">{week.theme}</h2>
               {phaseMeta && (
                 <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium border ${phaseMeta.color}`}>
                   {phaseMeta.label}
                 </span>
               )}
-              {phaseMeta && <p className="mt-3 text-white/40 text-sm">{phaseMeta.desc}</p>}
+              {phaseMeta && <p className="mt-3 text-white/45 text-sm">{phaseMeta.desc}</p>}
             </div>
 
             {/* Winner hero — translucent glass over winner image bg */}
@@ -1088,12 +1087,12 @@ export default function HomePage() {
 
         {/* ═══ WINNERS CIRCLE ═══ */}
         <section>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="h-px flex-1 bg-gradient-to-r from-amber-500/20 to-transparent" />
-            <h2 className="text-2xl font-bold text-amber-300/90 font-card-title" style={{ fontFamily: "'Libre Baskerville', serif" }}>
+          <div className="mb-8 text-center">
+            <p className="section-kicker mb-3">Hall Of Fame</p>
+            <h2 className="section-heading text-3xl text-amber-100 sm:text-4xl">
               Winners Circle
             </h2>
-            <div className="h-px flex-1 bg-gradient-to-l from-amber-500/20 to-transparent" />
+            <div className="mx-auto mt-4 h-px w-full max-w-xl bg-gradient-to-r from-transparent via-amber-400/30 to-transparent" />
           </div>
           <p className="text-center text-white/40 text-sm mb-6 -mt-2">Click any winner to rate, comment, and play trivia</p>
 
@@ -1109,7 +1108,7 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {winners.map((winner) => (
-                <div key={winner.id} className="group relative rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl transition-all duration-300 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.03]">
+                <div key={winner.id} className="glass-panel home-card-lift group relative rounded-[1.35rem] overflow-hidden transition-all duration-300 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.03]">
                   <Link href={`/winners/${winner.id}`} className="block">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
                       {winner.posterUrl ? (

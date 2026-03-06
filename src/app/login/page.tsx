@@ -247,10 +247,10 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-purple-600/15 blur-[160px]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[600px] h-[600px] rounded-full bg-indigo-600/15 blur-[140px]" />
+      <div className="app-ambient" aria-hidden>
+        <div className="app-ambient-orb app-ambient-orb-1" />
+        <div className="app-ambient-orb app-ambient-orb-2" />
+        <div className="app-ambient-orb app-ambient-orb-3" />
       </div>
 
       <div className="relative z-10 min-h-[100vh] h-[100dvh] overflow-y-auto overflow-x-hidden flex flex-col items-center justify-center px-4 py-8">

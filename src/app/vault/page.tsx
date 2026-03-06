@@ -577,10 +577,10 @@ export default function VaultPage() {
   return (
     <div className="min-h-screen">
       {/* Ambient glow — premium vault feel (scrolling bg comes from layout) */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-1/2 -left-1/4 w-[1000px] h-[1000px] rounded-full bg-purple-600/12 blur-[180px] animate-[casino-glow-pulse_6s_ease-in-out_infinite]" />
-        <div className="absolute -bottom-1/3 -right-1/4 w-[700px] h-[700px] rounded-full bg-indigo-600/10 blur-[160px] animate-[casino-glow-pulse_8s_ease-in-out_infinite]" style={{ animationDelay: "-2s" }} />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[140px] animate-[casino-glow-pulse_7s_ease-in-out_infinite]" style={{ animationDelay: "-1s" }} />
+      <div className="app-ambient" aria-hidden>
+        <div className="app-ambient-orb app-ambient-orb-1" />
+        <div className="app-ambient-orb app-ambient-orb-2" />
+        <div className="app-ambient-orb app-ambient-orb-3" />
       </div>
 
       <main className="relative z-10 px-4 sm:px-6 py-10 sm:py-14">

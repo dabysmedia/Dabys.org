@@ -60,7 +60,7 @@ function NavLink({
   dot?: boolean;
 }) {
   const base = "text-xs font-medium transition-colors relative inline-block";
-  const activeClass = active ? "text-purple-400" : "text-white/30 hover:text-purple-400";
+  const activeClass = active ? "nav-pill active text-cyan-100" : "nav-pill text-white/55 hover:text-white";
   return (
     <Link href={href} className={`${base} ${activeClass}`}>
       {label}
@@ -449,7 +449,7 @@ export default function Header() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-5 sm:gap-6">
+            <div className="flex items-center gap-4">
               <NavLink href="/stats" label="Stats" active={isStats} />
               <NavLink href="/vault" label="Vault" active={isVault} />
               <NavLink href="/casino" label="Casino" active={isCasino} />

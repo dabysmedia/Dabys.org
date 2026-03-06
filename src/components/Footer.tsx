@@ -130,7 +130,6 @@ export function Footer() {
             </button>
           )}
         </div>
-
         <p className="text-white/8 text-[10px] tracking-widest uppercase">Dabys Media Group</p>
       </div>
     </footer>

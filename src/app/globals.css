@@ -3,21 +3,62 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0f;
-  --foreground: #e5e5e5;
-  --accent: #8b5cf6;
-  --accent-glow: #a78bfa;
-  --card-bg: rgba(255, 255, 255, 0.04);
+  --background: #07111f;
+  --background-elevated: #0d1a2e;
+  --foreground: #edf2f7;
+  --muted: rgba(228, 236, 248, 0.62);
+  --accent: #5eead4;
+  --accent-strong: #f59e0b;
+  --accent-glow: rgba(94, 234, 212, 0.28);
+  --card-bg: rgba(11, 23, 39, 0.72);
   --card-border: rgba(255, 255, 255, 0.08);
   /* Header height — sidebars start just below it */
   --header-height: 5rem;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 26%),
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.07), transparent 25%),
+    radial-gradient(circle at 75% 0%, rgba(59, 130, 246, 0.1), transparent 32%),
+    linear-gradient(180deg, #07111f 0%, #050b14 50%, #03060d 100%);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
   min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 85%);
+  opacity: 0.22;
+}
+
+a,
+button {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
+}
+
+::selection {
+  background: rgba(94, 234, 212, 0.28);
+  color: #f8fafc;
 }
 
 /* Hide content for one frame during scroll restore to prevent wrong-position flash */
@@ -1027,4 +1068,121 @@ select option {
 }
 .notification-badge-pop {
   animation: notificationBadgePop 0.35s ease-out;
+}
+
+.glass-panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03)),
+    rgba(8, 18, 32, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(20px);
+}
+
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 24%);
+  opacity: 0.7;
+}
+
+.home-card-lift {
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.home-card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 24px 60px rgba(0, 0, 0, 0.34);
+}
+
+.section-kicker {
+  color: rgba(244, 196, 116, 0.9);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.section-heading {
+  font-family: "Libre Baskerville", Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+}
+
+.nav-pill.active {
+  border-color: rgba(94, 234, 212, 0.28);
+  background: rgba(94, 234, 212, 0.1);
+  color: #c4fff5;
+  box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.08), 0 10px 24px rgba(8, 145, 178, 0.16);
+}
+
+.page-shell {
+  position: relative;
+}
+
+.page-shell::before,
+.page-shell::after {
+  display: none;
+}
+
+.app-ambient {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(150px);
+  opacity: 0.9;
+}
+
+.app-ambient-orb-1 {
+  top: -34%;
+  left: -16%;
+  width: 62rem;
+  height: 62rem;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.app-ambient-orb-2 {
+  right: -18%;
+  bottom: -28%;
+  width: 46rem;
+  height: 46rem;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.app-ambient-orb-3 {
+  top: 24%;
+  left: 50%;
+  width: 30rem;
+  height: 30rem;
+  transform: translateX(-50%);
+  background: rgba(59, 130, 246, 0.09);
 }
