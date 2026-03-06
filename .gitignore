@@ -16,6 +16,9 @@ dist/
 .env.test.local
 .env.production.local
 
+# Data (runtime/user data, do not commit)
+src/data/
+
 # Debug
 npm-debug.log*
 yarn-debug.log*
@@ -30,46 +33,6 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
-src/data/weeks.json
-src/data/winners.json
-src/data/weeks.json
-src/data/winners.json
-src/data/weeks.json
-src/data/cards.json
-src/data/creditLedger.json
-src/data/credits.json
-src/data/packs.json
-src/data/cards.json
-src/data/characterPool.json
-src/data/creditLedger.json
-src/data/credits.json
-src/data/packs.json
-src/data/blackjackSessions.json
-src/data/cards.json
-src/data/triviaAttempts.json
-src/data/packs.json
-src/data/listings.json
-src/data/credits.json
-src/data/characterPool.json
-src/data/packs.json
+
+# Cursor
 .cursor/debug.log
-src/data/winners.json
-src/data/creditSettings.json
-src/data/dailyQuests.json
-src/data/setCompletionQuests.json
-src/data/questSettings.json
-src/data/codexUnlocks.json
-src/data/holoCodexUnlocks.json
-src/data/presence.json
-src/data/altArtCodexUnlocks.json
-src/data/blackjackSessions.json
-src/data/holoCodexUnlocks.json
-src/data/presence.json
-src/data/notifications.json
-src/data/activity.json
-src/data/tradeBlock.json
-src/data/siteSettings.json
-src/data/notificationReads.json
-src/data/stardust.json
-src/data/darkMatterCodexUnlocks.json
-src/data/prismaticCodexUnlocks.json
