@@ -16,6 +16,7 @@ export function usePresenceStatus() {
 
   useEffect(() => {
     const fetchStatuses = () => {
+      if (document.hidden) return;
       fetch("/api/presence")
         .then((r) => (r.ok ? r.json() : {}))
         .then((data: Record<string, OnlineStatus>) => setStatuses(data))
@@ -23,11 +24,15 @@ export function usePresenceStatus() {
     };
 
     fetchStatuses();
-    intervalRef.current = setInterval(fetchStatuses, POLL_INTERVAL);
+    if (!document.hidden) intervalRef.current = setInterval(fetchStatuses, POLL_INTERVAL);
 
     const onVisibility = () => {
-      if (!document.hidden) {
+      if (document.hidden) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      } else {
         fetchStatuses();
+        intervalRef.current = setInterval(fetchStatuses, POLL_INTERVAL);
       }
     };
     document.addEventListener("visibilitychange", onVisibility);

@@ -629,6 +629,24 @@ function CardsContent() {
   const [quicksellBenchSlots, setQuicksellBenchSlots] = useState<(string | null)[]>([null, null, null, null, null]);
   const [quicksellVendingId, setQuicksellVendingId] = useState<string | null>(null);
   const [quicksellError, setQuicksellError] = useState("");
+  const [sellAllRarityOpen, setSellAllRarityOpen] = useState(false);
+  const sellAllRarityRef = useRef<HTMLDivElement>(null);
+  const [pendingSellAllByRarity, setPendingSellAllByRarity] = useState<{
+    rarity: string;
+    count: number;
+    cardIds: string[];
+    sampleCard: Card;
+  } | null>(null);
+  useEffect(() => {
+    if (!sellAllRarityOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (sellAllRarityRef.current && !sellAllRarityRef.current.contains(e.target as Node)) {
+        setSellAllRarityOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [sellAllRarityOpen]);
   /** Fetched from /api/settings/quicksell so display reflects admin-configured prices. */
   const [quicksellPrices, setQuicksellPrices] = useState<{ quicksellUncommon: number; quicksellRare: number; quicksellEpic: number; quicksellLegendary: number } | null>(null);
   const [stardustDelta, setStardustDelta] = useState<number | null>(null);
@@ -2064,7 +2082,6 @@ function CardsContent() {
   async function handleQuicksellAll() {
     if (!user || quicksellBenchCards.length === 0) return;
     const totalCr = quicksellBenchCards.reduce((sum, c) => sum + getQuicksellCreditsForDisplay(c.rarity), 0);
-    if (!confirm(`Vendor ${quicksellBenchCards.length} card(s) for ${totalCr} credits? This cannot be undone.`)) return;
     setQuicksellError("");
     setQuicksellVendingId("_all");
     try {
@@ -2079,6 +2096,43 @@ function CardsContent() {
         return;
       }
       setQuicksellBenchSlots([null, null, null, null, null]);
+      const received = typeof data?.creditsReceived === "number" ? data.creditsReceived : totalCr;
+      window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: received } }));
+      await Promise.all([refreshCards(), refreshCredits()]);
+    } finally {
+      setQuicksellVendingId(null);
+    }
+  }
+
+  /** Get cards eligible for quicksell (not listed, not in trade, has credit value). */
+  function getQuicksellEligibleCards() {
+    return cards.filter(
+      (c) =>
+        c.id &&
+        !myListedCardIds.has(c.id) &&
+        !inTradeCardIds.has(c.id) &&
+        getQuicksellCreditsForDisplay(c.rarity) > 0
+    );
+  }
+
+  async function handleQuicksellAllByRarity(rarity: string, cardIdsOverride?: string[]) {
+    if (!user) return;
+    const cardIds = cardIdsOverride ?? getQuicksellEligibleCards().filter((c) => c.rarity === rarity).map((c) => c.id!);
+    if (cardIds.length === 0) return;
+    const totalCr = cardIds.length * getQuicksellCreditsForDisplay(rarity);
+    setQuicksellError("");
+    setQuicksellVendingId(`_${rarity}`);
+    try {
+      const res = await fetch("/api/alchemy/quicksell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, cardIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setQuicksellError(data?.error ?? "Quicksell failed");
+        return;
+      }
       const received = typeof data?.creditsReceived === "number" ? data.creditsReceived : totalCr;
       window.dispatchEvent(new CustomEvent("dabys-credits-refresh", { detail: { delta: received } }));
       await Promise.all([refreshCards(), refreshCredits()]);
@@ -4275,6 +4329,51 @@ function CardsContent() {
                   <p className="text-sm text-white/60 mb-4">
                     Vendor up to 5 cards for credits (by rarity).
                   </p>
+                  {pendingSellAllByRarity && (
+                    <div className="flex flex-wrap items-center gap-4 mb-4 p-4 rounded-xl border border-white/20 bg-white/[0.06]">
+                      <div className="relative shrink-0 w-24 h-36">
+                        <div className={`absolute inset-0 rounded-xl overflow-hidden border-2 ${SLOT_FILLED_STYLE[pendingSellAllByRarity.sampleCard.rarity] ?? SLOT_FILLED_STYLE.uncommon}`}>
+                          {pendingSellAllByRarity.sampleCard.profilePath ? (
+                            <img src={pendingSellAllByRarity.sampleCard.profilePath} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white/30 text-lg font-bold">
+                              {(pendingSellAllByRarity.sampleCard.actorName || "?")[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-black/70 border border-white/20 backdrop-blur-md min-w-[28px] h-7 px-2 z-10">
+                          <span className="text-xs font-bold text-white/90 tabular-nums">×{pendingSellAllByRarity.count}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 min-w-0">
+                        <span className="text-sm text-white/80">
+                          Sell all {pendingSellAllByRarity.count} {pendingSellAllByRarity.rarity} for {pendingSellAllByRarity.count * getQuicksellCreditsForDisplay(pendingSellAllByRarity.rarity)} credits
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await handleQuicksellAllByRarity(pendingSellAllByRarity.rarity, pendingSellAllByRarity.cardIds);
+                              setPendingSellAllByRarity(null);
+                            }}
+                            disabled={quicksellVendingId === `_${pendingSellAllByRarity.rarity}`}
+                            className="px-4 py-2 rounded-xl border border-sky-500/40 bg-sky-500/15 text-sky-300 font-semibold hover:bg-sky-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-2"
+                          >
+                            {quicksellVendingId === `_${pendingSellAllByRarity.rarity}` ? (
+                              <span className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin shrink-0" />
+                            ) : null}
+                            Vendor
+                          </button>
+                          <button
+                            onClick={() => setPendingSellAllByRarity(null)}
+                            disabled={!!quicksellVendingId}
+                            className="px-4 py-2 rounded-xl border border-white/20 bg-white/[0.06] text-white/70 font-medium hover:bg-white/[0.1] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
                     <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
                     <div className="flex flex-1 min-w-0 gap-2">
@@ -4348,6 +4447,61 @@ function CardsContent() {
                               Auto-fill
                             </button>
                           )}
+                          {!pendingSellAllByRarity && (() => {
+                            const eligible = getQuicksellEligibleCards();
+                            const rarities = ["uncommon", "rare", "epic", "legendary"] as const;
+                            const hasAny = rarities.some((r) => eligible.some((c) => c.rarity === r));
+                            if (!hasAny) return null;
+                            return (
+                              <div className="relative" ref={sellAllRarityRef}>
+                                <button
+                                  onClick={() => setSellAllRarityOpen((o) => !o)}
+                                  disabled={rarities.some((r) => quicksellVendingId === `_${r}`)}
+                                  className="px-5 py-2.5 rounded-xl border border-white/[0.18] bg-white/[0.06] text-white/80 font-semibold hover:bg-white/[0.1] hover:border-white/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                                >
+                                  Sell all
+                                </button>
+                                {sellAllRarityOpen && (
+                                  <div className="absolute top-full right-0 mt-2 py-2 rounded-xl border border-white/20 bg-white/[0.08] backdrop-blur-[64px] shadow-[0_8px_32px_rgba(0,0,0,0.2)] z-10 min-w-[160px]">
+                                    <p className="px-4 py-2 text-sm text-white/60 border-b border-white/[0.08] mb-1">Which rarity?</p>
+                                    {rarities.map((rarity) => {
+                                      const count = eligible.filter((c) => c.rarity === rarity).length;
+                                      const credits = count * getQuicksellCreditsForDisplay(rarity);
+                                      const vending = quicksellVendingId === `_${rarity}`;
+                                      if (count === 0) return null;
+                                      const rarityColor = RARITY_BADGE[rarity] ?? "text-white/90";
+                                      return (
+                                        <button
+                                          key={rarity}
+                                          onClick={() => {
+                                            const forRarity = eligible.filter((c) => c.rarity === rarity);
+                                            if (forRarity.length > 0) {
+                                              setPendingSellAllByRarity({
+                                                rarity,
+                                                count: forRarity.length,
+                                                cardIds: forRarity.map((c) => c.id!),
+                                                sampleCard: forRarity[0],
+                                              });
+                                            }
+                                            setSellAllRarityOpen(false);
+                                          }}
+                                          disabled={vending}
+                                          className="w-full px-4 py-2.5 text-left text-sm text-white/90 hover:bg-white/[0.1] disabled:opacity-50 capitalize flex items-center justify-between gap-2 transition-colors"
+                                        >
+                                          <span className={rarityColor}>{rarity}</span>
+                                          {vending ? (
+                                            <span className="w-3.5 h-3.5 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin shrink-0" />
+                                          ) : (
+                                            <span className="text-white/50 text-xs">{count} → {credits} cr</span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </>
                       )}
                     </div>
@@ -4477,7 +4631,7 @@ function CardsContent() {
                 const canAddTradeUp = !inTrade && card.rarity !== "legendary" && !myListedCardIds.has(card.id!) && !inSlots && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (card.rarity === tradeUpCards[0]?.rarity && (card.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")));
                 const canAddReroll = !inTrade && inventorySubTab === "tradeup" && card.rarity === "legendary" && !myListedCardIds.has(card.id!) && !inRerollSlots && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (card.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"));
                 const canAddAlchemy = !inTrade && inventorySubTab === "alchemy" && alchemySubTab === "bench" && !myListedCardIds.has(card.id!) && !onAlchemyBench && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!card.isFoil || (card.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && card.isFoil && (card.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !card.isFoil));
-                const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(card.rarity) > 0;
+                const canAddQuicksell = !inTrade && inventorySubTab === "quicksell" && !myListedCardIds.has(card.id!) && !onQuicksellBench && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(card.rarity) > 0 && !pendingSellAllByRarity?.cardIds.includes(card.id!);
                 const ineligibleTradeUp = inventorySubTab === "tradeup" && !canAddTradeUp && !canAddReroll && !inSlots && !inRerollSlots && (tradeUpCardIds.length > 0 || legendaryRerollCardIds.length > 0);
                 const ineligibleAlchemy = alchemyBenchCardIds.length > 0 && !canAddAlchemy && !onAlchemyBench && !canAddPrismaticForge && !onPrismaticForge && inventorySubTab === "alchemy";
                 const ineligibleQuicksell = quicksellBenchCardIds.length > 0 && !canAddQuicksell && !onQuicksellBench && inventorySubTab === "quicksell";
@@ -4572,6 +4726,7 @@ function CardsContent() {
                   ...legendaryRerollCardIds,
                   ...alchemyBenchCardIds,
                   ...quicksellBenchCardIds,
+                  ...(pendingSellAllByRarity?.cardIds ?? []),
                 ]);
                 const freeCards = stackCards.filter(c => !benchIdsSet.has(c.id!));
                 const freeCount = freeCards.length;
@@ -4593,7 +4748,7 @@ function CardsContent() {
                         if (!alchemyBenchCardIds.includes(c.id!) && alchemyBenchCardIds.length < 5 && ((alchemyBenchType === null && (!c.isFoil || (c.finish ?? "holo") === "holo")) || (alchemyBenchType === "foil" && c.isFoil && (c.finish ?? "holo") === "holo") || (alchemyBenchType === "normal" && !c.isFoil))) return { card: c, target: "alchemy" };
                       }
                     } else if (inventorySubTab === "quicksell") {
-                      if (!quicksellBenchCardIds.includes(c.id!) && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(c.rarity) > 0) return { card: c, target: "quicksell" };
+                      if (!quicksellBenchCardIds.includes(c.id!) && !pendingSellAllByRarity?.cardIds.includes(c.id!) && quicksellBenchCardIds.length < 5 && getQuicksellCreditsForDisplay(c.rarity) > 0) return { card: c, target: "quicksell" };
                     } else {
                       if (c.rarity === "legendary" && !legendaryRerollCardIds.includes(c.id!) && legendaryRerollCardIds.length < 2 && (legendaryRerollCards.length === 0 || (c.cardType ?? "actor") === (legendaryRerollCards[0]?.cardType ?? "actor"))) return { card: c, target: "reroll" };
                       if (c.rarity !== "legendary" && !tradeUpCardIds.includes(c.id!) && tradeUpCardIds.length < 4 && (tradeUpCards.length === 0 || (c.rarity === tradeUpCards[0]?.rarity && (c.cardType ?? "actor") === (tradeUpCards[0]?.cardType ?? "actor")))) return { card: c, target: "tradeup" };

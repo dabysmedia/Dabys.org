@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 
 const MOBILE_BREAKPOINT_PX = 768;
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
 
 function convKey(a: string, b: string) {
   return [a, b].sort().join("_");
@@ -167,12 +167,19 @@ export function MessagesPanel() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [user?.id, open, selectedOther?.id, loadConversations, loadMessages]);
 
-  // Poll for conversations when logged in (live-updating badge)
+  // Poll for conversations when logged in (live-updating badge). Pause when tab hidden.
   useEffect(() => {
     if (!user?.id) return;
+    let id: ReturnType<typeof setInterval> | null = null;
+    const poll = () => { if (!document.hidden) loadConversations(true); };
     loadConversations(false);
-    const id = setInterval(() => loadConversations(true), POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    const start = () => { if (!id) id = setInterval(poll, POLL_INTERVAL_MS); };
+    const stop = () => { if (id) { clearInterval(id); id = null; } };
+    start();
+    if (document.hidden) stop();
+    const onVisibility = () => (document.hidden ? stop() : start());
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
   }, [user?.id, loadConversations]);
 
   // Load messages when opening a conversation
@@ -180,11 +187,18 @@ export function MessagesPanel() {
     if (open && selectedOther) loadMessages();
   }, [open, selectedOther, loadMessages]);
 
-  // Poll for new messages in active conversation
+  // Poll for new messages in active conversation. Pause when tab hidden.
   useEffect(() => {
     if (!open || !user?.id || !selectedOther?.id) return;
-    const id = setInterval(loadMessages, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+    const poll = () => { if (!document.hidden) loadMessages(); };
+    const start = () => { if (!id) id = setInterval(poll, POLL_INTERVAL_MS); };
+    const stop = () => { if (id) { clearInterval(id); id = null; } };
+    start();
+    if (document.hidden) stop();
+    const onVisibility = () => (document.hidden ? stop() : start());
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
   }, [open, user?.id, selectedOther?.id, loadMessages]);
 
   // Mark conversation as read when viewing it

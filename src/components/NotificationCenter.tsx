@@ -14,7 +14,7 @@ interface NotificationEntry {
   meta?: Record<string, unknown>;
 }
 
-const POLL_INTERVAL = 2_000;
+const POLL_INTERVAL = 5_000;
 
 // Brand palette: amber, purple, sky, emerald (success), red (danger)
 const TYPE_CONFIG: Record<
@@ -132,16 +132,28 @@ export function NotificationCenter() {
   }, [userId]);
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, POLL_INTERVAL);
-    const onVisibility = () => {
-      if (!document.hidden) fetchNotifications();
-    };
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    function startPolling() {
+      if (interval) return;
+      fetchNotifications();
+      interval = setInterval(fetchNotifications, POLL_INTERVAL);
+    }
+    function stopPolling() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+
+    startPolling();
+    if (document.hidden) stopPolling();
+    const onVisibility = () => (document.hidden ? stopPolling() : startPolling());
     const onRefresh = () => fetchNotifications();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("dabys-notifications-refresh", onRefresh);
     return () => {
-      clearInterval(interval);
+      stopPolling();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("dabys-notifications-refresh", onRefresh);
     };

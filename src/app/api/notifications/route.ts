@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  getVisibleNotificationsForUser,
-  getUnreadNotificationCount,
-  getReadUpTo,
-} from "@/lib/data";
+import { getNotificationsResponse } from "@/lib/data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,9 +9,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  const notifications = getVisibleNotificationsForUser(userId);
-  const unreadCount = getUnreadNotificationCount(userId);
-  const readUpTo = getReadUpTo(userId);
-
+  const { notifications, unreadCount, readUpTo } = getNotificationsResponse(userId);
   return NextResponse.json({ notifications, unreadCount, readUpTo });
 }

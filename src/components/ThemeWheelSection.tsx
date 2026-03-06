@@ -340,13 +340,13 @@ export function ThemeWheelSection({ user, compact = true }: ThemeWheelSectionPro
       } catch { /* ignore */ }
     };
 
-    let interval = setInterval(pollFn, 1500);
+    let interval = setInterval(() => { if (!document.hidden) pollFn(); }, 3000);
     const onVisibility = () => {
       if (document.hidden) {
         clearInterval(interval);
       } else {
         pollFn();
-        interval = setInterval(pollFn, 1500);
+        interval = setInterval(() => { if (!document.hidden) pollFn(); }, 3000);
       }
     };
     document.addEventListener("visibilitychange", onVisibility);

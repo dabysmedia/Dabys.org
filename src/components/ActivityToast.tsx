@@ -51,7 +51,7 @@ interface Toast {
   exiting: boolean;
 }
 
-const POLL_INTERVAL = 2_000;
+const POLL_INTERVAL = 5_000;
 const TOAST_DISPLAY_MS = 5_000;
 const MAX_VISIBLE = 3;
 
@@ -107,9 +107,10 @@ export function ActivityToast() {
 
   useEffect(() => {
     let active = true;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     async function poll() {
-      if (!active) return;
+      if (!active || document.hidden) return;
       try {
         const res = await fetch(`/api/activity?since=${encodeURIComponent(lastPollRef.current)}`);
         if (!res.ok) return;
@@ -126,11 +127,27 @@ export function ActivityToast() {
       } catch {}
     }
 
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL);
+    function startPolling() {
+      if (interval) return;
+      poll();
+      interval = setInterval(poll, POLL_INTERVAL);
+    }
+    function stopPolling() {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    }
+
+    startPolling();
+    if (document.hidden) stopPolling();
+    const onVisibility = () => (document.hidden ? stopPolling() : startPolling());
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       active = false;
-      clearInterval(interval);
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [addToast, currentUserId]);
 

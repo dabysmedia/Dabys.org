@@ -28,15 +28,27 @@ function ensureDataFile(filename: string) {
   return targetPath;
 }
 
+// In-memory cache to reduce disk I/O when multiple requests read the same file.
+// Invalidated on write. Short TTL (5s) prevents stale data if external writes occur.
+const jsonCache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL_MS = 5000;
+
 function readJson<T>(filename: string): T {
+  const now = Date.now();
+  const cached = jsonCache.get(filename);
+  if (cached && cached.expires > now) return cached.data as T;
+
   const filePath = ensureDataFile(filename);
   const raw = fs.readFileSync(filePath, "utf-8");
-  return JSON.parse(raw);
+  const data = JSON.parse(raw) as T;
+  jsonCache.set(filename, { data, expires: now + CACHE_TTL_MS });
+  return data;
 }
 
 function writeJson<T>(filename: string, data: T) {
   const filePath = ensureDataFile(filename);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  jsonCache.delete(filename);
 }
 
 // ──── Users ─────────────────────────────────────────────
@@ -4770,6 +4782,36 @@ export function getUnreadNotificationCount(userId: string): number {
   if (!readUpTo) return notifications.length;
   const readMs = new Date(readUpTo).getTime();
   return notifications.filter((n) => new Date(n.timestamp).getTime() > readMs).length;
+}
+
+/**
+ * Get notifications, unread count, and readUpTo in a single pass (2 file reads instead of 5+).
+ * Use this for the notifications API to reduce I/O.
+ */
+export function getNotificationsResponse(userId: string): {
+  notifications: Notification[];
+  unreadCount: number;
+  readUpTo: string | null;
+} {
+  const allNotifications = getNotifications();
+  const states = getNotificationReadStates();
+  const userState = states.find((s) => s.userId === userId);
+  const readUpTo = userState?.readUpTo ?? null;
+  const clearedUpTo = userState?.clearedUpTo ?? null;
+
+  const forUser = allNotifications
+    .filter((n) => n.targetUserId === userId || n.targetUserId === "__global__")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const visible = clearedUpTo
+    ? forUser.filter((n) => new Date(n.timestamp).getTime() > new Date(clearedUpTo).getTime())
+    : forUser;
+
+  const unreadCount = readUpTo
+    ? visible.filter((n) => new Date(n.timestamp).getTime() > new Date(readUpTo).getTime()).length
+    : visible.length;
+
+  return { notifications: visible, unreadCount, readUpTo };
 }
 
 // ──── Site Settings (marketplace toggle, etc.) ───────────
