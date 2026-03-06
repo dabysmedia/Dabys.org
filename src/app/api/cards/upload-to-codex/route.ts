@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  type CharacterPortrayal,
   getCardById,
   removeCard,
   cancelPendingTradesInvolvingCards,
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
     const setId = derivedCommunitySetId;
     const setExists = getCommunitySetById(setId);
     if (setExists) {
-      poolEntry = { characterId, communitySetId: setId } as typeof poolEntry;
+      poolEntry = { characterId, communitySetId: setId } as CharacterPortrayal;
     }
   }
   const isCommunity = !!(poolEntry as { communitySetId?: string } | undefined)?.communitySetId;
