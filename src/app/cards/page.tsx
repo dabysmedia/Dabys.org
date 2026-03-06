@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { CardDisplay } from "@/components/CardDisplay";
 import ImageCropModal from "@/components/ImageCropModal";
 import { BadgePill } from "@/components/BadgePill";
@@ -76,6 +77,73 @@ function sortCommunityCardsByRarity<T extends { rarity?: string }>(cards: T[]): 
   return [...cards].sort((a, b) => (RARITY_ORDER[a.rarity ?? ""] ?? 0) - (RARITY_ORDER[b.rarity ?? ""] ?? 0));
 }
 
+function tradeCardGroupKey(card: Card): string {
+  return [
+    card.characterId ?? "",
+    card.finish ?? (card.isFoil ? "holo" : "normal"),
+    card.movieTitle ?? "",
+    card.characterName ?? "",
+    card.actorName ?? "",
+  ].join("|");
+}
+
+function sortTradeCards(cards: Card[]): Card[] {
+  return [...cards].sort((a, b) => {
+    const rarityDiff = (RARITY_ORDER[b.rarity ?? ""] ?? -1) - (RARITY_ORDER[a.rarity ?? ""] ?? -1);
+    if (rarityDiff !== 0) return rarityDiff;
+
+    const groupDiff = tradeCardGroupKey(a).localeCompare(tradeCardGroupKey(b));
+    if (groupDiff !== 0) return groupDiff;
+
+    const aLabel = cardLabelLines(a);
+    const bLabel = cardLabelLines(b);
+    const titleDiff = aLabel.title.localeCompare(bLabel.title);
+    if (titleDiff !== 0) return titleDiff;
+    const subtitleDiff = aLabel.subtitle.localeCompare(bLabel.subtitle);
+    if (subtitleDiff !== 0) return subtitleDiff;
+
+    return (a.id ?? "").localeCompare(b.id ?? "");
+  });
+}
+
+function filterTradeCards(cards: Card[], query: string): Card[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return cards;
+  return cards.filter((card) =>
+    [
+      card.characterName,
+      card.actorName,
+      card.movieTitle,
+      card.rarity,
+      card.finish ?? (card.isFoil ? "holo" : "normal"),
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(trimmed)
+  );
+}
+
+function buildTradeDisplayItems(cards: Card[]): TradeDisplayItem[] {
+  const groups = new Map<string, Card[]>();
+  const order: string[] = [];
+
+  for (const card of cards) {
+    const key = tradeCardGroupKey(card);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(card);
+  }
+
+  return order.map((key) => {
+    const grouped = groups.get(key)!;
+    return grouped.length === 1
+      ? { kind: "single", card: grouped[0] }
+      : { kind: "stack", stackKey: key, cards: grouped };
+  });
+}
+
 function getTimeUntilMidnightUTC(): string {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -142,6 +210,10 @@ interface UserWithAvatar {
   name: string;
   avatarUrl?: string;
 }
+
+type TradeDisplayItem =
+  | { kind: "single"; card: Card }
+  | { kind: "stack"; stackKey: string; cards: Card[] };
 
 // Web Audio API sounds for trade-up (no assets, works everywhere)
 let tradeUpAudioContext: AudioContext | null = null;
@@ -575,6 +647,8 @@ function CardsContent() {
   const [tradeOfferedCredits, setTradeOfferedCredits] = useState(0);
   const [tradeRequestedCredits, setTradeRequestedCredits] = useState(0);
   const [tradeUsers, setTradeUsers] = useState<UserWithAvatar[]>([]);
+  const [tradeOfferSearch, setTradeOfferSearch] = useState("");
+  const [tradeRequestSearch, setTradeRequestSearch] = useState("");
   const [counterpartyCards, setCounterpartyCards] = useState<Card[]>([]);
   const [counterpartyCodex, setCounterpartyCodex] = useState<{
     characterIds: Set<string>;
@@ -613,6 +687,11 @@ function CardsContent() {
   const [userAvatarMap, setUserAvatarMap] = useState<Record<string, string>>({});
   /** On mobile, which panel is active: yours | trade | theirs */
   const [mobileTradeTab, setMobileTradeTab] = useState<"yours" | "trade" | "theirs">("trade");
+  const [isClient, setIsClient] = useState(false);
+  const tradeOfferPaneRef = useRef<HTMLDivElement | null>(null);
+  const tradeSummaryPaneRef = useRef<HTMLDivElement | null>(null);
+  const tradeRequestPaneRef = useRef<HTMLDivElement | null>(null);
+  const tradeModalOpenedAtRef = useRef<number>(0);
   const [tcgInfoExpanded, setTcgInfoExpanded] = useState(false);
   const [stardust, setStardust] = useState(0);
   const [alchemyDisenchantingId, setAlchemyDisenchantingId] = useState<string | null>(null);
@@ -637,6 +716,9 @@ function CardsContent() {
     cardIds: string[];
     sampleCard: Card;
   } | null>(null);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   useEffect(() => {
     if (!sellAllRarityOpen) return;
     const handler = (e: MouseEvent) => {
@@ -2990,6 +3072,80 @@ function CardsContent() {
     listings.filter((l) => l.sellerUserId === tradeCounterparty?.id).map((l) => l.cardId)
   ), [listings, tradeCounterparty?.id]);
   const availableToRequest = useMemo(() => counterpartyCards.filter((c) => !counterpartyListedIds.has(c.id!)), [counterpartyCards, counterpartyListedIds]);
+  const sortedTradeUsers = useMemo(
+    () => [...tradeUsers].sort((a, b) => a.name.localeCompare(b.name)),
+    [tradeUsers]
+  );
+  const sortedAvailableForOffer = useMemo(() => sortTradeCards(availableForOffer), [availableForOffer]);
+  const sortedAvailableToRequest = useMemo(() => sortTradeCards(availableToRequest), [availableToRequest]);
+  const filteredAvailableForOffer = useMemo(
+    () => filterTradeCards(sortedAvailableForOffer, tradeOfferSearch),
+    [sortedAvailableForOffer, tradeOfferSearch]
+  );
+  const filteredAvailableToRequest = useMemo(
+    () => filterTradeCards(sortedAvailableToRequest, tradeRequestSearch),
+    [sortedAvailableToRequest, tradeRequestSearch]
+  );
+  const selectedOfferedCards = useMemo(
+    () => sortedAvailableForOffer.filter((c) => tradeOfferedIds.has(c.id!)),
+    [sortedAvailableForOffer, tradeOfferedIds]
+  );
+  const selectedRequestedCards = useMemo(
+    () => sortedAvailableToRequest.filter((c) => tradeRequestedIds.has(c.id!)),
+    [sortedAvailableToRequest, tradeRequestedIds]
+  );
+  const offeredLibraryItems = useMemo(
+    () => buildTradeDisplayItems(filteredAvailableForOffer),
+    [filteredAvailableForOffer]
+  );
+  const requestedLibraryItems = useMemo(
+    () => buildTradeDisplayItems(filteredAvailableToRequest),
+    [filteredAvailableToRequest]
+  );
+  const selectedOfferedItems = useMemo(
+    () => buildTradeDisplayItems(selectedOfferedCards),
+    [selectedOfferedCards]
+  );
+  const selectedRequestedItems = useMemo(
+    () => buildTradeDisplayItems(selectedRequestedCards),
+    [selectedRequestedCards]
+  );
+
+  useEffect(() => {
+    if (!showTradeModal) {
+      setTradeOfferSearch("");
+      setTradeRequestSearch("");
+      return;
+    }
+    if (tradeStep === 1) {
+      setTradeOfferSearch("");
+      setTradeRequestSearch("");
+    }
+  }, [showTradeModal, tradeStep]);
+
+  useEffect(() => {
+    if (!showTradeModal || tradeStep < 2) return;
+    tradeOfferPaneRef.current?.scrollTo({ top: 0 });
+    tradeSummaryPaneRef.current?.scrollTo({ top: 0 });
+    tradeRequestPaneRef.current?.scrollTo({ top: 0 });
+  }, [showTradeModal, tradeStep, tradeCounterparty?.id]);
+
+  useEffect(() => {
+    if (!showTradeModal) return;
+    tradeModalOpenedAtRef.current = Date.now();
+  }, [showTradeModal]);
+
+  useEffect(() => {
+    if (!showTradeModal) return;
+    window.scrollTo({ top: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showTradeModal]);
 
   function toggleTradeOffer(cardId: string) {
     setTradeOfferedIds((prev) => {
@@ -3006,6 +3162,139 @@ function CardsContent() {
       else next.add(cardId);
       return next;
     });
+  }
+
+  function renderTradeCardPreview(card: Card, opts: {
+    inMyCodex: boolean;
+  }) {
+    return (
+      <CardDisplay card={{ ...card, isAltArt: isAltArtCard(card) }} size="md" inCodex={opts.inMyCodex} />
+    );
+  }
+
+  function renderTradeLibraryCard(card: Card, opts: {
+    selected: boolean;
+    inMyCodex: boolean;
+    inTheirCodex: boolean;
+    onClick: () => void;
+    selectionLabel: string;
+    codexTitle?: string;
+  }) {
+    const statusTags = [
+      !opts.inMyCodex ? { label: "You need", className: "border-amber-400/35 bg-amber-400/20 text-amber-100" } : null,
+      !opts.inTheirCodex ? { label: "They need", className: "border-emerald-400/35 bg-emerald-400/20 text-emerald-100" } : null,
+      opts.selected ? { label: opts.selectionLabel, className: "border-white/15 bg-white/10 text-white/85" } : null,
+    ].filter((tag): tag is { label: string; className: string } => tag !== null);
+
+    return (
+      <button
+        key={card.id}
+        onClick={opts.onClick}
+        className={`group flex flex-col gap-2 rounded-xl transition-all cursor-pointer ${
+          opts.selected
+            ? "scale-[0.985]"
+            : "hover:-translate-y-1"
+        }`}
+        title={opts.codexTitle}
+      >
+        <div className={`${opts.selected ? "opacity-60" : ""}`}>
+          {renderTradeCardPreview(card, { inMyCodex: opts.inMyCodex })}
+        </div>
+        {statusTags.length > 0 && (
+          <div className="flex min-h-[1.75rem] flex-wrap gap-1">
+            {statusTags.map((tag) => (
+              <span
+                key={tag.label}
+                className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${tag.className}`}
+              >
+                {tag.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  function renderTradeDisplayItem(item: TradeDisplayItem, opts: {
+    selectedIds: Set<string>;
+    onToggle: (cardId: string) => void;
+    myCodexResolver: (card: Card) => boolean;
+    theirCodexResolver: (card: Card) => boolean;
+    selectedLabel: string;
+    codexTitleResolver: (card: Card) => string | undefined;
+  }) {
+    if (item.kind === "single") {
+      const card = item.card;
+      const inMyCodex = opts.myCodexResolver(card);
+      const inTheirCodex = opts.theirCodexResolver(card);
+      return renderTradeLibraryCard(card, {
+        selected: opts.selectedIds.has(card.id!),
+        inMyCodex,
+        inTheirCodex,
+        onClick: () => opts.onToggle(card.id!),
+        selectionLabel: opts.selectedLabel,
+        codexTitle: opts.codexTitleResolver(card),
+      });
+    }
+
+    const front = item.cards[0];
+    const selectedCount = item.cards.filter((card) => opts.selectedIds.has(card.id!)).length;
+    const inMyCodex = opts.myCodexResolver(front);
+    const inTheirCodex = opts.theirCodexResolver(front);
+    const codexTitle = opts.codexTitleResolver(front);
+
+    return (
+      <button
+        key={item.stackKey}
+        onClick={() => opts.onToggle(front.id!)}
+        className={`group flex flex-col gap-2 rounded-2xl transition-all cursor-pointer ${
+          selectedCount > 0 ? "scale-[0.985]" : "hover:-translate-y-1"
+        }`}
+        title={codexTitle}
+      >
+        <div className="relative pb-3 pr-3">
+          {Array.from({ length: Math.min(item.cards.length - 1, 3) }, (_, index) => {
+            const offset = (Math.min(item.cards.length - 1, 3) - index) * 3;
+            return (
+              <div
+                key={`${item.stackKey}-${index}`}
+                className="absolute inset-0 rounded-2xl border border-white/[0.06] bg-white/[0.025]"
+                style={{ transform: `translate(${offset}px, ${offset}px)` }}
+                aria-hidden
+              />
+            );
+          })}
+          <div
+            className={`relative rounded-xl overflow-hidden ${
+              selectedCount > 0 ? "scale-[0.985]" : ""
+            }`}
+          >
+            {renderTradeCardPreview(front, { inMyCodex })}
+          </div>
+          <div className="pointer-events-none absolute -right-2 -top-2 z-20 rounded-full border border-black/20 bg-black/75 px-2 py-1 text-[10px] font-bold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)]">
+            x{item.cards.length}
+          </div>
+        </div>
+        <div className="mt-2 flex min-h-[1.75rem] flex-wrap gap-1">
+          {!inMyCodex && (
+            <span className="rounded-full border border-amber-400/35 bg-amber-400/20 px-2 py-1 text-[10px] font-semibold text-amber-100">
+              You need
+            </span>
+          )}
+          {!inTheirCodex && (
+            <span className="rounded-full border border-emerald-400/35 bg-emerald-400/20 px-2 py-1 text-[10px] font-semibold text-emerald-100">
+              They need
+            </span>
+          )}
+          {selectedCount > 0 && (
+            <span className="rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[10px] font-semibold text-white/85">
+              {selectedCount} selected
+            </span>
+          )}
+        </div>
+      </button>
+    );
   }
 
   async function handleSendTrade() {
@@ -8050,29 +8339,42 @@ function CardsContent() {
         )}
 
         {/* Start Trade modal */}
-        {showTradeModal && (
+        {showTradeModal && isClient && createPortal(
           <>
             <div
-              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-              onClick={() => !tradeLoading && setShowTradeModal(false)}
+              className="fixed inset-0 z-50 bg-slate-950/78 backdrop-blur-md"
+              onClick={() => {
+                if (tradeLoading) return;
+                if (Date.now() - tradeModalOpenedAtRef.current < 180) return;
+                setShowTradeModal(false);
+              }}
               aria-hidden
             />
             <div
-              className={`fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/15 bg-[#0c0c18]/95 backdrop-blur-2xl shadow-[0_8px_48px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${tradeStep === 1 ? "max-w-3xl max-h-[70vh]" : "max-w-[90rem] max-h-[calc(100dvh-2rem)] lg:h-[min(85vh,820px)] lg:max-h-[min(85vh,820px)]"}`}
+              className={`glass-panel !fixed left-1/2 top-1/2 z-[80] flex w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] ${tradeStep === 1 ? "max-w-3xl h-[min(70vh,42rem)] max-h-[calc(100dvh-2rem)] min-h-[24rem]" : "max-w-[90rem] max-h-[calc(100dvh-2rem)] lg:h-[min(85vh,820px)] lg:max-h-[min(85vh,820px)]"}`}
               role="dialog"
               aria-label="Start trade"
               onClick={(e) => e.stopPropagation()}
             >
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+                <div className="absolute right-0 top-10 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl" />
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              </div>
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/30 shrink-0">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-white/90">
-                    {tradeStep === 1 ? "Start Trade" : `Trading with ${tradeCounterparty?.name}`}
-                  </h3>
+              <div className="relative z-[1] shrink-0 border-b border-white/10 bg-gradient-to-r from-white/[0.055] via-white/[0.03] to-white/[0.045] px-6 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="section-kicker text-[10px]">Trade Desk</p>
+                      <h3 className="section-heading text-lg font-bold text-white/92">
+                        {tradeStep === 1 ? "Start Trade" : `Trading with ${tradeCounterparty?.name}`}
+                      </h3>
+                    </div>
                   {tradeStep >= 2 && tradeCounterparty && (
                     <button
                       onClick={() => { setTradeStep(1); setTradeCounterparty(null); setTradeOfferedIds(new Set()); setTradeRequestedIds(new Set()); setTradeOfferedCredits(0); setTradeRequestedCredits(0); setCounterpartyCards([]); setCounterpartyCodex(null); setMobileTradeTab("trade"); }}
-                      className="text-xs text-white/40 hover:text-white/70 underline underline-offset-2 cursor-pointer transition-colors min-h-[44px] min-w-[44px] -m-2 p-2 inline-flex items-center"
+                      className="inline-flex min-h-[44px] min-w-[44px] items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/55 transition-all cursor-pointer hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-white/85"
                     >
                       Change user
                     </button>
@@ -8080,7 +8382,7 @@ function CardsContent() {
                 </div>
                 <button
                   onClick={() => !tradeLoading && setShowTradeModal(false)}
-                  className="min-h-[44px] min-w-[44px] p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.06] cursor-pointer transition-colors flex items-center justify-center touch-manipulation"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] p-2 text-white/45 transition-all cursor-pointer hover:border-white/20 hover:bg-white/[0.08] hover:text-white/82 touch-manipulation"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -8088,20 +8390,25 @@ function CardsContent() {
                   </svg>
                 </button>
               </div>
+              </div>
 
               {/* Step 1: User picker */}
               {tradeStep === 1 && (
-                <div className="p-6 overflow-auto flex-1">
-                  <p className="text-white/50 text-sm mb-4">Choose a user to trade with.</p>
-                  {tradeUsers.length === 0 ? (
+                <div className="relative z-[1] min-h-0 flex-1 overflow-auto p-6">
+                  <div className="mb-5 rounded-[24px] border border-white/[0.08] bg-gradient-to-br from-white/[0.07] via-white/[0.035] to-transparent px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                    <p className="section-kicker">Start Here</p>
+                    <p className="mt-2 text-base font-semibold text-white/88">Choose a trading partner.</p>
+                    <p className="mt-1 text-sm text-white/48">Users are sorted alphabetically. Once selected, both collections auto-sort with legendaries first and duplicate cards grouped together.</p>
+                  </div>
+                  {sortedTradeUsers.length === 0 ? (
                     <p className="text-white/40 text-sm">No other users yet.</p>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {tradeUsers.map((u) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {sortedTradeUsers.map((u) => (
                         <button
                           key={u.id}
                           onClick={() => { setTradeCounterparty(u); setTradeStep(2); }}
-                          className="flex items-center gap-3 px-4 py-3 min-h-[52px] rounded-xl border border-white/[0.12] bg-white/[0.04] hover:border-amber-500/40 hover:bg-amber-500/10 active:bg-amber-500/15 transition-all cursor-pointer text-left group touch-manipulation"
+                          className="home-card-lift flex min-h-[68px] items-center gap-3 rounded-[22px] border border-white/[0.12] bg-gradient-to-br from-white/[0.065] via-white/[0.03] to-transparent px-4 py-4 text-left group cursor-pointer touch-manipulation hover:border-amber-500/35 hover:bg-amber-500/[0.08] active:bg-amber-500/[0.12]"
                         >
                           {u.avatarUrl ? (
                             <img src={u.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10 group-hover:border-amber-500/30 transition-colors" />
@@ -8110,7 +8417,10 @@ function CardsContent() {
                               {u.name.charAt(0)}
                             </div>
                           )}
-                          <span className="text-sm font-medium text-white/90 truncate">{u.name}</span>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-medium text-white/90 truncate">{u.name}</span>
+                            <span className="block text-[11px] text-white/35 truncate">Open their collection and build an offer</span>
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -8120,15 +8430,15 @@ function CardsContent() {
 
               {/* Step 2+: Unified 3-column trading view (desktop) / tabbed view (mobile) */}
               {tradeStep >= 2 && (
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden">
                   {/* Mobile-only: tab bar to switch between Your cards, Trade summary, Their cards */}
-                  <div className="lg:hidden flex shrink-0 border-b border-white/[0.08] bg-black/30 px-2 py-2 gap-1" role="tablist" aria-label="Trade sections">
+                  <div className="lg:hidden flex shrink-0 gap-1 border-b border-white/[0.08] bg-white/[0.035] px-2 py-2" role="tablist" aria-label="Trade sections">
                     <button
                       type="button"
                       role="tab"
                       aria-selected={mobileTradeTab === "yours"}
                       onClick={() => setMobileTradeTab("yours")}
-                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "yours" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                      className={`flex-1 min-h-[44px] rounded-xl border text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "yours" ? "border-amber-500/35 bg-amber-500/16 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]" : "border-transparent text-white/60 hover:text-white/80 hover:bg-white/[0.06]"}`}
                     >
                       Yours
                     </button>
@@ -8137,7 +8447,7 @@ function CardsContent() {
                       role="tab"
                       aria-selected={mobileTradeTab === "trade"}
                       onClick={() => setMobileTradeTab("trade")}
-                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "trade" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                      className={`flex-1 min-h-[44px] rounded-xl border text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "trade" ? "border-amber-500/35 bg-amber-500/16 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]" : "border-transparent text-white/60 hover:text-white/80 hover:bg-white/[0.06]"}`}
                     >
                       Trade
                     </button>
@@ -8146,7 +8456,7 @@ function CardsContent() {
                       role="tab"
                       aria-selected={mobileTradeTab === "theirs"}
                       onClick={() => setMobileTradeTab("theirs")}
-                      className={`flex-1 min-h-[44px] rounded-xl text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "theirs" ? "bg-amber-500/20 text-amber-400 border border-amber-500/40" : "text-white/60 border border-transparent hover:text-white/80 hover:bg-white/[0.06]"}`}
+                      className={`flex-1 min-h-[44px] rounded-xl border text-sm font-medium transition-colors cursor-pointer touch-manipulation ${mobileTradeTab === "theirs" ? "border-amber-500/35 bg-amber-500/16 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]" : "border-transparent text-white/60 hover:text-white/80 hover:bg-white/[0.06]"}`}
                     >
                       Theirs
                     </button>
@@ -8155,80 +8465,88 @@ function CardsContent() {
                   <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px_1fr] overflow-hidden">
 
                     {/* Left: Your inventory */}
-                    <div className={`flex flex-col min-h-0 lg:border-r border-white/[0.08] order-2 lg:order-1 ${mobileTradeTab === "yours" ? "flex" : "hidden lg:flex"}`}>
-                      <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
+                    <div className={`flex flex-col min-h-0 order-2 lg:order-1 lg:border-r border-white/[0.08] bg-white/[0.015] ${mobileTradeTab === "yours" ? "flex" : "hidden lg:flex"}`}>
+                      <div className="shrink-0 border-b border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-4 py-4">
                         <div className="flex items-center gap-2">
                           {user?.id && (userAvatarMap[user.id] ? <img src={userAvatarMap[user.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{user.name?.charAt(0) || "?"}</div>)}
-                          <h4 className="text-sm font-semibold text-white/70">Your Collection</h4>
+                          <div>
+                            <p className="section-kicker text-[9px]">Your Side</p>
+                            <h4 className="text-sm font-semibold text-white/76">Your Collection</h4>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-white/25 mt-1">{availableForOffer.length} cards &mdash; click to add to trade. Cyan bar = in your codex</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/30">
+                          <span>{sortedAvailableForOffer.length} cards</span>
+                          <span className="text-white/15">|</span>
+                          <span>{selectedOfferedCards.length} selected</span>
+                          <span className="text-white/15">|</span>
+                          <span>Legendary-first</span>
+                        </div>
+                        <p className="mt-2 text-[11px] text-white/28">Stacks show duplicates. Clicking a stack adds or removes one copy, not the whole stack.</p>
+                        <input
+                          type="text"
+                          value={tradeOfferSearch}
+                          onChange={(e) => setTradeOfferSearch(e.target.value)}
+                          placeholder="Search your cards, movies, or rarity"
+                          className="mt-3 w-full rounded-xl border border-white/[0.08] bg-white/[0.045] px-3 py-2 text-sm text-white/85 placeholder:text-white/25 outline-none transition-colors focus:border-cyan-400/35 focus:bg-white/[0.06]"
+                        />
                       </div>
-                      <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
-                        {availableForOffer.length === 0 ? (
-                          <p className="text-white/25 text-xs text-center py-8">No cards available to offer.</p>
+                      <div ref={tradeOfferPaneRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/5 p-3 scrollbar-autocomplete">
+                        {offeredLibraryItems.length === 0 ? (
+                          <p className="text-white/25 text-xs text-center py-8">
+                            {sortedAvailableForOffer.length === 0 ? "No cards available to offer." : "No cards match your search."}
+                          </p>
                         ) : (
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {availableForOffer.map((c) => {
-                              const selected = tradeOfferedIds.has(c.id!);
-                              const inMyCodex = isCardInCodex(c, myCodexSets, poolEntries);
-                              return (
-                                <button
-                                  key={c.id}
-                                  onClick={() => toggleTradeOffer(c.id!)}
-                                  className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-red-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
-                                  title={inMyCodex ? "In your codex" : undefined}
-                                >
-                                  <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={inMyCodex} />
-                                  {selected && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                                      <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
+                            {offeredLibraryItems.map((item) =>
+                              renderTradeDisplayItem(item, {
+                                selectedIds: tradeOfferedIds,
+                                onToggle: toggleTradeOffer,
+                                myCodexResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries),
+                                theirCodexResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries),
+                                selectedLabel: "Offering",
+                                codexTitleResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries) ? "In your codex" : undefined,
+                              })
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Center: The Trade */}
-                    <div className={`flex flex-col min-h-0 bg-black/20 overflow-hidden order-1 lg:order-2 border-b lg:border-b-0 border-white/[0.08] ${mobileTradeTab === "trade" ? "flex" : "hidden lg:flex"}`}>
-                      <div className="px-4 py-3 border-b border-white/[0.08] bg-gradient-to-r from-red-500/[0.04] via-amber-500/[0.08] to-green-500/[0.04] shrink-0 text-center">
-                        <h4 className="text-sm font-bold text-amber-400/90 tracking-wide uppercase">The Trade</h4>
+                    <div className={`flex flex-col min-h-0 order-1 lg:order-2 overflow-hidden border-b border-white/[0.08] bg-gradient-to-b from-white/[0.045] via-white/[0.025] to-transparent lg:border-b-0 ${mobileTradeTab === "trade" ? "flex" : "hidden lg:flex"}`}>
+                      <div className="shrink-0 border-b border-white/[0.08] bg-gradient-to-r from-cyan-400/[0.06] via-amber-400/[0.08] to-emerald-400/[0.06] px-4 py-4 text-center">
+                        <p className="section-kicker text-[9px]">Offer Builder</p>
+                        <h4 className="mt-1 text-sm font-bold tracking-[0.22em] text-amber-200/90 uppercase">The Trade</h4>
+                        <p className="mt-1 text-[11px] text-white/35">
+                          {selectedOfferedCards.length} offered • {selectedRequestedCards.length} requested
+                        </p>
                       </div>
-                      <div className="flex-1 overflow-y-auto">
+                      <div ref={tradeSummaryPaneRef} className="flex-1 overflow-y-auto">
                         {/* You Give */}
-                        <div className="p-4 border-b border-white/[0.05]">
+                        <div className="border-b border-white/[0.06] p-4">
                           <div className="flex items-center gap-2 mb-3">
                             <div className="w-1.5 h-1.5 rounded-full bg-red-400/80" />
                             <h5 className="text-[11px] font-semibold text-red-400/80 uppercase tracking-widest">You Give</h5>
                           </div>
-                          <div className="min-h-[90px] rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.015] p-2">
-                            {(() => {
-                              const offeredCards = availableForOffer.filter(c => tradeOfferedIds.has(c.id!));
-                              return offeredCards.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  {offeredCards.map((c) => (
-                                    <button
-                                      key={c.id}
-                                      onClick={() => toggleTradeOffer(c.id!)}
-                                      className="relative rounded-xl overflow-hidden ring-1 ring-red-500/20 hover:ring-red-400/50 transition-all cursor-pointer group"
-                                      title={isCardInCodex(c, myCodexSets, poolEntries) ? "In your codex" : undefined}
-                                    >
-                                      <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={isCardInCodex(c, myCodexSets, poolEntries)} />
-                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                                        <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center h-full min-h-[70px]">
-                                  <p className="text-white/15 text-xs text-center">Click cards from your collection</p>
-                                </div>
-                              );
-                            })()}
+                          <div className="min-h-[90px] rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                            {selectedOfferedItems.length > 0 ? (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {selectedOfferedItems.map((item) =>
+                                  renderTradeDisplayItem(item, {
+                                    selectedIds: tradeOfferedIds,
+                                    onToggle: toggleTradeOffer,
+                                    myCodexResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries),
+                                    theirCodexResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries),
+                                    selectedLabel: "Offering",
+                                    codexTitleResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries) ? "In your codex" : undefined,
+                                  })
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center h-full min-h-[70px]">
+                                <p className="text-white/15 text-xs text-center">Click cards from your collection</p>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-3 flex items-center gap-2">
                             <span className="text-[11px] text-amber-400/50 font-medium shrink-0">Credits:</span>
@@ -8242,14 +8560,14 @@ function CardsContent() {
                                 setTradeOfferedCredits(isNaN(v) ? 0 : Math.max(0, v));
                               }}
                               placeholder="0"
-                              className="w-20 min-h-[44px] px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-sm outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors touch-manipulation"
+                              className="w-20 min-h-[44px] rounded-xl border border-white/[0.08] bg-white/[0.045] px-3 py-2 text-sm text-amber-300 outline-none transition-colors placeholder:text-white/15 focus:border-amber-500/35 focus:bg-white/[0.06] touch-manipulation"
                             />
                             <span className="text-[10px] text-white/20">/ {creditBalance}</span>
                           </div>
                         </div>
 
                         {/* Divider */}
-                        <div className="flex items-center gap-3 px-4 py-2 bg-black/10">
+                        <div className="flex items-center gap-3 bg-white/[0.02] px-4 py-3">
                           <div className="flex-1 h-px bg-gradient-to-r from-red-500/15 to-transparent" />
                           <svg className="w-4 h-4 text-white/15 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
                           <div className="flex-1 h-px bg-gradient-to-l from-green-500/15 to-transparent" />
@@ -8261,31 +8579,25 @@ function CardsContent() {
                             <div className="w-1.5 h-1.5 rounded-full bg-green-400/80" />
                             <h5 className="text-[11px] font-semibold text-green-400/80 uppercase tracking-widest">You Get</h5>
                           </div>
-                          <div className="min-h-[90px] rounded-xl border-2 border-dashed border-white/[0.06] bg-white/[0.015] p-2">
-                            {(() => {
-                              const requestedCards = availableToRequest.filter(c => tradeRequestedIds.has(c.id!));
-                              return requestedCards.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  {requestedCards.map((c) => (
-                                    <button
-                                      key={c.id}
-                                      onClick={() => toggleTradeRequest(c.id!)}
-                                      className="relative rounded-xl overflow-hidden ring-1 ring-green-500/20 hover:ring-green-400/50 transition-all cursor-pointer group"
-                                      title={isCardInCodex(c, counterpartyCodex, poolEntries) ? `In ${tradeCounterparty?.name}'s codex` : undefined}
-                                    >
-                                      <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={isCardInCodex(c, counterpartyCodex, poolEntries)} />
-                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                                        <span className="text-white/0 group-hover:text-white/90 text-lg font-light transition-colors">&times;</span>
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="flex items-center justify-center h-full min-h-[70px]">
-                                  <p className="text-white/15 text-xs text-center">Click cards from their collection</p>
-                                </div>
-                              );
-                            })()}
+                          <div className="min-h-[90px] rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                            {selectedRequestedItems.length > 0 ? (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {selectedRequestedItems.map((item) =>
+                                  renderTradeDisplayItem(item, {
+                                    selectedIds: tradeRequestedIds,
+                                    onToggle: toggleTradeRequest,
+                                    myCodexResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries),
+                                    theirCodexResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries),
+                                    selectedLabel: "Requesting",
+                                    codexTitleResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries) ? `In ${tradeCounterparty?.name}'s codex` : undefined,
+                                  })
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center h-full min-h-[70px]">
+                                <p className="text-white/15 text-xs text-center">Click cards from their collection</p>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-3 flex items-center gap-2">
                             <span className="text-[11px] text-amber-400/50 font-medium shrink-0">Credits:</span>
@@ -8298,19 +8610,19 @@ function CardsContent() {
                                 setTradeRequestedCredits(isNaN(v) ? 0 : Math.max(0, v));
                               }}
                               placeholder="0"
-                              className="w-20 min-h-[44px] px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.08] text-amber-300 text-sm outline-none focus:border-amber-500/40 placeholder-white/15 transition-colors touch-manipulation"
+                              className="w-20 min-h-[44px] rounded-xl border border-white/[0.08] bg-white/[0.045] px-3 py-2 text-sm text-amber-300 outline-none transition-colors placeholder:text-white/15 focus:border-amber-500/35 focus:bg-white/[0.06] touch-manipulation"
                             />
                           </div>
                         </div>
                       </div>
 
                       {/* Send button (desktop: inside center; mobile: in sticky footer below) */}
-                      <div className="hidden lg:block px-4 py-3.5 border-t border-white/[0.08] bg-black/30 shrink-0">
+                      <div className="hidden lg:block shrink-0 border-t border-white/[0.08] bg-white/[0.04] px-4 py-4">
                         {tradeError && <p className="text-red-400 text-xs mb-2">{tradeError}</p>}
                         <button
                           onClick={() => handleSendTrade()}
                           disabled={tradeLoading || (tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0) || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
-                          className="w-full px-4 py-2.5 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-amber-600/15 text-amber-400 font-semibold text-sm hover:border-amber-500/50 hover:from-amber-500/25 hover:to-amber-600/25 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all"
+                          className="w-full rounded-xl border border-amber-500/28 bg-gradient-to-r from-amber-500/18 via-amber-400/12 to-cyan-400/12 px-4 py-3 text-sm font-semibold text-amber-100 transition-all cursor-pointer hover:border-amber-400/45 hover:from-amber-500/24 hover:via-amber-400/18 hover:to-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           {tradeLoading ? "Sending..." : editingTradeId ? "Send Counter-Offer" : "Send Trade Offer"}
                         </button>
@@ -8318,38 +8630,48 @@ function CardsContent() {
                     </div>
 
                     {/* Right: Their inventory */}
-                    <div className={`flex flex-col min-h-0 lg:border-l border-white/[0.08] order-3 lg:order-3 ${mobileTradeTab === "theirs" ? "flex" : "hidden lg:flex"}`}>
-                      <div className="px-4 py-3 border-b border-white/[0.08] bg-white/[0.015] shrink-0">
+                    <div className={`flex flex-col min-h-0 order-3 lg:order-3 lg:border-l border-white/[0.08] bg-white/[0.015] ${mobileTradeTab === "theirs" ? "flex" : "hidden lg:flex"}`}>
+                      <div className="shrink-0 border-b border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-4 py-4">
                         <div className="flex items-center gap-2">
                           {tradeCounterparty && (userAvatarMap[tradeCounterparty.id] ? <img src={userAvatarMap[tradeCounterparty.id]} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" /> : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">{(tradeCounterparty?.name || "?")[0]}</div>)}
-                          <h4 className="text-sm font-semibold text-white/70">{tradeCounterparty?.name}&apos;s Collection</h4>
+                          <div>
+                            <p className="section-kicker text-[9px]">Their Side</p>
+                            <h4 className="text-sm font-semibold text-white/76">{tradeCounterparty?.name}&apos;s Collection</h4>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-white/25 mt-1">{availableToRequest.length} cards &mdash; click to add to trade. Cyan bar = in their codex</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-white/30">
+                          <span>{sortedAvailableToRequest.length} cards</span>
+                          <span className="text-white/15">|</span>
+                          <span>{selectedRequestedCards.length} selected</span>
+                          <span className="text-white/15">|</span>
+                          <span>Legendary-first</span>
+                        </div>
+                        <p className="mt-2 text-[11px] text-white/28">Stacks show duplicates. Clicking a stack adds or removes one copy, not the whole stack.</p>
+                        <input
+                          type="text"
+                          value={tradeRequestSearch}
+                          onChange={(e) => setTradeRequestSearch(e.target.value)}
+                          placeholder={`Search ${tradeCounterparty?.name ?? "their"} cards`}
+                          className="mt-3 w-full rounded-xl border border-white/[0.08] bg-white/[0.045] px-3 py-2 text-sm text-white/85 placeholder:text-white/25 outline-none transition-colors focus:border-cyan-400/35 focus:bg-white/[0.06]"
+                        />
                       </div>
-                      <div className="flex-1 overflow-y-auto p-3 scrollbar-autocomplete">
-                        {availableToRequest.length === 0 ? (
-                          <p className="text-white/25 text-xs text-center py-8">{tradeCounterparty?.name} has no cards available.</p>
+                      <div ref={tradeRequestPaneRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-black/5 p-3 scrollbar-autocomplete">
+                        {requestedLibraryItems.length === 0 ? (
+                          <p className="text-white/25 text-xs text-center py-8">
+                            {sortedAvailableToRequest.length === 0 ? `${tradeCounterparty?.name} has no cards available.` : "No cards match your search."}
+                          </p>
                         ) : (
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {availableToRequest.map((c) => {
-                              const selected = tradeRequestedIds.has(c.id!);
-                              const inTheirCodex = isCardInCodex(c, counterpartyCodex, poolEntries);
-                              return (
-                                <button
-                                  key={c.id}
-                                  onClick={() => toggleTradeRequest(c.id!)}
-                                  className={`relative rounded-xl overflow-hidden ring-2 transition-all cursor-pointer ${selected ? "ring-green-400/60 scale-[0.92] opacity-40" : "ring-transparent hover:ring-white/25 hover:scale-[1.03]"}`}
-                                  title={inTheirCodex ? `In ${tradeCounterparty?.name}'s codex` : undefined}
-                                >
-                                  <CardDisplay card={{ ...c, isAltArt: isAltArtCard(c) }} size="md" inCodex={inTheirCodex} />
-                                  {selected && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                                      <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">In Trade</span>
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
+                            {requestedLibraryItems.map((item) =>
+                              renderTradeDisplayItem(item, {
+                                selectedIds: tradeRequestedIds,
+                                onToggle: toggleTradeRequest,
+                                myCodexResolver: (card) => isCardInCodex(card, myCodexSets, poolEntries),
+                                theirCodexResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries),
+                                selectedLabel: "Requesting",
+                                codexTitleResolver: (card) => isCardInCodex(card, counterpartyCodex, poolEntries) ? `In ${tradeCounterparty?.name}'s codex` : undefined,
+                              })
+                            )}
                           </div>
                         )}
                       </div>
@@ -8358,12 +8680,12 @@ function CardsContent() {
                   </div>
 
                   {/* Mobile-only: sticky Send button so it's always reachable */}
-                  <div className="lg:hidden shrink-0 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-white/[0.08] bg-[#0c0c18]/98">
+                  <div className="lg:hidden shrink-0 border-t border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(11,16,29,0.96))] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     {tradeError && <p className="text-red-400 text-xs mb-2">{tradeError}</p>}
                     <button
                       onClick={() => handleSendTrade()}
                       disabled={tradeLoading || (tradeOfferedIds.size === 0 && tradeOfferedCredits <= 0) || (tradeRequestedIds.size === 0 && tradeRequestedCredits <= 0)}
-                      className="w-full min-h-[48px] px-4 py-3 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 to-amber-600/15 text-amber-400 font-semibold text-base hover:border-amber-500/50 hover:from-amber-500/25 hover:to-amber-600/25 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all touch-manipulation"
+                      className="w-full min-h-[48px] rounded-xl border border-amber-500/28 bg-gradient-to-r from-amber-500/18 via-amber-400/12 to-cyan-400/12 px-4 py-3 text-base font-semibold text-amber-100 transition-all cursor-pointer hover:border-amber-400/45 hover:from-amber-500/24 hover:via-amber-400/18 hover:to-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-30 touch-manipulation"
                     >
                       {tradeLoading ? "Sending..." : editingTradeId ? "Send Counter-Offer" : "Send Trade Offer"}
                     </button>
@@ -8371,7 +8693,8 @@ function CardsContent() {
                 </div>
               )}
             </div>
-          </>
+          </>,
+          document.body
         )}
 
           </div>
