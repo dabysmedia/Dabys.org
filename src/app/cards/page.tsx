@@ -514,6 +514,7 @@ interface Winner {
   posterUrl: string;
   weekTheme?: string;
   tmdbId?: number;
+  isBroll?: boolean;
 }
 
 interface Pack {
@@ -1079,7 +1080,7 @@ function CardsContent() {
     if (ordersRes.ok) setBuyOrders(await ordersRes.json());
     if (winnersRes.ok) {
       const w: Winner[] = await winnersRes.json();
-      setWinners(w.filter((x) => x.tmdbId));
+      setWinners(w.filter((x) => x.tmdbId && !x.isBroll));
     }
     if (attemptsRes.ok) {
       const att: { attempts: { winnerId: string }[] } = await attemptsRes.json();

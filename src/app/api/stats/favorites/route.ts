@@ -14,7 +14,7 @@ export async function GET() {
     );
   }
 
-  const winners = getWinners().filter((w) => w.tmdbId != null);
+  const winners = getWinners().filter((w) => w.tmdbId != null && !w.isBroll);
   const actorCount = new Map<string, { count: number; profilePath?: string }>();
   const directorCount = new Map<string, { count: number; profilePath?: string }>();
   const genreCount = new Map<string, number>();

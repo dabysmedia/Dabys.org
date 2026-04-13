@@ -68,6 +68,7 @@ interface WinnerDetail {
   submitterAvatarUrl?: string;
   submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
   weekTheme?: string;
+  isBroll?: boolean;
   runnerUps?: RunnerUp[];
   reviewsLocked?: boolean;
   ratings: Rating[];
@@ -531,12 +532,25 @@ export default function WinnerDetailPage() {
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="inline-flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.003 6.003 0 01-5.54 0" />
-                </svg>
-                <span className="text-xs uppercase tracking-widest text-amber-400/70 font-medium">
-                  Weekly Winner
-                </span>
+                {winner.isBroll ? (
+                  <>
+                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs uppercase tracking-widest text-slate-400/90 font-medium">
+                      B-Roll
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.003 6.003 0 01-5.54 0" />
+                    </svg>
+                    <span className="text-xs uppercase tracking-widest text-amber-400/70 font-medium">
+                      Weekly Winner
+                    </span>
+                  </>
+                )}
               </div>
               {winner.weekTheme && (
                 <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/15 border border-purple-500/25 text-purple-300">

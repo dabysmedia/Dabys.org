@@ -58,7 +58,7 @@ export async function PATCH(request: Request) {
     if (body.phase === "winner_published") {
       const weekId = currentWeek.id;
       const existingWinners = getWinners();
-      const alreadyHasWinner = existingWinners.some((w) => w.weekId === weekId);
+      const alreadyHasWinner = existingWinners.some((w) => w.weekId === weekId && !w.isBroll);
 
       if (!alreadyHasWinner) {
         const allSubmissions = getSubmissions().filter((s) => s.weekId === weekId);

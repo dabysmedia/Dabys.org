@@ -104,7 +104,7 @@ export async function generateTriviaQuestions(
   const movieTitle = winner.movieTitle || title;
   const questions: TriviaQuestion[] = [];
 
-  const allWinners = getWinners().filter((w) => w.tmdbId && w.id !== winnerId);
+  const allWinners = getWinners().filter((w) => w.tmdbId && !w.isBroll && w.id !== winnerId);
   const otherYears = allWinners
     .map((w) => w.year)
     .filter((y): y is string => !!y)

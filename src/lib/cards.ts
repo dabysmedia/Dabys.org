@@ -140,7 +140,7 @@ export function isGenericCharacterName(name: string): boolean {
 }
 
 export async function buildCharacterPool(): Promise<CharacterPortrayal[]> {
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   const existing = getCharacterPool();
   const byKey = new Map<string, CharacterPortrayal>();
 
@@ -191,7 +191,7 @@ export async function buildCharacterPool(): Promise<CharacterPortrayal[]> {
 
 /** Add up to 6 actor cards for a single winner to the main pool. Used by rebuild; new winners use addPendingPoolEntriesForWinner. */
 export async function addPoolEntriesForWinner(winner: Winner): Promise<void> {
-  if (!winner.tmdbId) return;
+  if (!winner.tmdbId || winner.isBroll) return;
   const tmdbId = winner.tmdbId;
   const movieTitle = winner.movieTitle;
 
@@ -237,7 +237,7 @@ export async function addPoolEntriesForWinner(winner: Winner): Promise<void> {
 
 /** Add up to 6 actor cards for a winner to the pending pool (admin must "push to pool" to add to main pool). */
 export async function addPendingPoolEntriesForWinner(winner: Winner): Promise<void> {
-  if (!winner.tmdbId) return;
+  if (!winner.tmdbId || winner.isBroll) return;
   const tmdbId = winner.tmdbId;
   const movieTitle = winner.movieTitle;
   const winnerId = winner.id;
@@ -853,7 +853,7 @@ export function getUserCodexCharacterIdsForMovie(userId: string, tmdbId: number)
 /** True if user has discovered all slots for the winner's movie in the codex (badge = codex completion). Works for sets of any size. */
 export function hasCompletedMovie(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
-  if (!winner?.tmdbId) return false;
+  if (!winner?.tmdbId || winner.isBroll) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const discovered = getUserCodexCharacterIdsForMovie(userId, winner.tmdbId);
@@ -867,7 +867,7 @@ export function hasCompletedMovie(userId: string, winnerId: string): boolean {
 /** True if user owns all pool characterIds for the winner's movie, each as foil. Works for sets of any size. */
 export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
-  if (!winner?.tmdbId) return false;
+  if (!winner?.tmdbId || winner.isBroll) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const ownedFoil = getUserCollectedFoilCharacterIdsForMovie(userId, winner.tmdbId);
@@ -881,7 +881,7 @@ export function hasCompletedMovieHolo(userId: string, winnerId: string): boolean
 /** True if every main pool entry for the winner's movie has its holo slot filled in the codex. Main or alt-art holo counts for each slot. */
 export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
-  if (!winner?.tmdbId) return false;
+  if (!winner?.tmdbId || winner.isBroll) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const holoIds = new Set(getCodexUnlockedHoloCharacterIds(userId));
@@ -899,20 +899,20 @@ export function hasCompletedMovieHoloCodex(userId: string, winnerId: string): bo
 
 /** Winner IDs for which the user has collected the full set (all codex slots for that movie). */
 export function getCompletedWinnerIds(userId: string): string[] {
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   return winners.filter((w) => hasCompletedMovie(userId, w.id)).map((w) => w.id);
 }
 
 /** Winner IDs for which the user has the full holo set in the codex (all main slots holo-upgraded). */
 export function getCompletedHoloWinnerIds(userId: string): string[] {
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   return winners.filter((w) => hasCompletedMovieHoloCodex(userId, w.id)).map((w) => w.id);
 }
 
 /** True if every main pool entry for the winner's movie has its prismatic slot filled in the codex. Main or alt-art prismatic counts for each slot. */
 export function hasCompletedMoviePrismaticCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
-  if (!winner?.tmdbId) return false;
+  if (!winner?.tmdbId || winner.isBroll) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const prismaticIds = new Set(getCodexUnlockedPrismaticCharacterIds(userId));
@@ -930,7 +930,7 @@ export function hasCompletedMoviePrismaticCodex(userId: string, winnerId: string
 /** True if every main pool entry for the winner's movie has its dark matter slot filled in the codex. Main or alt-art dark matter counts for each slot. */
 export function hasCompletedMovieDarkMatterCodex(userId: string, winnerId: string): boolean {
   const winner = getWinners().find((w) => w.id === winnerId);
-  if (!winner?.tmdbId) return false;
+  if (!winner?.tmdbId || winner.isBroll) return false;
   const pool = getPoolEntriesForMovie(winner.tmdbId);
   if (pool.length === 0) return false;
   const darkMatterIds = new Set(getCodexUnlockedDarkMatterCharacterIds(userId));
@@ -947,13 +947,13 @@ export function hasCompletedMovieDarkMatterCodex(userId: string, winnerId: strin
 
 /** Winner IDs for which the user has the full prismatic set in the codex. */
 export function getCompletedPrismaticWinnerIds(userId: string): string[] {
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   return winners.filter((w) => hasCompletedMoviePrismaticCodex(userId, w.id)).map((w) => w.id);
 }
 
 /** Winner IDs for which the user has the full dark matter set in the codex. */
 export function getCompletedDarkMatterWinnerIds(userId: string): string[] {
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   return winners.filter((w) => hasCompletedMovieDarkMatterCodex(userId, w.id)).map((w) => w.id);
 }
 
@@ -977,7 +977,7 @@ export function getBadgesLostIfCardsRemoved(
     .filter((c): c is NonNullable<typeof c> => c != null && c.userId === userId);
   if (toRemove.length === 0) return [];
 
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   const result: BadgeLossEntry[] = [];
   const seenWinner = new Set<string>();
 

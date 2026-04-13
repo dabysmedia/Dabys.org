@@ -211,6 +211,8 @@ export interface Winner {
   runtime?: number; // minutes (from TMDB)
   /** When the movie will be screened (ISO date string). Shown when winner is published. */
   screeningAt?: string;
+  /** Watched by the group but not the weekly vote winner; listed under B-Roll on the home page, not in Winners Circle. */
+  isBroll?: boolean;
 }
 
 export function getWinners(): Winner[] {

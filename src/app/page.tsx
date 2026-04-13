@@ -44,6 +44,7 @@ interface Winner {
   submitterAvatarUrl?: string;
   submitterDisplayedBadge?: { winnerId: string; movieTitle: string; isHolo: boolean } | null;
   voteCount?: number;
+  isBroll?: boolean;
 }
 interface TmdbSearchResult { id: number; title: string; year: string; posterUrl: string; overview: string; }
 interface TmdbMovieDetail { tmdbId: number; title: string; year: string; overview: string; posterUrl: string; backdropUrl: string; trailerUrl: string; letterboxdUrl: string; }
@@ -218,7 +219,7 @@ export default function HomePage() {
       setVotes(votesData);
 
       if (weekData.phase === "winner_published") {
-        const wk = winnersData.find((w) => w.weekId === weekData.id);
+        const wk = winnersData.find((w) => w.weekId === weekData.id && !w.isBroll);
         setThisWeekWinner(wk || null);
       } else {
         setThisWeekWinner(null);
@@ -354,6 +355,9 @@ export default function HomePage() {
   const myVote = votes.find((v) => v.userId === user?.id);
   const phase = week?.phase || "";
   const phaseMeta = PHASE_META[phase];
+
+  const circleWinners = winners.filter((w) => !w.isBroll);
+  const brollWinners = winners.filter((w) => w.isBroll);
 
   // vote tally: { submissionId: count }
   const voteTally: Record<string, number> = {};
@@ -1096,7 +1100,7 @@ export default function HomePage() {
           </div>
           <p className="text-center text-white/40 text-sm mb-6 -mt-2">Click any winner to rate, comment, and play trivia</p>
 
-          {winners.length === 0 ? (
+          {circleWinners.length === 0 ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl p-12 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/10 flex items-center justify-center">
                 <svg className="w-8 h-8 text-amber-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -1107,7 +1111,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {winners.map((winner) => (
+              {circleWinners.map((winner) => (
                 <div key={winner.id} className="glass-panel home-card-lift group relative rounded-[1.35rem] overflow-hidden transition-all duration-300 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-500/10 hover:scale-[1.03]">
                   <Link href={`/winners/${winner.id}`} className="block">
                     <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-purple-900/30 to-indigo-900/30">
@@ -1155,6 +1159,69 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {/* ═══ B-ROLL ═══ */}
+        {brollWinners.length > 0 && (
+          <section className="mt-16">
+            <div className="mb-8 text-center">
+              <p className="section-kicker mb-3">Also Watched</p>
+              <h2 className="section-heading text-3xl text-slate-200 sm:text-4xl">
+                B-Roll
+              </h2>
+              <div className="mx-auto mt-4 h-px w-full max-w-xl bg-gradient-to-r from-transparent via-slate-500/35 to-transparent" />
+            </div>
+            <p className="text-center text-white/35 text-sm mb-6 -mt-2">
+              Group watches that weren&apos;t the weekly pick — still on the record
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {brollWinners.map((winner) => (
+                <div key={winner.id} className="glass-panel home-card-lift group relative rounded-[1.35rem] overflow-hidden transition-all duration-300 hover:border-slate-500/35 hover:shadow-lg hover:shadow-slate-500/10 hover:scale-[1.03] border border-white/[0.06]">
+                  <Link href={`/winners/${winner.id}`} className="block">
+                    <div className="aspect-[2/3] relative overflow-hidden bg-gradient-to-br from-slate-800/40 to-slate-900/40">
+                      {winner.posterUrl ? (
+                        <img src={winner.posterUrl} alt={winner.movieTitle} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-95" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/10 text-4xl font-bold">{winner.movieTitle.charAt(0)}</div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      {winner.weekTheme && (
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-500/20 border border-slate-500/25 text-slate-300 backdrop-blur-sm">
+                          {winner.weekTheme}
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="text-sm font-semibold text-white/85 truncate group-hover:text-slate-200 transition-colors">{winner.movieTitle}</h3>
+                    </div>
+                  </Link>
+                  {(winner.year || winner.submittedBy) && (
+                    <div className="px-3 pb-3 -mt-1">
+                      <p className="text-[11px] text-white/30 flex items-center gap-1.5 flex-wrap">
+                        {winner.year && <span className="text-white/35">{winner.year} &middot; </span>}
+                        {winner.submittedBy && (
+                          <>
+                            <span>by{" "}
+                              {winner.submittedByUserId ? (
+                                <Link href={`/profile/${winner.submittedByUserId}`} className="text-white/35 hover:text-slate-400 transition-colors">
+                                  {winner.submittedBy}
+                                </Link>
+                              ) : (
+                                <span className="text-white/35">{winner.submittedBy}</span>
+                              )}
+                            </span>
+                            {winner.submitterDisplayedBadge && (
+                              <BadgePill movieTitle={winner.submitterDisplayedBadge.movieTitle} isHolo={winner.submitterDisplayedBadge.isHolo} />
+                            )}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
     </div>

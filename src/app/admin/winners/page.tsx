@@ -12,6 +12,7 @@ interface Winner {
   submittedBy: string;
   publishedAt: string;
   year?: string;
+  isBroll?: boolean;
 }
 
 interface TmdbSearchResult {
@@ -70,6 +71,7 @@ export default function AdminWinnersPage() {
   const [newWeekStart, setNewWeekStart] = useState("");
   const [newWeekEnd, setNewWeekEnd] = useState("");
   const [creatingWeek, setCreatingWeek] = useState(false);
+  const [addIsBroll, setAddIsBroll] = useState(false);
 
   // Edit winner
   const [editingWinner, setEditingWinner] = useState<Winner | null>(null);
@@ -89,6 +91,7 @@ export default function AdminWinnersPage() {
   const [editCreatingWeek, setEditCreatingWeek] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
+  const [editIsBroll, setEditIsBroll] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
@@ -278,6 +281,7 @@ export default function AdminWinnersPage() {
           backdropUrl: selectedMovie.backdropUrl,
           runtime: selectedMovie.runtime,
           manual: true,
+          ...(addIsBroll ? { isBroll: true } : {}),
         }),
       });
 
@@ -287,6 +291,7 @@ export default function AdminWinnersPage() {
         setAddWeekId("");
         setAddUserId("");
         setAddWatchedDate("");
+        setAddIsBroll(false);
         setShowAddForm(false);
         loadWinners();
       } else {
@@ -302,6 +307,7 @@ export default function AdminWinnersPage() {
 
   function openEdit(winner: Winner) {
     setEditingWinner(winner);
+    setEditIsBroll(!!winner.isBroll);
     setEditWeekId(winner.weekId || "");
     setEditUserId(users.find((u) => u.name === winner.submittedBy)?.id || "");
     setEditWatchedDate(winner.publishedAt ? winner.publishedAt.slice(0, 10) : "");
@@ -421,6 +427,7 @@ export default function AdminWinnersPage() {
         payload.tmdbId = editSelectedMovie.tmdbId;
         if (editSelectedMovie.runtime != null) payload.runtime = editSelectedMovie.runtime;
       }
+      payload.isBroll = editIsBroll;
 
       const res = await fetch(`/api/winners/${editingWinner.id}`, {
         method: "PATCH",
@@ -455,7 +462,7 @@ export default function AdminWinnersPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-2xl font-bold text-white/90">Winners</h1>
         <button
-          onClick={() => { setShowAddForm(!showAddForm); setSelectedMovie(null); setSearchQuery(""); }}
+          onClick={() => { setShowAddForm(!showAddForm); setSelectedMovie(null); setSearchQuery(""); setAddIsBroll(false); }}
           className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all cursor-pointer"
         >
           {showAddForm ? "Cancel" : "+ Add Movie Manually"}
@@ -468,6 +475,19 @@ export default function AdminWinnersPage() {
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
             Add to Past Winners
           </h2>
+
+          <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3 mb-4">
+            <input
+              type="checkbox"
+              checked={addIsBroll}
+              onChange={(e) => setAddIsBroll(e.target.checked)}
+              className="mt-0.5 rounded border-white/20 bg-white/[0.06] text-purple-500 focus:ring-purple-500/40"
+            />
+            <span className="text-sm text-white/70">
+              <span className="font-medium text-white/85">B-Roll</span>
+              {" — "}Check if this was watched with the group but wasn&apos;t the weekly vote winner (listed under B-Roll on the home page; no card pool or skip credit).
+            </span>
+          </label>
 
           {!selectedMovie ? (
             <div ref={dropdownRef} className="relative">
@@ -628,7 +648,7 @@ export default function AdminWinnersPage() {
               )}
 
               {/* Skip note */}
-              {addUserId && (
+              {addUserId && !addIsBroll && (
                 <p className="text-[11px] text-cyan-400/50 flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -644,7 +664,7 @@ export default function AdminWinnersPage() {
                 disabled={adding || !selectedMovie}
                 className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-medium hover:from-purple-500 hover:to-indigo-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               >
-                {adding ? "Adding..." : "Add Winner"}
+                {adding ? "Adding..." : addIsBroll ? "Add B-Roll" : "Add Winner"}
               </button>
             </form>
           )}
@@ -827,6 +847,19 @@ export default function AdminWinnersPage() {
                 </div>
               )}
 
+              <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={editIsBroll}
+                  onChange={(e) => setEditIsBroll(e.target.checked)}
+                  className="mt-0.5 rounded border-white/20 bg-white/[0.06] text-purple-500 focus:ring-purple-500/40"
+                />
+                <span className="text-sm text-white/70">
+                  <span className="font-medium text-white/85">B-Roll</span>
+                  {" — "}Not a weekly winner; listed under B-Roll on the home page.
+                </span>
+              </label>
+
               {editError && <p className="text-red-400/80 text-xs">{editError}</p>}
 
               <div className="flex gap-2 pt-2">
@@ -859,7 +892,7 @@ export default function AdminWinnersPage() {
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
           <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-white/60 uppercase tracking-widest">
-              All Winners ({winners.length})
+              Winners &amp; B-Roll ({winners.length})
             </h2>
             {reordering && <span className="text-xs text-white/40">Saving order...</span>}
             <p className="text-[11px] text-white/30 shrink-0">Drag to reorder</p>
@@ -899,9 +932,14 @@ export default function AdminWinnersPage() {
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white/80 truncate">
+                    <p className="text-sm font-medium text-white/80 truncate flex items-center gap-2 flex-wrap">
                       {winner.movieTitle}
-                      {winner.year && <span className="text-white/30 ml-1">({winner.year})</span>}
+                      {winner.year && <span className="text-white/30">({winner.year})</span>}
+                      {winner.isBroll && (
+                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-slate-500/20 text-slate-300 border border-slate-500/30">
+                          B-Roll
+                        </span>
+                      )}
                     </p>
                     <p className="text-[11px] text-white/30">
                       {winner.submittedBy && <>by <span className="text-white/50">{winner.submittedBy}</span> &middot; </>}

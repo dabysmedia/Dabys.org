@@ -7,7 +7,7 @@ export async function GET() {
   const winners = getWinners();
   const list: { id: string; name: string; skipsAvailable: number }[] = [];
   for (const user of users) {
-    const totalWins = winners.filter((w) => w.submittedBy === user.name).length;
+    const totalWins = winners.filter((w) => w.submittedBy === user.name && !w.isBroll).length;
     const profile = getProfile(user.id);
     const skipsUsed = profile.skipsUsed || 0;
     const skipsAvailable = Math.max(0, totalWins - skipsUsed);

@@ -89,7 +89,7 @@ export async function GET(
 
   // Weeks this user's submission won
   const userWins = allWinners.filter(
-    (w) => w.submittedBy === user.name
+    (w) => w.submittedBy === user.name && !w.isBroll
   );
   const weeksWon = userWins.map((w) => {
     const week = allWeeks.find((wk) => wk.id === w.weekId);

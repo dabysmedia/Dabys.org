@@ -243,7 +243,7 @@ export async function GET() {
         }
       : null,
     site: {
-      totalWinners: winners.length,
+      totalWinners: winners.filter((w) => !w.isBroll).length,
       totalSubmissions: submissions.length,
       totalVotes: votes.length,
       totalLedgerEntries: ledger.length,

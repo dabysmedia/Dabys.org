@@ -29,7 +29,7 @@ export async function GET() {
   // ─── Totals ───
   const totalWeeks = weeks.length;
   const totalSubmissions = submissions.length;
-  const totalWinners = winners.length;
+  const totalWinners = winners.filter((w) => !w.isBroll).length;
   const totalRatings = ratings.length;
   const totalComments = comments.length;
 
@@ -184,6 +184,7 @@ export async function GET() {
   // Win leaders
   const winCountByUser = new Map<string, number>();
   for (const w of winners) {
+    if (w.isBroll) continue;
     if (w.submittedBy) {
       winCountByUser.set(w.submittedBy, (winCountByUser.get(w.submittedBy) || 0) + 1);
     }
@@ -215,20 +216,19 @@ export async function GET() {
   let bestAvg = 0;
   for (const [winnerId, { sum, count }] of ratingByWinner.entries()) {
     if (count < 1) continue;
+    const winner = winners.find((w) => w.id === winnerId);
+    if (!winner || winner.isBroll) continue;
     const avg = sum / count;
     if (avg > bestAvg) {
       bestAvg = avg;
-      const winner = winners.find((w) => w.id === winnerId);
-      if (winner) {
-        const winnerRatings = ratings.filter((r) => r.winnerId === winnerId);
-        const dabysScorePct = computeDabysScorePct(winnerRatings);
-        bestRatedWinner = { winnerId, movieTitle: winner.movieTitle, posterUrl: winner.posterUrl || "", avgStars: Math.round(avg * 10) / 10, ratingCount: count, dabysScorePct };
-      }
+      const winnerRatings = ratings.filter((r) => r.winnerId === winnerId);
+      const dabysScorePct = computeDabysScorePct(winnerRatings);
+      bestRatedWinner = { winnerId, movieTitle: winner.movieTitle, posterUrl: winner.posterUrl || "", avgStars: Math.round(avg * 10) / 10, ratingCount: count, dabysScorePct };
     }
   }
 
   // Longest movie
-  const withRuntime = winners.filter((w) => w.runtime != null && w.runtime > 0);
+  const withRuntime = winners.filter((w) => !w.isBroll && w.runtime != null && w.runtime > 0);
   let longestWinner: { winnerId: string; movieTitle: string; posterUrl: string; runtimeMinutes: number } | null = null;
   if (withRuntime.length > 0) {
     const longest = withRuntime.reduce((a, b) => (a.runtime! > b.runtime! ? a : b));
@@ -238,6 +238,7 @@ export async function GET() {
   // Winners by decade
   const decadeCount = new Map<string, number>();
   for (const w of winners) {
+    if (w.isBroll) continue;
     const y = w.year ? parseInt(w.year, 10) : NaN;
     const decade = !Number.isNaN(y) ? `${Math.floor(y / 10) * 10}s` : "Unknown";
     decadeCount.set(decade, (decadeCount.get(decade) || 0) + 1);

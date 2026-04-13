@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   const profile = getProfile(userId);
   const winners = getWinners();
-  const totalWins = winners.filter((w) => w.submittedBy === user.name).length;
+  const totalWins = winners.filter((w) => w.submittedBy === user.name && !w.isBroll).length;
   const skipsUsed = profile.skipsUsed || 0;
   const skipsAvailable = Math.max(0, totalWins - skipsUsed);
   if (skipsAvailable <= 0) {

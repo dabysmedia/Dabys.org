@@ -352,7 +352,7 @@ export async function POST(request: Request) {
   }
   const tmdbId = card.movieTmdbId;
   if (tmdbId) {
-    const winner = getWinners().find((w) => w.tmdbId === tmdbId);
+    const winner = getWinners().find((w) => w.tmdbId === tmdbId && !w.isBroll);
     if (winner) {
       if (hasCompletedMovie(userId, winner.id)) {
         const added = addSetCompletionQuest(userId, winner.id, winner.movieTitle ?? "");

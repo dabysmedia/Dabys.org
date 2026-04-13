@@ -22,9 +22,11 @@ export function ScrollingWinnersBg() {
           backdropUrl?: string;
           posterUrl?: string;
           publishedAt?: string;
+          isBroll?: boolean;
         }[]) => {
+          const circle = winners.filter((w) => !w.isBroll);
           // Use the first 5 in list order (top of Winners Circle), not the latest by date
-          const topFive = winners.slice(0, 5);
+          const topFive = circle.slice(0, 5);
           setWinnerArt(
             topFive
               .map((w) => w.backdropUrl || w.posterUrl)

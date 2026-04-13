@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
-  const winners = getWinners().filter((w) => w.tmdbId);
+  const winners = getWinners().filter((w) => w.tmdbId && !w.isBroll);
   const totalSets = winners.length;
   if (totalSets === 0) {
     return NextResponse.json(

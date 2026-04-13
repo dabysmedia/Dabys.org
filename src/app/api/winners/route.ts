@@ -65,6 +65,8 @@ export async function POST(request: Request) {
 
   const currentWeek = getCurrentWeek();
 
+  const isBroll = body.isBroll === true;
+
   const newWinner = {
     id: newId,
     weekId: body.manual ? (body.weekId || "") : currentWeek?.id || "",
@@ -80,16 +82,17 @@ export async function POST(request: Request) {
     backdropUrl: body.backdropUrl || undefined,
     runtime: typeof body.runtime === "number" && body.runtime >= 0 ? body.runtime : undefined,
     screeningAt: typeof body.screeningAt === "string" && body.screeningAt.trim() ? body.screeningAt.trim() : undefined,
+    ...(isBroll ? { isBroll: true as const } : {}),
   };
 
   winners.push(newWinner);
   saveWinners(winners);
 
-  if (newWinner.tmdbId) {
+  if (newWinner.tmdbId && !isBroll) {
     addPendingPoolEntriesForWinner(newWinner).catch((e) => console.error("Pending pool add error", e));
   }
 
-  if (body.submittedBy) {
+  if (body.submittedBy && !isBroll) {
     const users = getUsers();
     const submitter = users.find((u) => u.name === body.submittedBy);
     if (submitter) {
@@ -98,8 +101,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // When adding manually, also create a submission so it counts in past weeks & profiles
-  if (body.manual && body.weekId && body.submittedBy) {
+  // When adding manually, also create a submission so it counts in past weeks & profiles (not for B-roll)
+  if (body.manual && body.weekId && body.submittedBy && !isBroll) {
     const users = getUsers();
     const submitter = users.find((u) => u.name === body.submittedBy);
     if (submitter) {
