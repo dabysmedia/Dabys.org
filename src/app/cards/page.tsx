@@ -1667,23 +1667,28 @@ function CardsContent() {
   // Lock body scroll when pack reveal is open so the page underneath doesn't scroll (fixes mobile overlap/input issues)
   useEffect(() => {
     if (!newCards || newCards.length === 0) return;
+    document.body.classList.add("dabys-pack-reveal-open");
     const scrollY = window.scrollY;
     const prevOverflow = document.body.style.overflow;
     const prevPosition = document.body.style.position;
     const prevTop = document.body.style.top;
     const prevLeft = document.body.style.left;
     const prevRight = document.body.style.right;
+    const prevWidth = document.body.style.width;
     document.body.style.overflow = "hidden";
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = "0";
     document.body.style.right = "0";
+    document.body.style.width = "100%";
     return () => {
+      document.body.classList.remove("dabys-pack-reveal-open");
       document.body.style.overflow = prevOverflow;
       document.body.style.position = prevPosition;
       document.body.style.top = prevTop;
       document.body.style.left = prevLeft;
       document.body.style.right = prevRight;
+      document.body.style.width = prevWidth;
       window.scrollTo(0, scrollY);
     };
   }, [newCards]);
@@ -3892,78 +3897,6 @@ function CardsContent() {
                 )}
                 </div>
               </div>
-            )}
-
-            {newCards && newCards.length > 0 && (
-              <>
-                <div
-                  className="fixed inset-0 z-30 bg-black/55 backdrop-blur-[2px] touch-none overscroll-contain"
-                  onClick={() => setNewCards(null)}
-                  onTouchMove={(e) => e.preventDefault()}
-                  aria-hidden
-                />
-                <div className="fixed inset-0 z-40 flex items-start sm:items-center justify-center p-3 pt-[calc(var(--header-height)+0.5rem)] sm:pt-4 sm:px-4 sm:p-4 pointer-events-none">
-                  <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[calc(100dvh-var(--header-height)-1rem)] sm:max-h-none rounded-2xl border border-white/[0.18] bg-white/[0.06] backdrop-blur-md shadow-[0_22px_70px_rgba(0,0,0,0.85)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col pointer-events-auto overscroll-contain">
-                    <div className="relative flex-shrink-0">
-                    {/* Mobile: sticky close X so you can always dismiss */}
-                    <button
-                      type="button"
-                      aria-label="Close"
-                      onClick={() => { setNewCards(null); setRevealCount(0); }}
-                      className="sm:hidden absolute top-0 right-0 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/15 active:bg-white/20 touch-manipulation select-none"
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                    <h2 className="text-base sm:text-lg font-semibold text-white/90 mb-3 sm:mb-4 text-center">
-                      You got
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 max-sm:mx-auto">
-                      {newCards.map((card, i) => {
-                        const revealed = i < revealCount;
-                        const isTrackedPull = revealed && card.characterId && (
-                          trackedCharacterIds.has(card.characterId) ||
-                          ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)) ||
-                          ((card.cardType as string) === "community" && trackedCharacterIds.has(`community:${card.characterId}`))
-                        );
-                        return (
-                          <div key={card.id} className="relative">
-                            {!revealed && (
-                              <div className="aspect-[2/3] rounded-xl border border-white/[0.18] bg-white/[0.06] flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white/40">
-                                ?
-                              </div>
-                            )}
-                            {revealed && (
-                              <div className={`card-reveal ${isTrackedPull ? "tracked-card-found" : ""}`}>
-                                <CardDisplay card={card} />
-                                {isTrackedPull && (
-                                  <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2 pointer-events-none">
-                                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(245,158,11,0.6)] animate-pulse">
-                                      Tracked
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-4 sm:mt-6 flex justify-center flex-shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:pt-4 max-sm:pb-[env(safe-area-inset-bottom,0)] max-sm:bg-gradient-to-t from-[rgba(0,0,0,0.4)] to-transparent max-sm:-mx-4 max-sm:-mb-4 max-sm:px-4 max-sm:rounded-b-2xl">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNewCards(null);
-                          setRevealCount(0);
-                        }}
-                        className="w-full max-w-[280px] sm:w-auto min-h-[48px] sm:min-h-0 px-6 sm:px-5 py-3 sm:py-2.5 rounded-xl border border-white/25 bg-white/[0.06] text-base sm:text-sm font-medium text-white/85 hover:bg-white/[0.1] hover:text-white active:bg-white/[0.12] transition-colors cursor-pointer touch-manipulation select-none"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    </div>
-                  </div>
-                </div>
-              </>
             )}
           </>
         )}
@@ -8337,6 +8270,82 @@ function CardsContent() {
               <p className="text-sm text-cyan-300/80 mt-1">Click anywhere to close</p>
             </div>
           </>
+        )}
+
+        {/* Pack reveal — portaled to body; solid scrim (no backdrop-blur) avoids bright top/side halos on some GPUs */}
+        {newCards && newCards.length > 0 && isClient && createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[9998] min-h-[100dvh] w-full bg-[#07070f]/95 touch-none overscroll-contain"
+              onClick={() => setNewCards(null)}
+              onTouchMove={(e) => e.preventDefault()}
+              aria-hidden
+            />
+            <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] w-full items-center justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4 pointer-events-none">
+              <div className="relative w-full max-w-[min(360px,92vw)] sm:max-w-4xl max-h-[min(calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)),900px)] rounded-2xl border border-white/12 bg-[#12121c] shadow-[0_22px_70px_rgba(0,0,0,0.55)] p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex flex-col pointer-events-auto overscroll-contain">
+                <div className="relative flex-shrink-0">
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    onClick={() => {
+                      setNewCards(null);
+                      setRevealCount(0);
+                    }}
+                    className="sm:hidden absolute top-0 right-0 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/18 text-white/90 hover:bg-black/55 active:bg-black/45 touch-manipulation select-none"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                  <h2 className="text-base sm:text-lg font-semibold text-white/90 mb-3 sm:mb-4 text-center">
+                    You got
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 max-sm:mx-auto">
+                    {newCards.map((card, i) => {
+                      const revealed = i < revealCount;
+                      const isTrackedPull = revealed && card.characterId && (
+                        trackedCharacterIds.has(card.characterId) ||
+                        ((card.cardType ?? "actor") === "character" && trackedCharacterIds.has(`boys:${card.characterId}`)) ||
+                        ((card.cardType as string) === "community" && trackedCharacterIds.has(`community:${card.characterId}`))
+                      );
+                      return (
+                        <div key={card.id} className="relative">
+                          {!revealed && (
+                            <div className="aspect-[2/3] rounded-xl border border-white/12 bg-black/35 backdrop-blur-md flex items-center justify-center text-2xl sm:text-3xl font-semibold text-white/50">
+                              ?
+                            </div>
+                          )}
+                          {revealed && (
+                            <div className={`card-reveal ${isTrackedPull ? "tracked-card-found" : ""}`}>
+                              <CardDisplay card={card} />
+                              {isTrackedPull && (
+                                <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-2 pointer-events-none">
+                                  <span className="px-2.5 py-1 rounded-lg bg-amber-500/90 text-amber-950 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(245,158,11,0.6)] animate-pulse">
+                                    Tracked
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 sm:mt-6 flex justify-center flex-shrink-0 max-sm:sticky max-sm:bottom-0 max-sm:pt-4 max-sm:pb-[env(safe-area-inset-bottom,0)] max-sm:bg-gradient-to-t from-[rgba(8,12,20,0.85)] via-[rgba(8,12,20,0.4)] to-transparent max-sm:backdrop-blur-sm max-sm:-mx-4 max-sm:-mb-4 max-sm:px-4 max-sm:rounded-b-2xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCards(null);
+                        setRevealCount(0);
+                      }}
+                      className="w-full max-w-[280px] sm:w-auto min-h-[48px] sm:min-h-0 px-6 sm:px-5 py-3 sm:py-2.5 rounded-xl border border-white/18 bg-black/35 backdrop-blur-md text-base sm:text-sm font-medium text-white/90 hover:bg-black/50 hover:border-white/28 hover:text-white active:bg-black/40 transition-colors cursor-pointer touch-manipulation select-none"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>,
+          document.body
         )}
 
         {/* Start Trade modal */}

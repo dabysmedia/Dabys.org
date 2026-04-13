@@ -18,6 +18,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Match app chrome so fixed-body scroll lock (e.g. pack reveal) never shows the UA white canvas */
+  background-color: #121220;
 }
 
 body {
@@ -73,6 +75,13 @@ button {
 body.dabys-scroll-restoring {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Pack reveal: sticky header uses white-tinted glass; hide it while open so no bright band shows
+   (stacking/compositor + backdrop-filter can still show it even when a portal overlay is on top). */
+body.dabys-pack-reveal-open header {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Dark dropdown options for readability in dark theme */
